@@ -509,7 +509,6 @@
                                                (binding-lifted-name mark-list binding))
                                              binding-set))
                                       binding-sets)]
-                            [_ (printf "raw: ~s~n" (memoized-read->raw (expr-read expr)))]
                             [val raw-sources (if (comes-from-local? expr)
                                                  (cadr (memoized-read->raw (expr-read expr)))
                                                  (build-list (length vals) (lambda (x) #f)))]
