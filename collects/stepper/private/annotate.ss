@@ -1220,7 +1220,7 @@
                             
                             [(#%top . var)
                              (let*-2vals ([var (syntax var)]
-                                          [free-varrefs (list var)])
+                                          [free-varrefs null])
                                          (2vals 
                                           (ccond [(or cheap-wrap? ankle-wrap?)
                                                   (appropriate-wrap var free-varrefs)]
@@ -1243,8 +1243,11 @@
                                                     ((let-bound) 
                                                      (wcm-break-wrap (make-debug-info-normal free-varrefs)
                                                                      (return-value-wrap var)))
-                                                    ((non-lexical) (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                                                                   (return-value-wrap var))))])
+                                                    ((non-lexical) 
+                                                     (case (identifier-binding var)
+                                                       ((#f) (error 'annotate "top-level identifier occurs without #%top"))
+                                                       (else (wcm-break-wrap (make-debug-info-normal free-varrefs)
+                                                                             (return-value-wrap var))))))])
                                           free-varrefs))]
                             
                             [else ; require, require-for-syntax, define-syntaxes, module, provide
