@@ -87,9 +87,9 @@
                 "positive integer"
                 '2nd
                 delta)
-    (check-proc tag left-right-action 2 "move-left-right argument" "two arguments")
-    (check-proc tag up-down-action 2 "move-up-down argument" "two arguments")
-    (check-proc tag draw-shape 1 " draw argument" "one argument")
+    (check-proc tag left-right-action 2 "move-left-right" "two arguments")
+    (check-proc tag up-down-action 2 "move-up-down" "two arguments")
+    (check-proc tag draw-shape 1 "draw" "one argument")
     ;; --- 
     (local ((define frame (make-object frame% TITLE #f 10 10))
             (define panel (make-object vertical-panel% frame))

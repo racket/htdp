@@ -45,7 +45,7 @@
       (error proc "procedure expected as ~s argument; given ~e" arg# f))
     (unless (procedure-arity-includes? f exp-arity)
       (let ([arity-of-f (procedure-arity f)])
-        (error proc "procedure of ~a expected as ~s argument; given procedure of ~a "
+        (error proc "procedure of ~a expected as ~a argument; given procedure of ~a "
 	  arg-err arg# 
 	  (cond
 	    [(number? arity-of-f)
