@@ -1,7 +1,8 @@
 
 ;; Implements the Teaching languages, at least in terms of the
-;; forms and procedures. The reader-level aspects of the language
-;; (e.g., case-sensitivity) are not implemented here.
+;; forms. The reader-level aspects of the language (e.g.,
+;; case-sensitivity) are not implemented here, and the procedures are
+;; in a separate module.
 
 ;; Error-message conventions:
 ;;  - report errors, somewhat anthopomorphicly, in terms of "expected"
@@ -35,13 +36,16 @@
 	   intermediate-local
 	   intermediate-letrec
 	   intermediate-let
+	   intermediate-lambda
 	   intermediate-time
 
 	   advanced-define
 	   advanced-lambda
+	   advanced-app
 	   advanced-define-struct
 	   advanced-let
-	   advanced-recur)
+	   advanced-recur
+	   advanced-begin)
   
   (define-struct posn (x y) (make-inspector)) ; transparent
   (provide (struct posn (x y)))
@@ -85,8 +89,8 @@
       (teach-syntax-error
        'define
        stx
-       "found a `define' expression that is embedded in an expression, ~
-        but all `define' expressions must be at the top level"))
+       "found a `define' that is embedded in an expression, ~
+        but all `define's must be at the top level"))
       
     (syntax-case stx ()
       ;; Constant or lambda def:
@@ -213,7 +217,7 @@
        (teach-syntax-error
 	'define-struct
 	(syntax name)
-	"expected a structure type name after `define-syntax', but found ~a"
+	"expected a structure type name after `define-struct', but found ~a"
 	(something-else (syntax name)))]
       [(_ name_ (field_ ...) . rest)
        (let ([name (syntax name_)]
@@ -223,10 +227,15 @@
 	    (unless (identifier? field)
 	      (teach-syntax-error
 	       'define-struct
-	       stx
+	       field
 	       "expected a structure field name, found ~a"
 	       (something-else field))))
 	  fields)
+	 (when (null? fields)
+	   (teach-syntax-error
+	    'define-struct
+	    stx
+	    "expected at least one structure field name, but none are there"))
 	 (let ([rest (syntax->list (syntax rest))])
 	   (unless (null? rest)
 	     (teach-syntax-error
@@ -258,14 +267,20 @@
        (teach-syntax-error
 	'define-struct
 	(syntax something)
-	"expected a sequence of field name after the structure type name in `define-struct', ~
+	"expected a sequence of field names after the structure type name in `define-struct', ~
          but found ~a"
 	(something-else (syntax something)))]
+      [(_ name_)
+       (teach-syntax-error
+	'define-struct
+	(syntax something)
+	"expected a sequence of field names after the structure type name in `define-struct', ~
+         but nothing's there")]
       [(_)
        (teach-syntax-error
 	'define-struct
 	stx
-	"expected a structure type name after `define-syntax', but nothing's there")]
+	"expected a structure type name after `define-struct', but nothing's there")]
       [_else (bad-use-error 'define-struct stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -369,7 +384,7 @@
 		       (something-else clause))]))
 		 clauses)])
 	   ;; Add `else' clause for error, if necessary:
-	   (let ([clauses (let loop ([clauses clauses])
+	   (let ([clauses (let loop ([clauses checked-clauses])
 			    (cond
 			     [(null? clauses)
 			      (list
@@ -489,7 +504,15 @@
 					exprs))
 	     (with-syntax ([((d-v (def-id ...) def-expr) ...) partly-expanded-defns])
 	       (with-syntax ([((tmp-id ...) ...)
-			      (map generate-temporaries
+			      ;; Generate tmp-ids that at least look like the defined
+			      ;;  ids, for the purposes of error reporting, etc.:
+			      (map (lambda (def-ids)
+				     (map (lambda (def-id)
+					    (datum->syntax-object
+					     #f
+					     (string->uninterned-symbol
+					      (symbol->string (syntax-e def-id)))))
+					  (syntax->list def-ids)))
 				   (syntax->list (syntax ((def-id ...) ...))))])
 		 (with-syntax ([mappings
 				(apply
@@ -575,7 +598,7 @@
 			    [(name . exprs)
 			     (identifier? (syntax name))
 			     (check-single-expression who
-						      (format "after the name ~a"
+						      (format "after the name `~a'"
 							      (syntax-e (syntax name)))
 						      binding
 						      (syntax->list (syntax exprs)))]
@@ -626,6 +649,48 @@
 	     who)]
 	   [_else
 	    (bad-use-error who stx)]))]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; lambda (intermediate)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (intermediate-lambda stx)
+    (syntax-case stx ()
+      [(beginner-lambda arg-seq lexpr ...)
+       (syntax-case (syntax arg-seq) () [(arg ...) #t][_else #f])
+       (let ([args (syntax->list (syntax arg-seq))])
+	 (for-each (lambda (arg)
+		     (unless (identifier? arg)
+		       (teach-syntax-error
+			'lambda
+			arg
+			"expected a name for a function argument, but found ~a"
+			(something-else arg))))
+		   args)
+	 (when (null? args)
+	   (teach-syntax-error
+	    'lambda
+	    (syntax arg-seq)
+	    "expected at least one argument name in the sequence after `lambda', but found none"))
+	 (check-single-expression 'lambda
+				  "within lambda"
+				  stx
+				  (syntax->list (syntax (lexpr ...))))
+	 (syntax/loc stx (lambda arg-seq lexpr ...)))]
+      ;; Bad lambda because bad args:
+      [(beginner-lambda args . _)
+       (teach-syntax-error
+	'lambda
+	(syntax args)
+	"expected a sequence of function arguments after `lambda', but found ~a"
+	(something-else (syntax args)))]
+      [(_)
+       (teach-syntax-error
+	'lambda
+	stx
+	"expected a sequence of argument names after `lambda', but nothing's there")]
+      [_else
+       (bad-use-error 'lambda stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; time
@@ -699,13 +764,29 @@
        (bad-use-error 'lambda stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; application (advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (advanced-app stx)
+    (syntax-case stx ()
+      [(_ rator rand ...)
+       (syntax (#%app rator rand ...))]
+      [(_)
+       (teach-syntax-error
+	'application
+	stx
+	"expected a defined name or a primitive operation name after after an ~
+         open parenthesis, but nothing's there")]
+      [_else (bad-use-error '#%app stx)]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; define-struct (advanced)         >> weak errors <<
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (define-syntax (advanced-define-struct stx)
     (syntax-case stx ()
       [(_ name/sup fields)
-       (syntax/loc stx (syntax (define-struct name/sup fields)))]))
+       (syntax/loc stx (define-struct name/sup fields))]))
 
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -714,9 +795,15 @@
 
   (define-syntax (advanced-let stx)
     (syntax-case stx ()
+      [(_ name ids body)
+       (identifier? (syntax name))
+       (syntax/loc stx (let name ids body))]
       [(_ name . rest)
        (identifier? (syntax name))
-       (syntax/loc stx (let name . rest))]
+       (teach-syntax-error
+	'let
+	stx
+	"bad syntax for named `let'")]
       [(_ . rest)
        (syntax/loc stx (intermediate-let . rest))]
       [_else
@@ -731,4 +818,22 @@
       [(_ . rest)
        (syntax/loc stx (advanced-let . rest))]
       [_else
-       (bad-use-error 'recur stx)])))
+       (bad-use-error 'recur stx)]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; begin (advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  
+  ;; Mask out the top-level begin
+  (define-syntax (advanced-begin stx)
+    (syntax-case stx ()
+      [(_)
+       (teach-syntax-error
+	'begin
+	stx
+	"expected a sequence of expressions after `begin', but nothing's there")]
+      [(_ e ...)
+       (syntax (let () e ...))]
+      [_else
+       (bad-use-error 'begin stx)])))
+

@@ -1,0 +1,86 @@
+
+;; Basic checks for the advanced language. See also
+;;  beginner.ss
+
+(load-relative "loadtest.ss")
+
+;; Don't need these:
+(define no-extra-if-tests? #t)
+
+(require (lib "advanced.ss" "lang"))
+
+(load-relative "beg-adv.ss")
+(load-relative "intm-adv.ss")
+
+(err/rt-test (1 2 3))
+(err/rt-test (+) exn:application:arity?)
+
+(define (f a) (a))
+(test (void) f void)
+
+(define (x) 10)
+(test 10 x)
+(define x (lambda () 11))
+(test 11 x)
+
+(define-struct a0 ())
+(test #t a0? (make-a0))
+
+(syntax-test #'begin)
+(syntax-test #'(begin))
+(syntax-test #'(begin (define x 10)))
+(syntax-test #'(begin (define x 10) x))
+(syntax-test #'(let () (begin (define x 10) x)))
+(syntax-test #'(+ 1 (begin)))
+
+(test 1 'begin (begin 1))
+(test 2 'begin (begin 1 2))
+(test 3 'begin (begin 1 2 3))
+
+(syntax-test #'set!)
+(syntax-test #'(set!))
+(syntax-test #'(set! x))
+(syntax-test #'(set! 1 2))
+(syntax-test #'(set! x 2 3))
+
+(set! x 'hello)
+(test 'hello 'access-x x)
+(test 18 'set! (local [(define x 12)]
+		 (begin
+		   (set! x 18)
+		   x)))
+
+(syntax-test #'delay)
+(syntax-test #'(delay))
+(syntax-test #'(delay 1 2))
+
+(define d (delay (begin (set! x 89) 12)))
+(test #t promise? d)
+(test 12 force d)
+(test 89 'access-x x)
+(set! x 13)
+(test 12 force d)
+(test 13 'access-x x)
+
+(syntax-test #'(let name))
+(syntax-test #'(let name 10))
+(syntax-test #'(let name ()))
+(syntax-test #'(let name ([x]) 1))
+(syntax-test #'(let name ([x 10] 2) 1))
+(syntax-test #'(let name ([11 10]) 1))
+(syntax-test #'(let name ([x 10]) 1 2))
+(test 10 'lookup (let name () 10))
+(test 1024 'loop (let loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
+
+(syntax-test #'(recur name))
+(syntax-test #'(recur name 10))
+(syntax-test #'(recur name ()))
+(syntax-test #'(recur name ([x]) 1))
+(syntax-test #'(recur name ([x 10] 2) 1))
+(syntax-test #'(recur name ([11 10]) 1))
+(syntax-test #'(recur name ([x 10]) 1 2))
+(test 10 'lookup (recur name () 10))
+(test 1024 'loop (recur loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
+
+(report-errs)
+

@@ -3,17 +3,6 @@
 ;; forms and procedures. The reader-level aspects of the language
 ;; (e.g., case-sensitivity) are not implemented here.
 
-;; Error-message conventions:
-;;  - report errors, somewhat anthopomorphicly, in terms of "expected"
-;;    versus "found" syntax
-;;  - report errors according to a left-to-right reading; e.g., the
-;;    error in `(define 1 2 3)' is "expected an identifier, found 1",
-;;    not "expected two parts after `define', but found three"
-
-;; Possible bug: keywords are not disallowed as function names or
-;; arguments. (This is a "possible" bug because it's not clear we want
-;; to maintain the restriction.)
-
 (module beginner mzscheme
   (require (lib "etc.ss")
 	   (lib "list.ss")
@@ -21,7 +10,8 @@
 	   (lib "docprovide.ss" "syntax"))
 
   ;; Implements the forms:
-  (require "private/teach.ss")
+  (require "private/teach.ss"
+	   "private/teachprims.ss")
 
   ;; syntax:
   (provide (rename beginner-define define)
@@ -35,7 +25,8 @@
 	   (rename beginner-quote quote)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum
-	   #%top)
+	   #%top
+	   empty true false)
 
   ;; procedures:
   (provide-and-document
@@ -58,13 +49,13 @@
     (>= (real real -> boolean)
 	"to compare two real numbers for greater-than or equality")
     
-    (+ (num num num ... -> num)
+    ((beginner-+ +) (num num num ... -> num)
        "to compute the sum of the input numbers")
     (- (num num ... -> num)
        "to compute the difference between the input numbers or to negate a number, if there is only one input")
-    (* (num num num ... -> num)
+    ((beginner-* *) (num num num ... -> num)
        "to compute the product of all of the input numbers")
-    (/ (num num num ... -> num)
+    ((beginner-/ /) (num num num ... -> num)
        "to compute the rational quotient of its input."
        "None but the first number can be zero.")
     (max (num num ... -> num)
@@ -238,7 +229,7 @@
     (list? (any -> boolean)
 	   "to determine whether some value is a list")
     
-    (cons (X (listof X) -> (listof X))
+    ((beginner-cons cons) (X (listof X) -> (listof X))
 	  "to construct a list")
 
     (first ( (cons Y (listof X)) -> Y )
@@ -276,7 +267,7 @@
     
     (list (any ... -> (listof any)) "to construct a list of its arguments")
 
-    (append ((listof any) ... -> (listof any))
+    ((beginner-append append) ((listof any) ... -> (listof any))
 	    "to create a single list from several, by juxtaposition of the items")
     (length (list -> number)
 	    "to compute the number of items on a list")
@@ -413,7 +404,7 @@
 	    "to format a string, possibly embedding values"))
    
    ("Misc"
-    (error (symbol string -> void) "to signal an error")
+    ((beginner-error error) (symbol string -> void) "to signal an error")
     (struct? (any -> boolean) "to determine whether some value is a structure")
     (eq? (any any -> boolean) "to compare two values based on when they were created")
     (exit ( -> void) "to exit the running program"))

@@ -1,13 +1,15 @@
 
 (module intermediate mzscheme
   (require "private/teach.ss"
+	   (lib "etc.ss")
+	   (lib "list.ss")
 	   (lib "docprovide.ss" "syntax"))
 
   ;; syntax:
   (provide (rename beginner-define define)
 	   (rename beginner-define-struct define-struct)
-	   (rename beginner-lambda lambda)
 	   (rename beginner-app #%app)
+	   (rename intermediate-lambda lambda)
 	   (rename intermediate-local local)
 	   (rename intermediate-let let)
 	   (rename intermediate-letrec letrec)
@@ -19,7 +21,8 @@
 	   (rename intermediate-time time)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum
-	   #%top)
+	   #%top
+	   empty true false)
 
   ;; procedures:
   (provide-and-document

@@ -1,6 +1,7 @@
 
 (module advanced mzscheme
   (require "private/teach.ss"
+	   "private/teachprims.ss"
 	   (lib "etc.ss")
 	   (lib "list.ss")
 	   (lib "docprovide.ss" "syntax"))
@@ -9,7 +10,7 @@
   (provide (rename advanced-define define)
 	   (rename advanced-define-struct define-struct)
 	   (rename advanced-lambda lambda)
-	   (rename #%app #%app)
+	   (rename advanced-app #%app)
 	   (rename intermediate-local local)
 	   (rename advanced-let let)
 	   (rename advanced-recur recur)
@@ -20,12 +21,13 @@
 	   (rename beginner-or or)
 	   (rename quote quote)
 	   (rename intermediate-time time)
-	   (rename begin begin)
+	   (rename advanced-begin begin)
 	   (rename set! set!)
 	   (rename delay delay)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum
-	   #%top)
+	   #%top
+	   empty true false)
 
   ;; procedures:
   (provide-and-document
@@ -48,7 +50,7 @@
 	       "to update the rest of a non-empty list")
     (set-car! ((cons Y (listof X)) Y -> void)
 	      "to update the first item of a non-empty list")
-    (set-cdr! ((cons Y (listof X)) (listof X) -> void)
+    ((advanced-set-cdr! set-cdr!) ((cons Y (listof X)) (listof X) -> void)
 	      "to update the rest of a non-empty list"))
    
    ("Misc"
