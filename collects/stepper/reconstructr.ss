@@ -155,7 +155,8 @@
                     (let ([fun-val (mark-binding-value
                                     (find-var-binding mark-list 
                                                       (z:varref-var (get-arg-symbol 0))))])
-                      (and (procedure-arity-includes? 
+                      (and (procedure? fun-val)
+                           (procedure-arity-includes? 
                             fun-val
                             (length (z:app-args expr)))
                            (or (and (s:get-constructor-style-printing)
