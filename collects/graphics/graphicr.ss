@@ -3,7 +3,8 @@
 ; Originally written by Johnathan Franklin
 
 (unit/sig graphics^
-  (import mzlib:file^
+  (import [wx : wx^]
+	  mzlib:file^
 	  (mred : mred^))
   
   (define-struct viewport (label canvas))
