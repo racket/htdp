@@ -680,8 +680,9 @@
 			      (cond
 			       [(null? clauses)
 				(list
-				 (syntax/loc stx
-				   [else (error 'cond "all question results were false")]))]
+                                 (with-syntax ([err (syntax-property (syntax (error 'cond "all question results were false")) 'stepper-hint 'inserted-else)])
+                                   (syntax/loc stx
+                                     [else err])))]
 			       [(syntax-case (car clauses) (else)
 				  [(else . _) #t]
 				  [_else #f])
@@ -724,8 +725,8 @@
 	       (with-syntax ([swhere where])
 		 (lambda (stx)
 		   (syntax-case stx ()
-		     [(_ a ...)
-		      (let ([n (length (syntax->list (syntax (a ...))))])
+		     [(_ . clauses)
+		      (let ([n (length (syntax->list (syntax clauses)))])
 			(when (n . < . 2)
 			  (teach-syntax-error
 			   where
@@ -734,7 +735,14 @@
 			   "expected at least two expressions after `~a', but found ~a"
 			   where
 			   (if (zero? n) "no expressions" "only one expression")))
-			(syntax/loc stx (swhere (verify-boolean a 'swhere) ...)))]
+                        (let ([verified-clauses 
+                               (map (lambda (term)
+                                      (with-syntax ([term term])
+                                        (syntax-property (syntax/loc stx (verify-boolean term 'swhere))
+                                                         'stepper-skipto
+                                                         (list syntax-e cdr car))))
+                                    (syntax->list (syntax clauses)))])
+                          (datum->syntax-object #'here (cons where verified-clauses) stx)))]
 		     [_else (bad-use-error where stx)]))))])
 	(values (mk 'or) (mk 'and))))
 
