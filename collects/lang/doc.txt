@@ -31,3 +31,28 @@ special teaching functions:
 
  * _imageeq.ss_ - provides the `image=?' function
 
+----------------------------------------
+
+The _prim.ss_ module defines two syntactic forms for use by the
+implementors of teachpacks, which the teachpack is to be used with the
+Beginner Student languages. In Beginner Student, primitive names (for
+built-in procedures) are dikstinguished from other types of
+expressions, so that they can be syntactically restricted to
+application positions.
+
+> (define-higher-order-procedure id proc-id (arg ...)) - defines `id'
+  to be a primitive operator whose implementation is
+  `proc-id'. Normally, `id' is exported from the teachpack and
+  `proc-id' is not.
+
+  For each non-procedure argument, the corresponding `arg' should be
+  an underscore. For each procedure argument, the corresponding `arg'
+  should be the usual name of the procedure.
+
+  Example: 
+   (define-higher-order-primitive convert-gui convert-gui/proc (f2c))
+
+> (define-primitive id proc-id) - defines `id' to be a primitive
+  operator whose implementation is `proc-id', and which takes no
+  procedures as arguments. Normally, `id' is exported from the
+  teachpack and `proc-id' is not.

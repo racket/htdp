@@ -6,7 +6,7 @@
            (lib "class.ss")
            (lib "mred.ss" "mred")
            (lib "error.ss" "htdp")
-           (lib "hoprim.ss" "lang"))
+           (lib "prim.ss" "lang"))
            
   (provide convert-gui convert-repl convert-file)
 

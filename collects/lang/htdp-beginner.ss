@@ -34,17 +34,33 @@
          ;; Some things are not really functions:
          (if (memq (syntax-e orig) '(beginner:pi beginner:e beginner:null beginner:eof))
              #'(define new-name orig-name)
-             #'(define-syntax (new-name stx)
-                 (syntax-case stx ()
-                   [(id . args)
-                    (syntax (beginner-app orig-name . args))]
-                   [_else
-                    (raise-syntax-error
-                     #f
-                     (string-append
-                      "this primitive operator must be applied to arguments; "
-                      "expected an open parenthesis before the operator name")
-                     stx)]))))]))
+	     (with-syntax ([(what something)
+			    (case (syntax-e orig)
+			      [(beginner:make-posn)
+			       #'("constructor"
+				  "called with values for the structure fields")]
+			      [(beginner:posn-x beginner:posn-y)
+			       #'("selector"
+				  "applied to a structure to get the field value")]
+			      [(beginner:posn?)
+			       #'("predicate"
+				  "applied to an argument")]
+			      [else
+			       #'("primitive operator"
+				  "applied to arguments")])])
+	       #'(define-syntax (new-name stx)
+		   (syntax-case stx ()
+		     [(id . args)
+		      (syntax/loc stx (beginner-app orig-name . args))]
+		     [_else
+		      (raise-syntax-error
+		       #f
+		       (format
+			"this ~a must be ~a; expected an open parenthesis before the ~a name"
+			what
+			something
+			what)
+		       stx)])))))]))
   
   ;; procedures:
   (provide-and-document/wrap
