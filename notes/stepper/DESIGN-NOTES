@@ -148,7 +148,8 @@ Okay, this isn't that hard.  Yes, it's true that every expression that becomes
 it's not even always the case that a "substitution" occurs in the simplistic 
 sense I'm imagining.  Damn, I wish my reduction semantics were finished.
 
-
+(Much later): The real issue is that the "stop-on-enter" code is inserted based
+on the surrounding code, and 
 
 
 So, here's the next macro we need to handle: define-struct.
@@ -415,3 +416,32 @@ line-breakable.
 Lucky.
 
 And Ugly.
+
+*****
+
+January, 2000
+
+I'm working on the debugger, now, and in particular extending the annotater to handle all of the Zodiac forms. Let and Letrec turn out to be quite ugly.  I'm still a little unsure about certain aspects of variable references, like for example whether or not they stay renamed, or whether they return to their original names. 
+
+But that's not what I'm here to talk about.  No, the topic of the day is 'floating variables.'  A floating variable is one whose value must be captured in a continuation mark even though it doesn't occur free in the expression that the wcm wraps.  Let me give an example:
+
+(unit/sig some-sig^
+  (import)
+  
+  (define a 13)
+  (define b (wcm <must grab a> (+ 3 4))))
+  
+In this case, the continuation-mark must hold the value of a, even though a does not occur free in the rhs of b's definition.  Floating variables are stored in a parameter of annotate/inner.  In other words, they propagate downward.  Furthermore, they're subject to the same potential elision as all other variables; you only need to store the ones which are also contained in the set tail-bound.  Also note that (thank God) Zodiac standardizes names apart, so we don't need to worry about duplications.  Also note that floating variables may only be bound-varrefs.
+
+********
+
+Okay, well that doesn't work at all; dynamic scope blows it away completely.  For instance, imagine the following unit:
+
+(unit/sig some-sig^
+  (import sig-that-includes-c^)
+  
+  (define a 13)
+  (define b (c)))
+  
+Now, during the execution of c, there's no mark on the stack which holds the bindings of a. DUH! I can't believe I didn't think of this before.  Okay, one possible solution for this would be to use _different keys_ for the marks, so that a mark on the unit-evaluation-continuaiton could be retained.
+  
