@@ -430,21 +430,11 @@
            (if (eq? stx highlight-placeholder-stx)
                (begin (queue-push highlight-queue-dest (unwind-and/or (queue-pop highlight-queue-src) user-source user-position))
                       highlight-placeholder-stx)
-               (with-syntax ([label (datum->syntax-object #f label)]
-                             [clauses
+               (with-syntax ([clauses
                               (let loop ([stx stx])
                                 (if (and (eq? user-source (syntax-property stx 'user-source))
                                          (eq? user-position (syntax-property stx 'user-position)))
-                                    (syntax-case stx (if let-values)
-                                      [(let-values (((part-0) test-stx)) (if part-1 part-2 part-3))
-                                       (cons (inner (syntax test-stx))
-                                             (case label
-                                               ((and)
-                                                (loop (syntax part-2)))
-                                               ((or)
-                                                (loop (syntax part-3)))
-                                               (else
-                                                (error 'unwind-and/or "unknown label ~a" label))))]
+                                    (syntax-case stx (if let-values #%datum)
                                       [(if part-1 part-2 part-3)
                                        (cons (inner (syntax part-1))
                                              (case label
@@ -455,8 +445,8 @@
                                                (else
                                                 (error 'unwind-and/or "unknown label ~a" label))))]
                                       [else (error 'unwind-and/or "syntax: ~a does not match and/or patterns" (syntax-object->datum stx))])
-                                    (list (inner stx))))])
-                 (syntax (label . clauses))))))
+                                    null))])
+                 #`(#,label . clauses)))))
       
       (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
       (let* ([main (map inner stxs)]

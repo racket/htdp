@@ -199,43 +199,7 @@
                                            (map recur-regular (syntax->list #'(rhs ...))))]
                              [new-bodies (map (lambda (exp) (recur-with-bindings exp vars-list)) (syntax->list #'bodies))]
                              [new-bindings (map list labelled-vars-list rhs-list)])
-                        (datum->syntax-object stx `(,#'label ,new-bindings ,@new-bodies) stx stx))))]
-                 [do-or
-                  ; NOTE: I maintain my invariants in this section through foreknowledge of the shape of 
-                  ; the or macro. Therefore, this code is fragile.
-                  (lambda (new-and/or-test stx)
-                    (kernel:kernel-syntax-case stx #f
-                      [(let-values [((test-var) test-exp)] (if if-test then else))
-                       (let* ([new-test (syntax-property (recur-with-macro-bindings (syntax if-test) (list (syntax test-var)))
-                                                         'stepper-skip-completely
-                                                         #t)]
-                              [new-then-else (list (recur-with-macro-bindings (syntax then) (list (syntax test-var)))
-                                                   (recur-in-and/or (syntax else) new-and/or-test (list (syntax test-var))))]
-                              [new-if (syntax-property (rebuild-stx `(if ,new-test
-                                                                         ,@new-then-else)
-                                                                    stx)
-                                                       'stepper-hint
-                                                       'comes-from-or)])
-                         (syntax-property (rebuild-stx `(let-values ([(,(syntax-property (recur-regular (syntax test-var))
-                                                                                         'stepper-binding-type
-                                                                                         'macro-bound))
-                                                                      ,(recur-regular (syntax test-exp))])
-                                                          ,new-if)
-                                                       stx)
-                                          'stepper-hint
-                                          'comes-from-or))]))]
-                 
-                 [do-and
-                  ; same note as above
-                  (lambda (new-and/or-test stx)
-                    (kernel:kernel-syntax-case stx #f
-                      [(if test then else)
-                       (syntax-property (rebuild-stx `(if ,(recur-regular (syntax test))
-                                                          ,(recur-in-and/or (syntax then) new-and/or-test null)
-                                                          ,(recur-regular (syntax else)))
-                                                     stx)
-                                        'stepper-hint
-                                        'comes-from-and)]))])
+                        (datum->syntax-object stx `(,#'label ,new-bindings ,@new-bodies) stx stx))))])
             (kernel:kernel-syntax-case stx #f
               
               ; define-lambda :
@@ -252,28 +216,6 @@
                                      (cons #'define-values (syntax (names (lambda args lambda-body))))
                                      stx
                                      stx))]
-              ; or :
-              [(let-values x ...)
-               (let ([origin (syntax-property stx 'origin)])
-                 (and origin (pair? origin) (pair? (cdr origin)) (eq? (syntax-e (cadr origin)) 'or)))
-               (do-or (lx (and (eq? (syntax-source stx) (syntax-source _))
-                               (eq? (syntax-position stx) (syntax-position _)))) 
-                      stx)]
-              [(let-values x ...)
-               (and/or-test stx)
-               (do-or and/or-test stx)]
-              
-              ; and : 
-              [(if test then else)
-               (let ([origin (syntax-property stx 'origin)])
-                 (and origin (pair? origin) (pair? (cdr origin)) (eq? (syntax-e (cadr origin)) 'and)))
-               (do-and (lx (and (eq? (syntax-source stx) (syntax-source _))
-                                (eq? (syntax-position stx) (syntax-position _))))
-                       stx)]
-              
-              [(if test then else)
-               (and/or-test stx)
-               (do-and and/or-test stx)]
               
               ; cond :
               [(if test (begin then) else-stx)
@@ -1056,5 +998,5 @@
          
          ; body of local
          (let* ([annotated-expr (annotate/top-level expr)])
-           (fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
+           ;(fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
            (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index))))))
