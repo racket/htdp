@@ -2,7 +2,7 @@
   (require "mred-extensions.ss"
            "my-macros.ss"
            (lib "specs.ss" "framework")
-           (lib "unitsig.ss"))
+           "pconvert.ss")
   
   ; there are two separate reasons to use units here, but it's just too painful.
   ; reason 1) the drscheme:language procedures are linked at runtime into the
@@ -23,12 +23,15 @@
    check-global-defined ; : (symbol -> boolean)
    global-lookup
    
+   print-convert ; (-> any any)
+   
    get-render-settings ; (-> render-settings?)
    fake-beginner-render-settings ; render-settings?
    
    render-settings? ; predicate
    
    set-render! ; (-> (-> any? string?) void?)
+   set-set-print-settings ; (-> (-> (-> any) any) void?)
    )
   
   ; contracts for procedures in the settings unit:
@@ -40,11 +43,22 @@
   
   (define (render val)
     (error 'model-settings "render not set yet"))
-    
+  (define (set-print-settings val)
+    (error 'model-settings "set-print-settings not set yet"))
+  
   (define set-render!
     (contract
      (-> (-> any? string?) void?)
      (lx (set! render _))
+     'model-settings
+     'caller))
+  
+  (define set-set-print-settings!
+    (contract
+     (-> (-> (-> any)
+             any)
+         void?)
+     (lx (set! set-print-settings _))
      'model-settings
      'caller))
   
@@ -71,7 +85,30 @@
          (lx abbreviate-cons-as-list/bool))))
      'model-settings
      'caller))
+  
+  ;; print-convert : (-> any any)
+  (define print-convert
+    (contract
+     (-> any any)
+     (lambda (val)
+       (set-print-settings
+        (lambda ()
+          (simple-module-based-language 
       
+  ;; COPIED FROM drscheme/private/language.ss
+  ;; simple-module-based-language-convert-value : TST settings -> TST
+  (define (simple-module-based-language-convert-value value settings)
+        (case (simple-settings-printing-style settings)
+          [(write) value]
+          [(constructor)
+           (parameterize ([constructor-style-printing #t]
+                          [show-sharing (simple-settings-show-sharing settings)])
+             (print-convert value))]
+          [(quasiquote)
+           (parameterize ([constructor-style-printing #f]
+                          [show-sharing (simple-settings-show-sharing settings)])
+             (print-convert value))]))
+  
   
   (define check-global-defined
     (contract

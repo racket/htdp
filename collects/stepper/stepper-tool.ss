@@ -186,18 +186,29 @@
            
            (define settings 
              (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol)))
+           (define language
+             (drscheme:language-configuration:language-settings-language settings))
            
-           (set-render! 
-            (lambda (val)
-              (let ([string-port (open-output-string)])
-                (send drscheme:language:language
-                      render-value
-                      val
-                      settings
-                      string-port
-                      #f)
-                (get-output-string string-port))))
-                      
+           
+           ;; render-to-string : TST -> string
+           (define (render-to-string val)
+                (let ([string-port (open-output-string)])
+                  (send language
+                        render-value
+                        val
+                        settings
+                        string-port
+                        #f)
+                  (get-output-string string-port)))
+           
+           ;; set-print-settings ; ( -> TST) -> TST
+           (define (set-print-settings thunk)
+             (unless (method-in-interface? 'set-print-settings (object-interface language))
+               (error 'stepper-tool "language object does nat contain set-print-settings method"))
+             (send language set-print-settings thunk))
+              
+           (set-render! render-to-string)
+           (set-set-print-settings! set-print-settings)           
                  
            (define program-expander
              (contract
