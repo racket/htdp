@@ -25,7 +25,7 @@
           (iter (expand (car expr-list)) (stream-ify (cdr expr-list) iter)))))
  
   
-  (define (test-sequence-core namespace-spec render-settings track-inferred-names? in-port expected-steps)
+  (define (test-sequence-core namespace-spec teachpack-specs render-settings track-inferred-names? in-port expected-steps)
     (let* ([current-error-display-handler (error-display-handler)]) 
         (let* ([all-steps
                 (append expected-steps 
@@ -51,14 +51,14 @@
                                        (if (eof-object? expr)
                                            null
                                            (cons expr (read-loop)))))]
-                         [exprs (wrap-in-module exps namespace-spec)])
+                         [exprs (wrap-in-module exps namespace-spec teachpack-specs)])
                     ((stream-ify exprs iter))))])
           (let/ec escape
             (parameterize ([error-escape-handler (lambda () (escape (void)))])
               (go program-expander receive-result render-settings track-inferred-names?)))
           (error-display-handler current-error-display-handler))))
   
-  (define (test-sequence namespace-spec render-settings track-inferred-names? exp-str expected-steps)
+  (define (test-sequence namespace-spec teachpack-specs render-settings track-inferred-names? exp-str expected-steps)
     (let ([filename (build-path test-directory "stepper-test")])
       (call-with-output-file filename
         (lambda (port)
@@ -66,12 +66,12 @@
         'truncate)
       (printf "testing string: ~v\n" exp-str)
       (letrec ([port (open-input-file filename)])
-        (test-sequence-core namespace-spec render-settings track-inferred-names? port expected-steps))))
+        (test-sequence-core namespace-spec teachpack-specs render-settings track-inferred-names? port expected-steps))))
 
   
   (define (lang-level-test-sequence namespace-spec rs track-inferred-names?)
     (lambda args
-      (apply test-sequence namespace-spec rs track-inferred-names? args)))
+      (apply test-sequence namespace-spec `()- rs track-inferred-names? args)))
   
   (define (make-multi-level-test-sequence level-fns)
     (lambda args
@@ -1057,7 +1057,7 @@
   
   (require (lib "mred.ss" "mred"))
   
-  (define tp-namespace
+  #;(define tp-namespace
     (let ([ns (current-namespace)]
           [mred-name ((current-module-name-resolver) '(lib "mred.ss" "mred") #f #f)]
           [new-namespace (make-namespace 'empty)])
@@ -1069,10 +1069,10 @@
         (namespace-require '(lib "servlet2.ss" "htdp"))
         new-namespace)))
   
-  (define test-teachpack-sequence (lambda args
+  (define test-teachpack-sequence (lambda (teachpack-specs expr-string expected-results)
                                     (let ([new-custodian (make-custodian)])
                                       (parameterize ([current-custodian new-custodian])
-                                        (apply (lang-level-test-sequence tp-namespace fake-beginner-render-settings #t) args))
+                                        (test-sequence `(lib "htdp-beginner.ss" "lang") teachpack-specs fake-beginner-render-settings #t expr-string expected-results))
                                       (custodian-shutdown-all new-custodian))))
   
     
@@ -1086,6 +1086,7 @@
   
   (t teachpack-drawing
   (test-teachpack-sequence 
+   `((lib "draw.ss" "htdp"))
    "(define (draw-limb i) (cond  
  [(= i 1) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
  [(= i 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))  
@@ -1119,6 +1120,7 @@
  
   (t teachpack-web-interaction
   (test-teachpack-sequence
+   `((lib "servlet2.ss" "htdp"))
 "(define (adder go) (inform (number->string (+ (single-query (make-number \"enter 10\")) (single-query (make-number \"enter 20\"))))))
 (adder true)"
 `((before-after-finished ((define (adder go) (inform (number->string (+ (single-query (make-number "enter 10")) (single-query (make-number "enter 20")))))))
