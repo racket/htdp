@@ -343,7 +343,7 @@
                                          error-msg after-exprs (line-spacing 1.0) (tabstops null))
       (inherit find-snip insert change-style highlight-range last-position lock erase auto-wrap
                begin-edit-sequence end-edit-sequence get-start-position get-style-list set-style-list
-               get-admin get-snip-location get-dc needs-update)
+               get-admin get-snip-location get-dc needs-update hide-caret)
       (public [reset-width 
                (lambda (canvas)
                  (begin-edit-sequence)
@@ -400,6 +400,7 @@
       
 
       (sequence (super-init line-spacing tabstops)
+                (hide-caret #t)
                 (set-style-list (f:scheme:get-style-list))
                 (let ([before-position (last-position)])
                   (for-each insert (list top-defs-snip (string #\newline) horiz-separator-1
@@ -596,8 +597,6 @@
       (send button-panel stretchable-width #f)
       (send button-panel stretchable-height #f)
       (send canvas stretchable-height #t)
-      ;(send canvas min-width stepper-minimum-width)
-      ;(send canvas min-height stepper-minimum-height)
       (send previous-button enable #f)
       (send home-button enable #f)
       (send next-button enable #f)
