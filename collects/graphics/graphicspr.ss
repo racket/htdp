@@ -181,8 +181,12 @@
 	   (send release-queue flush)
 	   (send press-queue flush))])))
   
+  (define open-frames-sema (make-semaphore 1))
+  (define open-frames 0)
+  (define open-frames-timer (make-object mred:timer%))
+
   (define sixlib-frame%
-    (class-asi mred:frame%
+    (class mred:frame% args
       (rename [super-on-close on-close])
       (public
 	[canvas #f]
@@ -191,7 +195,18 @@
        [on-close
 	(lambda ()
 	  (close-viewport (ivar canvas viewport))
-	  (super-on-close))])))
+	  (semaphore-wait open-frames-sema)
+	  (set! open-frames (- open-frames 1))
+	  (when (zero? open-frames)
+	    (send open-frames-timer stop))
+	  (semaphore-post open-frames-sema)
+	  (super-on-close))])
+      (sequence (apply super-init args)
+		(semaphore-wait open-frames-sema)
+		(when (zero? open-frames)
+		  (send open-frames-timer start 100000000))
+		(set! open-frames (+ open-frames 1))
+		(semaphore-post open-frames-sema))))
   
   (define repaint
     (lambda (viewport)
