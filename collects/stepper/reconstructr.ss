@@ -139,7 +139,7 @@
                         [var-val-thunk (car var-record)]
                         [var-top-level? (z:top-level-varref? expr)])
                    (if var-top-level?
-                       (z:varref-var expr)
+                       (string->uninterned-symbol (symbol->string (z:varref-var expr)))
                        (rectify-value (var-val-thunk)))))]
             
             [(z:app? expr)
