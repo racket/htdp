@@ -5,8 +5,7 @@
            (lib "pretty.ss")
            "highlight-placeholder.ss"
            "testing-shared.ss"
-	   (lib "string-constant.ss" "string-constants")
-           (lib "xml-snipclass.ss" "xml"))
+	   (lib "string-constant.ss" "string-constants"))
 
   (provide
    stepper-canvas%
