@@ -118,6 +118,14 @@
   ; a BINDING-SET is (union 'all (listof BINDING))
   ; a VARREF-SET is (listof VARREF)
   
+  (make-contract-checker BINDING-SET
+                         (lambda (arg)
+                           (or (eq? arg 'all)
+                               (andmap syntax? arg))))
+  (make-contract-checker VARREF-SET
+                         (lambda (arg)
+                           (andmap syntax? arg)))
+  
   ; note: a BINDING-SET which is not 'all may be used as a VARREF-SET.
   ; this is because they both consist of syntax objects, and a binding
   ; answers true to bound-identifier=? with itself, just like a varref
@@ -193,39 +201,32 @@
   (define (closure-key-maker closure)
     closure)
 
-  (define (contract-check-BINDING-SET? arg var-name)
-    (unless (or (eq? arg 'all)
-                (andmap syntax? arg))
-      (error 'contract-check "arg ~s is not a BINDING-SET: ~a" (symbol->string var-name) arg)))
-            
+              
   ;;;;;;;;;;
   ;;
   ;; make-debug-info builds the thunk which will be the mark at runtime.  It contains 
   ;; a source expression and a set of binding/value pairs.
-  ;; (syntax-object BINDING-SET BINDING-SET BINDING-SET symbol boolean) -> debug-info)
+  ;; (syntax-object BINDING-SET VARREF-SET VARREF-SET symbol boolean) -> debug-info)
   ;;
   ;;;;;;;;;;
      
-  (define (make-debug-info source tail-bound free-bindings advance-warning label lifting?)
-    ; CONTRACT CHECK:
-    (contract-check-BINDING-SET? tail-bound 'tail-bound)
-    (contract-check-BINDING-SET? free-bindings 'free-bindings)
-    (contract-check-BINDING-SET? advance-warning 'advance-warning)
-    (let* ([kept-bindings (if (eq? tail-bound 'all)
-                              free-bindings
-                              (binding-set-varref-set-intersect tail-bound
-                                                     free-bindings))]
-           [var-clauses (map (lambda (x) 
-                               (list x (d->so #f `(quote-syntax ,x))))
-                             kept-bindings)]
-           [let-bindings (filter (lambda (x) (not (lambda-bound-var? x))) 
-                                 (append advance-warning kept-bindings))]
-           [lifter-syms (map get-lifted-var let-bindings)]
-           [quoted-lifter-syms (map (lambda (b) 
-                                      (d->so #f `(syntax-quote ,b))) 
-                                    lifter-syms)]
-           [let-clauses (map list lifter-syms quoted-lifter-syms)])
-      (make-full-mark source label (append var-clauses (if lifting? let-clauses null)))))
+  (define make-debug-info
+    (checked-lambda (source (tail-bound BINDING-SET) (free-bindings VARREF-SET) (advance-warning VARREF-SET) label lifting?)
+                    (let* ([kept-bindings (if (eq? tail-bound 'all)
+                                              free-bindings
+                                              (binding-set-varref-set-intersect tail-bound
+                                                                                free-bindings))]
+                           [var-clauses (map (lambda (x) 
+                                               (list x (d->so #f `(quote-syntax ,x))))
+                                             kept-bindings)]
+                           [let-bindings (filter (lambda (x) (not (lambda-bound-var? x))) 
+                                                 (append advance-warning kept-bindings))]
+                           [lifter-syms (map get-lifted-var let-bindings)]
+                           [quoted-lifter-syms (map (lambda (b) 
+                                                      (d->so #f `(syntax-quote ,b))) 
+                                                    lifter-syms)]
+                           [let-clauses (map list lifter-syms quoted-lifter-syms)])
+                      (make-full-mark source label (append var-clauses (if lifting? let-clauses null))))))
   
   ; cheap-wrap for non-debugging annotation
   
@@ -387,17 +388,17 @@
          
          (define (wcm-pre-break-wrap debug-info expr)
            (if break
-               (simple-wcm-wrap debug-info (d->so #f `(begin (,(make-break 'result-break)) ,expr)))
+               (simple-wcm-wrap debug-info (d->so #f `(frob (,(make-break 'result-break)) ,expr)))
                (simple-wcm-wrap debug-info expr)))
          
          (define (break-wrap expr)
            (if break
-               (d->so #f `(begin (,(make-break 'normal-break)) ,expr))
+               (d->so expr `(frob (,(make-break 'normal-break)) ,expr))
                expr))
          
          (define (double-break-wrap expr)
            (if break
-               (d->so #f `(begin (,(make-break 'double-break)) ,expr))
+               (d->so expr `(begin (,(make-break 'double-break)) ,expr))
                expr))
          
          (define (simple-wcm-break-wrap debug-info expr)
@@ -690,11 +691,11 @@
                                       ; time to work from the inside out again
                                       ; without renaming, this would all be much much simpler.
                                       [middle-begin
-                                       (double-break-wrap (d->so #f `(begin ,@set!-clauses 
-                                                                            ,(late-let-break-wrap binding-list
-                                                                                                  lifted-vars
-                                                                                                  (car annotated-bodies))
-                                                                            ,@(cdr annotated-bodies))))]
+                                       (double-break-wrap (d->so expr `(begin ,@set!-clauses 
+                                                                              ,(late-let-break-wrap binding-list
+                                                                                                    lifted-vars
+                                                                                                    (car annotated-bodies))
+                                                                              ,@(cdr annotated-bodies))))]
                                       [wrapped-begin
                                        (wcm-wrap (make-debug-info expr 
                                                                   (binding-set-union (list tail-bound binding-list))
@@ -718,8 +719,9 @@
              (kernel:kernel-syntax-case expr #f
 
                [(lambda . clause)
-                (let*-2vals ([(annotated-clause free-varrefs)
+                (let*-2vals ([(annotated-clause free-varref-sets)
                               (lambda-clause-abstraction (syntax clause))]
+                             [free-varrefs (varref-set-union free-varref-sets)]
                              [annotated-lambda
                               (with-syntax ([annotated-clause annotated-clause])
                                 (syntax/loc expr (lambda . annotated-clause)))])
@@ -821,7 +823,7 @@
                                    (lambda (vals binding-list)
                                      (for-each mark-never-undefined binding-list))
                                    (lambda (bindings)
-                                     (d->so #f (map (lambda (_) *unevaluated*) bindings)))))]
+                                     (map (lambda (_) *unevaluated*) bindings))))]
                
                [(letrec-values . _)
                 (let-abstraction expr 
