@@ -1,7 +1,7 @@
 (module elevator mzscheme
   (require (lib "big-draw.ss" "htdp")
 	   (lib "error.ss" "htdp")
-           (lib "teach.ss" "lang" "private")
+	   (lib "posn.ss" "lang")
            (lib "etc.ss")
            (lib "mred.ss" "mred"))
 

@@ -1,7 +1,7 @@
 (module big-draw mzscheme
   (require "error.ss"
            "draw-sig.ss"
-           (lib "teach.ss" "lang" "private") ;; posn struct
+	   (lib "posn.ss" "lang")
            (lib "unitsig.ss")
            (prefix mred: (lib "mred.ss" "mred"))
            (lib "mred-sig.ss" "mred")

@@ -10,7 +10,7 @@ Matthias writes, about this file:
 (module hangman-play mzscheme
   (require "hangman.ss"
            "big-draw.ss"
-           (lib "teach.ss" "lang" "private"))
+	   (lib "posn.ss" "lang"))
 
   (provide go)
 

@@ -3,7 +3,7 @@
 	   (lib "unitsig.ss")
 	   (lib "draw-sig.ss" "htdp")
 	   (lib "big-draw.ss" "htdp")
-           (lib "teach.ss" "lang" "private"))
+	   (lib "posn.ss" "lang"))
 
   (provide-signature-elements draw^)
 
