@@ -77,8 +77,8 @@
 		      (set-size -1 -1 
 				(+ CANVAS-W-DELTA width) 
 				(+ CANVAS-H-DELTA height))
-		      (let ([bitmap (make-object wx:bitmap% width height)])
-			(send buffer-DC select-object bitmap))
+		      (set! bitmap (make-object wx:bitmap% width height))
+		      (send buffer-DC select-object bitmap)
 		      (send buffer-DC set-brush (send DC get-brush))
 		      (send buffer-DC set-pen (send DC get-pen))
 		      (let ([f (send DC get-font)])
@@ -96,6 +96,7 @@
 		 (label 0)
 		 current-pen
 		 current-brush
+		 bitmap
 		 DC
 		 buffer-DC
 		 (get-current-pen (lambda () current-pen))
@@ -479,6 +480,10 @@
    (define invisi-pen (make-object wx:pen% "WHITE" 1 wx:const-transparent))
    (define invisi-brush (make-object wx:brush% "WHITE" wx:const-transparent))
 
+   (define draw-it (lambda (draw flip clear) (draw)))
+   (define flip-it (lambda (draw flip clear) (flip)))
+   (define clear-it (lambda (draw flip clear) (clear)))
+
    (define make-draw-proc
      (lambda (draw-name get-pen-name set-pen-name 
 			get-current-pen-name set-viewport-pen white-pen)
@@ -533,9 +538,9 @@
 				    (lambda () (clear draw))))))])])
 	       the-function))))))
 
-   (define draw-line (make-do-line (lambda (draw flip clear) (draw))))
-   (define clear-line (make-do-line (lambda (draw flip clear) (clear))))
-   (define flip-line (make-do-line (lambda (draw flip clear) (flip))))
+   (define draw-line (make-do-line draw-it))
+   (define clear-line (make-do-line clear-it))
+   (define flip-line (make-do-line flip-it))
 
    (define make-do-box
      (lambda (go name get-pen-name set-pen-name
@@ -593,21 +598,76 @@
 		    'get-current-brush set-viewport-brush white-brush
 		    'get-pen 'set-pen invisi-pen)))
 
-   (define draw-rectangle (make-do-rectangle (lambda (draw flip clear) (draw))))
-   (define clear-rectangle (make-do-rectangle (lambda (draw flip clear) (clear))))
-   (define flip-rectangle (make-do-rectangle (lambda (draw flip clear) (flip))))
+   (define draw-rectangle (make-do-rectangle draw-it))
+   (define clear-rectangle (make-do-rectangle clear-it))
+   (define flip-rectangle (make-do-rectangle flip-it))
 
-   (define draw-solid-rectangle (make-do-solid-rectangle (lambda (draw flip clear) (draw))))
-   (define clear-solid-rectangle (make-do-solid-rectangle (lambda (draw flip clear) (clear))))
-   (define flip-solid-rectangle (make-do-solid-rectangle (lambda (draw flip clear) (flip))))
+   (define draw-solid-rectangle (make-do-solid-rectangle draw-it))
+   (define clear-solid-rectangle (make-do-solid-rectangle clear-it))
+   (define flip-solid-rectangle (make-do-solid-rectangle flip-it))
 
-   (define draw-ellipse (make-do-ellipse (lambda (draw flip clear) (draw))))
-   (define clear-ellipse (make-do-ellipse (lambda (draw flip clear) (clear))))
-   (define flip-ellipse (make-do-ellipse (lambda (draw flip clear) (flip))))
+   (define draw-ellipse (make-do-ellipse draw-it))
+   (define clear-ellipse (make-do-ellipse clear-it))
+   (define flip-ellipse (make-do-ellipse flip-it))
 
-   (define draw-solid-ellipse (make-do-solid-ellipse (lambda (draw flip clear) (draw))))
-   (define clear-solid-ellipse (make-do-solid-ellipse (lambda (draw flip clear) (clear))))
-   (define flip-solid-ellipse (make-do-solid-ellipse (lambda (draw flip clear) (flip))))
+   (define draw-solid-ellipse (make-do-solid-ellipse draw-it))
+   (define clear-solid-ellipse (make-do-solid-ellipse clear-it))
+   (define flip-solid-ellipse (make-do-solid-ellipse flip-it))
+
+   (define make-do-pointlist
+     (lambda (go name get-pen-name set-pen-name
+		 get-current-pen-name set-viewport-pen white-pen
+		 get-brush-name set-brush-name invisi-brush)
+       (let ([f (make-draw-proc name get-pen-name set-pen-name 
+				get-current-pen-name set-viewport-pen white-pen)])
+	 (lambda (viewport)
+	   (let ([f (f viewport)]
+		 [get-brush (uq-ivar (viewport-DC viewport) get-brush-name)]
+		 [set-brush-1 (uq-ivar (viewport-DC viewport) set-brush-name)]
+		 [set-brush-2 (uq-ivar (viewport-buffer-DC viewport) set-brush-name)])
+	     (letrec ([the-function
+		       (case-lambda
+			[(posns offset) (the-function posns offset #f)]
+			[(posns offset color)
+			 (f color
+			    (lambda (draw-1 draw-2 flip clear)
+			      (let* ([points (map (lambda (p)
+						    (make-object wx:point% (posn-x p) (posn-y p)))
+						  posns)]
+				     [x (posn-x offset)]
+				     [y (posn-y offset)]
+				     [orig (get-brush)]
+				     [draw (lambda ()
+					     (set-brush-1 invisi-brush)
+					     (set-brush-2 invisi-brush)
+					     (draw-1 points x y)
+					     (draw-2 points x y)
+					     (set-brush-1 orig)
+					     (set-brush-2 orig))])
+				(go draw
+				    (lambda () (flip draw))
+				    (lambda () (clear draw))))))])])
+	       the-function))))))
+
+   (define make-do-polygon
+     (lambda (go)
+       (make-do-pointlist go 'draw-polygon 'get-pen 'set-pen 
+			  'get-current-pen set-viewport-pen white-pen
+			  'get-brush 'set-brush invisi-brush)))
+
+   (define make-do-solid-polygon
+     (lambda (go)
+       (make-do-pointlist go 'draw-polygon 'get-brush 'set-brush  
+			  'get-current-brush set-viewport-brush white-brush
+			  'get-pen 'set-pen invisi-pen)))
+
+   (define draw-polygon (make-do-polygon draw-it))
+   (define clear-polygon (make-do-polygon clear-it))
+   (define flip-polygon (make-do-polygon flip-it))
+
+   (define draw-solid-polygon (make-do-solid-polygon draw-it))
+   (define clear-solid-polygon (make-do-solid-polygon clear-it))
+   (define flip-solid-polygon (make-do-solid-polygon flip-it))
 
    (define make-do-pixel
      (lambda (go)
@@ -631,9 +691,9 @@
 				    (lambda () (clear draw))))))])])
 	       the-function))))))
 
-   (define draw-pixel (make-do-pixel (lambda (draw flip clear) (draw))))
-   (define clear-pixel (make-do-pixel (lambda (draw flip clear) (clear))))
-   (define flip-pixel (make-do-pixel (lambda (draw flip clear) (flip))))
+   (define draw-pixel (make-do-pixel draw-it))
+   (define clear-pixel (make-do-pixel clear-it))
+   (define flip-pixel (make-do-pixel flip-it))
    
    (define pixmap-functions
      (lambda (pixel-op)
@@ -837,4 +897,61 @@
 		[G (- 1 R)])
 	   (change-color index (make-rgb R G B))))))
 
+   (define viewport-snipclass
+     (make-object
+      (class wx:snip-class% ()
+	     (inherit set-classname)
+	     (sequence
+	       (super-init)
+	       (set-classname "viewport-snip"))
+	     (public
+	      [complained? #f]
+	      [write-header
+	       (lambda ()
+		 (set! complained? #f)
+		 #t)]
+	      [write-complain
+	       (lambda ()
+		 (unless complained?
+			 (set! complained? #t)
+			 (wx:message-box "Can't save viewport images" "Warning")))]))))
+   
+   (define viewport-snip%
+     (class wx:snip% (mem-dc bitmap)
+	    (inherit set-snipclass)
+	    (sequence 
+	      (super-init)
+	      (set-snipclass viewport-snipclass))
+	    (public
+	     [get-extent
+	      (lambda (dc x y w h descent space lspace rspace)
+		(let ([zero! (lambda (x) (unless (null? x)
+						 (set-box! x 0.0)))])
+		  (unless (null? w)
+			  (set-box! w (send bitmap get-width)))
+		  (unless (null? h)
+			  (set-box! h (send bitmap get-height)))
+		  (zero! descent)
+		  (zero! space)
+		  (zero! lspace)
+		  (zero! rspace)))]
+	     [draw
+	      (lambda (dc x y left top right bottom dx dy draw-caret)
+		(let ([w (send bitmap get-width)]
+		      [h (send bitmap get-height)])
+		  (send dc blit x y w h mem-dc 0 0)))]
+	     [copy
+	      (lambda ()
+		(make-object viewport-snip% mem-dc bitmap))]
+	     [write
+	      (lambda ()
+		(send viewport-snipclass write-complain))])))
+
+   (define viewport->snip
+     (lambda (viewport)
+       (let* ([dc (viewport-buffer-DC viewport)]
+	      [bitmap (ivar (viewport-canvas viewport) bitmap)]
+	      [snip (make-object viewport-snip% dc bitmap)])
+	 snip)))
+	 
    (create-cmap)))
