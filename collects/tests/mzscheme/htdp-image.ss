@@ -48,14 +48,14 @@
            (lambda (s1 s2)
              (apply max
                     (map (lambda (x y) (abs (- x y))) 
-                         (map char->integer (string->list s1))
-                         (map char->integer (string->list s1)))))])
+                         (bytes->list s1)
+                         (bytes->list s1))))])
       
       ;; test that no drawing is outside the snip's drawing claimed drawing area
       (let ([bm-clip (make-object bitmap% (+ width 100) (+ height 100))]
             [bm-noclip (make-object bitmap% (+ width 100) (+ height 100))]
-            [s-clip (make-string (* (+ width 100) (+ height 100) 4))]
-            [s-noclip (make-string (* (+ width 100) (+ height 100) 4))])
+            [s-clip (make-bytes (* (+ width 100) (+ height 100) 4))]
+            [s-noclip (make-bytes (* (+ width 100) (+ height 100) 4))])
         (send bdc set-bitmap bm-clip)
         (send bdc clear)
         (send bdc set-clipping-rect 50 50 width height)
@@ -68,12 +68,12 @@
         (send snp draw bdc 50 50 0 0 (+ width 100) (+ height 100) 0 0 #f)
         (send bdc get-argb-pixels 0 0 (+ width 100) (+ height 100) s-noclip)
         (send bdc set-bitmap #f)
-        (test (list 'bmclip name #t) (lambda () (list 'bmclip name (string=? s-clip s-noclip)))))
+        (test (list 'bmclip name #t) (lambda () (list 'bmclip name (equal? s-clip s-noclip)))))
       
       (let ([bm-normal (make-object bitmap% width height)]
             [bm-bitmap (make-object bitmap% width height)]
-            [s-normal (make-string (* width height 4))]
-            [s-bitmap (make-string (* width height 4))])
+            [s-normal (make-bytes (* width height 4))]
+            [s-bitmap (make-bytes (* width height 4))])
         
         (send bdc set-bitmap bm-normal)
         (send bdc clear)
@@ -388,16 +388,24 @@
        (text "x" 12 'red)))
 
 (test (make-posn 2 5)
-      'find-image
+      'find-image1
       (find-image (overlay/xy (p00 (rectangle 16 16 'solid 'red))
                               2 5
                               (p00 (ellipse 6 6 'outline 'blue)))
-                  (ellipse 6 6 'outline 'blue)))
+                  (p00 (ellipse 6 6 'outline 'blue))))
 
 (test (make-posn 0 0)
-      'find-image
-      (find-image (rectangle 16 16 'solid 'blue)
-                  (ellipse 6 6 'outline 'blue)))
+      'find-image2
+      (find-image (p00 (rectangle 16 16 'solid 'blue))
+                  (p00 (ellipse 6 6 'outline 'blue))))
+
+(test (make-posn 1 1)
+      'find-image3
+      (find-image (overlay/xy (rectangle 10 10 'solid 'blue)
+                              1
+                              1
+                              (ellipse 5 5 'solid 'red))
+                  (ellipse 5 5 'solid 'red)))
 
 (test 5
       'image-width

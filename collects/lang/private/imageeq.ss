@@ -75,7 +75,7 @@
   (define (bitmap->mask bitmap)
     (let* ([w (send bitmap get-width)]
            [h (send bitmap get-height)]
-           [s (make-string (* 4 w h))]
+           [s (make-bytes (* 4 w h))]
            [new-bitmap (make-object bitmap% w h)]
            [dc (make-object bitmap-dc% new-bitmap)])
       (send dc clear)
@@ -86,12 +86,12 @@
           (let ([r (- i 3)]
                 [g (- i 2)]
                 [b (- i 1)])
-            (unless (and (eq? #\377 (string-ref s r))
-                         (eq? #\377 (string-ref s g))
-                         (eq? #\377 (string-ref s b)))
-              (string-set! s r #\000)
-              (string-set! s g #\000)
-              (string-set! s b #\000))
+            (unless (and (eq? 255 (bytes-ref s r))
+                         (eq? 255 (bytes-ref s g))
+                         (eq? 255 (bytes-ref s b)))
+              (bytes-set! s r 0)
+              (bytes-set! s g 0)
+              (bytes-set! s b 0))
             (loop (- i 4)))))
       (send dc set-argb-pixels 0 0 w h s)
       (begin0

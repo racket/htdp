@@ -431,7 +431,9 @@ plt/collects/tests/mzscheme/image-test.ss
     (check-image who i "first")
     (check-image who a "second")
     (let-values ([(iw ih) (snip-size i)]
-                 [(aw ah) (snip-size a)])
+                 [(ipx ipy) (send i get-pinhole)]
+                 [(aw ah) (snip-size a)]
+                 [(apx apy) (send a get-pinhole)])
       (and (iw . >= . aw)
            (ih . >= . ah)
            (let ([i-argb-vector (argb-vector (send i get-argb))]
@@ -452,7 +454,7 @@ plt/collects/tests/mzscheme/image-test.ss
                                             (car al)
                                             (* 4 (+ (* (+ dy dd) iw) dx)))
                                            (loop (cdr al) (add1 dd)))))
-                                (make-posn dx dy)
+                                (make-posn (+ dx (- apx ipx)) (+ dy (- apy ipy)))
                                 (xloop (add1 dx)))
                             (yloop (add1 dy)))))))))))
   
@@ -640,7 +642,7 @@ converting from the computer's coordinates, we get:
       (send bdc draw-bitmap i 0 0 'solid 
             (send the-color-database find-color "black")
             (send i get-loaded-mask))
-      (let ([is (make-string (* 4 iw ih))]
+      (let ([is (make-bytes (* 4 iw ih))]
             [cols (make-vector (* iw ih))])
         (send bdc get-argb-pixels 0 0 iw ih is)
         (let yloop ([y 0][pos 0])
@@ -650,9 +652,9 @@ converting from the computer's coordinates, we get:
                   (yloop (add1 y) pos)
                   (begin
                     (vector-set! cols (+ x (* y iw))
-                                 (make-color (char->integer (string-ref is (+ 1 pos)))
-                                             (char->integer (string-ref is (+ 2 pos)))
-                                             (char->integer (string-ref is (+ 3 pos)))))
+                                 (make-color (bytes-ref is (+ 1 pos))
+                                             (bytes-ref is (+ 2 pos))
+                                             (bytes-ref is (+ 3 pos))))
                     (xloop (add1 x) (+ pos 4)))))))
         (send bdc set-bitmap #f)
         (vector->list cols))))
@@ -696,8 +698,8 @@ converting from the computer's coordinates, we get:
            [mask-dc (make-object bitmap-dc% mask-bm)])
       (unless (send bm ok?)
 	(error (format "cannot make ~a x ~a image" w h)))
-      (let ([is (make-string (* 4 w h) #\000)]
-            [mask-is (make-string (* 4 w h) #\000)]
+      (let ([is (make-bytes (* 4 w h) 0)]
+            [mask-is (make-bytes (* 4 w h) 0)]
 	    [cols (list->vector cl)])
 	(let yloop ([y 0][pos 0])
 	  (unless (= y h)
@@ -708,13 +710,13 @@ converting from the computer's coordinates, we get:
                          [r (pk color-red col)]
                          [g (pk color-green col)]
                          [b (pk color-blue col)])
-		    (string-set! is (+ 1 pos) r)
-		    (string-set! is (+ 2 pos) g)
-		    (string-set! is (+ 3 pos) b)
-                    (when (char=? r g b #\377)
-                      (string-set! mask-is (+ 1 pos) #\377)
-                      (string-set! mask-is (+ 2 pos) #\377)
-                      (string-set! mask-is (+ 3 pos) #\377))
+		    (bytes-set! is (+ 1 pos) r)
+		    (bytes-set! is (+ 2 pos) g)
+		    (bytes-set! is (+ 3 pos) b)
+                    (when (= 255 r g b)
+                      (bytes-set! mask-is (+ 1 pos) 255)
+                      (bytes-set! mask-is (+ 2 pos) 255)
+                      (bytes-set! mask-is (+ 3 pos) 255))
                     (xloop (add1 x) (+ pos 4)))))))
 	(send dc set-argb-pixels 0 0 w h is)
         (send mask-dc set-argb-pixels 0 0 w h mask-is))
@@ -722,7 +724,7 @@ converting from the computer's coordinates, we get:
       (send mask-dc set-bitmap #f)
       (bitmaps->cache-image-snip bm mask-bm px py)))
   
-  (define (pk sel col) (integer->char (min 255 (max 0 (sel col)))))
+  (define (pk sel col) (min 255 (max 0 (sel col))))
   
   (define (alpha-color-list->image cl w h px py)
     (check 'alpha-color-list->image alpha-color-list? cl "list-of-alpha-colors" "first")

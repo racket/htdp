@@ -19,9 +19,7 @@
              (define (get-procs!)
                (unless tried?
                  (set! tried? #t)
-                 (with-handlers ([not-break-exn? (lambda (x)
-                                                   (fprintf op "err: ~a\n" (exn-message x))
-                                                   #f)])
+                 (with-handlers ([exn:fail? (lambda (x) #f)])
                    (set! got-id (dynamic-require '(lib "imageeq.ss" "lang" "private") 'id))
                    ...)))))]))
 
