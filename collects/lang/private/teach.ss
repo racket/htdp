@@ -315,18 +315,19 @@
 			      id 
 			      id)))
 
-    (define (wrap-func-definitions first-order? kinds names k)
+    (define (wrap-func-definitions first-order? kinds names argcs k)
       (if first-order?
 	  (let ([name2s (map (make-name-inventer) names)])
 	    (quasisyntax
 	     (begin
 	       #,@(map
-		   (lambda (name name2 kind)
+		   (lambda (name name2 kind argc)
 		     #`(define-syntax #,name 
 			 (make-first-order-function '#,kind 
+						    #,argc
 						    (quote-syntax #,name2) 
 						    (quote-syntax #%app))))
-		   names name2s kinds)
+		   names name2s kinds argcs)
 	       #,(k name2s))))
 	  (k names)))
 
@@ -337,9 +338,9 @@
 
     (define (beginner-or-intermediate-define/proc first-order? stx)
 
-      (define (wrap-func-definition name k)
+      (define (wrap-func-definition name argc k)
 	(wrap-func-definitions first-order? 
-			       '(procedure) (list name) 
+			       '(procedure) (list name) (list argc)
 			       (lambda (names)
 				 (k (car names)))))
 
@@ -378,6 +379,7 @@
 		 #'name
 		 (wrap-func-definition
 		  #'name
+		  (length (syntax->list #'arg-seq))
 		  (lambda (name)
 		    (with-syntax ([name name])
 		      (quasisyntax/loc 
@@ -443,6 +445,7 @@
             (car names)
 	    (wrap-func-definition
 	     (car (syntax-e #'name-seq))
+	     (length (cdr (syntax->list #'name-seq)))
 	     (lambda (fn)
 	       (with-syntax ([fn fn]
 			     [args (cdr (syntax-e #'name-seq))])
@@ -637,6 +640,9 @@
 			      (list* 'constructor 
 				     'predicate
 				     (map (lambda (x) 'selector) (cddr to-define-names)))
+			      (list* (- (length to-define-names) 2)
+				     1
+				     (map (lambda (x) 1) (cddr to-define-names)))
 			      to-define-names
 			      (lambda (def-to-define-names)
 				(with-syntax ([(def-to-define-name ...) def-to-define-names]
