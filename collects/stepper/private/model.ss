@@ -207,7 +207,7 @@
                                                        'foot-wrap)])
              (set! packaged-envs envs)
              (set! current-expr expanded)
-             (with-handlers ([(lambda (exn) #t) 
+             (with-handlers ([(lambda (exn) #f); #t) 
                               (lambda (exn) 
                                 (err-handler (exn-message exn)))])
              (let ([expression-result

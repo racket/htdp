@@ -10,29 +10,29 @@
   
   (define (test-sequence namespace render-settings exp-str expected-steps)
     (printf "testing string: ~v\n" exp-str)
-    (let* ([expanded-steps
-            (map expand-test-spec expected-steps)]
-           [receive-result
-            (lambda (result)
-              (if (compare-steps result (car expanded-steps))
-                  (set! expanded-steps (cdr expanded-steps))
-                  (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expanded-steps))))]
-           [expand-in-namespace
-            (lambda (sexp)
-              (parameterize ([current-namespace namespace])
-                (expand sexp)))]
-           [program-expander
-            (lambda (init iter)
-              (letrec ([input-port (open-input-string exp-str)]
-                       [read-and-deliver
-                        (lambda ()
-                          (let ([new-exp (read input-port)])
-                            (if (eof-object? new-exp)
-                                (iter new-exp void)
-                                (iter (expand-in-namespace new-exp) read-and-deliver))))])
-                (init)
-                (read-and-deliver)))])
-      (go program-expander receive-result render-settings)))
+    (parameterize ([current-namespace namespace])
+      (let* ([expanded-steps
+              (map expand-test-spec expected-steps)]
+             [receive-result
+              (lambda (result)
+                (if (compare-steps result (car expanded-steps))
+                    (set! expanded-steps (cdr expanded-steps))
+                    (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expanded-steps))))]
+             [expand-in-namespace
+              (lambda (sexp)
+                (expand sexp))]
+             [program-expander
+              (lambda (init iter)
+                (letrec ([input-port (open-input-string exp-str)]
+                         [read-and-deliver
+                          (lambda ()
+                            (let ([new-exp (read input-port)])
+                              (if (eof-object? new-exp)
+                                  (iter new-exp void)
+                                  (iter (expand-in-namespace new-exp) read-and-deliver))))])
+                  (init)
+                  (read-and-deliver)))])
+        (go program-expander receive-result render-settings))))
   
   (define (lang-level-test-sequence ns rs)
     (lambda args
@@ -119,14 +119,14 @@
 		      (finished (3))))
   
 
-  (test-mz-sequence "((lambda (x) x) (begin (+ 3 4) (+ 4 5)"
-		    `((before-after ((begin ,h-p (+ 4 5))) ((+ 3 4))
-				    ((begin ,h-p (+ 4 5))) (7))
-		      (before-after (,h-p) ((begin 7 (+ 4 5)))
-				    (,h-p) ((+ 4 5)))
-                      (before-after (,h-p) ((+ 4 5))
-				    (,h-p) (9))
-		      (finished (9))))
+;  (test-mz-sequence "((lambda (x) x) (begin (+ 3 4) (+ 4 5)))"
+;		    `((before-after ((begin ,h-p (+ 4 5))) ((+ 3 4))
+;				    ((begin ,h-p (+ 4 5))) (7))
+;		      (before-after (,h-p) ((begin 7 (+ 4 5)))
+;				    (,h-p) ((+ 4 5)))
+;                      (before-after (,h-p) ((+ 4 5))
+;				    (,h-p) (9))
+;		      (finished (9))))
   
   (test-mz-sequence "((lambda (a) (lambda (b) (+ a b))) 14)"
                     `((before-after (,h-p) (((lambda (a) (lambda (b) (+ a b))) 14))

@@ -156,12 +156,14 @@
                                                                                          
   (define (skip-step? break-kind mark-list render-settings)
     (case break-kind
-      ((result-value-break result-exp-break)
-       #f)
-      ((normal-break)
-       (skip-redex-step? mark-list render-settings))
-      ((double-break late-let-break)
-       #f)))  
+      [(result-value-break result-exp-break)
+       #f]
+      [(normal-break)
+       (skip-redex-step? mark-list render-settings)]
+      [(double-break)
+       (render-settings-lifting? render-settings)]
+      [(late-let-break)
+       #f]))  
   
   (define (skip-redex-step? mark-list render-settings)
     (and (pair? mark-list)
@@ -785,6 +787,17 @@
                    #`(if #,test-exp 
                          #,(recon-source-current-marks (syntax then))
                          #,(recon-source-current-marks (syntax else))))
+                 expr)]
+               
+               ; one-armed if
+               
+               [(if test then)
+                (attach-info
+                 (let ([test-exp (if (eq? so-far nothing-so-far)
+                                     (recon-value (lookup-binding mark-list if-temp) render-settings)
+                                     so-far)])
+                   #`(if #,test-exp 
+                         #,(recon-source-current-marks (syntax then))))
                  expr)]
                
                ; quote : there is no break on a quote.
