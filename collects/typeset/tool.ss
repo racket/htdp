@@ -8,6 +8,11 @@
 
 (define read/snips (lambda x (error x)))
 
+(define (snipize obj)
+  (if (is-a? obj snip%)
+      obj
+      (make-string-snip obj)))
+
 (define (make-string-snip obj)
   (let* ([str (format "~a" obj)]
 	 [sn (make-object string-snip% (string-length str))])
@@ -149,12 +154,16 @@
       [expand
        (lambda (obj)
 	 (let ([text (get-editor)])
-	   (let ([read
-		  (zodiac:read
-		   (gui-utils:read-snips/chars-from-text text 0 (send text last-position))
-		   (zodiac:make-location 0 0 0 text)
-		   #t 1)])
-	     (read))))])
+	   (let* ([loc (zodiac:make-location 0 0 0 text)]
+		  [read
+		   (zodiac:read
+		    (gui-utils:read-snips/chars-from-text text 0 (send text last-position))
+		    loc
+		    #t 1)])
+	     (zodiac:structurize-syntax
+	      `(,snipize
+		,(read))
+	      (zodiac:make-zodiac #f loc loc)))))])
 
     (override
       [make-editor
@@ -187,7 +196,7 @@
 (send (get-the-snip-class-list) add evaluated-snipclass)
 
 (define plain-text%
-  (class text:basic% ([delta (make-object style-delta%)])
+  (class text:keymap% ([delta (make-object style-delta%)])
     (inherit change-style copy-self-to)
     (rename [super-after-insert after-insert]
             [super-on-insert on-insert])
@@ -223,13 +232,7 @@
       (is-a? snip evaluated-snip%)))
 
 (require-library "pretty.ss")
-(define (evaluate snip)
-  (let* ([transformed (transform snip)]
-	 [answer (eval transformed)])
-    (cond
-     [(is-a? answer snip%) (send answer copy)]
-     [(void? answer) (make-object void-snip%)]
-     [else (make-string-snip answer)])))
+
 
 (define (replace-in-template family template-snip . replacements)
   (let* ([delta (make-delta family)]
@@ -267,34 +270,9 @@
       (send snip set-tight-text-fit #t)
       snip)))
 
-(define (transform snip)
-  (cond
-   [(is-a? snip constant-snip%)
-    (let ([editor (send snip get-editor)])
-      `(replace-in-template
-	,snip
-	,@(let loop ([snip (send editor find-first-snip)])
-	    (cond
-	     [(not snip) `()]
-	     [(transformable? snip)
-	      `(,(transform snip)
-		.
-		,(loop (send snip next)))]
-	     [else (loop (send snip next))]))))]
-   [(is-a? snip evaluated-snip%)
-    (let ([sexp (read/snips (send snip get-editor))])
-      (let loop ([sexp sexp])
-	(cond
-	 [(transformable? sexp) (transform sexp)]
-	 [(pair? sexp) (cons (loop (car sexp)) (loop (cdr sexp)))]
-	 [(vector? sexp) (list->vector (map loop (vector->list sexp)))]
-	 [(box? sexp) (box (loop (unbox sexp)))]
-	 [else sexp])))]
-   [else snip]))
-
 (define (typeset-frame-extension super%)
   (class/d super% args
-    ((inherit get-editor get-menu-bar))
+    ((inherit get-editor get-menu-bar get-edit-target-object))
 
     (apply super-init args)
 
@@ -302,14 +280,16 @@
 	   [menu (make-object menu% "Typeset" mb)]
 	   [insert-snip
 	    (lambda (make-obj)
-	      (let loop ([editor (get-editor)])
-		(let ([focused (send editor get-focus-snip)])
-		  (if (and focused
-			   (is-a? focused editor-snip%))
-		      (loop (send focused get-editor))
-		      (let ([snip (make-obj)])
-			(send editor insert snip)
-			(send editor set-caret-owner snip 'display))))))])
+	      (let ([editor (get-edit-target-object)])
+		(when editor
+		  (let loop ([editor editor])
+		    (let ([focused (send editor get-focus-snip)])
+		      (if (and focused
+			       (is-a? focused editor-snip%))
+			  (loop (send focused get-editor))
+			  (let ([snip (make-obj)])
+			    (send editor insert snip)
+			    (send editor set-caret-owner snip 'display))))))))])
       (make-object menu-item% "Modern Constant Snip" menu
 		   (lambda (menu evt)
 		     (insert-snip
