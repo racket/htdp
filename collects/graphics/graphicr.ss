@@ -783,70 +783,27 @@
 		1
 		0))))))
   
-  ;; returns the draw, flip and clear operations. In that order.
-  (define pixmap-functions
-    (opt-lambda (filename [type (string->symbol (filename-extension filename))])
+  (define draw-pixmap-posn
+    (opt-lambda (filename [type 'unknown])
       (let* ([type
 	      (case type
-		[(gif xbm xpm bmp pict) type]
+		[(gif xbm xpm bmp pict unknown) type]
 		[else 
-		 (error 'pixmap "unrecognized file type: ~a~n" type)])]
-	     [bitmap (make-object mred:bitmap% filename type)]
-	     [do-job
-	      (lambda (viewport posn op)
-		(let ([x (posn-x posn)]
-		      [y (posn-y posn)]
-		      [DC (viewport-DC viewport)]
-		      [buffer (viewport-buffer-DC viewport)])
-		(send DC draw-bitmap bitmap x y op)
-		(send buffer draw-bitmap bitmap x y op)))])
-	(values (opt-lambda (viewport posn [color #f])
-		  (when color
-		    (set-viewport-pen viewport (get-pen color)))
-		  (do-job viewport posn 'solid))
-		(lambda (viewport posn)
-		  (do-job viewport posn 'xor))
-		(opt-lambda (viewport posn [color #f])
-		  (when color
-		    (set-viewport-pen viewport (get-pen color)))
-		  (do-job viewport posn 'solid))))))
-
-  (define-values (draw-pixmap-posn
-		  clear-pixmap-posn
-		  flip-pixmap-posn)
-    (let* ([box (box 0)]
-	   [construct-it
-	    (lambda (select color?)
-	      (opt-lambda (filename [type box])
-		(let ([func
-		       (call-with-values
-			(lambda ()
-			  (if (eq? box type)
-			      (pixmap-functions filename)
-			      (pixmap-functions filename type)))
-			(lambda x (select x)))])
-		  (lambda (pixmap)
-		    (if color?
-			(opt-lambda (posn [color #f])
-			  (func pixmap posn color))
-			(lambda (posn)
-			  (func pixmap posn)))))))])
-      (values (construct-it car #t)
-	      (construct-it cadr #f)
-	      (construct-it caddr #t))))
+		 (error 'pixmap "unrecognized file type: ~e~n" type)])]
+	     [bitmap (make-object mred:bitmap% filename type)])
+	(lambda (viewport)
+	  (opt-lambda (posn [color #f])
+	    (when color
+	      (set-viewport-pen viewport (get-color color)))
+	    (let ([x (posn-x posn)]
+		  [y (posn-y posn)])
+	      (send (viewport-DC viewport) draw-bitmap bitmap x y)
+	      (send (viewport-buffer-DC viewport) draw-bitmap bitmap x y)))))))
 
   (define draw-pixmap
     (lambda (pixmap)
       (opt-lambda (filename p [color #f])
-	(((draw-pixmap-posn filename 'xbm) pixmap) p color))))
-  (define flip-pixmap
-    (lambda (pixmap)
-      (opt-lambda (filename p [color #f])
-	(((flip-pixmap-posn filename 'xbm) pixmap) p color))))
-  (define clear-pixmap
-    (lambda (pixmap)
-      (opt-lambda (filename p)
-	(((clear-pixmap-posn filename 'xbm) pixmap) p))))
+	(((draw-pixmap-posn filename 'unknown) pixmap) p color))))
   
   (define DEFAULT-PEN black-pen)
   (define DEFAULT-FONT (make-object mred:font% 12 'roman 'normal 'normal))

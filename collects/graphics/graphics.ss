@@ -48,9 +48,8 @@
 
    draw-string clear-string flip-string 
 
-   pixmap-functions
-   draw-pixmap-posn clear-pixmap-posn flip-pixmap-posn
-   draw-pixmap clear-pixmap flip-pixmap
+   draw-pixmap-posn
+   draw-pixmap
 
    copy-viewport 
 
