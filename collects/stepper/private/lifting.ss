@@ -15,11 +15,17 @@
              (lambda (index-mangler list-of-subtries)
                (let loop ([index 0] [remaining list-of-subtries])
                  (unless (null? remaining)
-                   (if (eq? stx highlight-placeholder)
-                       (success-escape context-so-far)
+                   (fprintf (current-output-port) "~v\n" (syntax-object->datum stx))
+                   (if (kernel:kernel-syntax-case stx #f 
+                         [(#%top . var)
+                          (eq? (syntax-e #'var) highlight-placeholder)
+                          #t]
+                         [else #f]) ;(eq? stx highlight-placeholder)
                        (begin
-                         (fprintf (current-error-port) "about to try expression: ~v\n" (cadar list-of-subtries))
-                         ((caar list-of-subtries) (cadar list-of-subtries) (cons (make-context-record stx (index-mangler index) kind) context-so-far))
+                         (fprintf (current-error-port) "success!\n")
+                       (success-escape context-so-far))
+                       (begin
+                         ((caar remaining) (cadar remaining) (cons (make-context-record stx (index-mangler index) kind) context-so-far))
                          (loop (+ index 1) (cdr remaining))))))))
            
            (define try->offset-try
@@ -68,8 +74,9 @@
                      (lambda (stx)
                        (kernel:kernel-syntax-case stx #f
                          [(kwd (((variable ...) rhs) ...) . bodies)
-                          (try-exprs (lambda (index) (list 1 index 1)) #'(rhs ...))
-                          (try-exprs-offset 2 #'bodies)]
+                          (begin
+                            (try-exprs (lambda (index) (list 1 index 1)) #'(rhs ...))
+                            (try-exprs-offset 2 #'bodies))]
                          [else
                           (error 'expr-syntax-object-iterator 
                                  "unexpected let(rec) expression: ~a"
@@ -98,13 +105,15 @@
                  [(set! var val)
                   (try-exprs-offset 2 #'(val))]
                  [(quote _)
-                  (void)]q
+                  (void)]
                  [(quote-syntax _)
                   (void)]
                  [(with-continuation-mark key mark body)
                   (try-exprs-offset 1 #'(key mark body))]
                  [(#%app . exprs)
-                  (try-exprs-offset 0 #'exprs)]
+                  (begin
+                    (fprintf (current-error-port) "application sub-exprs: ~v\n" (map syntax-object->datum (syntax->list #'exprs)))
+                  (try-exprs-offset 0 #'exprs))]
                  [(#%datum . _)
                   (void)]
                  [(#%top . var)
@@ -120,7 +129,8 @@
   )
 
 (require find-highlight
-         "highlight-placeholder.ss")
+         "highlight-placeholder.ss"
+         (lib "kerncase.ss" "syntax"))
 
 (define (datum-ize-context-record cr)
   (make-context-record (syntax-object->datum (context-record-stx cr))
