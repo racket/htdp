@@ -6,6 +6,10 @@
           [b : userspace:basis^]
 	  stepper:shared^)
 
+  (define global-defined-vars #f)
+  (define (set-global-defined-vars! x) 
+    (set! global-defined-vars x))
+  
   (define nothing-so-far (gensym "nothing-so-far-"))
   
   (define (mark-source mark)
@@ -85,18 +89,13 @@
     (make-check-raw-first-symbol 'or))
 
   (define (rectify-value val)
-    (cond [(and (procedure? val) (primitive? val))
-           (primitive-name val)]
-          [(procedure? val)
-           (let ([recorded-name (closure-record-name
-                                 (closure-table-lookup val))])
-             (if recorded-name
-                 recorded-name
-                 'unknown-procedure))]
-          [else (parameterize
-                    ([p:constructor-style-printing #t]
-                     [p:abbreviate-cons-as-list #f])
-                  (p:print-convert val))]))
+    (let ([closure-record (closure-table-lookup val (lambda () #f))])
+      (if closure-record
+          (closure-record-name closure-record)
+          (parameterize
+              ([p:constructor-style-printing #t]
+               [p:abbreviate-cons-as-list #f])
+            (p:print-convert val)))))
   
   (define (o-form-case-lambda->lambda o-form)
     (cond [(eq? (car o-form) 'lambda)
@@ -114,7 +113,7 @@
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
  
-  (define (stop-here? mark-list all-defs global-defined-vars)
+  (define (stop-here? mark-list)
     (not (and (pair? mark-list)
               (let ([expr (mark-source (car mark-list))])
                 (or (and (z:varref? expr)
@@ -125,19 +124,21 @@
                                     (lambda (k)
                                       (with-handlers ([exn:variable?
                                                        (lambda (exn) (k #f))])
-                                        (procedure? (mark-binding-value
-                                                     (find-var-binding mark-list (z:varref-var expr)))))))))))
+                                        (let ([val (mark-binding-value
+                                                    (find-var-binding mark-list (z:varref-var expr)))])
+                                          (and (procedure? val)
+                                               (eq? var
+                                                    (closure-record-name 
+                                                     (closure-table-lookup val))))))))))))
                     (and (z:app? expr)
-                         (let ([app-first (z:app-fun expr)])
-                           (and (z:top-level-varref? app-first)
-                                (let ([var (z:varref-var app-first)])
-                                  (or (eq? var 'cons)
-                                      (let ([var-string (symbol->string var)])
-                                        (and (>= (string-length var-string) 5)
-                                             (string=? (substring (symbol->string var) 0 5)
-                                                     "make-")))))))))))))
-                                                         
-  
+                         (let ([fun-val (mark-binding-value
+                                         (find-var-binding mark-list 
+                                                           (z:varref-var (get-arg-symbol 0))))])
+                           (or (eq? fun-val cons)
+                               (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
+                                 (and closure-record
+                                      (closure-record-constructor? closure-record)))))))))))
+    
   (define (rectify-source-expr expr mark-list lexically-bound-vars)
     (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
       (cond [(z:varref? expr)
@@ -164,11 +165,17 @@
                        `(struct ,raw-type ,raw-fields))))]
             
             [(z:if-form? expr)
-             (if (comes-from-cond? expr)
-                 `(cond ,@(rectify-cond-clauses (z:zodiac-start expr) expr mark-list lexically-bound-vars))
-                 `(if ,(recur (z:if-form-test expr))
-                      ,(recur (z:if-form-then expr))
-                      ,(recur (z:if-form-else expr))))]
+             (cond
+               [(comes-from-cond? expr)
+                `(cond ,@(rectify-cond-clauses (z:zodiac-start expr) expr mark-list lexically-bound-vars))]
+               [(comes-from-and? expr)
+                `(and ,@(rectify-and-clauses (z:zodiac-start expr) expr mark-list lexically-bound-vars))]
+               [(comes-from-or? expr)
+                `(or ,@(rectify-or-clauses (z:zodiac-start expr) expr mark-list lexically-bound-vars))]
+               [else
+                `(if ,(recur (z:if-form-test expr))
+                     ,(recur (z:if-form-then expr))
+                     ,(recur (z:if-form-else expr)))])]
             
             [(z:quote-form? expr)
              (let ([raw (read->raw (z:quote-form-expr expr))])
@@ -214,12 +221,20 @@
               expr
               (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))])))
  
-;  (define (rectify-and and-source expr mark-list lexically-bound-vars)
-;    (let ([rectify-source (lambda (expr) (rectify-soruce-expr expr mark-list lexically-bound-vars))])
-;      (if (and (comes-from-and expr) (equal? and-source (z:zodiac-start expr)))
-;          (cons (rectify-source (z:if-form-test expr))
-;                (rectify-cond-clauses and-source (z:if-form))))))
-
+  (define (rectify-and-clauses and-source expr mark-list lexically-bound-vars)
+    (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
+      (if (equal? and-source (z:zodiac-start expr))
+          (cons (rectify-source (z:if-form-test expr))
+                (rectify-and-clauses and-source (z:if-form-then expr) mark-list lexically-bound-vars))
+          (list (rectify-source expr)))))
+  
+  (define (rectify-or-clauses or-source expr mark-list lexically-bound-vars)
+    (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
+      (if (equal? or-source (z:zodiac-start expr))
+          (cons (rectify-source (z:if-form-test expr))
+                (rectify-or-clauses or-source (z:if-form-else expr) mark-list lexically-bound-vars))
+          (list (rectify-source expr)))))
+  
   (define (rectify-cond-clauses cond-source expr mark-list lexically-bound-vars)
     (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
       (if (and (z:if-form? expr) (equal? cond-source (z:zodiac-start expr)))
@@ -264,6 +279,7 @@
                        [(or (comes-from-define-procedure? expr)
                             (and (comes-from-define? expr)
                                  current-expr?
+                                 (pair? so-far)
                                  (eq? (car so-far) 'lambda)))
                         (let* ([proc-name (z:varref-var
                                            (car (z:define-values-form-vars expr)))]
@@ -289,31 +305,31 @@
                    (rectify-source-current-marks expr))))
          
          (define (rectify-old-var var)
-           (let ([val ((car (find-var-binding mark-list var)))])
-             (if (procedure? val)
-                 (let* ([closure-record (closure-table-lookup val)]
-                        [info ((closure-record-mark closure-record))]
-                        [expr (car info)])
-                   (rectify-source-expr expr (list (lambda () info)) null))
-                 (rectify-value val))))
+           (let ([val (mark-binding-value (find-var-binding mark-list var))])
+             (rectify-value val)))
                   
          (define (rectify-old-expression expr vars)
-           (cond [(z:define-values-form? expr)
-                  (if (comes-from-define-struct? expr)
-                      (read->raw (expr-read expr))
-                      (let ([rectified-vars (map rectify-old-var vars)])
-                        (cond [(comes-from-define-procedure? expr)
-                               (o-form-lambda->define (o-form-case-lambda->lambda (car rectified-vars))
-                                                      (car vars))]
-                              [(comes-from-define? expr)
-                               `(define ,(car vars) ,(car rectified-vars))]
-                              [else
-                               `(define-values ,vars
-                                  ,(if (= (length rectified-vars) 1)
-                                       (car rectified-vars)
-                                       `(values ,@rectified-vars)))])))]
-                 [else
-                  (rectify-old-var (top-level-exp-gensym-source expr))]))
+           (let ([values (map (lambda (var) (mark-binding-value
+                                             (find-var-binding mark-list var)))
+                              vars)])
+             (cond [(z:define-values-form? expr)
+                    (if (comes-from-define-struct? expr)
+                        (read->raw (expr-read expr))
+                        (let ([rectified-vars (map rectify-value values)])
+                          (cond [(comes-from-define-procedure? expr)
+                                 (let* ([mark (closure-record-mark  (closure-table-lookup (car values)))]
+                                        [rectified (rectify-source-expr (mark-source mark) (list mark) null)])
+                                   (o-form-lambda->define (o-form-case-lambda->lambda rectified)
+                                                          (car vars)))]
+                                [(comes-from-define? expr)
+                                 `(define ,(car vars) ,(car rectified-vars))]
+                                [else
+                                 `(define-values ,vars
+                                    ,(if (= (length values) 1)
+                                         (car rectified-vars)
+                                         `(values ,@rectified-vars)))])))]
+                   [else
+                    (rectify-old-var (top-level-exp-gensym-source expr))])))
 
          (define (reconstruct-inner mark-list so-far)
            (if (null? mark-list)
@@ -335,18 +351,8 @@
                            [arg-temps (build-list (length sub-exprs) get-arg-symbol)]
                            [arg-temp-syms (map z:varref-var arg-temps)]
                            [arg-vals (map (lambda (arg-sym) 
-                                            ((car (find-var-binding mark-list arg-sym))))
-                                          arg-temp-syms)]
-                           ; this next function is a terrible hack. It will have to go,
-                           ; at some point. The "inferred-name" thing doesn't work at
-                           ; all for non-primitives.
-                           [beginner-rectify-app-value
-                            (lambda (expr val)
-                              (if (and (procedure? val) (z:varref? expr))
-                                  (if (z:top-level-varref? expr)
-                                      (z:varref-var expr)
-                                      (z:binding-orig-name (z:bound-varref-binding expr)))
-                                  (rectify-value val)))])
+                                            (mark-binding-value (find-var-binding mark-list arg-sym)))
+                                          arg-temp-syms)])
                       (case (mark-label (car mark-list))
                         ((not-yet-called)
                          (letrec
@@ -360,9 +366,7 @@
                                        (values (cons (car vals) small-vals) small-exprs))))])
                            (let-values ([(evaluated unevaluated) (split-lists sub-exprs arg-vals)])
                              (let* ([eval-exprs (list-take (length evaluated) sub-exprs)]
-                                    [rectified-evaluated (map beginner-rectify-app-value 
-                                                             eval-exprs
-                                                             evaluated)])
+                                    [rectified-evaluated (map rectify-value evaluated)])
                                (if (null? unevaluated)
                                    rectified-evaluated
                                    (append rectified-evaluated
@@ -395,14 +399,25 @@
                                         (rectify-source-current-marks 
                                          (create-bogus-bound-varref if-temp))
                                         so-far)])
-                      (if (comes-from-cond? expr)
-                          (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
-                                 [cond-source (z:zodiac-start expr)]
-                                 [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list null)])
-                            `(cond ,clause ,@rest-clauses))
-                          `(if ,test-exp 
-                               ,(rectify-source-current-marks (z:if-form-then expr))
-                               ,(rectify-source-current-marks (z:if-form-else expr)))))]
+                      (cond [(comes-from-cond? expr)
+                             (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
+                                    [cond-source (z:zodiac-start expr)]
+                                    [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list null)])
+                               `(cond ,clause ,@rest-clauses))]
+                            [(comes-from-and? expr)
+                             `(and ,test-exp ,@(rectify-and-clauses (z:zodiac-start expr)
+                                                                    (z:if-form-then expr)
+                                                                    mark-list
+                                                                    null))]
+                            [(comes-from-or? expr)
+                             `(or ,test-exp ,@(rectify-or-clauses (z:zodiac-start expr)
+                                                                  (z:if-form-else expr)
+                                                                  mark-list
+                                                                  null))]
+                            [else
+                             `(if ,test-exp 
+                                  ,(rectify-source-current-marks (z:if-form-then expr))
+                                  ,(rectify-source-current-marks (z:if-form-else expr)))]))]
                    
                    ; quote : there is no mark or break on a quote.
                    

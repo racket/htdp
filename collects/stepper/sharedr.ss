@@ -36,11 +36,7 @@
 
   ; the closure record is placed in the closure table
 
-  (define (make-closure-record a b)
-    (list a b))
-  
-  (define closure-record-name car)
-  (define closure-record-mark cadr)
+  (define-struct closure-record (name mark constructor?))
   
   ; bogus-varref is used so that we can create legal zodiac varrefs for temporary variables
   
@@ -147,8 +143,8 @@
       (values
        (lambda (key value)
 	 (hash-table-put! closure-table key value))
-       (lambda (key)
-         (hash-table-get closure-table key)))))
+       (lambda args ; key or key & failure-thunk
+         (apply hash-table-get closure-table args)))))
   
   
 ) 
