@@ -694,7 +694,7 @@
 	[_else (bad-use-error 'define-struct stx)]))
 
     (define (beginner-define-struct/proc stx)
-      (do-define-struct stx #t #f #t))
+      (do-define-struct stx #t #f #f))
 
     (define (intermediate-define-struct/proc stx)
       (do-define-struct stx #f #f #f))
