@@ -26,14 +26,6 @@
 	 (e:internal-error arglist
 			   "Given to arglist->ilist")))))
   
-  ; gensyms needed by both the annotater and the reconstructor:
-  
-  ; *unevaluated* is the value assigned to temps before they are evaluated.
-  (define *unevaluated* (gensym "unevaluated-"))
- 
-  ; if-temp : uninterned-symbol
-  (define if-temp (gensym "if-temp-"))
-
   (define (read-exprs text)
     (let ([reader (z:read (open-input-string text) 
                           (z:make-location 1 1 0 "stepper-string"))])
@@ -58,6 +50,17 @@
   (define (create-bogus-top-level-varref name)
     (z:make-top-level-varref #f #f #f #f name))
 
+  ; gensyms needed by both the annotater and the reconstructor:
+  
+  ; *unevaluated* is the value assigned to temps before they are evaluated.
+  (define *unevaluated* (gensym "unevaluated-"))
+ 
+  ; if-temp : uninterned-symbol
+  (define if-temp (gensym "if-temp-"))
+
+  ; struct-flag : uninterned symbol
+  (define struct-flag (gensym "struct-flag-"))
+  
   ; get-arg-symbol maintains a list of gensyms associated with the non-negative
   ; integers.  These symbols are used in the elaboration of applications; the nth
   ; in the application is evaluated and stored in a variable whose name is the nth
@@ -90,12 +93,7 @@
          (not (eq? arg1 arg2p))))
   |#
   
-  ; the varref structure contains a name and a boolean which indicates whether the reference
-  ; is a top-level (substitutable) one (this includes unit-bound and class-bound, but _not_
-  ; local-bound
-  
-  (define-struct varref (var top-level?))
-    
+
   ; to perform source correlation, we use the 'register-client' ability of zodiac to
   ; add fields to parsed structures at runtime.
   

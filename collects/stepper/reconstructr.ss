@@ -32,7 +32,7 @@
   (define (find-var-binding mark-list var)
     (if (null? mark-list)
         ; must be a primitive
-        (list #f (make-varref var #t))
+        (list #f #f)
 	; (error var "no binding found for variable.")
 	(let* ([bindings (mark-bindings (car mark-list))]
 	       [matches (filter (lambda (mark-var)
@@ -45,6 +45,8 @@
 		[else ; (length matches) = 1
 		 (car matches)]))))
 
+  ; JEEZ, I'm dumb! Why not just use read->raw to make my life 100% easier!?
+  
   (define (read-expr-first-symbol read-expr)
     (if (z:list? read-expr)
         (let ([first (car (z:read-object read-expr))])
@@ -87,8 +89,12 @@
   (define (rectify-value val)
     (cond [(and (procedure? val) (primitive? val))
            (primitive-name val)]
-          [(and (procedure? val) (inferred-name val))
-           (inferred-name val)]
+          [(procedure? val)
+           (let ([recorded-name (closure-record-name
+                                 (closure-table-lookup val))])
+             (if recorded-name
+                 recorded-name
+                 'unknown-procedure))]
           [else val]))
   
   (define (o-form-case-lambda->lambda o-form)
@@ -136,7 +142,7 @@
             
             [(z:if-form? expr)
              (if (comes-from-cond? expr)
-                 `(cond ,@(rectify-cond-clauses (z:zodiac-start expr) expr mark-list))
+                 `(cond ,@(rectify-cond-clauses (z:zodiac-start expr) expr mark-list lexically-bound-vars))
                  `(if ,(recur (z:if-form-test expr))
                       ,(recur (z:if-form-then expr))
                       ,(recur (z:if-form-else expr))))]
@@ -179,12 +185,13 @@
               expr
               (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))])))
  
-  (define (rectify-cond-clauses cond-source expr mark-list)
-    (if (and (z:if-form? expr) (equal? cond-source (z:zodiac-start expr)))
-        (cons (list (rectify-source-expr (z:if-form-test expr) mark-list null)
-                    (rectify-source-expr (z:if-form-then expr) mark-list null))
-              (rectify-cond-clauses cond-source (z:if-form-else expr) null))
-        `((else ,(rectify-source-expr expr mark-list null)))))
+  (define (rectify-cond-clauses cond-source expr mark-list lexically-bound-vars)
+    (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
+      (if (and (z:if-form? expr) (equal? cond-source (z:zodiac-start expr)))
+          (cons (list (rectify-source (z:if-form-test expr))
+                      (rectify-source (z:if-form-then expr)))
+                (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list lexically-bound-vars))
+          `((else ,(rectify-source expr))))))
   
   
   (define (reconstruct expr-list mark-list all-defs-list current-def-num)
@@ -239,13 +246,20 @@
                    (rectify-source-current-marks expr))))
          
          (define (rectify-old-definition var)
-           (let ([val ((car (find-var-binding mark-list var)))])
-             (if (procedure? val)
-                 (let* ([info ((closure-table-lookup val))]
-                        [expr (car info)]
-                        [o-form-proc (rectify-source-expr expr (list (lambda () info)) null)])
-                   (o-form-lambda->define (o-form-case-lambda->lambda o-form-proc) var)) 
-                 `(define ,var ,val))))
+           (if (and (list? var) (eq? (car var) struct-flag))
+               (cdr var)
+               (let ([val ((car (find-var-binding mark-list var)))])
+                 (if (procedure? val)
+                     (let* ([closure-record (closure-table-lookup val)]
+                            [closure-maybe-name (closure-record-name closure-record)])
+                       ; this is a terrible hack.  There's a lot of things here I need to fix.
+                       (if closure-maybe-name
+                           `(define ,var ,closure-maybe-name)
+                           (let* ([info ((closure-record-mark closure-record))]
+                                  [expr (car info)]
+                                  [o-form-proc (rectify-source-expr expr (list (lambda () info)) null)])
+                             (o-form-lambda->define (o-form-case-lambda->lambda o-form-proc) var)))) 
+                     `(define ,var ,val)))))
                  
  
 
@@ -332,7 +346,7 @@
                       (if (comes-from-cond? expr)
                           (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
                                  [cond-source (z:zodiac-start expr)]
-                                 [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list)])
+                                 [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list null)])
                             `(cond ,clause ,@rest-clauses))
                           `(if ,test-exp 
                                ,(rectify-source-current-marks (z:if-form-then expr))

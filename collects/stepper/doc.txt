@@ -256,3 +256,18 @@ applications and 'if's are funny: they have no bindings.  They have no
 orig-name's.  They _must_ be expanded, always. This may be a problem when 
 I stop displaying the values of lambda-bound variables.
 
+***************
+
+currently on the stack:
+
+yank all of that 'comes-from-blah' crap if read->raw works.
+
+ponder why I put in the mechanism for storing names when it's
+not even needed by structures.  It may be useful later.
+
+try to get (make-NAME ...) expressions not to be redexes (and worse yet,
+to appear unchanged as they're passed over).
+
+debug, debug, debug.
+
+
