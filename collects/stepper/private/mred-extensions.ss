@@ -403,8 +403,6 @@
   
   ; constructor : ((listof sexp) (listof sexp) (listof sexp) (union string #f) (listof sexp) -> )
   
-  ; redexes MUST NOT OVERLAP. all warranties void if this is violated.
-  
   (define stepper-text%
     (class f:text:standard-style-list% ()
       
@@ -498,8 +496,10 @@
                    
                    (super-instantiate ())
                    
-                   (inherit insert)
-                   (insert "evaluation of program is complete.")) ()))
+                   (inherit insert lock)
+                   (insert "All of the definitions have been successfully evaluated.")
+                   (lock #t)) 
+      ()))
   
   
   (define (snip? val)

@@ -70,6 +70,10 @@
           
           (define (file-menu:print a b) (printing-proc a b))
           
+          (define/override (edit-menu:between-find-and-preferences edit-menu) (void))
+          (define/override (edit-menu:between-select-all-and-find edit-menu) (void))
+          (define/override (file-menu:between-save-as-and-print file-menu) (void))
+          
           ;; CUSTODIAN:
           
           (define custodian #f)
@@ -122,14 +126,14 @@
       
       (define (view-controller-go drscheme-frame program-expander)
         
-        (define settings 
-          (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol)))
+        (define language-settings 
+          (send (send drscheme-frame get-definitions-text) get-next-settings))
         (define language
-          (drscheme:language-configuration:language-settings-language settings))
+          (drscheme:language-configuration:language-settings-language language-settings))
         (define language-level-name
           (car (last-pair (send language get-language-position))))
         (define simple-settings
-          (drscheme:language-configuration:language-settings-settings settings))
+          (drscheme:language-configuration:language-settings-settings language-settings))
         
         ;; VALUE CONVERSION CODE:
         
@@ -204,7 +208,7 @@
         ; it checks to see whether this is of the kind that the stepper wants.  If so, display it.
         ; otherwise, release the stepped program to continue execution.
         
-        (define (hand-off-and-block step-text end-of-stepping? step-kind)
+        (define (hand-off-and-block step-text step-kind)
           (let ([new-semaphore (make-semaphore)])
             (parameterize ([current-eventspace drscheme-eventspace])
               (queue-callback
@@ -396,7 +400,7 @@
                                     (before-after-result-kind result))
                                (and (finished-stepping? result)
                                     'finished-stepping))])
-            (hand-off-and-block step-text #f step-kind)))
+            (hand-off-and-block step-text step-kind)))
         
         ; need to capture the custodian as the thread starts up:
         (define (program-expander-prime init iter)
@@ -448,8 +452,7 @@
                  void?)
              (lambda (init iter)
                (let* ([lang-settings 
-                       (frame:preferences:get
-                        (drscheme:language-configuration:get-settings-preferences-symbol))]
+                       (send (get-definitions-text) get-next-settings)]
                       [lang (drscheme:language-configuration:language-settings-language lang-settings)]
                       [settings (drscheme:language-configuration:language-settings-settings lang-settings)])
                  (drscheme:eval:expand-program
@@ -468,10 +471,7 @@
                          (let ([str (get-output-string sp)])
                            (if ((string-length str) . <= . len)
                                str
-                               (string-append (substring str 0 (max 0 (- len 3))) "..."))))))
-                    ;(drscheme:teachpack:install-teachpacks  ; not needed anymore?
-                    ; (frame:preferences:get 'drscheme:teachpacks)) ; this belongs in model, but I'd need a unit rewrite
-                    )
+                               (string-append (substring str 0 (max 0 (- len 3))) "...")))))))
                   void ; kill
                   iter)))
              'program-expander
@@ -485,7 +485,7 @@
               (lambda (button evt)
                 (if stepper-frame
                     (send stepper-frame show #t)
-                    (let* ([settings (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))]
+                    (let* ([settings (send (get-definitions-text) get-next-settings)]
                            [language (drscheme:language-configuration:language-settings-language settings)]
                            [language-level (car (last-pair (send language get-language-position)))])
                       (if (member language-level stepper-works-for)
