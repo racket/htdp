@@ -395,7 +395,7 @@
     (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break))
     
   (define break-contract
-    (-> continuation-mark-set? any? break-kind? list? any?))
+    (-> continuation-mark-set? break-kind? list? any?))
   
   (define (vectorof/n . fs)
     (for-each

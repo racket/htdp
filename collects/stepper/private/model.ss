@@ -7,6 +7,7 @@
            (prefix a: "annotate.ss")
            (prefix r: "reconstruct.ss")
            "shared.ss"
+           "marks.ss"
            "highlight-placeholder.ss")
  
   
@@ -97,8 +98,8 @@
               ;        error-value)
               
               
-              (define (break mark-set key break-kind returned-value-list)
-                (let* ([mark-list (continuation-mark-set->list mark-set key)])
+              (define (break mark-set break-kind returned-value-list)
+                (let* ([mark-list (extract-mark-list mark-set)])
                   (let ([double-redivide
                          (lambda (finished-exprs new-exprs-before new-exprs-after)
                            (let*-values ([(before current after) (redivide new-exprs-before)]

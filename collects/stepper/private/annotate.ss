@@ -360,9 +360,7 @@
                (let ([origin (syntax-property stx 'origin)]
                      [rebuild-if
                       (lambda (new-cond-test)
-                        (let* ([new-then (syntax-property (recur-regular (syntax (begin then)))
-                                                          'stepper-skipto
-                                                          (list syntax-e cdr car))])
+                        (let* ([new-then (recur-regular (syntax then))])
                           (syntax-property
                            (rebuild-stx `(if ,(recur-regular (syntax test))
                                              ,new-then
@@ -510,7 +508,7 @@
             ; potential optimization: remove the var-args where it's not needed:
             (define (make-break kind)
               (lambda returned-value-list
-                (break (current-continuation-marks) debug-key kind returned-value-list)))
+                (break (current-continuation-marks) kind returned-value-list)))
             
             (define normal-break
               (make-break 'normal-break))
@@ -649,15 +647,20 @@
                (lambda (expr tail-bound pre-break? top-level? procedure-name-info)
                  
                  (cond [(syntax-property expr 'stepper-skipto)
-                        (let ([free-vars-captured #f]) ; this will be set!'ed
-                          ; WARNING! I depend on the order of evaluation in application arguments here:
-                          (2vals (skipto-annotate
-                                  (syntax-property expr 'stepper-skipto) 
-                                  expr 
-                                  (lambda (subterm)
-                                    (let*-2vals ([(stx free-vars) (annotate/inner subterm tail-bound pre-break? top-level? procedure-name-info)])
-                                                (set! free-vars-captured free-vars)
-                                                stx)))
+                        (let* ([free-vars-captured #f] ; this will be set!'ed
+                               ; WARNING! I depend on the order of evaluation in application arguments here:
+                               [annotated (skipto-annotate
+                                           (syntax-property expr 'stepper-skipto) 
+                                           expr 
+                                           (lambda (subterm)
+                                             (let*-2vals ([(stx free-vars) (annotate/inner subterm tail-bound pre-break? top-level? procedure-name-info)])
+                                                         (set! free-vars-captured free-vars)
+                                                         stx)))])
+                          (2vals (if top-level?
+                                     annotated
+                                     (simple-wcm-wrap
+                                      skipto-mark
+                                      annotated))
                                  free-vars-captured))]
                        
                        [(syntax-property expr 'stepper-skip-completely)
@@ -931,21 +934,22 @@
                                [free-varrefs (varref-set-union (list free-varrefs-test 
                                                                      free-varrefs-then 
                                                                      free-varrefs-else))]
-                               [annotated-if
-                                (with-syntax ([then-stx annotated-then]
+                               [annotated-if 
+                                (with-syntax ([test-stx annotated-test]
+                                              [then-stx annotated-then]
                                               [else-stx annotated-else]
                                               [break-stx normal-break]
                                               [test-var if-temp])
-                                  (syntax/loc expr (begin (break-stx) (if test-var then-stx else-stx))))]
+                                  (syntax/loc expr (begin (set! test-var test-stx) (break-stx) (if test-var then-stx else-stx))))]
                                [wrapped (wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
                                                                        (varref-set-union (list free-varrefs (list if-temp)))
                                                                        'none)
                                                   annotated-if)])
                               (2vals
-                               (with-syntax ([test-stx annotated-test]
-                                             [test-var if-temp]
-                                             [wrapped-stx wrapped])
-                                 (syntax/loc expr (let ([test-var test-stx]) wrapped-stx)))
+                               (with-syntax ([test-var if-temp]
+                                             [wrapped-stx wrapped]
+                                             [unevaluated-stx *unevaluated*])
+                                 (syntax/loc expr (let ([test-var unevaluated-stx]) wrapped-stx)))
                                free-varrefs))]
                             
                             ; yecch: should abstract over if with & without else clauses
