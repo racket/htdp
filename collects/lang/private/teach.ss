@@ -1131,7 +1131,6 @@
 				     (syntax
 				      (((define-syntaxes (def-id)
                                           (make-undefined-check
-                                            (quote-syntax def-id)
                                             (quote-syntax check-not-undefined)
                                             (quote-syntax tmp-id)))
 					...)
@@ -1218,7 +1217,6 @@
                 (let-values ([(tmp-id) rhs-expr] ...)
                   #,(syntax-property
                      #`(let-syntaxes ([(name) (make-undefined-check
-                                               (quote-syntax name)
                                                (quote-syntax check-not-undefined)
                                                (quote-syntax tmp-id))]
                                       ...)

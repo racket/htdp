@@ -5,7 +5,7 @@
   (provide make-undefined-check 
 	   make-first-order-function)
   
-  (define (make-undefined-check orig-id check-proc tmp-id)
+  (define (make-undefined-check check-proc tmp-id)
     (let ([set!-stx (datum->syntax-object check-proc 'set!)])
       (make-set!-transformer
        (lambda (stx)
@@ -13,41 +13,26 @@
 	   [(set! id expr)
 	    (module-identifier=? (syntax set!) set!-stx)
 	    (with-syntax ([tmp-id tmp-id])
-	      (syntax-property
-	       (syntax (set! tmp-id expr))
-	       'bound-in-source
-	       (cons orig-id
-		     (syntax-local-introduce
-		      (syntax id)))))]
+	      (syntax (set! tmp-id expr)))]
 	   [(id . args)
+	    (datum->syntax-object
+	     check-proc
+	     (cons (syntax-property
+		    (datum->syntax-object
+		     check-proc
+		     (list check-proc 
+			   (list 'quote (syntax id))
+			   tmp-id))
+		    'stepper-skipto
+		    (list syntax-e cdr syntax-e cdr cdr car))
+		   (syntax args)))]
+	   [id
 	    (syntax-property
 	     (datum->syntax-object
 	      check-proc
-	      (cons (syntax-property
-		     (datum->syntax-object
-		      check-proc
-		      (list check-proc 
-			  (list 'quote (syntax id))
-			  tmp-id))
-		     'stepper-skipto
-		     (list syntax-e cdr syntax-e cdr cdr car))
-		    (syntax args)))
-	     'bound-in-source
-	     (cons orig-id
-		   (syntax-local-introduce
-		    (syntax id))))]
-	   [id
-            (syntax-property
-             (syntax-property
-              (datum->syntax-object
-               check-proc
-               (list check-proc 
-                     (list 'quote (syntax id))
-                     tmp-id))
-              'bound-in-source
-              (cons orig-id
-                    (syntax-local-introduce
-                     (syntax id))))
+	      (list check-proc 
+		    (list 'quote (syntax id))
+		    tmp-id))
              'stepper-skipto
              (list syntax-e cdr syntax-e cdr cdr car))]))))) ; this may make other stepper-skipto annotations obsolete.
 
