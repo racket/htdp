@@ -377,7 +377,10 @@
     (length (unbox queue)))
   
   (define (rebuild-stx new old)
-    (datum->syntax-object old new old old))
+    (syntax-recertify (datum->syntax-object old new old old)
+                      old
+                      (current-code-inspector)
+                      #f))
   
   (define break-kind?
     (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break 'expr-finished-break 'define-struct-break))

@@ -9,6 +9,7 @@
            "xml-box.ss"
            (prefix beginner-defined: "beginner-defined.ss"))
 
+  
   ; CONTRACTS
 
   
@@ -23,21 +24,21 @@
         boolean?                        ; track-inferred-name?
         syntax?)]                       ; results
    [top-level-rewrite (-> syntax? syntax?)])
- 
-  ;;                                              ;;;;                          ;                     
- ;  ;                                     ;       ;                         ;                         
- ;     ;   ;  ; ;;;   ; ;;;    ;;;   ; ;;;;;;     ;     ;   ;  ; ;;    ;;; ;;;; ;   ;;;   ; ;;    ;;; 
- ;     ;   ;  ;;   ;  ;;   ;  ;   ;  ;;   ;       ;     ;   ;  ;;  ;  ;     ;   ;  ;   ;  ;;  ;  ;    
-  ;;   ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;;;;  ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;  ;    
-    ;  ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;     ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;   ;;  
-    ;  ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;     ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;     ; 
- ;  ;  ;  ;;  ;;   ;  ;;   ;  ;   ;  ;    ;       ;     ;  ;;  ;   ;  ;     ;   ;  ;   ;  ;   ;     ; 
-  ;;    ;; ;  ; ;;;   ; ;;;    ;;;   ;     ;;     ;      ;; ;  ;   ;   ;;;   ;; ;   ;;;   ;   ;  ;;;  
-              ;       ;                                                                               
-              ;       ;                                                                               
-  
-  ; wrap-struct-form 
-  
+
+;  ;;                                              ;;;;                          ;
+; ;  ;                                     ;       ;                         ;
+; ;     ;   ;  ; ;;;   ; ;;;    ;;;   ; ;;;;;;     ;     ;   ;  ; ;;    ;;; ;;;; ;   ;;;   ; ;;    ;;;
+; ;     ;   ;  ;;   ;  ;;   ;  ;   ;  ;;   ;       ;     ;   ;  ;;  ;  ;     ;   ;  ;   ;  ;;  ;  ;
+;  ;;   ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;;;;  ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;  ;
+;    ;  ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;     ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;   ;;
+;    ;  ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;     ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;     ;
+; ;  ;  ;  ;;  ;;   ;  ;;   ;  ;   ;  ;    ;       ;     ;  ;;  ;   ;  ;     ;   ;  ;   ;  ;   ;     ;
+;  ;;    ;; ;  ; ;;;   ; ;;;    ;;;   ;     ;;     ;      ;; ;  ;   ;   ;;;   ;; ;   ;;;   ;   ;  ;;;
+;              ;       ;
+;              ;       ;                                                                               
+; 
+  ; wrap-struct-form
+
 ;  (define (wrap-struct-form names annotated)
 ;    (let* ([arg-temps (build-list (length names) get-arg-var)]
 ;           [struct-proc-names (cdr names)]
@@ -60,10 +61,10 @@
   ;;
   ;; collapse-let-values: for the purposes of the annotater, it's easier to simply collapse let's and
   ;;  let*'s into one big let*.  The lexical-binding information attached to each variable reference
-  ;;  guarantees that this won't 
+  ;;  guarantees that this won't affect correctness
   ;;
   ;;;;;;;;;;
-  
+
   (define (collapse-let-values stx)
     (syntax-case stx (let-values let*-values)
       [(_ (outer-binding ...) (let-values (inner-binding ...) . bodies))
@@ -85,19 +86,19 @@
   ;          (list (list #'(let ([a 3] [b 9]) (+ a b)) '(let-values ([(a) (#%datum . 3)] [(b) (#%datum . 9)]) (#%app (#%top . +) a b)) 12)
   ;                (list #'(let* ([a 9] [b a] [c b]) c) '(let*-values ([(a) (#%datum . 9)] [(b) a] [(c) b]) c) 9)
   ;                (list #'(let ([a 3] [b 9]) (let ([b 14]) b)) '(let*-values ([(a) (#%datum . 3)] [(b) (#%datum . 9)] [(b) (#%datum . 14)]) b) 14)))
-                                                                                                
-                           ;                      ;                                ;            
- ;                         ;                      ;                                   ;         
-;;;;  ;;;   ; ;;;          ;   ;;;  ;   ;   ;;;   ;      ; ;;  ;;;  ;   ;   ; ; ;; ; ;;;;  ;;;  
- ;   ;   ;  ;;   ;         ;  ;   ; ;   ;  ;   ;  ;      ;;   ;   ; ;   ;   ; ;;   ;  ;   ;   ; 
- ;   ;   ;  ;    ;         ;  ;   ;  ; ;   ;   ;  ;      ;    ;   ;  ; ; ; ;  ;    ;  ;   ;   ; 
- ;   ;   ;  ;    ;  ;;;;;  ;  ;;;;;  ; ;   ;;;;;  ;      ;    ;;;;;  ; ; ; ;  ;    ;  ;   ;;;;; 
- ;   ;   ;  ;    ;         ;  ;      ; ;   ;      ;      ;    ;      ; ; ; ;  ;    ;  ;   ;     
- ;   ;   ;  ;;   ;         ;  ;      ;;    ;      ;      ;    ;      ; ; ; ;  ;    ;  ;   ;     
-  ;;  ;;;   ; ;;;          ;   ;;;;   ;     ;;;;  ;      ;     ;;;;   ;   ;   ;    ;   ;;  ;;;; 
-            ;                                                                                   
-            ;                                                                                   
-                                                                                                
+;
+;  ;                         ;                      ;                                ;            
+;  ;                         ;                      ;                                   ;         
+; ;;;;  ;;;   ; ;;;          ;   ;;;  ;   ;   ;;;   ;      ; ;;  ;;;  ;   ;   ; ; ;; ; ;;;;  ;;;  
+;  ;   ;   ;  ;;   ;         ;  ;   ; ;   ;  ;   ;  ;      ;;   ;   ; ;   ;   ; ;;   ;  ;   ;   ; 
+;  ;   ;   ;  ;    ;         ;  ;   ;  ; ;   ;   ;  ;      ;    ;   ;  ; ; ; ;  ;    ;  ;   ;   ; 
+;  ;   ;   ;  ;    ;  ;;;;;  ;  ;;;;;  ; ;   ;;;;;  ;      ;    ;;;;;  ; ; ; ;  ;    ;  ;   ;;;;; 
+;  ;   ;   ;  ;    ;         ;  ;      ; ;   ;      ;      ;    ;      ; ; ; ;  ;    ;  ;   ;     
+;  ;   ;   ;  ;;   ;         ;  ;      ;;    ;      ;      ;    ;      ; ; ; ;  ;    ;  ;   ;     
+;   ;;  ;;;   ; ;;;          ;   ;;;;   ;     ;;;;  ;      ;     ;;;;   ;   ;   ;    ;   ;;  ;;;; 
+;             ;                                                                                   
+;             ;                                                                                   
+;                                                                                                 
 
   
   ; top-level-rewrite : (SYNTAX-OBJECT -> SYNTAX-OBJECT)
@@ -387,10 +388,10 @@
                          skipto-mark
                          annotated)
                         free-vars-captured))]
-              
+
               [(syntax-property expr 'stepper-skip-completely)
                (2vals (wcm-wrap 13 expr) null)]
-              
+
               [else
                (let* ([tail-recur (lambda (expr) (annotate/inner expr tail-bound #t procedure-name-info))]
                       [non-tail-recur (lambda (expr) (annotate/inner expr null #f #f))]
@@ -601,17 +602,20 @@
                                           [unevaluated-stx *unevaluated*])
                               (syntax/loc expr (let ([test-var unevaluated-stx]) wrapped-stx)))
                             free-varrefs)))]
-                      )
-                 
+                      [recertifier
+                       (lambda (vals)
+                         (let*-2vals ([(new-expr bindings) vals])
+                                         (2vals (syntax-recertify new-expr expr (current-code-inspector) #f)
+                                                bindings)))])
                  ; find the source expression and associate it with the parsed expression
-                 
                  ;             (when (and red-exprs foot-wrap?)
-                 ;               (set-expr-read! expr (find-read-expr expr))) 
+                 ;               (set-expr-read! expr (find-read-expr expr)))
+
                  
-                 
-                 (kernel:kernel-syntax-case expr #f
-                   
-                   [(lambda . clause)
+                 (recertifier
+                  (kernel:kernel-syntax-case expr #f
+
+                  [(lambda . clause)
                     (let*-2vals ([(annotated-clause free-varrefs)
                                   (lambda-clause-abstraction (syntax clause))]
                                  [annotated-lambda
@@ -777,6 +781,9 @@
                    
                    [var-stx
                     (identifier? (syntax var-stx))
+                    (begin
+                      (fprintf (current-error-port) "annotating variable: ~v with binding type: ~v\n" (syntax-object->datum #'var-stx)
+                               (syntax-property #'var-stx 'stepper-binding-type)) ;; DEBUGGING
                     (let*-2vals ([var (syntax var-stx)]
                                  [free-varrefs (list var)])
                       (2vals 
@@ -793,10 +800,10 @@
                                       (wcm-break-wrap (make-debug-info-normal free-varrefs)
                                                       (return-value-wrap var))
                                       (outer-wcm-wrap (make-debug-info-normal free-varrefs) var))))))
-                       free-varrefs))]
+                       free-varrefs)))]
                    
                    [else ; require, require-for-syntax, define-syntaxes, module, provide
-                    (2vals expr null)]))])))
+                    (2vals expr null)])))])))
     
     
     ;; annotate/top-level : syntax-> syntax
@@ -810,9 +817,9 @@
       (syntax? . -> . syntax?)
       (lambda (expr)
         (syntax-case expr (module #%plain-module-begin let-values dynamic-wind lambda)
-          [(module name lang
-             (#%plain-module-begin . bodies))
-           #`(module name lang (#%plain-module-begin #,@(map annotate/module-top-level (syntax->list #`bodies))))]
+          [(m1 n1 l1
+             (pm1 . bodies))
+           #`(m1 n1 l1 (pm1 #,@(map annotate/module-top-level (syntax->list #`bodies))))]
           ; the 'require' form is used for the test harness
           [(require module-name)
            expr]
@@ -867,5 +874,5 @@
     ; body of local
     #;(printf "input: ~a\n" expr)
     (let* ([annotated-expr (annotate/top-level expr)])
-      ;(printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
+      #;(printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
       annotated-expr)))
