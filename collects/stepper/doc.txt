@@ -52,3 +52,28 @@ categories, we do not need to check for the undefined value at runtime.
 Only when we are looking at a bound or unit varref which may contain the 
 `<undefined>' value do we need to insert a runtime check.
 
+*******
+
+Another topic entirely is that of sharing.  When a break occurs, the 
+stepper reconstructs the state of memory. However, two closures may refer 
+to the same binding. For instance,
+
+(define-values (setter getter)
+  (let ([a '*undefined*])
+    (values
+     (lambda (x) (set! a x))
+     (lambda () a))))
+
+If each closure is linked to a record of the form (lambda () 
+values-of-free-vars), there's no way to tell whether the first and second 
+closure refer to the same binding of a or not.  So in this case, we must 
+devise some other technique to detect sharing.  A simple one suggested by 
+Matthew is to store mutators in the closure record; then, sharing can be 
+detected by the old bang-one-and-see-if-the-other-changes technique.
+
+*********
+
+A note about source locations: I'm using the "start" locations of sexps 
+(assigned by Zodiac) to uniquely identify those expressions: I don't 
+believe there are any instances where two expressions share a start 
+location.

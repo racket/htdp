@@ -62,5 +62,41 @@
          (eq? arg2 arg2p)
          (not (eq? arg1 arg2p))))
   
+  ; the varref structure contains a name and a boolean which indicates whether the reference
+  ; is a top-level (substitutable) one (this includes unit-bound and class-bound, but _not_
+  ; local-bound
+  
+  (define-struct varref (var top-level?))
+    
+  ; source correlation stuff:
+  
+  (define source-table (make-hash-table-weak))
+
+  (define (register-source key value)
+    (hash-table-put! source-table key value))
+  
+  (define (find-source-expr key offset)
+    (let search-exprs ([exprs (hash-table-get key)])
+      (let ([expr 
+	     (car (filter 
+		   (lambda (expr) 
+		     (< offset (z:location-offset (z:zodiac-finish expr))))
+		   exprs))])
+	(if (= offset (z:location-offset (z:zodiac-start expr)))
+	    expr
+	    (cond
+	      ((z:scalar? expr) (e:static-error "starting offset inside scalar:" offset))
+	      ((z:sequence? expr) 
+	       (let ([object (z:read-object expr)])
+		 (cond
+		   ((z:list? expr) (search-exprs object))
+		   ((z:vector? expr) 
+		    (search-exprs (vector->list object))) ; can source exprs be here?
+		   ((z:improper-list? expr)
+		    (search-exprs (search-exprs object))) ; can source exprs be here?
+		   (else (e:static-error "unknown expression type in sequence" expr)))))
+	      (else (e:static-error "unknown read type" expr)))))))
+  
+  
   
 ) 
