@@ -72,6 +72,13 @@
                         (eq? (car raw) 'define)
                         (pair? (cadr raw))))))
   
+  (define comes-from-lambda-defined-procedure?
+    (make-apply-pred-to-raw
+     (lambda (raw) (and (pair? raw)
+                        (eq? (car raw) 'define)
+                        (pair? (caddr raw))
+                        (eq? (caaddr raw) 'lambda)))))
+  
   (define comes-from-define-struct?
     (make-check-raw-first-symbol 'define-struct))
   
@@ -308,6 +315,10 @@
                                  [rectified (rectify-source-expr (mark-source mark) (list mark) null)])
                             (o-form-lambda->define (o-form-case-lambda->lambda rectified)
                                                    (car vars)))]
+                         [(comes-from-lambda-defined-procedure? expr)
+                          (let* ([mark (closure-record-mark (closure-table-lookup (car values)))]
+                                 [rectified (rectify-source-expr (mark-source mark) (list mark) null)])
+                            `(define ,(car vars) ,(o-form-case-lambda->lambda rectified)))]
                          [(comes-from-define? expr)
                           `(define ,(car vars) ,(car rectified-vars))]
                          [else
