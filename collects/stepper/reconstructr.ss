@@ -4,13 +4,10 @@
 	  [e : stepper:error^]
           [p : mzlib:print-convert^]
           [b : userspace:basis^]
+          [s : stepper:settings^]
 	  stepper:shared^)
 
-  (define global-defined-vars #f)
-  (define (set-global-defined-vars! x) 
-    (set! global-defined-vars x))
-  
-  (define nothing-so-far (gensym "nothing-so-far-"))
+   (define nothing-so-far (gensym "nothing-so-far-"))
   
   (define (mark-source mark)
     (car (mark)))
@@ -93,8 +90,11 @@
       (if closure-record
           (closure-record-name closure-record)
           (parameterize
-              ([p:constructor-style-printing #t]
-               [p:abbreviate-cons-as-list #f])
+              ([p:constructor-style-printing (s:get-constructor-style-printing)]
+               [p:abbreviate-cons-as-list (s:get-abbreviate-cons-as-list)]
+               [p:empty-list-name (s:get-empty-list-name)]
+;               [p:show-sharing (s:get-show-sharing)]
+               [current-namespace (s:get-namespace)])
             (p:print-convert val)))))
   
   (define (o-form-case-lambda->lambda o-form)
@@ -119,7 +119,7 @@
                 (or (and (z:varref? expr)
                          (or (z:bound-varref? expr)
                              (let ([var (z:varref-var expr)])
-                               (or (memq var global-defined-vars)
+                               (or (memq var (s:get-global-defined-vars))
                                    (call-with-current-continuation
                                     (lambda (k)
                                       (with-handlers ([exn:variable?
@@ -134,7 +134,11 @@
                          (let ([fun-val (mark-binding-value
                                          (find-var-binding mark-list 
                                                            (z:varref-var (get-arg-symbol 0))))])
-                           (or (eq? fun-val cons)
+                           (or (and (s:get-constructor-style-printing)
+                                    (if (s:get-abbreviate-cons-as-list)
+                                        (eq? fun-val list)
+                                        (eq? fun-val (s:get-cons))))
+                               (eq? fun-val (s:get-vector))
                                (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
                                  (and closure-record
                                       (closure-record-constructor? closure-record)))))))))))
