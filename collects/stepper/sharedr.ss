@@ -113,9 +113,8 @@
   
   ; *unevaluated* is the value assigned to temps before they are evaluated. It's not a symbol so
   ; it won't need quoting in the source.  Bit of a hack, I know.
-  (define *unevaluated* 
-    (let ([sym (gensym "unevaluated-")])
-      (lambda () sym)))
+  (define-struct *unevaluated-struct* ())
+  (define *unevaluated* (make-*unevaluated-struct*))
  
   ; if-temp : uninterned-symbol
   (define if-temp (create-bogus-binding "if-temp-"))
@@ -126,6 +125,9 @@
   ; highlight-placeholder : uninterned symbol
   (define highlight-placeholder (gensym "highlight-placeholder"))
 
+  ; unit-result-values-list
+  (define unit-result-values-list (gensym "unit-result-vaues-list"))
+  
   ; list-partition takes a list and a number, and returns two lists; the first one contains the
   ; first n elements of the list, and the second contains the remainder.  If n is greater than
   ; the length of the list, the exn:application:mismatch exception is raised.
