@@ -779,3 +779,12 @@ of subterms paired with indices, and then iterating through these.
 
 2003-07-13
 
+**********
+
+Intermediate stepper now working.  I developed a much better
+way of specifying the highlight: the reconstruct engine now delivers
+a syntax object to the display engine, which allows me to use
+syntax properties.  Much much better.
+
+2004-01-15
+

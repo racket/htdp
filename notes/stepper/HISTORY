@@ -38,3 +38,7 @@ Changes for v205:
 
 v. minor bug fixes.
 
+Changes for v206:
+
+Stepper supports intermediate, minor bug fixes, major rewrite of interface
+ between reconstruct and display.
