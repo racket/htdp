@@ -367,20 +367,12 @@
   
   (define make-color make-rgb)
   
-  (define get-rgb-map
-    (lambda (rgb)
-      (let*
-	  ([r-box (box 10)]
-	   [g-box (box 10)]
-	   [b-box (box 10)])
-	(send rgb get r-box g-box b-box)
-	(list (/ (unbox r-box) 255.0)
-	      (/ (unbox g-box) 255.0)
-	      (/ (unbox b-box) 255.0)))))
+  (define (rgb-red rgb) (/ (send rgb red) 255))
+  (define (rgb-blue rgb) (/ (send rgb blue) 255))
+  (define (rgb-green rgb) (/ (send rgb green) 255))
   
-  (define rgb-blue (lambda (rgb) (caddr (get-rgb-map rgb))))
-  (define rgb-red (lambda (rgb) (car (get-rgb-map rgb))))
-  (define rgb-green (lambda (rgb) (cadr (get-rgb-map rgb))))
+  (define rgb? (lambda (object) (is-a? object mred:color%)))
+  (define color? rgb?)
   
   (define change-color
     (lambda (index color)
@@ -411,8 +403,6 @@
 	 (send mred:the-brush-list find-or-create-brush index 'solid)]
 	[else (vector-ref global-brush-vector index)])))
   
-  (define rgb? (lambda (object) (is-a? object mred:color%)))
-  (define color? rgb?)
   (define pen? (lambda (object) (is-a? object mred:pen%)))
   (define brush? (lambda (object) (is-a? object mred:brush%)))
   
@@ -421,7 +411,9 @@
       (do
 	  ([index 0 (+ index 1)])
 	((eq? index 100))
-	(display (get-rgb-map (get-color index))))))
+	(display (list (/ (rgb-red (get-color index)) 255)
+                       (/ (rgb-green (get-color index)) 255)
+                       (/ (rgb-blue (get-color index)) 255))))))
   
   (define make-font
     (lambda (name)
