@@ -435,7 +435,7 @@
       (define stepper-bitmap
         (drscheme:unit:make-bitmap
          "Step"
-         (build-path (collection-path "icons") "foot.bmp")))
+         (build-path (collection-path "icons") "foot.png")))
 
       ;; stepper-unit-frame<%> : the interface that the extended drscheme frame fulfils
       (define stepper-unit-frame<%>
