@@ -1,2 +1,2 @@
-(define car 3)
+(define first 3)
 3

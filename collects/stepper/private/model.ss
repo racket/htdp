@@ -15,7 +15,6 @@
 
   (define program-expander-contract
     (-> (-> void?) ; init
-        (-> string? any? void?) ; error
         (-> (union eof-object? syntax? (cons/p string? any?)) (-> void?) void?) ; iter
         void?))
     
@@ -123,7 +122,8 @@
                                      (set! held-redex-list redex-list))]
                         
                         [(result-exp-break result-value-break)
-                         (unless (and (eq? break-kind 'result-exp-break) (eq? held-expr-list no-sexp))
+                         (unless (and ;(eq? break-kind 'result-exp-break) ; taken out for quick release
+                                  (eq? held-expr-list no-sexp))
                            (let*-2vals ([(reconstructed reduct-list) (reconstruct-helper)])
                                        ;              ; this invariant (contexts should be the same)
                                        ;              ; fails in the presence of unannotated code.  For instance,
@@ -205,8 +205,8 @@
                        (receive-result (make-error-result finished-exprs message) user-computation-semaphore))))))
            
               (program-expander
-               void ; init
-               err-display-handler ; error
+               (lambda ()
+                 (error-display-handler err-display-handler)) ; init
                (lambda (expanded continue-thunk) ; iter
                  (if (eof-object? expanded)
                      (send-to-drscheme-eventspace 

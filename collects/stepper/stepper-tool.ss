@@ -104,7 +104,6 @@
                 ; receive-result takes a result from the model and renders it on-screen
                 ; : (step-result semaphore -> void)
                 (define (receive-result result continue-user-computation-semaphore)
-                  (fprintf (current-error-port) "in receive-result with result: ~a" result)
                   (set! continue-semaphore continue-user-computation-semaphore)
                   (let ([step-text
                          (cond [(before-after-result? result) 
@@ -187,10 +186,9 @@
            (define program-expander
              (contract
               (-> (-> void?) ; init
-                  (-> string? any? void?)
                   (-> (union eof-object? syntax? (cons/p string? any?)) (-> void?) void?) ; iter
                   void?)
-              (lambda (init error iter)
+              (lambda (init iter)
                 (drscheme:eval:expand-program
                  (drscheme:language:make-text/pos (get-definitions-text) 
                                                   0
@@ -198,7 +196,6 @@
                                                         last-position)) 
                  (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))
                  init
-                 error
                  void ; kill
                  iter))
               'program-expander
