@@ -1,5 +1,5 @@
 
-(module beginner-abbr mzscheme
+(module htdp-beginner-abbr mzscheme
   (require (lib "etc.ss")
 	   (lib "list.ss")
 	   (lib "math.ss")

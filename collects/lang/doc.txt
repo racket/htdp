@@ -4,22 +4,24 @@ languages for other modules (i.e., as the initial import):
 
  * _r5rs.ss_ - provides R5RS Scheme
 
- * _big.ss_ - provides MzScheme plus the following MzLib libraries:
-   etc.ss, file.ss, list.ss, class.ss, unit.ss, unitsig.ss,
-   include.ss, defmacro.ss, pretty.ss, string.ss, thread.ss, math.ss,
-   match.ss, and shared.ss
+ * _htdp-full-text.ss_ - provides MzScheme plus the
+   following MzLib libraries: etc.ss, file.ss, list.ss,
+   class.ss, unit.ss, unitsig.ss, include.ss, defmacro.ss,
+   pretty.ss, string.ss, thread.ss, math.ss, match.ss, and
+   shared.ss
 
- * _big-gui.ss_ - provides big.ss plus the MrEd classes
+ * _htdp-full-graphical.ss_ - provides big.ss 
+    plus the MrEd classes
 
- * _beginner.ss_ - provides Beginning Student
+ * _htdp-beginner.ss_ - provides Beginning Student
 
- * _beginner-abbr.ss_ - provides Beginning Student with List Abbreviations
+ * _htdp-beginner-abbr.ss_ - provides Beginning Student with List Abbreviations
 
- * _intermediate.ss_ - provides Intermediate Student
+ * _htdp-intermediate.ss_ - provides Intermediate Student
 
- * _intermediate-lambda.ss_ - provides Intermediate Student with Lambda
+ * _htdp-intermediate-lambda.ss_ - provides Intermediate Student with Lambda
 
- * _advanced.ss_ - provides Advanced Student
+ * _htdp-advanced.ss_ - provides Advanced Student
 
 In addition, the "lang" collection defines two modules that supply
 special teaching functions:

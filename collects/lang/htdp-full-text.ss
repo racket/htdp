@@ -1,5 +1,5 @@
 
-(module big mzscheme
+(module htdp-full-text mzscheme
   (require (lib "etc.ss")
 	   (lib "file.ss")
 	   (lib "list.ss")

@@ -3,7 +3,7 @@
 ;; forms and procedures. The reader-level aspects of the language
 ;; (e.g., case-sensitivity) are not implemented here.
 
-(module beginner mzscheme
+(module htdp-beginner mzscheme
   (require (lib "etc.ss")
 	   (lib "list.ss")
 	   (lib "math.ss")

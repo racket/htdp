@@ -1,5 +1,5 @@
 
-(module intermediate-lambda mzscheme
+(module htdp-intermediate-lambda mzscheme
   (require "private/teach.ss"
 	   (lib "etc.ss")
 	   (lib "list.ss")

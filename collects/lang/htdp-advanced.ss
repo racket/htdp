@@ -1,5 +1,5 @@
 
-(module advanced mzscheme
+(module htdp-advanced mzscheme
   (require "private/teach.ss"
 	   "private/teachprims.ss"
 	   (lib "etc.ss")
