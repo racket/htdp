@@ -59,7 +59,7 @@
      [(predicate procedure)
       "applied to arguments"]))
 
-  (define (make-first-order-function what orig-id app)
+  (define (make-first-order-function what arity orig-id app)
     (make-set!-transformer
      (lambda (stx)
        (syntax-case stx (set!)
@@ -76,7 +76,17 @@
 	   stx
 	   #f)]
 	 [(id . rest)
-	  (datum->syntax-object
-	   app
-	   (list* app (datum->syntax-object orig-id (syntax-e orig-id) #'id #'id) #'rest)
-	   stx stx)])))))
+	  (let ([l (length (syntax->list #'rest))])
+	    (unless (= l arity)
+	      (raise-syntax-error
+	       #f
+	       (format "this ~a expects ~a argument~a, here it is provided ~a argument~a"
+		       what 
+		       arity (if (= 1 arity) "" "s")
+		       l (if (= 1 l) "" "s"))
+	       stx
+	       #f))
+	    (datum->syntax-object
+	     app
+	     (list* app (datum->syntax-object orig-id (syntax-e orig-id) #'id #'id) #'rest)
+	     stx stx))])))))

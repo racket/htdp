@@ -640,10 +640,10 @@
 			      (list* 'constructor 
 				     'predicate
 				     (map (lambda (x) 'selector) (cddr to-define-names)))
+			      to-define-names
 			      (list* (- (length to-define-names) 2)
 				     1
 				     (map (lambda (x) 1) (cddr to-define-names)))
-			      to-define-names
 			      (lambda (def-to-define-names)
 				(with-syntax ([(def-to-define-name ...) def-to-define-names]
 					      [(to-define-name ...) to-define-names])
