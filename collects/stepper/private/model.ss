@@ -99,7 +99,6 @@
                (case break-kind
                  [(normal-break)
                   (when (not (r:skip-redex-step? mark-list))
-                    (error 'yikes "not really an error.")
                     (let*-2vals ([(reconstructed redex-list) (reconstruct-helper)])
                       (set! held-expr-list reconstructed)
                       (set! held-redex-list redex-list)))
