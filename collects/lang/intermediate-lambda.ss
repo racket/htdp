@@ -32,38 +32,4 @@
   ;; procedures:
   (provide-and-document
    procedures
-   (all-from beginner: (lib "intermediate.ss" "lang") procedures)
-
-   ("Higher-Order Functions"
-    (map ((X ... -> Z) (listof X) ... -> (listof Z))
-	 "to construct a new list by applying a function to each item on an existing existing") 
-    (for-each ((any ... -> any) (listof any) ... -> void)
-	      "to apply a function to each item on a list for effect only")
-    (filter ((X -> boolean) (listof X) -> (listof X))
-	    "to construct a list from all those items on  a list for which the predicate holds")
-    (foldr ((X Y -> Z) Y (listof X) -> Z)
-	   "(foldr f base (list x-1 ... x-n)) = (f x-1 ... (f x-n base))")
-    (foldl ((X Y -> Z) Y (listof X) -> Z)
-	   "(foldl f base (list x-1 ... x-n)) = (f x-n ... (f x-1 base))")
-    (build-list (nat (nat -> X) -> (listof X))
-		"(build-list n f) = (list (f 0) ... (f (- n 1)))")
-    (build-string (nat (nat -> char) -> string)
-		  "(build-string n f) = (string (f 0) ... (f (- n 1)))")
-    (quicksort ((X X -> boolean) (listof X) -> (listof X))
-	       "to construct a list from all items on a list in an order according to a predicate")
-    (andmap ((X -> boolean) (listof X) -> boolean)
-	    "(andmap p (list x-1 ... x-n)) = (and (p x-1) (and ... (p x-n)))")
-    (ormap ((X -> boolean) (listof X) -> boolean)
-	   "(ormap p (list x-1 ... x-n)) = (or (p x-1) (and ... (p x-n)))")
-
-    (memf ((X -> boolean) (listof X) -> (union false (listof X)))
-	  "to determine whether the first argument produces true for some value in the second argument")
-    (assf ((X -> boolean) (listof (cons X Y)) -> (union false (cons X Y)))
-	  "to determine whether the first argument produces true for some value in the second argument")
-    
-    (apply ((X-1 ... X-N -> Y) X-1 ... X-i (list X-i+1 ... X-N) -> Y)
-	      "to apply a function using items from a list as the arguments")
-    (compose ((Y-1 -> Z) ... (Y-N -> Y-N-1) (X-1 ... X-N -> Y-N) -> (X-1 ... X-N -> Z))
-	     "to compose a sequence of procedures into a single procedure")
-    (procedure? (any -> boolean)
-	     "to determine if a value is a procedure"))))
+   (all-from beginner: (lib "intermediate.ss" "lang") procedures)))

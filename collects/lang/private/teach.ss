@@ -29,9 +29,6 @@
   ;; run-time helpers
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (define-struct posn (x y) (make-inspector)) ; transparent
-  (provide (struct posn (x y)))
-
   ;; verify-boolean is inserted to check for boolean results:
   (define (verify-boolean b where)
     (if (or (eq? b #t) (eq? b #f))

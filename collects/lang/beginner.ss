@@ -11,7 +11,9 @@
 
   ;; Implements the forms:
   (require "private/teach.ss"
-	   "private/teachprims.ss")
+	   "private/teachprims.ss"
+	   "posn.ss"
+	   "imageeq.ss")
 
   ;; syntax:
   (provide (rename beginner-define define)
@@ -28,14 +30,7 @@
 	   #%top
 	   empty true false)
 
-  (define (image=? a b)
-    ;; We can't do image=? unless we're in MrEd...
-    (let ([image=? (with-handlers ([not (lambda (x) #f)])
-		     (dynamic-require '(lib "imageeq.ss" "lang" "private") 'image=?))])
-      (if image=?
-	  (image=? a b)
-	  (raise-type-error 'image=? "image" 0 a b))))
-
+  
   ;; procedures:
   (provide-and-document
    procedures
@@ -443,6 +438,8 @@
 	    "to format a string, possibly embedding values"))
 
    ("Misc"
+    (identity (any -> any)
+	      "to return the argument unchanged")
     (image=? (image image -> boolean)
 	     "to determine whether two images are equal")
     ((beginner-error error) (symbol string -> void) "to signal an error")

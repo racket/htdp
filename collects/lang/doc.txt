@@ -6,8 +6,8 @@ languages for other modules (i.e., as the initial import):
 
  * _big.ss_ - provides MzScheme plus the following MzLib libraries:
    etc.ss, file.ss, list.ss, class.ss, unit.ss, unitsig.ss,
-   include.ss, pretty.ss, string.ss, thread.ss, math.ss, match.ss, and
-   shared.ss
+   include.ss, defmacro.ss, pretty.ss, string.ss, thread.ss, math.ss,
+   match.ss, and shared.ss
 
  * _big-gui.ss_ - provides big.ss plus the MrEd classes
 
@@ -17,4 +17,14 @@ languages for other modules (i.e., as the initial import):
 
  * _intermediate.ss_ - provides Intermediate Student
 
+ * _intermediate-lambda.ss_ - provides Intermediate Student with Lambda
+
  * _advanced.ss_ - provides Advanced Student
+
+In addition, the "lang" collection defines two modules that supply
+special teaching functions:
+
+ * _posn.ss_ - provides the `posn' structure
+
+ * _imageeq.ss- provides the `image=?' function
+

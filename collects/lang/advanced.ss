@@ -5,7 +5,8 @@
 	   (lib "etc.ss")
 	   (lib "list.ss")
 	   (lib "pretty.ss")
-	   (lib "docprovide.ss" "syntax"))
+	   (lib "docprovide.ss" "syntax")
+	   "posn.ss")
 
   ;; syntax:
   (provide (rename advanced-define define)
