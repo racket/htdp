@@ -716,3 +716,35 @@ vars.  Well, maybe some other day...
 
 ***********
 
+Okay, as much as I hate to admit it, reconstruct is not just getting a
+face lift; it's being largely rewritten.  The major change is this:
+I'm going to delay macro unwinding until the end.  Toward this end,
+the recon (formerly "rectify") procedures will produce syntax objects
+with attached properties that record the macro expansions and the
+primary origin of the form.  After all reconstruction is done, we go
+through again and look for things that need to be rewritten.  This
+will separate the macro unwinding from the basic reconstruction of the
+expression.  Hopefully, at the end we can just use
+(syntax-object->datum) to discard all of the side information.
+
+Please, let this work. Yikes.
+
+2002-01-12
+
+*******
+
+There's a problem with the reconstruction of let-values, which only
+surfaces in the presence of multiple-values.  This is okay for now,
+because beginner and intermediate do not allow multiple values.  The
+problem is that if you allow expressions like this --- (let-values
+([() (values)]) 3) --- that is, where there can be an empty set of
+variables in a lhs position, you may not be able to tell at runtime
+what expression you're in the middle of.  The problem is that when we
+stop during the evaluation of a rhs in a let, we figure out which rhs
+we're evaluating by which lhs-vars have been changed from their
+original values.  Oh, dang.  This is totally broken for letrec's in
+which the rhs evaluates to the undefined value.
+
+Well, I guess I'm going to have to fix this the right way, by adding a
+counter to every let which is incremented explicitly after the
+evaluation of each rhs. Yikes.
