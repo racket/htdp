@@ -81,13 +81,32 @@ Debugger Events:
 
 A debugger-event is either:
 > (make-breakpoint-halt), or
+    : (-> debugger-event?)
 > (make-normal-breakpoint-info mark-list kind returned-value-list)
+    : (-> (listof mark?) symbol? (listof any?) 
+          debugger-event?)
 > (make-error-breakpoint-info message)
+    : (-> string? 
+          debugger-event?)
 > (make-expression-finished returned-value-list)
+    : (-> (listof any?)
+          debugger-event?)
 
-These structures are provided by (lib "private/marks.ss" "stepper).
-This library also provides many functions which are used to 
-manipulate the marks in a mark-list.
+> (make-full-mark location label bindings)
+    : (-> syntax? symbol? (listof identifier?)
+          syntax?)
+
+NOTE: there is a mistake here, in the sense that the thing made by
+'make-full-mark' is not actually a mark.  It's a piece of syntax
+that represents a lambda expression which when evaluated turns 
+into a mark.  A mark is an opaque data type.  Its contents can
+be extracted with the expose-mark function:
+
+expose-mark : (-> mark?
+                  (list/p syntax? 
+                          symbol? 
+                          (listof (list/p identifier? any?))))
+
 
 Debugger UI (view-controller) signatures:
 
@@ -116,8 +135,7 @@ a  (make-breakpoint-halt) event will occur whenever the user's
 program blocks at a breakpoint.
 
 > debugger-output-port : output from the user's program goes 
-to this port. (NB: at the moment, this is broken for a known
-reason.)  
+to this port. 
 
 
 Existing mini-UI:
