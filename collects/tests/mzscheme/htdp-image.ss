@@ -117,8 +117,23 @@
 (htdp-top (define ared (make-alpha-color 0 255 0 0)))
 (htdp-top (define aclr (make-alpha-color 255 0 0 0)))
 
-(eval `(htdp-top (define image-snip1 ,image-snip1)))
-(eval `(htdp-top (define image-snip2 ,image-snip2)))
+(htdp-top (define (p00 i) (move-pinhole i (- (pinhole-x i)) (- (pinhole-y i)))))
+
+(eval `(htdp-top (define image-snip1 (p00 ,image-snip1))))
+(eval `(htdp-top (define image-snip2 (p00 ,image-snip2))))
+
+(htdp-test 3 
+           'pinhole-x
+           (pinhole-x (rectangle 6 8 'solid 'black)))
+(htdp-test 4
+           'pinhole-y
+           (pinhole-y (rectangle 6 8 'solid 'black)))
+(htdp-test 1
+           'move-pinhole1
+           (pinhole-x (move-pinhole (rectangle 6 8 'solid 'black) -2 -2)))
+(htdp-test 2
+           'move-pinhole2
+           (pinhole-y (move-pinhole (rectangle 6 8 'solid 'black) -2 -2)))
 
 (htdp-test (list red)
 	   'color-list
@@ -198,15 +213,15 @@
            'alpha-color-list7
            (equal? (image->color-list
                     (overlay
-                     (rectangle 3 3 'solid 'blue)
-                     (alpha-color-list->image
-                      (list ared aclr ared
-                            aclr aclr aclr
-                            ared aclr ared)
-                      3
-                      3
-                      0
-                      0)))
+                     (p00 (rectangle 3 3 'solid 'blue))
+                     (p00 (alpha-color-list->image
+                           (list ared aclr ared
+                                 aclr aclr aclr
+                                 ared aclr ared)
+                           3
+                           3
+                           0
+                           0))))
                    (list red  blue red
                          blue blue blue
                          red  blue red)))
@@ -244,54 +259,54 @@
 (htdp-test #t
 	   'overlay
 	   (image=? (color-list->image (list blue red blue red) 2 2 0 0)
-		    (overlay (rectangle 2 2 'solid 'red)
-                             (rectangle 1 2 'solid 'blue))))
+		    (overlay (p00 (rectangle 2 2 'solid 'red))
+                             (p00 (rectangle 1 2 'solid 'blue)))))
 
 (htdp-test #t
            'overlay/empty-spaces-are-unmasked
            (image=? (color-list->image (list red red red blue) 2 2 0 0)
                     (overlay
-                     (rectangle 2 2 'solid 'blue)
-                     (overlay (rectangle 1 2 'solid 'red)
-                              (rectangle 2 1 'solid 'red)))))
+                     (p00 (rectangle 2 2 'solid 'blue))
+                     (overlay (p00 (rectangle 1 2 'solid 'red))
+                              (p00 (rectangle 2 1 'solid 'red))))))
 
 (htdp-test #t
-	   'offset-image+1
+	   'overlay/xy1
 	   (image=? (color-list->image (list red blue red blue) 2 2 0 0)
-		    (offset-image+ (rectangle 2 2 'solid 'red)
-				   1 0
-				   (rectangle 1 2 'solid 'blue))))
+		    (overlay/xy (p00 (rectangle 2 2 'solid 'red))
+                                1 0
+                                (p00 (rectangle 1 2 'solid 'blue)))))
 
 (htdp-test #t
-	   'offset-image+2
+	   'overlay/xy2
 	   (image=? (color-list->image (list red red red blue) 2 2 0 0)
-		    (offset-image+ (rectangle 2 2 'solid 'red)
+		    (overlay/xy (p00 (rectangle 2 2 'solid 'red))
 				   1 1
-				   (rectangle 1 1 'solid 'blue))))
+				   (p00 (rectangle 1 1 'solid 'blue)))))
 
 (htdp-test #t
-	   'offset-image+3
+	   'overlay/xy3
 	   (image=? (color-list->image (list red red blue blue) 2 2 0 0)
-		    (offset-image+ (rectangle 2 1 'solid 'red)
+		    (overlay/xy (p00 (rectangle 2 1 'solid 'red))
 				   0 1
-				   (rectangle 2 1 'solid 'blue))))
+				   (p00 (rectangle 2 1 'solid 'blue)))))
 
 (htdp-test #t
-	   'offset-image+4
+	   'overlay/xy4
 	   (image=? (color-list->image (list blue blue red red) 2 2 0 0)
-		    (offset-image+ (rectangle 2 1 'solid 'red)
+		    (overlay/xy (p00 (rectangle 2 1 'solid 'red))
 				   0 -1
-				   (rectangle 2 1 'solid 'blue))))
+				   (p00 (rectangle 2 1 'solid 'blue)))))
 
 (htdp-test #t
-           'offset-image+/white
+           'overlay/xy/white
            (image=? (alpha-color-list->image (list ablack ablack ablack
                                                    ablack awhite ablack
                                                    ablack ablack ablack)
                                              3 3 0 0)
-                    (offset-image+ (rectangle 3 3 'solid 'black)
+                    (overlay/xy (p00 (rectangle 3 3 'solid 'black))
                                    1 1
-                                   (rectangle 1 1 'solid 'white))))
+                                   (p00 (rectangle 1 1 'solid 'white)))))
 
 (htdp-test #t
            'color-list->image/white-in-mask
@@ -299,7 +314,7 @@
                                              red   red   red
                                              black red   black)
                                        3 3 0 0)
-                    (image+ (rectangle 3 3 'solid 'red)
+                    (overlay (p00 (rectangle 3 3 'solid 'red))
                             (color-list->image (list black white black
                                                      white white white
                                                      black white black)
@@ -307,38 +322,38 @@
 
 
 (htdp-test #t
-	   'image+
+	   'overlay
 	   (image=? (color-list->image (list red blue red red blue red) 3 2 0 0)
-		    (offset-image+ (rectangle 3 2 'solid 'red)
+		    (overlay/xy (p00 (rectangle 3 2 'solid 'red))
 				   1 0
-				   (rectangle 1 2 'solid 'blue))))
+				   (p00 (rectangle 1 2 'solid 'blue)))))
 
 (htdp-test #t
 	   'image-inside?1
-	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
+	   (image-inside? (overlay/xy (p00 (rectangle 3 2 'solid 'red))
 					 1 0
-					 (rectangle 1 2 'solid 'blue))
+					 (p00 (rectangle 1 2 'solid 'blue)))
 			  (rectangle 1 2 'solid 'blue)))
 
 (htdp-test #f
 	   'image-inside?2
-	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
+	   (image-inside? (overlay/xy (p00 (rectangle 3 2 'solid 'red))
 					 1 0
-					 (rectangle 1 2 'solid 'blue))
+					 (p00 (rectangle 1 2 'solid 'blue)))
 			  (rectangle 1 2 'solid 'black)))
 
 (htdp-test #t
 	   'image-inside?3
-	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
+	   (image-inside? (overlay/xy (p00 (rectangle 3 2 'solid 'red))
 					 1 0
-					 (rectangle 1 2 'solid 'blue))
+					 (p00 (rectangle 1 2 'solid 'blue)))
 			  (rectangle 1 2 'solid 'red)))
 
 (htdp-test #f
 	   'image-inside?4
-	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
+	   (image-inside? (overlay/xy (p00 (rectangle 3 2 'solid 'red))
 					 1 0
-					 (rectangle 1 2 'solid 'blue))
+					 (p00 (rectangle 1 2 'solid 'blue)))
 			  (rectangle 2 1 'solid 'red)))
 
 (htdp-test #t
@@ -348,26 +363,26 @@
 
 (htdp-test #f
 	   'image-inside?6
-	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
+	   (image-inside? (overlay/xy (p00 (rectangle 3 2 'solid 'red))
 					 1 0
-					 (rectangle 1 2 'solid 'blue))
+					 (p00 (rectangle 1 2 'solid 'blue)))
 			  (color-list->image (list blue white white) 
 					     3 1 0 0)))
 
 (htdp-test #t
 	   'image-inside?7
-	   (image-inside? (offset-image+ (rectangle 16 16 'solid 'red)
+	   (image-inside? (overlay/xy (p00 (rectangle 16 16 'solid 'red))
                                          2 5
-                                         (ellipse 6 6 'outline 'blue))
+                                         (p00 (ellipse 6 6 'outline 'blue)))
                           (ellipse 6 6 'outline 'blue)))
 
 (htdp-test #t
            'image-inside?8
            (image-inside?
-            (image+ (rectangle (image-width (text "x" 12 'red))
-                               (image-height (text "x" 12 'red))
-                               'solid 
-                               'white)
+            (overlay (p00 (rectangle (image-width (text "x" 12 'red))
+                                    (image-height (text "x" 12 'red))
+                                    'solid 
+                                    'white))
                     (text "x" 12 'red))
             (text "x" 12 'red)))
 
@@ -379,9 +394,9 @@
 
 (htdp-test (make-posn 2 5)
 	   'find-image
-	   (find-image (offset-image+ (rectangle 16 16 'solid 'red)
+	   (find-image (overlay/xy (p00 (rectangle 16 16 'solid 'red))
 				      2 5
-				      (ellipse 6 6 'outline 'blue))
+				      (p00 (ellipse 6 6 'outline 'blue)))
 		       (ellipse 6 6 'outline 'blue)))
 
 (htdp-test (make-posn 0 0)
@@ -442,21 +457,21 @@
                      0)))
 
 (htdp-test #t
-           'add-line
-           (image=? (image+ (rectangle 5 4 'solid 'black)
-                            (rectangle 1 4 'solid 'red))
-                    (add-line (rectangle 4 4 'solid 'black)
-                              (make-posn -1 0)
-                              (make-posn -1 3)
+           'add-line1
+           (image=? (overlay (p00 (rectangle 5 4 'solid 'black))
+                             (p00 (rectangle 1 4 'solid 'red)))
+                    (add-line (p00 (rectangle 4 4 'solid 'black))
+                              -1 0
+                              -1 3
                               'red)))
 
 (htdp-test #t
-           'add-line
-           (image=? (image+ (rectangle 4 5 'solid 'black)
-                            (rectangle 4 1 'solid 'red))
-                    (add-line (rectangle 4 4 'solid 'black)
-                              (make-posn 0 -1)
-                              (make-posn 3 -1)
+           'add-line2
+           (image=? (overlay (p00 (rectangle 4 5 'solid 'black))
+                             (p00 (rectangle 4 1 'solid 'red)))
+                    (add-line (p00 (rectangle 4 4 'solid 'black))
+                              0 -1
+                              3 -1
                               'red)))
 
 (check-on-bitmap 'solid-rect (htdp-eval (rectangle 2 2 'solid 'red)))
@@ -469,14 +484,15 @@
 (check-on-bitmap 'outline-triangle (htdp-eval (triangle 10 'outline 'red)))
 (check-on-bitmap 'line (htdp-eval (line 10 7 'red)))
 (check-on-bitmap 'text (htdp-eval (text "XX" 12 'red)))
-(check-on-bitmap 'image+ (htdp-eval (image+ (rectangle 1 4 'solid 'blue) (rectangle 4 1 'solid 'green))))
-(check-on-bitmap 'image+ (htdp-eval (offset-image+ (rectangle 4 4 'solid 'blue)
-                                                   2 2
-                                                   (rectangle 4 4 'solid 'green))))
+(check-on-bitmap 'overlay (htdp-eval (overlay (p00 (rectangle 1 4 'solid 'blue))
+                                              (p00 (rectangle 4 1 'solid 'green)))))
+(check-on-bitmap 'overlay (htdp-eval (overlay/xy (p00 (rectangle 4 4 'solid 'blue))
+                                                 2 2
+                                                 (p00 (rectangle 4 4 'solid 'green)))))
 (check-on-bitmap 'alpha-color-list
                  (htdp-eval
-                  (image+
-                   (rectangle 3 3 'solid 'blue)
+                  (overlay
+                   (p00 (rectangle 3 3 'solid 'blue))
                    (alpha-color-list->image
                     (list ared aclr ared
                           aclr aclr aclr
@@ -488,9 +504,9 @@
 (check-on-bitmap 'add-line
                  (htdp-eval
                   (add-line
-                   (rectangle 100 100 'solid 'black)
-                   (make-posn -10 -10)
-                   (make-posn 110 110)
+                   (p00 (rectangle 100 100 'solid 'black))
+                   -10 -10
+                   110 110
                    'red)))
 
 #|
@@ -523,16 +539,16 @@ snips as arguments
            'bs-image-height
            (image-height image-snip2))
 (htdp-test #t
-           'bs-image+
-           (image=? image-snip1 (image+ image-snip1 image-snip2)))
+           'bs-overlay
+           (image=? image-snip1 (overlay image-snip1 image-snip2)))
 (htdp-test #t
-           'bs-offset-image+
-           (image=? image-snip1 (offset-image+ image-snip1 0 0 image-snip2)))
+           'bs-overlay/xy
+           (image=? image-snip1 (overlay/xy image-snip1 0 0 image-snip2)))
 (htdp-test #t
            'bs-add-line
            (image=?
-            (add-line image-snip1 (make-posn 0 0) (make-posn 10 10) 'green)
-            (add-line image-snip2 (make-posn 0 0) (make-posn 10 10) 'green)))
+            (add-line image-snip1 0 0 10 10 'green)
+            (add-line image-snip2 0 0 10 10 'green)))
 (htdp-test #t
            'bs-image-inside?1
            (image-inside? image-snip1 image-snip2))

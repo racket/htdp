@@ -33,10 +33,13 @@
 (module helper mzscheme
   (define-syntax (module-begin stx)
     (syntax-case stx ()
-     [(_ the-test lang . rest)
+     [(_ the-test lang to-export . rest)
       #'(#%module-begin
 	 (require (rename tester the-test test))
 	 (require lang)
+         #,@(if (syntax-object->datum (syntax to-export))
+                (list (syntax (provide to-export)))
+                '())
 	 . rest)]))
   (provide (rename module-begin #%module-begin)))
        
@@ -50,6 +53,7 @@
      #`(module #,name helper
 	 test
 	 (all-except #,current-htdp-lang #%module-begin)
+         #f
 	 #,@body-accum
 	 #,stx))
     (unless stx-err?
@@ -63,8 +67,7 @@
      #`(module #,name helper
 	 test
 	 (all-except #,current-htdp-lang #%module-begin)
+         the-answer
 	 #,@body-accum
 	 (define the-answer #,stx)))
-    (dynamic-require name #f)
-    (parameterize ([current-namespace (module->namespace name)])
-      (namespace-variable-value 'the-answer))))
+    (dynamic-require name 'the-answer)))
