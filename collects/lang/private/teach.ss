@@ -9,7 +9,7 @@
 ;; straightforward, but error-checking is complex.
 
 ;; Error-message conventions:
-;;  - Report errors, somewhat anthropomorphicly, in terms of "expected"
+;;  - Report errors, somewhat anthropomorphically, in terms of "expected"
 ;;    versus "found" syntax.
 ;;  - Report errors according to a left-to-right reading; e.g., the
 ;;    error in `(define 1 2 3)' is "expected an identifier, found 1",
@@ -736,7 +736,8 @@
 			     clause
 			     "found an `else' clause that isn't the last clause ~
                                     in its `cond' expression"))
-			  (syntax/loc clause (else answer)))]
+                          (with-syntax ([true (syntax-property (syntax #t) 'stepper-else #t)])
+                            (syntax/loc clause (true answer))))]
 		       [(question answer)
                         (with-syntax ([verified (syntax-property (syntax (verify-boolean question 'cond)) 'stepper-skipto (list syntax-e cdr syntax-e cdr car))])
                           (syntax/loc clause (verified answer)))]
@@ -758,12 +759,12 @@
 		       [(question? answer? ...)
 			(check-preceding-exprs clause)
 			(let ([parts (syntax->list clause)])
-			  ;; to ensure he illusion of left-ot-right checking, make sure 
+			  ;; to ensure the illusion of left-to-right checking, make sure 
 			  ;; the question and first answer (if any) are ok:
 			  (local-expand (car parts) 'expression null)
 			  (unless (null? (cdr parts))
 			    (local-expand (cadr parts) 'expression null))
-			  ;; question and answer 9if any) are ok, raise a count-based exception:
+			  ;; question and answer (if any) are ok, raise a count-based exception:
 			  (teach-syntax-error
 			   'cond
 			   stx
@@ -779,19 +780,11 @@
 			 "expected a question--answer clause, but found ~a"
 			 (something-else clause))]))
 		   clauses)])
-	     ;; Add `else' clause for error, if necessary:
-	     (let ([clauses (let loop ([clauses checked-clauses])
-			      (cond
-			       [(null? clauses)
-				(list
-                                 (with-syntax ([err (syntax-property (syntax (error 'cond "all question results were false")) 'stepper-inserted-else #t)])
-                                   (syntax/loc stx
-                                     [else err])))]
-			       [(syntax-case (car clauses) (else)
-				  [(else . _) #t]
-				  [_else #f])
-				clauses]
-			       [else (cons (car clauses) (loop (cdr clauses)))]))])
+             ;; Add `else' clause for error (always):
+             (let ([clauses (append checked-clauses 
+                                    (list 
+                                     (syntax/loc stx
+                                       [else (error 'cond "all question results were false")])))])
 	       (with-syntax ([clauses clauses])
 		 (syntax/loc stx (cond . clauses))))))]
 	[_else (bad-use-error 'cond stx)]))
