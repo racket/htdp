@@ -101,6 +101,8 @@
 	 (zodiac:structurize-syntax
 	  `(,replace-in-template
 	    ',family
+	    ;,this
+	    ;,(make-object editor-snip% (get-editor))
 	    ,(make-object editor-snip% (send (get-editor) copy-self))
 	    ,@(let loop ([snip (send (get-editor) find-first-snip)])
 		(cond
@@ -279,6 +281,7 @@
 			     0 0 0 0)])
       (send text hide-caret #t)
       (send snip set-tight-text-fit #t)
+      (send snip set-align-top-line #t)
       snip)))
 
 (define (typeset-frame-extension super%)
