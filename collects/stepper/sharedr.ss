@@ -1,6 +1,7 @@
 (unit/sig stepper:shared^
   (import [z : zodiac:system^]
-	  [e : stepper:error^])
+	  [e : stepper:error^]
+          stepper:zodiac-client-procs^)
   
   ; copied from aries
   
@@ -113,13 +114,11 @@
   ; add fields to parsed structures at runtime.
   
   (define-values (expr-read set-expr-read!)
-    (let-values ([(getter setter) 
-                  (z:register-client 'stepper:read (lambda () #f))])
-      (values
-       (lambda (parsed) (getter (z:parsed-back parsed)))
-       (lambda (parsed read) (setter (z:parsed-back parsed) read)))))
+    (values
+     (lambda (parsed) (read-getter (z:parsed-back parsed)))
+     (lambda (parsed read) (read-setter (z:parsed-back parsed) read))))
+
   
- 
   (define (list-take n a-list)
     (if (= n 0)
         null
