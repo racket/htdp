@@ -28,16 +28,23 @@
     (define (fahr->cel f)
       (error 'convert "not initialized"))
     
+    ;; slider-cb : slider% event% -> void
+    ;; to use fahr->cel to perform the conversion 
     (define (slider-cb c s)
-      (send sliderC set-value ((compose 2int fahr->cel) (send sliderF get-value))))
+      (local ((define (in-slider-range x)
+		(cond
+		 [(<= SLI-MIN x SLI-MAX) x]
+		 [else (error 'convert-gui "result out of range for Celsius slider")])))
+      (send sliderC set-value 
+	    ((compose in-slider-range 2int fahr->cel) (send sliderF get-value)))))
     
-    #| --------------------------------------------------------
+    #| --------------------------------------------------------------------
     
-    view  (exports sliderF sliderC) (imports f2c slider-cb)   
+    view  (exports sliderF sliderC SLI-MIN SLI-MAX) (imports f2c slider-cb)   
     
-    model (imports sliderF sliderC) (exports f2c slider-cb)   
+    model (imports sliderF sliderC SLI-MIN SLI-MAX) (exports f2c slider-cb)   
     
-    -------------------------------------------------------- |#
+    ----------------------------------------------------------------------- |#
     
     ;; ============================================================================
     ;; VIEW
@@ -59,9 +66,11 @@
     ;; to display the Fahrenheit temperature 
     (define sliderF (make-object slider% #f -50 250 panel void 32))
     
+    (define SLI-MIN (f2c -50))
+    (define SLI-MAX (f2c 250))
     ;; sliderC : slider% 
     ;; to display the Celsius temperature 
-    (define sliderC (make-object slider% #f (f2c -50) (f2c 250) panel void (f2c 32)))
+    (define sliderC (make-object slider% #f SLI-MIN SLI-MAX panel void (f2c 32)))
     
     ;; convert : button%
     ;; to convert fahrenheit to celsius 
