@@ -52,6 +52,7 @@
                  (hash-table-put! assoc-table key new-binding)
                  new-binding)))))))
   
+  
   ; get-binding-name extracts the S-expression name for a binding. Zodiac
   ; creates a unique, gensym'd symbol for each binding, but the name is
   ; unreadable. Here, we create a new gensym, but the name of the generated
@@ -92,12 +93,21 @@
          (not (eq? arg1 arg2p))))
   |#
   
+  ; get-lifted-gensym maintains the mapping between let-bindings and the gensym
+  ; which is used to capture its index at runtime.
+  
+  (define get-lifted-gensym
+    (make-binding-source "lifter"))
+  
   ; gensyms needed by many modules:
 
   ; no-sexp is used to indicate no sexpression for display.
   ; e.g., on an error message, there's no sexp.
   (define no-sexp (gensym "no-sexp-"))
 
+  ; multiple-highlight is used to indicate multiple highlighted expressions
+  (define multiple-highlight (gensym "multiple-highlight-"))
+  
   ; *unevaluated* is the value assigned to temps before they are evaluated.
   (define *unevaluated* (gensym "unevaluated-"))
  
@@ -142,4 +152,17 @@
        (lambda (key value)
 	 (hash-table-put! closure-table key value))
        (lambda args ; key or key & failure-thunk
-         (apply hash-table-get closure-table args)))))) 
+         (apply hash-table-get closure-table args)))))
+  
+  ; insert-highlighted-value : sexp sexp -> sexp
+  ; replaces highlight-placeholder in the first sexp with the second sexp
+  
+  (define (insert-highlighted-value exp inserted)
+    (let ([recur (lambda (exp) (insert-highlighted-value exp inserted))])
+      (cond [(list? exp)
+             (map recur exp)]
+            [(vector? exp)
+             (list->vector (map recur (vector->list exp)))]
+            [(eq? exp highlight-placeholder)
+             inserted]
+            [else exp])))) 

@@ -421,9 +421,17 @@ And Ugly.
 
 January, 2000
 
-I'm working on the debugger, now, and in particular extending the annotater to handle all of the Zodiac forms. Let and Letrec turn out to be quite ugly.  I'm still a little unsure about certain aspects of variable references, like for example whether or not they stay renamed, or whether they return to their original names. 
+I'm working on the debugger, now, and in particular extending the annotater 
+to handle all of the Zodiac forms. Let and Letrec turn out to be quite ugly.  
+I'm still a little unsure about certain aspects of variable references, like 
+for example whether or not they stay renamed, or whether they return to their 
+original names. [ed. note: they get new uninterned symbols that print like
+their original names]
 
-But that's not what I'm here to talk about.  No, the topic of the day is 'floating variables.'  A floating variable is one whose value must be captured in a continuation mark even though it doesn't occur free in the expression that the wcm wraps.  Let me give an example:
+But that's not what I'm here to talk about.  No, the topic of the day is 
+'floating variables.'  A floating variable is one whose value must be captured
+in a continuation mark even though it doesn't occur free in the expression that 
+the wcm wraps.  Let me give an example:
 
 (unit/sig some-sig^
   (import)
@@ -431,7 +439,14 @@ But that's not what I'm here to talk about.  No, the topic of the day is 'floati
   (define a 13)
   (define b (wcm <must grab a> (+ 3 4))))
   
-In this case, the continuation-mark must hold the value of a, even though a does not occur free in the rhs of b's definition.  Floating variables are stored in a parameter of annotate/inner.  In other words, they propagate downward.  Furthermore, they're subject to the same potential elision as all other variables; you only need to store the ones which are also contained in the set tail-bound.  Also note that (thank God) Zodiac standardizes names apart, so we don't need to worry about duplications.  Also note that floating variables may only be bound-varrefs.
+In this case, the continuation-mark must hold the value of a, even though a 
+does not occur free in the rhs of b's definition.  Floating variables are 
+stored in a parameter of annotate/inner.  In other words, they propagate 
+downward.  Furthermore, they're subject to the same potential elision as all 
+other variables; you only need to store the ones which are also contained in 
+the set tail-bound.  Also note that (thank God) Zodiac standardizes names 
+apart, so we don't need to worry about duplications.  Also note that 
+floating variables may only be bound-varrefs.
 
 ********
 
@@ -502,5 +517,100 @@ _also_ going to have a mark and a break around it, for the "result-break" of the
 let.  I thought I could leave out the outer break, but it doesn't work.  Actually,
 maybe I could leave out the inner one.  Gee whiz.  This stuff is really complicated.
 
+*************
 
-      
+Okay, well, I figured all that stuff out, but now I've got to restructure the 
+reconstructor to handle lifting---PRE-lifting, that is---on let/letrec/local.
+In particular, the reconstruct-inner function will now return four things: the
+free bindings, the reconstructed expr, the "before" definitions, and the "after"
+definitions.  These before and after definitions are wrapped around the current
+set of generated definitions.  Case in point; I'm about to execute the (+ 7 8)
+in the following expression:
+
+(let ([a 4]
+      [b (let ([h 3]
+               [i (+ 7 8)]
+               [j 9])
+            (+ h i j))]
+      [c 19])
+   (+ a b c))
+
+How do we reconstruct this?  Well, first we reconstruct the (+ 7 8) itself, that's
+easy.  Then, we encounter a let.  The return value of this will be the _before_
+expressions:
+(define ~h~0 3)
+the _after_expressions:
+(define ~i~0 (+ 7 8))
+(define ~j~0 9)
+and the reconstructed expression:
+(+ ~h~0 ~i~0 ~j~0)
+
+Now, we recur, using the reconstructed expression.  The next step outward is _also_
+a let, so we get the following before expressions:
+(define ~a~0 4)
+the following after expressions:
+(define ~b~0 (+ ~h~0 ~i~0 ~j~0))  <---here is where the reconstructed expr appears
+(define ~c~0 19)
+and the reconstructed expression:
+(+ ~a~0 ~b~0 ~c~0)
+
+So then, the final assembly occurs when the "before" expressions are slapped together,
+last first, then the "after" expressions, first first, and then whatever reconstructed
+expression is left over.
+
+Ugh.
+
+***********
+
+Wow. more complications.  Here's the new problem.  Let's say I have an expression like
+this:
+
+(define (make-thunk)
+  (let ([lexical-binding 14]
+        [returned-thunk (lambda () lexical-binding)])
+     returned-thunk))
+     
+(define first-thunk (make-thunk))
+(define second-thunk (make-thunk))
+
+(first-thunk)
+
+Now, when I'm just inside the body of first-thunk, and trying to reconstruct "lexical-
+binding", I need to know what lifted name it got. 
+
+There are a bunch of ways to try to do this, but I'm going to take the most 
+straightforward approach (which came to me after about a day of thought), 
+which is to expand every lexical binding into a pair of bindings; one which 
+refers to the bound value (with the same name as the original binding), and 
+a new, gensym'ed one, which indicates what index number this binding has
+received.
+
+2000-06-05
+
+***********
+
+So here's the new format of a full mark: 
+(make-mark label source bindings)
+where label is a symbol, source is a zodiac:parsed, and bindings is an association
+list from bindings to values.  Note, however, that every let-type binding now has
+_two_ entries in this list.  The first one supplies the binding's value, and the
+second one supplies the lifted name's index.
+
+2000-06-06
+
+***********
+
+How do we guarantee that lifted names do not clash? Well, for
+each binding we use the original name, with two numbers appended
+to it, separated by zeros; the first one indicates which binding
+it is (more than one binding may have the same original name),
+and the second one indicates which dynamic occurrence of this
+binding it is.
+
+So, for instance, if a program contains one binding named 'foo', and it's 
+evaluated three times, the third evaluation would result in the lifted name
+'foo0002'.  I personally guarantee that no namespace clashes can occur
+in this scheme. Yep.
+
+2000-06-06
+

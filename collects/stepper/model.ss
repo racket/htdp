@@ -199,8 +199,31 @@
   (define held-expr no-sexp)
   (define held-redex no-sexp)
   
+  (define (redivide exprs)
+    (letrec ([contains-highlight-placeholder
+              (lambda (expr)
+                (if (pair? expr)
+                    (or (contains-highlight-placeholder (car expr))
+                        (contains-highlight-placeholder (cdr expr)))
+                    (eq? expr highlight-placeholder)))])
+      (let loop ([exprs exprs] [before-accum (lambda (x) x)])
+        (cond [(null? exprs) 
+               (e:internal-error 'redivide "no sexp contained the highlight-placeholder.")]
+              [(contains-highlight-placeholder (car exprs))
+               (values (before-accum null) (car exprs) (cdr exprs))]
+              [else
+               (loop (cdr exprs) (lambda (x) (before-accum (cons (car exprs) x))))]))))
+  
   (define (break mark-list break-kind returned-value-list)
-    (let ([reconstruct-helper
+    (let ([double-redivide
+           (lambda (finished-exprs new-exprs-before new-exprs-after)
+             (let*-values ([(before current after) (redivide held-expr)]
+                           [(before-2 current-2 after-2) (redivide reconstructed)]
+                           [(_) (unless (and (equal before before-2)
+                                             (equal after after-2)))
+                            (e:internal-error 'break "reconstructed before or after defs are not equal.")])
+               (values (append finished-exprs before) current current-2 after)))]
+           [reconstruct-helper
            (lambda (finish-thunk)
              (send-to-drscheme-eventspace
               (lambda ()
@@ -234,38 +257,55 @@
 ;                (e:internal-error 'reconstruct-helper
 ;                                  "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
 ;                                  held-expr reconstructed))
-              (let ([result (make-before-after-result finished-exprs
-                                                      held-expr
-                                                      held-redex
-                                                      reconstructed
-                                                      reduct)])
+              (let*-values 
+                  ([(new-finished current-pre current-post after) (double-redivide finished-exprs held-expr reconstructed)]
+                   [result (make-before-after-result new-finished
+                                                     current-pre
+                                                     held-redex
+                                                     current-post
+                                                     reduct
+                                                     after)])
                 (set! held-expr no-sexp)
                 (set! held-redex no-sexp)
                 (i:receive-result result))))
            (suspend-user-computation))]
         [(double-break)
-         ; a double-break occurs at the beginning of a let's body.
+         ; a double-break occurs at the beginning of a let's evaluation.
+         (printf "entering double-break~n")
          (send-to-drscheme-eventspace
           (lambda ()
-            (let* ([reconstruct-quintuple
+            (let* ([reconstruct-quadruple
                     (r:reconstruct-current current-expr mark-list break-kind returned-value-list)])
-              (set! finished-exprs (append finished-exprs (car reconstruct-quintuple)))
               (when (not (eq? held-expr no-sexp))
                 (e:internal-error 'break-reconstruction
                                   "held-expr not empty when a double-break occurred"))
-              (i:receive-result (apply make-before-after-result 
-                                       finished-exprs
-                                       (cdr reconstruct-quintuple))))))
+              (let*-values 
+                  ([(new-finished current-pre current-post after) (double-redivide finished-exprs held-expr reconstructed)])
+                (unless (eq? current-post highlight-placeholder)
+                  (e:internal-error 'break "current-post should have been highlight-placeholder"))
+                (i:receive-result (make-before-after-result new-finished
+                                                            current-pre
+                                                            (list-ref reconstruct-quadruple 1)
+                                                            double-highlight
+                                                            (list-ref reconstruct-quadruple 3)
+                                                            after))))))
+         (suspend-user-computation)]
+        [(late-let-break)
+         (send-to-drscheme-eventspace
+          (lambda ()
+            (let ([new-finished (r:reconstruct-current current-expr mark-list break-kind returned-value-list)])
+              (set! finished-exprs (append finished-exprs new-finished))
+              (continue-user-computation))))
          (suspend-user-computation)]
         [else (e:internal-error 'break "unknown label on break")])))
   
   (define (handle-exception exn)
     (if (not (eq? held-expr no-sexp))
+        (let*-values
+            ([(before current after) (redivide held-expr)])
+          (i:receive-result (make-before-error-result (append finished-exprs before) 
+                                                      held-expr held-redex (exn-message exn) after)))
         (begin
-          (printf "held-expr: ~a~n" held-expr)
-          (i:receive-result (make-before-error-result finished-exprs held-expr held-redex (exn-message exn))))
-        (begin
-          (printf "no held sexp~n")
           (i:receive-result (make-error-result finished-exprs (exn-message exn))))))
            
   (define (make-exception-handler k)

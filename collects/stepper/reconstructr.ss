@@ -64,36 +64,6 @@
   (define comes-from-or?
     (make-check-raw-first-symbol 'or))
 
-  ; the lifted-names table maps bindings to numbers. the number,
-  ; essentially, is how we avoid clashes.  So, if a binding with
-  ; the original name "foo" is associated with the number "2", 
-  ; the lifted name will be "~foo~2". Note that you _need_
-  ; that second tilde; otherwise there could be an overlap, 
-  ; e.g. (foo 12) => ~foo12, (foo1 2) => ~foo12. 
-  
-  (define lifted-names-table (make-hash-table-weak))
-  
-  (define (insert-lifted-name binding)
-    (let* ([binding-name (z:binding-orig-name binding)]
-           [matching (filter
-                      (lambda (key&val) (eq? (car key&val) binding-name))
-                      (hash-table-map lifted-names-table (lambda (key val) (list (z:binding-orig-name key) val))))]
-           [matching-nums (map cadr matching)]
-           [free-num (let loop ([try-index 0]) 
-                       (if (memq try-index matching-nums) 
-                           (loop (+ try-index 1))
-                           try-index))])
-      (hash-table-put! lifted-names-table binding free-num)
-      (string->symbol (string-append "~" (symbol->string binding-name) "~" (number->string free-num)))))
-  
-  (define (lookup-lifted-name binding)
-    (cond [(hash-table-get lifted-names-table binding (lambda () #f)) =>
-           (lambda (binding-number)
-             (string->symbol (string-append "~" (symbol->string (z:binding-orig-name binding)) "~" 
-                                            (number->string binding-number))))]
-          [else ; the user is about to get the undefined value in a letrec...
-           (z:binding-orig-name binding)]))
-    
   (define (rectify-value val)
     (let ([closure-record (closure-table-lookup val (lambda () #f))])
       (cond
@@ -184,6 +154,31 @@
                     (comes-from-cond? expr))
                (in-inserted-else-clause (cdr mark-list))))))
   
+   ; static-binding-indexer (z:parsed -> integer)
+  
+  (define static-binding-indexer
+    (let* ([name-number-table (make-hash-table)]
+           [binding-number-table (make-hash-table-weak)])
+      (lambda (binding)
+        (cond [(hash-table-get binding-number-table binding (lambda () #f)) =>
+               (lambda (x) x)]
+              [else (let* ([orig-name (z:binding-orig-name binding)]
+                           [old-index (hash-table-get name-number-table orig-name (lambda () -1))]
+                           [new-index (+ old-index 1)])
+                      (hash-table-put name-number-table orig-name new-index)
+                      (hash-table-put binding-number-table binding new-index)
+                      new-index)]))))
+  
+  ; construct-lifted-name (z:parsed num -> string)
+  
+  (define (construct-lifted-name binding dynamic-index)
+    (let* ([static-index (static-binding-indexer binding)])
+      (string->symbol
+       (string-append (z:binding-orig-name binding) "0" 
+                      (number->string static-index) "0" 
+                      (number->string dynamic-index)))))
+  
+  
   ; rectify-source-expr (z:parsed (ListOf Mark) (ListOf z:binding) -> sexp)
   
   (define (rectify-source-expr expr mark-list lexically-bound-bindings)
@@ -195,8 +190,8 @@
                       (if (memq binding lexically-bound-bindings)
                           (z:binding-orig-name binding)
                           (if (z:lambda-binding? binding)
-                              (rectify-value (mark-binding-value (lookup-binding mark-list (z:bound-varref-binding expr))))
-                              (lookup-lifted-name binding))))]
+                              (rectify-value (mark-binding-value (lookup-binding mark-list binding)))
+                              (construct-lifted-name binding (lookup-dynamic-index mark-list binding)))))]
                    [(z:top-level-varref? expr)
                     (z:varref-var expr)])]
             
@@ -346,6 +341,18 @@
              (utils:read->raw (expr-read expr))]
             [else
              (rectify-value value)]))
+  
+  
+  ; reconstruct-lifted ((listof symbol) sexp -> sexp)
+  ; reconstruct-lifted really should take into account the original source expression. Local may
+  ; screw me up. We'll cross that bridge when we get to it.
+  
+  (define (reconstruct-lifted names sexp)
+    (case (length names)
+      ((0) `(define-values () ,sexp))
+      ((1) `(define ,(car names) ,sexp))
+      (else `(define-values ,names ,sexp))))
+  
     
   ; reconstruct-current : takes a parsed expression, a list of marks, the kind of break, and
   ; any values that may have been returned at the break point. It produces a list containing the
@@ -364,7 +371,7 @@
         ((define (rectify-source-top-marks expr)
            (rectify-source-expr expr mark-list null))
          
-         (define (rectify-top-level expr so-far)
+         (define (rectify-top-level expr so-far so-far-defs)
            (if (z:define-values-form? expr)
                (let ([vars (z:define-values-form-vars expr)]
                      [val (z:define-values-form-val expr)])
@@ -398,6 +405,8 @@
                            ,(rectify-source-top-marks val))]))
                so-far))
          
+         ; rectify-inner ((listof mark) sexp -> (listof sexp) (listof sexp) sexp)
+         
          (define (rectify-inner mark-list so-far)
            (let* ([rectify-source-current-marks 
                    (lambda (expr)
@@ -406,40 +415,50 @@
                    (lambda (letrec? binding-sets vals body)
                      (let+ ([val binding-list (apply append binding-sets)]
                             [val binding-names (map (lambda (set) (map z:binding-orig-name set)) binding-sets)]
-                            [val must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-sets)]
                             [val dummy-var-list (if letrec?
                                                     binding-list
                                                     (build-list (length binding-list) get-arg-binding))]
                             [val rhs-vals (map (lambda (arg-binding) 
                                                  (mark-binding-value (lookup-binding mark-list arg-binding)))
                                                dummy-var-list)]
-                            [val rhs-list
-                                 (let loop ([binding-sets binding-sets] [rhs-vals rhs-vals] [rhs-sources vals])
-                                   (cond [(null? binding-sets) null]
+                            [val rhs-lifted-name-sets
+                                 (map (lambda (binding-set)
+                                        (map (lambda (binding)
+                                               (construct-lifted-name binding (lookup-dynamic-index mark-list binding)))
+                                             binding-set))
+                                      binding-sets)]
+                            [val (values before-defs after-defs)
+                                 (let loop ([rhs-vals rhs-vals]
+                                            [rhs-sources vals]
+                                            [rhs-lifted-name-sets rhs-lifted-name-sets])
+                                   (cond [(null? binding-sets) (values null null)]
                                          [(eq? (car rhs-vals) (if letrec?
                                                                   the-undefined-value
                                                                   *unevaluated*))
-                                          (cons so-far
-                                                (map (lambda (expr)
-                                                       (rectify-source-expr expr mark-list (if letrec?
-                                                                                               binding-sets
-                                                                                               null)))
-                                                     (cdr rhs-sources)))]
+                                          (values null
+                                                  (cons (reconstruct-lifted (car rhs-lifted-name-sets) so-far)
+                                                        (map (lambda (rhs-lifted-name-set rhs-source)
+                                                               (recosntruct-lifted rhs-lifted-name-set 
+                                                                                   (rectify-source-expr expr
+                                                                                                        mark-list
+                                                                                                        (if letrec?
+                                                                                                            binding-list
+                                                                                                            null))))
+                                                             (cdr rhs-lifted-name-sets)
+                                                             (cdr rhs-sources))))]
                                          [else
-                                          (let*-values ([(first-set) (car binding-sets)]
-                                                        [(set-vals remaining) (list-partition rhs-vals (length first-set))])
-                                            (cons 
-                                             (case (length first-set)
-                                               ((0) `(values))
-                                               ((1) (car set-vals))
-                                               (else `(values ,@set-vals)))
-                                             (loop (cdr binding-sets) remaining (cdr rhs-sources))))]))]
+                                          (let*-values ([(first-set) (car rhs-lifted-name-sets)]
+                                                        [(set-vals remaining) (list-partition rhs-vals (length first-set))]
+                                                        [(reconstructed) (map reconstruct-lifted
+                                                                              rhs-lifted-name-sets
+                                                                              (map rectify-value set-vals))]
+                                                        [(before after) (loop remaining
+                                                                              (cdr rhs-sources)
+                                                                              (cdr rhs-lifted-name-sets))])
+                                            (values (append reconstructed before)
+                                                    after))]))]
                             [val rectified-body (rectify-source-expr body mark-list binding-list)])
-                       (if must-be-values?
-                           `(,(if letrec? 'letrec-values 'let-values) 
-                             ,(map list binding-names rhs-list) ,rectified-body)
-                           `(,(if letrec? 'letrec 'let)
-                             ,(map list (map car binding-names) rhs-list) ,rectified-body))))]
+                       (values before-defs after-defs rectified-body)))]
                   [top-mark (car mark-list)]
                   [expr (mark-source top-mark)])
              (cond 
@@ -453,74 +472,77 @@
                ; applications
                
                [(z:app? expr)
-                (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
-                       [arg-temps (build-list (length sub-exprs) get-arg-binding)]
-                       [arg-vals (map (lambda (arg-temp) 
-                                        (mark-binding-value (lookup-binding mark-list arg-temp)))
-                                      arg-temps)])
-                  (case (mark-label (car mark-list))
-                    ((not-yet-called)
-                     (letrec
-                         ([split-lists
-                           (lambda (exprs vals)
-                             (if (or (null? vals)
-                                     (eq? (car vals) *unevaluated*))
-                                 (values null exprs)
-                                 (let-values ([(small-vals small-exprs)
-                                               (split-lists (cdr exprs) (cdr vals))])
-                                   (values (cons (car vals) small-vals) small-exprs))))])
-                       (let-values ([(evaluated unevaluated) (split-lists sub-exprs arg-vals)])
-                         (let* ([rectified-evaluated (map rectify-value evaluated)])
-                           (if (null? unevaluated)
-                               rectified-evaluated
-                               (append rectified-evaluated
-                                       (cons so-far
-                                             (map rectify-source-current-marks (cdr unevaluated)))))))))
-                    ((called)
-                     (if (eq? so-far nothing-so-far)
-                         `(...) ; in unannotated code
-                         `(... ,so-far ...)))
-                    (else
-                     (e:static-error "bad label in application mark: ~s" expr))))]
+                (so-far-only
+                 (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
+                        [arg-temps (build-list (length sub-exprs) get-arg-binding)]
+                        [arg-vals (map (lambda (arg-temp) 
+                                         (mark-binding-value (lookup-binding mark-list arg-temp)))
+                                       arg-temps)])
+                   (case (mark-label (car mark-list))
+                     ((not-yet-called)
+                      (letrec
+                          ([split-lists
+                            (lambda (exprs vals)
+                              (if (or (null? vals)
+                                      (eq? (car vals) *unevaluated*))
+                                  (values null exprs)
+                                  (let-values ([(small-vals small-exprs)
+                                                (split-lists (cdr exprs) (cdr vals))])
+                                    (values (cons (car vals) small-vals) small-exprs))))])
+                        (let-values ([(evaluated unevaluated) (split-lists sub-exprs arg-vals)])
+                          (let* ([rectified-evaluated (map rectify-value evaluated)])
+                            (if (null? unevaluated)
+                                rectified-evaluated
+                                (append rectified-evaluated
+                                        (cons so-far
+                                              (map rectify-source-current-marks (cdr unevaluated)))))))))
+                     ((called)
+                      (if (eq? so-far nothing-so-far)
+                          `(...) ; in unannotated code
+                          `(... ,so-far ...)))
+                     (else
+                      (e:static-error "bad label in application mark: ~s" expr)))))]
                
                ; define-struct 
                
                [(z:struct-form? expr)
-                (if (comes-from-define-struct? expr)
-                    so-far
-                    (let ([super-expr (z:struct-form-super expr)]
-                          [raw-type (utils:read->raw (z:struct-form-type expr))]
-                          [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
-                      (if super-expr
-                          `(struct (,raw-type ,so-far)
-                                   ,raw-fields)
-                          `(struct ,raw-type ,raw-fields))))]
+                (so-far-only
+                 (if (comes-from-define-struct? expr)
+                     so-far
+                     (let ([super-expr (z:struct-form-super expr)]
+                           [raw-type (utils:read->raw (z:struct-form-type expr))]
+                           [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
+                       (if super-expr
+                           `(struct (,raw-type ,so-far)
+                                    ,raw-fields)
+                           `(struct ,raw-type ,raw-fields)))))]
                
                ; if
                
                [(z:if-form? expr)
-                (let ([test-exp (if (eq? so-far nothing-so-far)
-                                    (rectify-value (mark-binding-value (lookup-binding mark-list if-temp)))
-                                    so-far)])
-                  (cond [(comes-from-cond? expr)
-                         (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
-                                [cond-source (z:zodiac-start expr)]
-                                [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list null)])
-                           `(cond ,clause ,@rest-clauses))]
-                        [(comes-from-and? expr)
-                         `(and ,test-exp ,@(rectify-and-clauses (z:zodiac-start expr)
-                                                                (z:if-form-then expr)
-                                                                mark-list
-                                                                null))]
-                        [(comes-from-or? expr)
-                         `(or ,test-exp ,@(rectify-or-clauses (z:zodiac-start expr)
-                                                              (z:if-form-else expr)
-                                                              mark-list
-                                                              null))]
-                        [else
-                         `(if ,test-exp 
-                              ,(rectify-source-current-marks (z:if-form-then expr))
-                              ,(rectify-source-current-marks (z:if-form-else expr)))]))]
+                (so-far-only
+                 (let ([test-exp (if (eq? so-far nothing-so-far)
+                                     (rectify-value (mark-binding-value (lookup-binding mark-list if-temp)))
+                                     so-far)])
+                   (cond [(comes-from-cond? expr)
+                          (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
+                                 [cond-source (z:zodiac-start expr)]
+                                 [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list null)])
+                            `(cond ,clause ,@rest-clauses))]
+                         [(comes-from-and? expr)
+                          `(and ,test-exp ,@(rectify-and-clauses (z:zodiac-start expr)
+                                                                 (z:if-form-then expr)
+                                                                 mark-list
+                                                                 null))]
+                         [(comes-from-or? expr)
+                          `(or ,test-exp ,@(rectify-or-clauses (z:zodiac-start expr)
+                                                               (z:if-form-else expr)
+                                                               mark-list
+                                                               null))]
+                         [else
+                          `(if ,test-exp 
+                               ,(rectify-source-current-marks (z:if-form-then expr))
+                               ,(rectify-source-current-marks (z:if-form-else expr)))])))]
                
                ; quote : there is no mark or break on a quote.
                
@@ -553,11 +575,13 @@
          
          (define redex #f)
          
-         (define (current-def-rectifier so-far mark-list first)
+         (define (current-def-rectifier defs so-far mark-list first)
            (if (null? mark-list)
-               (rectify-top-level expr so-far)
-               (let ([reconstructed (rectify-inner mark-list so-far)])
+               (append defs
+                       (list (rectify-top-level expr so-far)))
+               (let-values ([(before after reconstructed) (rectify-inner mark-list so-far)])
                  (current-def-rectifier
+                  (append before defs after)
                   (if first
                       (begin
                         (set! redex reconstructed)
@@ -566,36 +590,15 @@
                   (cdr mark-list)
                   #f))))
          
-         (define (let-style-abstraction letrec? binding-sets body)
-           (let* ([redex (rectify-inner mark-list #f)]
-                  [binding-list (apply append binding-sets)]
-                  [new-names (map insert-lifted-name binding-list)]
-                  [dummy-var-list (if letrec?
-                                      binding-list
-                                      (build-list (length binding-list) get-arg-binding))]
-                  [rhs-vals (map (lambda (arg-temp) 
-                                   (mark-binding-value (lookup-binding mark-list arg-temp)))
-                                 dummy-var-list)]
-                  [before-step (current-def-rectifier highlight-placeholder (cdr mark-list) #f)]
-                  [reduct (rectify-source-expr body mark-list null)]
-                  [after-step (current-def-rectifier highlight-placeholder (cdr mark-list) #f)]
-                  [new-defines (map (lambda (name val) `(define ,name ,val)) new-names rhs-vals)])
-             (list new-defines before-step redex after-step reduct)))
-           
-           
          (define (rectify-let-values-step)
-           (let* ([source-expr (mark-source (car mark-list))])
-             (apply let-style-abstraction
-                    (z:letrec-values-form? source-expr)
-                    (map (lambda (accessor) (accessor source-expr))
-                         (cond [(z:let-values-form? source-expr)
-                                (list z:let-values-form-vars
-                                      z:let-values-form-body)]
-                               [(z:letrec-values-form? source-expr)
-                                (list z:letrec-values-form-vars
-                                      z:letrec-values-form-body)])))))
-                    
-                    
+           (let*-values ([(redex) (rectify-source (mark-source (car mark-list)) mark-list null)]
+                         [(before after wrapper) (current-def-rectifier highlight-placeholder (cdr mark-list) #f)]
+                         [(r-before r-after reduct) (rectify-inner mark-list #f)])
+             (list (append before after (list wrapper)) redex 
+                   (append before highlight-placeholder after (list (insert-highlighted-value wrapper reduct)))
+                   (append r-before r-after))))
+           
+           
          ;         (define (confusable-value? val)
          ;           (not (or (number? val)
          ;                    (boolean? val)
@@ -615,6 +618,10 @@
                   (list current-def redex)))
              ((double-break)
               (rectify-let-values-step))
+             ((late-let-break)
+              (let ([reconstructed (rectify-inner mark-list #f)])
+                (let loop ([first (car reconstructed)] [rest (cdr reconstructed)]) ; take all but last
+                  (if (null? rest) null (cons first (loop (car rest) (cdr rest)))))))
              (else
               (e:internal-error 'reconstruct-current-def "unknown break kind: " break-kind))))
 
