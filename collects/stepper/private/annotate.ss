@@ -147,10 +147,6 @@
   (define (closure-key-maker closure)
     closure)
   
-  (define-struct bogus-mark-struct ())
-  (define bogus-mark
-    (datum->syntax-object #'here (make-bogus-mark-struct)))
-  
   ;;;;;;;;;;
   ;;
   ;; make-debug-info builds the thunk which will be the mark at runtime.  It contains 
@@ -329,7 +325,10 @@
 ;     (begin
 ;       (test 'let-bound syntax-property (syntax a-var-1) 'stepper-binding-type))])       
                                                             
-                                                   
+                    
+;; capturing mzscheme construct names:
+  
+  (define mz-app #'#%app)
                                                    
                                                    
    ;                                               
@@ -434,31 +433,31 @@
          
          (define (break-wrap expr)
            (if break
-               (datum->syntax-object expr `(begin (,(make-break 'normal-break)) ,expr))
+               (d->so `(begin (,(make-break 'normal-break)) ,expr))
                expr))
          
          (define (var-break-wrap expr)
            (if break
-               (datum->syntax-object expr `(begin (,(make-break 'var-break)) ,expr))
+               (d->so `(begin (,(make-break 'var-break)) ,expr))
                expr))
          
          (define (double-break-wrap expr)
            (if break
-               (datum->syntax-object expr `(begin (,(make-break 'double-break)) ,expr))
+               (d->so `(begin (,(make-break 'double-break)) ,expr))
                expr))
          
          (define (late-let-break-wrap var-names lifted-gensyms expr)
            (if break
                (let* ([interlaced (apply append (map list var-names lifted-gensyms))])
-                 (datum->syntax-object expr `(begin (,(make-break 'late-let-break) ,@interlaced) ,expr)))
+                 (d->so `(begin (,(make-break 'late-let-break) ,@interlaced) ,expr)))
                expr))
          
          (define (return-value-wrap expr)
            (if break
-               (datum->syntax-object expr
-                      `(let* ([result ,expr])
-                         (,(make-break 'result-break) result)
-                         result))
+               (d->so
+                `(let* ([result ,expr])
+                   (,mz-app ,(make-break 'result-break) result)
+                   result))
                expr))
 
 ;  For Multiple Values:         
@@ -665,15 +664,15 @@
                               (if (memq 'no-closure-capturing wrap-opts)
                                   inferred-name-lambda
                                   (cond [(symbol? procedure-name-info)
-                                         (datum->syntax-object expr `(,closure-storing-proc ,inferred-name-lambda ,closure-info))]
+                                         (d->so `(,closure-storing-proc ,inferred-name-lambda ,closure-info))]
                                         [(pair? procedure-name-info)
                                          (if foot-wrap?
-                                             (datum->syntax-object expr `(,closure-storing-proc ,inferred-name-lambda ,closure-info 
+                                             (d->so `(,closure-storing-proc ,inferred-name-lambda ,closure-info 
                                                            ,(cadr procedure-name-info)))
-                                             (datum->syntax-object expr `(,closure-storing-proc ,inferred-name-lambda ,closure-info 
+                                             (d->so `(,closure-storing-proc ,inferred-name-lambda ,closure-info 
                                                            #f)))]
                                         [else
-                                         (datum->syntax-object expr `(,closure-storing-proc ,inferred-name-lambda ,closure-info))]))])
+                                         (d->so `(,closure-storing-proc ,inferred-name-lambda ,closure-info))]))])
                           
                           (2vals
                            (ccond [foot-wrap? 
@@ -777,10 +776,10 @@
                                       ; time to work from the inside out again
                                       ; without renaming, this would all be much much simpler.
                                       [middle-begin
-                                       (double-break-wrap (datum->syntax-object expr `(begin ,@interlaced-clauses 
-                                                                                             ,(late-let-break-wrap binding-list
-                                                                                                                   lifted-vars
-                                                                                                                   tagged-body))))]
+                                       (double-break-wrap (d->so `(begin ,@interlaced-clauses 
+                                                                         ,(late-let-break-wrap binding-list
+                                                                                               lifted-vars
+                                                                                               tagged-body))))]
                                       [wrapped-begin (wcm-wrap (make-debug-info-let free-varrefs
                                                                                     binding-list
                                                                                     let-counter) 
@@ -830,7 +829,7 @@
                                                            free-varrefs-then 
                                                            free-varrefs-else))]
                      [annotated-if
-                      (datum->syntax-object expr `(if ,annotated-test ,annotated-then ,annotated-else))])
+                      (datum->syntax-object #'here `(if #t 3 4))])
                   (2vals
                    (if foot-wrap?
                        (wcm-break-wrap (make-debug-info-normal free-varrefs) annotated-if)
@@ -1104,5 +1103,5 @@
          
          ; body of local
       (let* ([annotated-expr (annotate/top-level expr)])
-        ;(printf "annotated: ~n~a~n" (car annotated-exprs))
+        (fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
         (values annotated-expr (list struct-proc-names user-defined-names binding-index))))))

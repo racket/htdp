@@ -33,6 +33,8 @@
 
          (define held-expr-list no-sexp)
          (define held-redex-list no-sexp)
+         
+         (define basic-eval (current-eval))
   
          ; if there's a sexp which _doesn't_ contain a highlight in between two that do, we're in trouble.
   
@@ -166,16 +168,20 @@
                  [else (error 'break "unknown label on break")]))))
          
          (define (step-through-expression expanded expand-next-expression)
-           (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
-                                                       'foot-wrap)])
-             (set! packaged-envs envs)
-             (set! current-expr expanded)
-             (let/ec k
-               (let ([expression-result
-                      (parameterize ([current-exception-handler (make-exception-handler k)])
-                        (eval annotated))])
-                 (add-finished-expr expression-result)
-                 (send-to-drscheme-eventspace expand-next-expression)))))
+           (let/ec k
+             (parameterize ([current-exception-handler (make-exception-handler k)])
+               (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
+                                                           'foot-wrap)])
+                 (set! packaged-envs envs)
+                 (set! current-expr expanded)
+                 (fprintf (current-error-port) "foo1\n")
+                 (eval (expand annotated))
+                 (fprintf (current-error-port) "foo2\n")
+                 (let ([expression-result
+                        (parameterize ([current-eval basic-eval])
+                          (eval annotated))])
+                   (add-finished-expr expression-result)
+                   (send-to-drscheme-eventspace expand-next-expression))))))
          
          (define (add-finished-expr expression-result)
            (let ([reconstructed (r:reconstruct-completed current-expr expression-result)])
@@ -194,6 +200,9 @@
            (lambda (exn)
              (send-to-drscheme-eventspace
               (lambda ()
+                (if (exn:syntax? exn)
+                    (fprintf (current-error-port) "error source: ~a\n" (syntax-object->datum (exn:syntax-expr exn)))
+                    (fprintf (current-error-port) "not a syntax error\n"))
                 (handle-exception exn)))
              (k))))
       

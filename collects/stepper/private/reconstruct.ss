@@ -297,41 +297,41 @@
 ;                    (comes-from-cond? expr))
 ;               (in-inserted-else-clause (cdr mark-list))))))
   
-  ; teach-name-substring: the name of the file containing the teaching macros. Yuck!
-  (define teach-name-substring "lang/private/teach.ss")
-  
-  ; teach-filter : (listof SYNTAX-OBJECT) -> (listof SYNTAX-OBJECT)
-  (define (teach-filter origins)
-    (filter (lambda (origin)
-              (let* ([origin-source (syntax-source origin)])
-                (and (string? origin-source)
-                     (let* ([origin-len (string-length origin-source)]
-                            [test-len (string-length teach-name-substring)])
-                       (and (>= origin-len test-len)
-                            (string=? teach-name-substring (substring origin-source (- origin-len test-len) origin-len)))))))
-            origins))
-    
-    
-  (define (unwind expr)
-    (let* ([origins (teach-filter (syntax-property expr 'user-origin))]
-           [stepper-hints (syntax-property expr 'user-stepper-hint)]
-           [_ (unless (= (length origins) (length stepper-hints))
-                (error 'unwind "length of origin-list (~a) <> length of stepper-hints (~a)" (length origins) (length stepper-hints)))]
-           [unwound (foldl unwind-once expr origins stepper-hints)])
-      ; now recur on pieces somehow
-      (syntax-object->datum unwound)))
-  
-  (define (unwind-once origin stepper-hint stx)
-    (case expansion-kind
-      ((define) 
-       (case (stepper-hint)
-         ((define-lambda)
-          (syntax-case stx ()
-            [(_ (name args ...) body ...)
-             (syntax (define name (lambda (args ...) body ...)))]))
-         ((define-constant)
-          stx)))       
-      (else (error 'unwind-once "unknown element in origin field: ~a\n" expansion-kind))))
+;  ; teach-name-substring: the name of the file containing the teaching macros. Yuck!
+;  (define teach-name-substring "lang/private/teach.ss")
+;  
+;  ; teach-filter : (listof SYNTAX-OBJECT) -> (listof SYNTAX-OBJECT)
+;  (define (teach-filter origins)
+;    (filter (lambda (origin)
+;              (let* ([origin-source (syntax-source origin)])
+;                (and (string? origin-source)
+;                     (let* ([origin-len (string-length origin-source)]
+;                            [test-len (string-length teach-name-substring)])
+;                       (and (>= origin-len test-len)
+;                            (string=? teach-name-substring (substring origin-source (- origin-len test-len) origin-len)))))))
+;            origins))
+;    
+;    
+;  (define (unwind stx)
+;    (let* ([origins (syntax-property stx 'user-origin)]
+;           ;[stepper-hints (syntax-property expr 'user-stepper-hint)]
+;           ;[_ (unless (= (length origins) (length stepper-hints))
+;           ;     (error 'unwind "length of origin-list (~a) <> length of stepper-hints (~a)" (length origins) (length stepper-hints)))]
+;           [unwound (foldl unwind-once stx origins)])
+;      ; now recur on pieces somehow
+;      (syntax-object->datum unwound)))
+;  
+;  (define (unwind-once origin stepper-hint stx)
+;    (case origin
+;      ((define) 
+;       (case (syntax-property stx 'stepper-hint)
+;         ((define-lambda)
+;          (syntax-case stx ()
+;            [(_ (name args ...) body ...)
+;             (syntax (define name (lambda (args ...) body ...)))]))
+;         ((define-constant)
+;
+;          (else (error 'unwind-once "unknown element in origin field: ~a\n" origin))))
       
 ;;;;  
 ; (define comes-from-define?
