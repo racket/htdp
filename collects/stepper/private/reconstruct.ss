@@ -162,8 +162,13 @@
                                                                                          
   (define (skip-step? break-kind mark-list render-settings)
     (case break-kind
-      [(result-value-break result-exp-break)
+      [(result-value-break)
        #f]
+      [(result-exp-break)
+       ;; skip if clauses that are the result of and/or reductions
+       (let ([and/or-clauses-consumed (syntax-property (mark-source (car mark-list)) 'stepper-and/or-clauses-consumed)])
+         (and and/or-clauses-consumed
+              (> and/or-clauses-consumed 0)))]
       [(normal-break)
        (skip-redex-step? mark-list render-settings)]
       [(double-break)
@@ -215,7 +220,7 @@
                               (and (eq? fun-val void)
                                    (eq? (cdr (syntax->list (syntax terms))) null))
                               (struct-constructor-procedure? fun-val))))]
-                  [else
+                 [else
                    #f])))))
   
   (define (find-special-value name valid-args)
@@ -360,7 +365,6 @@
                    (fall-through)))))
          
          (define (unwind-define stx)
-           (printf "unwind-define called on expression: ~e\n" (syntax-object->datum stx))
            (kernel:kernel-syntax-case stx #f
              [(define-values (name . others) body)
               (unless (null? (syntax-e #'others))
@@ -376,6 +380,8 @@
                        (case define-type
                          [(shortened-proc-define)
                           #`(define (#,printed-name . arglist) lam-body ...)]
+                         [(lambda-define)
+                          #`(define #,printed-name #,unwound-body)]
                          [else (error 'unwind-define "unknown value for syntax property 'user-stepper-define-type: ~e" define-type)])]
                       [else (error 'unwind-define "expr with stepper-define-type is not a lambda: ~e" (syntax-object->datum ))])
                     #`(define #,printed-name #,unwound-body)))]
@@ -434,7 +440,7 @@
                                       [(and) #`true]
                                       [(or) #`false])])
                (with-syntax ([clauses
-                              (append (build-list (lambda (x) clause-padder) (syntax-property stx 'user-stepper-and/or-clauses-consumed))
+                              (append (build-list (syntax-property stx 'user-stepper-and/or-clauses-consumed) (lambda (x) clause-padder))
                                       (let loop ([stx stx])
                                         (if (and (eq? user-source (syntax-property stx 'user-source))
                                                  (eq? user-position (syntax-property stx 'user-position)))

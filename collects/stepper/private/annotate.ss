@@ -202,21 +202,6 @@
                         (datum->syntax-object stx `(,#'label ,new-bindings ,@new-bodies) stx stx))))])
             (kernel:kernel-syntax-case stx #f
               
-              ; define-lambda :
-              [(define-values names (lambda args make-gen-lam body))
-               (eq? (syntax-property stx 'stepper-hint) 'lambda-define)
-               (with-syntax ([lambda-body
-                              (syntax-property
-                               (with-syntax ([new-body (recur-regular (syntax body))])
-                                 (syntax (begin make-gen-lam new-body)))
-                               'stepper-skipto
-                               (list syntax-e cdr cdr car))])
-               (datum->syntax-object stx 
-                                     ; this is a funny hack to avoid assigning syntax info to the expr:
-                                     (cons #'define-values (syntax (names (lambda args lambda-body))))
-                                     stx
-                                     stx))]
-              
               ; cond :
               [(if test (begin then) else-stx)
                (let ([origin (syntax-property stx 'origin)]
@@ -597,10 +582,9 @@
                                                   (if (= (length (syntax->list (syntax bodies))) 1)
                                                       (lambda-body-recur (car (syntax->list (syntax bodies))))
                                                       (lambda-body-recur (syntax (begin . bodies))))]
-                                                 [tagged-body (syntax-property annotated-body 'stepper-info 'lambda-body-begin)]
                                                  [new-free-varrefs (varref-set-remove-bindings free-varrefs
                                                                                                (arglist-flatten #'args-stx))])
-                                                (2vals (datum->syntax-object #'here `(,#'args-stx ,tagged-body) #'clause) new-free-varrefs))))]
+                                                (2vals (datum->syntax-object #'here `(,#'args-stx ,annotated-body) #'clause) new-free-varrefs))))]
                                
                                [outer-lambda-abstraction
                                 (lambda (annotated-lambda free-varrefs)
@@ -685,7 +669,6 @@
                                         (if (= (length (syntax->list (syntax bodies))) 1)
                                             (car (syntax->list (syntax bodies)))
                                             (syntax (begin . bodies))))]
-                                      [tagged-body (syntax-property annotated-body 'stepper-info 'let-body-begin)]
                                       [free-varrefs (varref-set-remove-bindings 
                                                      (varref-set-union (cons free-varrefs-body
                                                                              free-varref-sets-vals)) 
@@ -717,7 +700,7 @@
                                                                        #`(begin #,@(apply append (zip set!-clauses counter-clauses)) 
                                                                                 #,(late-let-break-wrap binding-list
                                                                                                        lifted-vars
-                                                                                                       tagged-body))))])
+                                                                                                       annotated-body))))])
                                         (2vals (quasisyntax/loc 
                                                 expr 
                                                 (#,output-identifier #,outer-initialization #,wrapped-begin)) 

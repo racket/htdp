@@ -90,11 +90,11 @@
   ; or (make-error-result finished-exprs err-msg)
   ; or (make-finished-result finished-exprs)
   
-  (define-struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs))
-  (define-struct before-error-result (finished-exprs exp redex err-msg after-exprs))
-  (define-struct error-result (finished-exprs err-msg))
-  (define-struct finished-result (finished-exprs))
-  (define-struct finished-stepping ())
+  (define-struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs) (make-inspector))
+  (define-struct before-error-result (finished-exprs exp redex err-msg after-exprs) (make-inspector))
+  (define-struct error-result (finished-exprs err-msg) (make-inspector))
+  (define-struct finished-result (finished-exprs) (make-inspector))
+  (define-struct finished-stepping () (make-inspector))
   
   (define step-result? (union before-after-result? before-error-result? error-result? finished-result? finished-stepping?))
   
