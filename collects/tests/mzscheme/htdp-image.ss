@@ -1,7 +1,7 @@
 ;; Load this one with MrEd
 
 (load-relative "loadtest.ss")
-
+(require (lib "errortrace.ss" "errortrace"))
 (define current-htdp-lang '(lib "htdp-beginner.ss" "lang"))
 (load-relative "htdp-test.ss")
 
