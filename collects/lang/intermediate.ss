@@ -23,4 +23,5 @@
 
   ;; procedures:
   (provide-and-document
-   (all-from beginner: (lib "beginner.ss" "lang"))))
+   procedures
+   (all-from beginner: (lib "beginner.ss" "lang") procedures)))

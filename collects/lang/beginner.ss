@@ -39,6 +39,7 @@
 
   ;; procedures:
   (provide-and-document
+   procedures
    
    ("Reading and Printing"
     (read (-> sexp) "to read input from the user"))
