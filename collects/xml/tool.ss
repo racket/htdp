@@ -178,8 +178,8 @@
           (define/public (make-snip)
             (error 'make-snip "abstract method"))
           
-          (define/public (make-editor)
-            (make-object (drscheme:unit:program-editor-mixin plain-text%)))
+          (define/public (make-editor) 
+            (error 'make-editor "abstract method in XML/Scheme box superclass"))
           
           (inherit set-min-width get-margin)
           (define/public (reset-min-width)
