@@ -166,9 +166,15 @@
   ;; to change the current contents of a message field 
   (define (draw-message msg txt)
     (check-arg 'draw-message (gui-item? msg) "gui-item" "first" msg)
-    (check-arg 'draw-message (string? txt) "string" "second" txt)      
-    (send ((gui-item-builder msg) #f) set-label txt)
-    true)
+    (check-arg 'draw-message (string? txt) "string" "second" txt)   
+    (let* ([o ((gui-item-builder msg) #f)])
+      (when (<= (send o min-width) (string-length txt))
+        (let*-values ;; MF: I couldn't think of a better way of doing this
+            ([(m) (new message% [parent (new frame% [label "hello"])][label txt])]
+             [(x y) (send m get-graphical-min-size)])
+          (send o min-width x)))
+      (send o set-label txt)
+      true))
   
   ;; PROBING ITEMS:
   ;; ------------------------------------------------------------------
