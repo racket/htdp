@@ -131,13 +131,13 @@
                        (let ([number-snip-type (drscheme:language:simple-settings-fraction-style simple-settings)])
                          (cond
                            [(eq? number-snip-type 'repeating-decimal)
-                            (drscheme:snip:make-repeating-decimal-snip expr #f)]
+                            (drscheme:number-snip:make-repeating-decimal-snip expr #f)]
                            [(eq? number-snip-type 'repeating-decimal-e)
-                            (drscheme:snip:make-repeating-decimal-snip expr #t)]
+                            (drscheme:number-snip:make-repeating-decimal-snip expr #t)]
                            [(eq? number-snip-type 'mixed-fraction)
-                            (drscheme:snip:make-fraction-snip expr #f)]
+                            (drscheme:number-snip:make-fraction-snip expr #f)]
                            [(eq? number-snip-type 'mixed-fraction-e)
-                            (drscheme:snip:make-fraction-snip expr #t)]
+                            (drscheme:number-snip:make-fraction-snip expr #t)]
                            [else
                             (error 'which-number-snip
                                    "expected either 'repeating-decimal, 'repeating-decimal-e, 'mixed-fraction, or 'mixed-fraction-e got : ~e"
