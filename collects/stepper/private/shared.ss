@@ -21,10 +21,10 @@
              ((flat-named-contract-predicate (cons/p identifier? arglist?)) (syntax-e v)))))
   
   (provide/contract
-   [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
-   [binding-set-varref-set-intersect (-> binding-set? varref-set? binding-set?)]
-   [binding-set-union (-> (listof binding-set?) binding-set?)]
-   [varref-set-union (-> (listof varref-set?) varref-set?)]
+   ;[varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
+   ;[binding-set-varref-set-intersect (-> binding-set? varref-set? binding-set?)]
+   ;[binding-set-union (-> (listof binding-set?) binding-set?)]
+   ;[varref-set-union (-> (listof varref-set?) varref-set?)]
    [in-closure-table (-> any? boolean?)]
    [sublist (-> number? number? list? list?)]
    [attach-info (-> syntax? syntax? syntax?)]
@@ -33,6 +33,12 @@
    [arglist-flatten (-> arglist? (listof identifier?))])
   
   (provide
+   binding-set-union
+   binding-set-pair-union
+   varref-set-union
+   varref-set-pair-union
+   varref-set-remove-bindings
+   binding-set-varref-set-intersect
    step-result?
    exp-without-holes?
    exp-with-holes?
@@ -76,6 +82,8 @@
    ; expr-read
    ; set-expr-read!
    values-map
+   reset-profiling-table ; profiling info
+   get-set-pair-union-stats ; profiling info
    )
   
   ; an exp-with-holes is either:
@@ -444,30 +452,76 @@
   ; binding-set-union: (listof BINDING-SET) -> BINDING-SET
   ; varref-set-union: (listof VARREF-SET) -> VARREF-SET
   
-  (define-values (binding-set-union
-                  varref-set-union)
-    (local ((define (set-pair-union a-set b-set comparator)
-              (append (remove* a-set b-set comparator) a-set))
-            
-            (define (varref-set-pair-union a-set b-set)
-              (set-pair-union a-set b-set free-identifier=?))
-            
-            (define (binding-set-pair-union a-set b-set)
-              (cond [(eq? a-set 'all) 'all]
-                    [(eq? b-set 'all) 'all]
-                    [else (set-pair-union a-set b-set eq?)]))
-            
-            (define (pair-union->many-union fn)
-              (lambda (args)
-                (foldl fn null args)))
-            
-            (define binding-set-union
-              (pair-union->many-union binding-set-pair-union))
-            
-            (define varref-set-union
-              (pair-union->many-union varref-set-pair-union)))
-      (values binding-set-union
-              varref-set-union)))
+  (define profiling-table (make-hash-table 'equal))
+  (define (reset-profiling-table)
+    (set! profiling-table (make-hash-table 'equal)))
+  
+  (define (profiling-table-incr a-length b-length)
+    (let ([pair (cons a-length b-length)])
+      (let ([cell (hash-table-get profiling-table pair (lambda () #f))])
+        (if cell
+            (set-box! cell (+ (unbox cell) 1))
+            (hash-table-put! profiling-table pair (box 1))))))
+  
+  (define (get-set-pair-union-stats) (hash-table-map profiling-table (lambda (k v) (list k (unbox v)))))
+  
+  
+  ; test cases :
+  ; (profiling-table-incr 1 2)
+  ; (profiling-table-incr 2 3)
+  ; (profiling-table-incr 2 1)
+  ; (profiling-table-incr 1 2)
+  ; (profiling-table-incr 2 1)
+  ;
+  ; (equal? (get-set-pair-union-stats)
+  ;         `(((2 . 3) 1) ((2 . 1) 2) ((1 . 2) 2)))
+    
+  ; until this remove* goes into list.ss?
+  
+  (define my-remove*
+    (lambda (l r equal?)
+      (cond [(null? r) null]
+            [(let ([first-r (car r)])
+               (let loop ([l-rest l])
+                 (cond [(null? l-rest) (cons first-r (my-remove* l (cdr r) equal?))]
+                       [(equal? (car l-rest) first-r) (my-remove* l (cdr r) equal?)]
+                       [else (loop (cdr l-rest))])))])))
+
+  ;(equal? (my-remove* `(a b c d) `()  equal?) `())
+  ;(equal? (my-remove* `(a b c d) `(q b m d l) equal?)
+  ;        `(q m l))
+
+
+  (define (set-pair-union a-set b-set comparator)
+    (cond [(null? b-set) a-set]
+          [(null? a-set) b-set]
+          [else (append (my-remove* a-set b-set comparator) a-set)])
+    ;              ; for best running time: put short list first
+    ;              (let loop ([a-set a-set])
+    ;                (if (null? a-set)
+    ;                    b-set
+    ;                    (let ()
+    ;                      (if (ormap (lambda (elt) ()))))))
+    )
+  
+  (define (varref-set-pair-union a-set b-set)
+    (set-pair-union a-set b-set free-identifier=?))
+  
+  (define (binding-set-pair-union a-set b-set)
+    (cond [(eq? a-set 'all) 'all]
+          [(eq? b-set 'all) 'all]
+          [else (set-pair-union a-set b-set eq?)]))
+  
+  (define (pair-union->many-union fn)
+    (lambda (args)
+      (foldl fn null args)))
+  
+  (define binding-set-union
+    (pair-union->many-union binding-set-pair-union))
+  
+  (define varref-set-union
+    (pair-union->many-union varref-set-pair-union))
+      
 
   ; binding-set-varref-set-intersect : BINDING-SET VARREF-SET -> BINDING-SET
   ; return the subset of varrefs that appear in the bindings
