@@ -48,16 +48,14 @@
               (map vec->struc (vector-ref sexp 1)))]
       [else sexp]))
   
-  (define turtle->vector (make-->vector turtle))
-
   (define (struc->vec sexp)
     (cond
       [(pair? sexp) (cons (struc->vec (car sexp)) (struc->vec (cdr sexp)))]
-      [(turtle? sexp) (vector 'struct:turtle (map struct->vec (vector->list (turtle->vector sexp))))]
-      [(offset? sexp) (vector 'struct:offset (map struct->vec (vector->list (offset->vector sexp))))]
-      [(line? sexp) (vector 'struct:line (map struct->vec (vector->list (line->vector sexp))))]
-      [(tmerge? sexp) (vector 'struct:tmerge (map struct->vec (vector->list (tmerge->vector sexp))))]
-      [(turtles/offset? sexp) (vector 'struct:turtles/offset (map struct->vec (vector->list (turtles/offset->vector sexp))))]
+      [(turtle? sexp) (vector 'struct:turtle (map struc->vec (vector->list (turtle->vector sexp))))]
+      [(offset? sexp) (vector 'struct:offset (map struc->vec (vector->list (offset->vector sexp))))]
+      [(line? sexp) (vector 'struct:line (map struc->vec (vector->list (line->vector sexp))))]
+      [(tmerge? sexp) (vector 'struct:tmerge (map struc->vec (vector->list (tmerge->vector sexp))))]
+      [(turtles/offset? sexp) (vector 'struct:turtles/offset (map struc->vec (vector->list (turtles/offset->vector sexp))))]
       [else sexp]))
   
   (define prim-read read)
