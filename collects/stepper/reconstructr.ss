@@ -55,11 +55,13 @@
                      (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
                             [arg-sym-list (build-list (length sub-exprs) get-arg-symbol)]
                             [arg-vals (map (lambda (arg-sym) 
-                                             (car (find-var-binding mark-list arg-sym)
-                     
-                     
-                     
-                     
-                     
-  
-    
+                                             (car (find-var-binding mark-list arg-sym)))
+                                           arg-sym-list)])
+                       (if  (andmap (lambda (val) (not (eq? val *undefined*))) arg-vals)
+                           `(... so-far ...)
+                           (map (lambda (val expr)
+                                  (if (eq? val *undefined*)
+                                      ; RIGHT HERE.  GOT TO FIGURE OUT
+                                      ; WHETHER THERE IS A SUBEXPRESSION
+                                      ; ACTIVE IN THIS CONTEXT.
+                                      
