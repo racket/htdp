@@ -1,6 +1,6 @@
 
 (reference-library "turtles.ss" "graphics")
-(reference-library "functiou.ss" "standard")
+(reference-library "functiou.ss")
 
 (invoke-open-unit/sig 
  (compound-unit/sig
