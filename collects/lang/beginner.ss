@@ -3,6 +3,9 @@
 ;; forms and procedures. The reader-level aspects of the language
 ;; (e.g., case-sensitivity) are not implemented here.
 
+;; Bugs: (cond [false 5]) should be an error
+;;       define-struct shouldn't define mutators (or struct)
+
 (module beginner mzscheme
   (require (lib "etc.ss")
 	   (lib "list.ss")
@@ -42,7 +45,7 @@
 	   posn-y error eq? apply
 	   true false empty)
 
-  (define-struct posn (x y))
+  (define-struct posn (x y) (make-inspector)) ; transparent
 
   ;; verify-boolean is inserted to check for boolean results:
   (define (verify-boolean b where)
