@@ -54,13 +54,10 @@
                                  xexpr)]
                 [expd-xexpr (expand-embedded clean-xexpr)]
                 [qq-body (datum->syntax-object #'here expd-xexpr (list editor #f #f #f #f))])
-           (values
-            (with-syntax ([qq-body qq-body])
-              (syntax-property (syntax (quasiquote qq-body))
-                               'stepper-xml-hint
-                               'from-xml-box))
-            1
-            #t)))
+           (with-syntax ([qq-body qq-body])
+             (syntax-property (syntax (quasiquote qq-body))
+                              'stepper-xml-hint
+                              'from-xml-box))))
        (lambda () (send editor lock old-locked)))))
   
   (define scheme-snip<%>
@@ -146,8 +143,10 @@
   ;; snip, it returns snip via the ``special'' functionality of custom ports.
   (define (make-fill-chars text)
     (let ([ptr 0]
+          [continue #f]
+          [saved-bytes #f]
           [sema (make-semaphore 1)])
-      (lambda (str)
+      (lambda (bytes)
         (semaphore-wait sema)
         (let ([snip (send text find-snip ptr 'after-or-none)])
           (begin0
@@ -158,9 +157,16 @@
                (set! ptr (+ ptr 1))
                (lambda (src line col pos)
                  (values (make-wrapped snip text line col pos) 1))]
+              [(and continue
+                    (continue . < . (bytes-length saved-bytes)))
+               (bytes-set! bytes 0 (bytes-ref saved-bytes continue))
+               (set! continue (+ continue 1))
+               1]
               [else
-               (string-set! str 0 (send text get-character ptr))
+               (set! saved-bytes (string->bytes/utf-8 (string (send text get-character ptr))))
+               (bytes-set! bytes 0 (bytes-ref saved-bytes 0))
                (set! ptr (+ ptr 1))
+               (set! continue 1)
                1])
             (semaphore-post sema))))))
   
