@@ -217,11 +217,11 @@
   (define (break mark-list break-kind returned-value-list)
     (let ([double-redivide
            (lambda (finished-exprs new-exprs-before new-exprs-after)
-             (let*-values ([(before current after) (redivide held-expr)]
-                           [(before-2 current-2 after-2) (redivide reconstructed)]
-                           [(_) (unless (and (equal before before-2)
-                                             (equal after after-2)))
-                            (e:internal-error 'break "reconstructed before or after defs are not equal.")])
+             (let*-values ([(before current after) (redivide new-exprs-before)]
+                           [(before-2 current-2 after-2) (redivide new-exprs-after)]
+                           [(_) (unless (and (equal? before before-2)
+                                             (equal? after after-2))
+                            (e:internal-error 'break "reconstructed before or after defs are not equal."))])
                (values (append finished-exprs before) current current-2 after)))]
            [reconstruct-helper
            (lambda (finish-thunk)
@@ -259,7 +259,7 @@
 ;                                  held-expr reconstructed))
               (let*-values 
                   ([(new-finished current-pre current-post after) (double-redivide finished-exprs held-expr reconstructed)]
-                   [result (make-before-after-result new-finished
+                   [(result) (make-before-after-result new-finished
                                                      current-pre
                                                      held-redex
                                                      current-post
@@ -280,13 +280,14 @@
                 (e:internal-error 'break-reconstruction
                                   "held-expr not empty when a double-break occurred"))
               (let*-values 
-                  ([(new-finished current-pre current-post after) (double-redivide finished-exprs held-expr reconstructed)])
+                  ([(new-finished current-pre current-post after) (double-redivide finished-exprs (list-ref reconstruct-quadruple 0) 
+                  (list-ref reconstruct-quadruple 2))])
                 (unless (eq? current-post highlight-placeholder)
                   (e:internal-error 'break "current-post should have been highlight-placeholder"))
                 (i:receive-result (make-before-after-result new-finished
                                                             current-pre
                                                             (list-ref reconstruct-quadruple 1)
-                                                            double-highlight
+                                                            multiple-highlight
                                                             (list-ref reconstruct-quadruple 3)
                                                             after))))))
          (suspend-user-computation)]

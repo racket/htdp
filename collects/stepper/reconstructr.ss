@@ -165,8 +165,8 @@
               [else (let* ([orig-name (z:binding-orig-name binding)]
                            [old-index (hash-table-get name-number-table orig-name (lambda () -1))]
                            [new-index (+ old-index 1)])
-                      (hash-table-put name-number-table orig-name new-index)
-                      (hash-table-put binding-number-table binding new-index)
+                      (hash-table-put! name-number-table orig-name new-index)
+                      (hash-table-put! binding-number-table binding new-index)
                       new-index)]))))
   
   ; construct-lifted-name (z:parsed num -> string)
@@ -353,6 +353,7 @@
       ((1) `(define ,(car names) ,sexp))
       (else `(define-values ,names ,sexp))))
   
+  (define (so-far-only so-far) (values so-far null null))
     
   ; reconstruct-current : takes a parsed expression, a list of marks, the kind of break, and
   ; any values that may have been returned at the break point. It produces a list containing the
@@ -438,7 +439,7 @@
                                           (values null
                                                   (cons (reconstruct-lifted (car rhs-lifted-name-sets) so-far)
                                                         (map (lambda (rhs-lifted-name-set rhs-source)
-                                                               (recosntruct-lifted rhs-lifted-name-set 
+                                                               (reconstruct-lifted rhs-lifted-name-set 
                                                                                    (rectify-source-expr expr
                                                                                                         mark-list
                                                                                                         (if letrec?
@@ -464,10 +465,11 @@
              (cond 
                ; variable references
                [(z:varref? expr)
+               (so-far-only
                 (if (eq? so-far nothing-so-far)
                     (rectify-source-current-marks expr)
                     (e:internal-error expr 
-                                      "variable reference given as context"))]
+                                      "variable reference given as context")))]
                
                ; applications
                
@@ -591,7 +593,7 @@
                   #f))))
          
          (define (rectify-let-values-step)
-           (let*-values ([(redex) (rectify-source (mark-source (car mark-list)) mark-list null)]
+           (let*-values ([(redex) (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
                          [(before after wrapper) (current-def-rectifier highlight-placeholder (cdr mark-list) #f)]
                          [(r-before r-after reduct) (rectify-inner mark-list #f)])
              (list (append before after (list wrapper)) redex 
