@@ -15,18 +15,9 @@
 ;; Don't need these:
 (define no-extra-if-tests? #t)
 
-;; Check export names:
-(require (lib "docprovide.ss" "syntax"))
-(let ([docs (lookup-documentation '(lib "htdp-beginner.ss" "lang") 'procedures)])
-  (for-each
-   (lambda (row)
-     (for-each
-      (lambda (doc)
-	(let ([v (dynamic-require '(lib "htdp-beginner.ss" "lang") (car doc))])
-	  (when (procedure? v)
-	    (test (car doc) object-name v))))
-      (cdr row)))
-   docs))
+(require (rename mzscheme exn:user? exn:user?)
+	 (rename mzscheme exn:application:type? exn:application:type?)
+	 (rename mzscheme exn:application:arity? exn:application:arity?))
 
 (require (lib "htdp-beginner.ss" "lang"))
 

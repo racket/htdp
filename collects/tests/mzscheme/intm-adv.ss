@@ -1,4 +1,11 @@
 
+;; These are true for beginner, but the operators are syntax, so
+;; arity-test doesn't work.
+(arity-test + 2 -1)
+(arity-test * 2 -1)
+(arity-test / 2 -1)
+(arity-test - 1 -1)
+
 (syntax-test #'local)
 (syntax-test #'(local))
 (syntax-test #'(local ()))

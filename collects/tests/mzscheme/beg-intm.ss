@@ -5,7 +5,7 @@
 (syntax-test #'("hello" 1 2))
 
 
-(syntax-test #'(define x (lambda (y) (lambda (z) z))))
+(syntax-test #'(define x17 (lambda (y) (lambda (z) z))))
 (syntax-test #'(lambda (x) 10))
 
 (syntax-test #'(lambda (f) (f f)))
