@@ -58,6 +58,14 @@ use with an HtDP course.
    form-query          ; Form -> Response
    ; posing a list of questions with tag 
 
+   extract/single      ; Symbol Response -> Answer
+   ; extracting the answer for a given tag from a response; the tag must
+   ; occur exactly once. 
+
+   extract             ; Symbol Response -> (listof Answer)
+   ; extracting all the answers for a given tag from a response; the list
+   ; is empty if there is no such tag. 
+
    echo-response       ; Response -> true
    ; echoing the response from a form to a Web page (development)
    

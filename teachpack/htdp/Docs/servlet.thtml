@@ -62,17 +62,21 @@ constrained as follows:
   that looks like a browser initially requested the servlet's URL.
 
   <li><code>extract-binding/single : Symbol Env -> string</code><br>
-  consumes the name of an HTML form field and a bindings environment.  It
-  returns the only value associated with the given name.  It raises an
-  exception when zero or more than one input is provided for a single name.
+  consumes the symbol of an HTML form field and a bindings environment.  It
+  returns the only value associated with the given symbol.  It raises an
+  exception when zero or more than one input is provided for a single symbol.
 
   <li><code>extract-bindings : Symbol Env -> (listof String)</code>
-  <br /> consumes a name and a bindings environment.  It produces all the
-  values associated with that name.
+  <br /> consumes a symbol and a bindings environment.  It produces all the
+  values associated with that symbol.
+
+  <li><code>extract-string : String Env -> (listof String)</code>
+  <br /> consumes a string and a bindings environment.  It produces all the
+  values associated with that string.
 
   <li><code>exists-binding? : Symbol Env -> Boolean</code> <br>
-  consumes a name and a bindings environment.  It produces true when the
-  name is bound.  This is useful for checkboxes.
+  consumes a symbol and a bindings environment.  It produces true when the
+  symbol is bound.  This is useful for checkboxes.
 
   <li><code>extract-user-pass : Env -> (union false (cons string string))</code>
   <br>extracts the username and the password from the HTTP headers environment,
