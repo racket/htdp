@@ -185,7 +185,7 @@
           
           (init-field eliminate-whitespace-in-empty-tags?)
           
-          (define/override (make-editor) (make-object xml-text%))
+          (define/override (make-editor) (make-object (get-xml-text%)))
           (define/override (get-corner-bitmap) 
             (if eliminate-whitespace-in-empty-tags?
                 xml-box-bm
@@ -332,7 +332,7 @@
             (scheme-read-one-special this file line col pos))
           
           (define/override (make-editor)
-            (make-object (drscheme:unit:program-editor-mixin 
+            (make-object ((drscheme:unit:get-program-editor-mixin)
                           (add-file-keymap-mixin
                            (scheme:text-mixin 
                             (editor:keymap-mixin text:basic%))))))
@@ -457,10 +457,14 @@
           (inherit set-style-list)
           (set-style-list (scheme:get-style-list))))
       
-      (define xml-text%
-        (drscheme:unit:program-editor-mixin 
-         (xml-text-mixin
-          plain-text%)))
+      (define get-xml-text%
+	(let ([xml-text% #f])
+	  (lambda ()
+	    (unless xml-text%
+	      (set! xml-text% ((drscheme:unit:get-program-editor-mixin)
+			       (xml-text-mixin
+				plain-text%))))
+	    xml-text%)))
 
       ;; matching-xml : (is-a?/c text) -> void
       ;; inserts > and if there is an XML tag just
