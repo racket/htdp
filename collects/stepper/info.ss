@@ -2,5 +2,6 @@
   (define name "Stepper")
   (define tools '(("stepper-tool.ss")
                   ("debugger-tool.ss")))
-  (define tool-names (list "The Stepper"))
-  (define tool-icons (list '("foot-up.gif" "icons"))))
+  (define tool-names (list "The Stepper" "The Debugger"))
+  (define tool-icons (list '("foot-up.gif" "icons") 
+			   '("foot-up.gif" "icons"))))
