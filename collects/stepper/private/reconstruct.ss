@@ -204,7 +204,7 @@
                   [id
                    (identifier? expr)
                    (or (eq? (syntax-property expr 'stepper-binding-type) 'lambda-bound) ; don't halt for lambda-bound vars
-                       (let ([val (mark-binding-value (lookup-binding mark-list expr))]) 
+                       (let ([val (lookup-binding mark-list expr)]) 
                          (and (procedure? val)
                               (not (continuation? val)))))] ; don't halt for varrefs bound to non-continuation procedures
                   [(#%top . id-stx)
@@ -226,7 +226,7 @@
                                   )))))]
                   [(#%app . terms)
                    ; don't halt for proper applications of constructors
-                   (let ([fun-val (mark-binding-value (lookup-binding mark-list (get-arg-var 0)))])
+                   (let ([fun-val (lookup-binding mark-list (get-arg-var 0))])
                      (and (procedure? fun-val)
                           (procedure-arity-includes? 
                            fun-val
@@ -250,7 +250,7 @@
       (eval expanded)))
   
   (define (second-arg-is-list? mark-list)
-    (let ([arg-val (mark-binding-value (lookup-binding mark-list (get-arg-var 2)))])
+    (let ([arg-val (lookup-binding mark-list (get-arg-var 2))])
       (list? arg-val)))
     
 ;   ; static-binding-indexer (z:parsed -> integer)
@@ -278,7 +278,7 @@
   ; binding-lifted-name ((listof mark) SYNTAX-OBJECT -> num)
   
   (define (binding-lifted-name mark-list binding)
-      (construct-lifted-name binding (mark-binding-value (lookup-binding mark-list (get-lifted-var binding)))))
+      (construct-lifted-name binding (lookup-binding mark-list (get-lifted-var binding))))
 
                                                                 ;              ;  ;               
                                                                                ;                  
@@ -526,10 +526,10 @@
                                              var
                                              (case (syntax-property var 'stepper-binding-type)
                                                ((lambda-bound) 
-                                                (recon-value (mark-binding-value (lookup-binding mark-list var))))
+                                                (recon-value (lookup-binding mark-list var)))
                                                ((macro-bound)
                                                 ; for the moment, let-bound vars occur only in and/or :
-                                                (recon-value (mark-binding-value (lookup-binding mark-list var))))
+                                                (recon-value (lookup-binding mark-list var)))
                                                 ; (d->so (binding-lifted-name mark-list var)))
                                                ((top-level) var)
                                                ((let-bound)
@@ -723,7 +723,7 @@
                           (let*-2vals ([binding-sets (map syntax->list (syntax->list (syntax (vars ...))))]
                                        [binding-list (multi-append binding-sets)]
                                        [rhs-vals (map (lambda (arg-binding) 
-                                                        (mark-binding-value (lookup-binding mark-list arg-binding)))
+                                                        (lookup-binding mark-list arg-binding))
                                                       binding-list)]
                                        [rhs-val-sets (reshape-list rhs-vals binding-sets)]
                                        [rhs-name-sets
@@ -735,7 +735,7 @@
                                                     binding-set))
                                              binding-sets)]
                                        [glumps (map make-let-glump rhs-name-sets (syntax->list (syntax (rhs ...))) rhs-val-sets)]
-                                       [num-defns-done (mark-binding-value (lookup-binding mark-list let-counter))]
+                                       [num-defns-done (lookup-binding mark-list let-counter)]
                                        [(done-glumps not-done-glumps)
                                         (n-split-list num-defns-done glumps)]
                                        [recon-lifted-val
@@ -789,7 +789,7 @@
                     (let* ([sub-exprs (syntax->list (syntax terms))]
                            [arg-temps (build-list (length sub-exprs) get-arg-var)]
                            [arg-vals (map (lambda (arg-temp) 
-                                            (mark-binding-value (lookup-binding mark-list arg-temp)))
+                                            (lookup-binding mark-list arg-temp))
                                           arg-temps)])
                       (case (mark-label (car mark-list))
                         ((not-yet-called)
@@ -828,7 +828,7 @@
                   [(if test then else)
                    (attach-info
                     (let ([test-exp (if (eq? so-far nothing-so-far)
-                                        (recon-value (mark-binding-value (lookup-binding mark-list if-temp)))
+                                        (recon-value (lookup-binding mark-list if-temp))
                                         so-far)])
                       (d->so `(if ,test-exp 
                                   ,(recon-source-current-marks (syntax then))
