@@ -5,12 +5,7 @@
           [p : mzlib:print-convert^]
           [b : userspace:basis^]
 	  stepper:shared^)
-    
-  (define beginner-level-defined-vars
-    (list first second third fourth fifth sixth seventh eighth rest cons? empty empty?
-          boolean=? identity compose foldl foldr last-pair remv remq remove remv* remq* remove*
-          assf memf filter build-string build-vector build-list quicksort loop-until ignore-errors))
-  
+
   (define nothing-so-far (gensym "nothing-so-far-"))
   
   (define (mark-source mark)
@@ -31,7 +26,7 @@
   (define (find-var-binding mark-list var)
     (if (null? mark-list)
         ; must be a primitive
-        (list #f #f)
+        (error 'find-var-binding "variable not found in environment: ~a" var)
 	; (error var "no binding found for variable.")
 	(let* ([bindings (mark-bindings (car mark-list))]
 	       [matches (filter (lambda (mark-var)
@@ -44,47 +39,51 @@
 		[else ; (length matches) = 1
 		 (car matches)]))))
 
-  ; JEEZ, I'm dumb! Why not just use read->raw to make my life 100% easier!?
+  (define memoized-read->raw
+    (let ([table (make-hash-table-weak)])
+      (lambda (read)
+        (or (hash-table-get table read (lambda () #f))
+            (let ([raw (z:sexp->raw read)])
+              (hash-table-put! table read raw)
+              raw)))))
   
-  (define (read-expr-first-symbol read-expr)
-    (if (z:list? read-expr)
-        (let ([first (car (z:read-object read-expr))])
-          (if (z:symbol? first)
-              (z:symbol-orig-name first)
-              #f))
-        #f))
-
-  (define (make-comes-from-blah blah)
+  (define (make-apply-pred-to-raw pred)
     (lambda (expr)
-      (let* ([read-expr (expr-read expr)]
-             [first-symbol (read-expr-first-symbol read-expr)])
-        (and first-symbol
-             (eq? first-symbol blah)))))
-  
-  (define comes-from-define?
-    (make-comes-from-blah 'define))
+      (pred (memoized-read->raw (expr-read expr)))))
+             
+  (define (make-check-raw-first-symbol symbol)
+    (make-apply-pred-to-raw
+     (lambda (raw)
+       (and (pair? raw)
+            (eq? (car raw) symbol)))))
 
-  (define (comes-from-define-procedure? expr)
-    (if (comes-from-define? expr)
-        (let* ([read-expr (expr-read expr)]
-               [defined-var (cadr (z:read-object read-expr))])
-          (if (z:scalar? defined-var)
-              #f
-              #t))
-        #f))
+  (define comes-from-define?
+    (make-check-raw-first-symbol 'define))
+
+  (define comes-from-define-procedure?
+    (make-apply-pred-to-raw
+     (lambda (raw) (and (pair? raw)
+                        (eq? (car raw) 'define)
+                        (pair? (cadr raw))))))
   
   (define comes-from-define-struct?
-    (make-comes-from-blah 'define-struct))
+    (make-check-raw-first-symbol 'define-struct))
   
   (define comes-from-cond?
-    (make-comes-from-blah 'cond))
+    (make-check-raw-first-symbol 'cond))
   
   (define comes-from-lambda?
-    (make-comes-from-blah 'lambda))
+    (make-check-raw-first-symbol 'lambda))
   
   (define comes-from-case-lambda?
-    (make-comes-from-blah 'case-lambda))
+    (make-check-raw-first-symbol 'case-lambda))
+
+  (define comes-from-and?
+    (make-check-raw-first-symbol 'and))
   
+  (define comes-from-or?
+    (make-check-raw-first-symbol 'or))
+
   (define (rectify-value val)
     (cond [(and (procedure? val) (primitive? val))
            (primitive-name val)]
@@ -115,32 +114,40 @@
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
  
-  (define (stop-here? mark-list all-defs)
+  (define (stop-here? mark-list all-defs global-defined-vars)
     (not (and (pair? mark-list)
               (let ([expr (mark-source (car mark-list))])
-                (and (z:varref? expr)
-                     (or (z:bound-varref? expr)
-                         (let ([var (z:varref-var expr)])
-                           (or (built-in-name var)
-                               (memq var beginner-level-defined-vars)
-                               (call-with-current-continuation
-                                (lambda (k)
-                                  (with-handlers ([exn:variable?
-                                                   (lambda (exn) (k #f))])
-                                    (procedure? (mark-binding-value
-                                                 (find-var-binding mark-list (z:varref-var expr)))))))))))))))
+                (or (and (z:varref? expr)
+                         (or (z:bound-varref? expr)
+                             (let ([var (z:varref-var expr)])
+                               (or (memq var global-defined-vars)
+                                   (call-with-current-continuation
+                                    (lambda (k)
+                                      (with-handlers ([exn:variable?
+                                                       (lambda (exn) (k #f))])
+                                        (procedure? (mark-binding-value
+                                                     (find-var-binding mark-list (z:varref-var expr)))))))))))
+                    (and (z:app? expr)
+                         (let ([app-first (z:app-fun expr)])
+                           (and (z:top-level-varref? app-first)
+                                (let ([var (z:varref-var app-first)])
+                                  (or (eq? var 'cons)
+                                      (let ([var-string (symbol->string var)])
+                                        (and (>= (string-length var-string) 5)
+                                             (string=? (substring (symbol->string var) 0 5)
+                                                     "make-")))))))))))))
+                                                         
   
   (define (rectify-source-expr expr mark-list lexically-bound-vars)
     (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
       (cond [(z:varref? expr)
-             (if (memq (z:varref-var expr) lexically-bound-vars)
-                 (z:binding-orig-name (z:bound-varref-binding expr))
-                 (let* ([var-record (find-var-binding mark-list (z:varref-var expr))]
-                        [var-val-thunk (car var-record)]
-                        [var-top-level? (z:top-level-varref? expr)])
-                   (if var-top-level?
-                       (string->uninterned-symbol (symbol->string (z:varref-var expr)))
-                       (rectify-value (var-val-thunk)))))]
+             (cond [(memq (z:varref-var expr) lexically-bound-vars)
+                    (z:binding-orig-name (z:bound-varref-binding expr))]
+                   [(z:top-level-varref? expr)
+                    (string->uninterned-symbol (symbol->string (z:varref-var expr)))]
+                   [else
+                    (rectify-value (mark-binding-value (find-var-binding mark-list 
+                                                                         (z:varref-var expr))))])]
             
             [(z:app? expr)
              (map recur (cons (z:app-fun expr) (z:app-args expr)))]
@@ -207,6 +214,12 @@
               expr
               (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))])))
  
+;  (define (rectify-and and-source expr mark-list lexically-bound-vars)
+;    (let ([rectify-source (lambda (expr) (rectify-soruce-expr expr mark-list lexically-bound-vars))])
+;      (if (and (comes-from-and expr) (equal? and-source (z:zodiac-start expr)))
+;          (cons (rectify-source (z:if-form-test expr))
+;                (rectify-cond-clauses and-source (z:if-form))))))
+
   (define (rectify-cond-clauses cond-source expr mark-list lexically-bound-vars)
     (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
       (if (and (z:if-form? expr) (equal? cond-source (z:zodiac-start expr)))
