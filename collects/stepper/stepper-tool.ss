@@ -14,7 +14,7 @@
            "private/model-settings.ss"
            (lib "pconvert.ss")
            (lib "string-constant.ss" "string-constants")
-           (lib "channel.ss" "web-server"))
+           (lib "async-channel.ss"))
 
   ;; mflatt: MINOR HACK - work around temporary
   ;;         print-convert problems
@@ -179,7 +179,7 @@
                        (simple-module-based-language-convert-value val simple-settings)))))
 
                 ; channel for incoming views
-                (define view-channel (create-channel))
+                (define view-channel (make-async-channel))
                 
                 ; the semaphore associated with the view at the end of the view-history
                 ; note that because these are fresh semaphores for every step, posting to a semaphore
@@ -203,7 +203,7 @@
                 (define (try-to-get-view-pair)
                   (when stepper-is-waiting?
                     (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
-                  (let ([try-get (channel-try-get view-channel (lambda () #f))])
+                  (let ([try-get (async-channel-try-get view-channel)])
                     (if try-get
                         try-get
                         (begin
@@ -224,9 +224,9 @@
                        (lambda ()
                          (when end-of-stepping?
                            (set! never-step-again #t))
-                         (channel-put view-channel (list step-text new-semaphore))
+                         (async-channel-put view-channel (list step-text new-semaphore))
                          (when stepper-is-waiting?
-                             (let ([try-get (channel-try-get view-channel (lambda () #f))])
+                             (let ([try-get (async-channel-try-get view-channel)])
                                (unless try-get
                                  (error 'check-for-stepper-waiting "queue is empty, even though a step was just added."))
                                (set! stepper-is-waiting? #f)
