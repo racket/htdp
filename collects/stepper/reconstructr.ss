@@ -87,18 +87,25 @@
 
   (define (rectify-value val)
     (let ([closure-record (closure-table-lookup val (lambda () #f))])
-      (if closure-record
-          (or (closure-record-name closure-record)
-              (let ([mark (closure-record-mark closure-record)])
-                (o-form-case-lambda->lambda 
-                 (rectify-source-expr (mark-source mark) (list mark) null))))
-          (parameterize
-              ([p:constructor-style-printing (s:get-constructor-style-printing)]
-               [p:abbreviate-cons-as-list (s:get-abbreviate-cons-as-list)]
-               [p:empty-list-name (s:get-empty-list-name)]
-               [p:show-sharing (s:get-show-sharing)]
-               [current-namespace (s:get-namespace)])
-            (p:print-convert val)))))
+      (cond
+        [closure-record
+         (or (closure-record-name closure-record)
+             (let ([mark (closure-record-mark closure-record)])
+               (o-form-case-lambda->lambda 
+                (rectify-source-expr (mark-source mark) (list mark) null))))]
+        [else
+         (parameterize
+             ([p:constructor-style-printing (s:get-constructor-style-printing)]
+              [p:abbreviate-cons-as-list (s:get-abbreviate-cons-as-list)]
+              [p:empty-list-name (s:get-empty-list-name)]
+              [p:show-sharing (s:get-show-sharing)]
+              [p:current-print-convert-hook 
+               (lambda (v basic-convert sub-convert)
+                 (if (s:image? v)
+                     v
+                     (basic-convert v)))]
+              [current-namespace (s:get-namespace)])
+           (p:print-convert val))])))
   
   (define (o-form-case-lambda->lambda o-form)
     (cond [(eq? (car o-form) 'lambda)
@@ -145,18 +152,21 @@
                          (let ([fun-val (mark-binding-value
                                          (find-var-binding mark-list 
                                                            (z:varref-var (get-arg-symbol 0))))])
-                           (or (and (s:get-constructor-style-printing)
-                                    (if (s:get-abbreviate-cons-as-list)
-                                        (eq? fun-val list)
-                                        (eq? fun-val (s:get-cons))))
-                               (eq? fun-val (s:get-vector))
-                               (and (eq? fun-val void)
-                                    (eq? (z:app-args expr) null))
-                               (struct-constructor-procedure? fun-val)
-                               ; this next clause may be obviated by the previous one.
-                               (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
-                                 (and closure-record
-                                      (closure-record-constructor? closure-record))))))
+                           (and (procedure-arity-includes? 
+                                 fun-val
+                                 (length (z:app-args expr)))
+                                (or (and (s:get-constructor-style-printing)
+                                         (if (s:get-abbreviate-cons-as-list)
+                                             (eq? fun-val list)
+                                             (eq? fun-val (s:get-cons))))
+                                    (eq? fun-val (s:get-vector))
+                                    (and (eq? fun-val void)
+                                         (eq? (z:app-args expr) null))
+                                    (struct-constructor-procedure? fun-val)
+                                    ; this next clause may be obviated by the previous one.
+                                    (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
+                                      (and closure-record
+                                           (closure-record-constructor? closure-record)))))))
                     (in-inserted-else-clause mark-list))))))
   
   (define (in-inserted-else-clause mark-list)
