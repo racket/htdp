@@ -131,12 +131,7 @@
           (not (not (regexp-match r (get-output-string p))))))))
   
   (define (skip-result-step? mark-list)
-    (or (in-inserted-else-clause mark-list)
-        (and (pair? mark-list)
-             (pair? (cdr mark-list))
-             (let ([second-mark (cadr mark-list)])
-               (and (z:app? (mark-source second-mark))
-                    (eq? (mark-label second-mark) 'called))))))
+    (in-inserted-else-clause mark-list))
   
   (define (skip-redex-step? mark-list)
     (and (pair? mark-list)
@@ -404,7 +399,6 @@
                  ; applications
                  
                  [(z:app? expr)
-                  (printf "reconstructing app. label: ~s~n" (mark-label (car mark-list)))
                   (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
                          [arg-temps (build-list (length sub-exprs) get-arg-symbol)]
                          [arg-temp-syms (map z:varref-var arg-temps)]
@@ -506,7 +500,6 @@
                  (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
                  (current-def-rectifier 
                   (let ([reconstructed (reconstruct-inner mark-list so-far)])
-                    (printf "current-def-rectifier rectified: ~n~s~n" reconstructed)
                     (when first
                       (set! redex reconstructed))
                     reconstructed)
@@ -533,7 +526,6 @@
             (if (eq? break-kind 'result-break)
                 (if (null? returned-value-list)
                     (let* ([first-exp (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
-                           [_ (printf "first-exp : ~s~n" first-exp)]
                            [so-far (if (heap-value? first-exp) first-exp highlight-placeholder)]
                            [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
                       (list (append old-defs (list current-def) last-defs) first-exp))
@@ -542,6 +534,5 @@
                            [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
                       (list (append old-defs (list current-def) last-defs) inner-value)))
                 (begin
-                  (printf "about to start reconstructing.~n")
                   (let ([current-def (current-def-rectifier  nothing-so-far mark-list #t)])
                     (list (append old-defs (list current-def) last-defs) redex)))))))))
