@@ -143,7 +143,7 @@
           (inherit get-special-menu get-edit-target-object)
           (super-new)
           (new menu-item%
-               (label "Insert Text Box")
+               (label (string-constant insert-text-box-item))
                (parent (get-special-menu))
                (callback
                 (lambda (menu event)

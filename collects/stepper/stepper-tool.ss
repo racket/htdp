@@ -333,15 +333,15 @@
         ;; GUI ELEMENTS:
         (define s-frame (make-object stepper-frame% drscheme-frame))
         (define button-panel (make-object horizontal-panel% (send s-frame get-area-container)))
-        (define home-button (make-object button% "Home" button-panel
+        (define home-button (make-object button% (string-constant stepper-home) button-panel
                               (lambda (_1 _2) (home))))
-        (define previous-application-button (make-object button% "|< Application" button-panel
+        (define previous-application-button (make-object button% (string-constant stepper-previous-application) button-panel
                                               (lambda (dc-1 dc-2) (previous-application))))
-        (define previous-button (make-object button% "< Step" button-panel
+        (define previous-button (make-object button% (string-constant stepper-previous) button-panel
                                   (lambda (_1 _2) (previous))))
-        (define next-button (make-object button% "Step >" button-panel 
+        (define next-button (make-object button% (string-constant stepper-next) button-panel 
                               (lambda (_1 _2) (next))))
-        (define next-application-button (make-object button% "Application >|" button-panel
+        (define next-application-button (make-object button% (string-constant stepper-next-application) button-panel
                                           (lambda (dc-1 dc-2) (next-application))))
         (define canvas (make-object x:stepper-canvas% (send s-frame get-area-container)))
 
@@ -434,7 +434,7 @@
       ;; stepper-bitmap : the image used for the stepper button
       (define stepper-bitmap
         (bitmap-label-maker
-         "Step"
+         (string-constant stepper-button-label)
          (build-path (collection-path "icons") "foot.png")))
 
       ;; stepper-unit-frame<%> : the interface that the extended drscheme frame fulfils
@@ -497,11 +497,11 @@
                            [language-level (car (last-pair (send language get-language-position)))])
                       (if (member language-level stepper-works-for)
                           (set! stepper-frame (view-controller-go this program-expander))
-                          (message-box "Stepper"
-                                       (string-append
-                                        "The language level is set to \"" language-level "\". "
-                                        "Currently, the stepper works only for the \"" (car stepper-works-for)
-                                        "\" through the \"" (car (reverse stepper-works-for)) "\" language levels."))))))))
+                          (message-box (string-constant stepper-name)
+				       (format (string-constant stepper-language-level-message)
+					       language-level
+					       (car stepper-works-for)
+					       (car (reverse stepper-works-for))))))))))
           
           
           (define/augment (enable-evaluation)
