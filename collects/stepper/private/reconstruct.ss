@@ -127,7 +127,7 @@
                                    base-name)])
                     (if (and assigned-name (free-identifier=? base-name assigned-name))
                         (recon-source-expr (mark-source mark) (list mark) null null render-settings)
-                        #`#,name))
+                        (re-intern-identifier #`#,name)))
                   (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
             (let ([rendered ((render-settings-render-to-sexp render-settings) val)])
               (if (symbol? rendered)
@@ -172,15 +172,16 @@
       (with-handlers ([exn:variable? (lambda (dc-exn) #f)])
         (let ([val (lookup-binding mark-list varref)])
           (equal? (syntax-object->datum (recon-value val render-settings))
-                  (syntax-object->datum (case (syntax-property varref 'stepper-binding-type)
-                                          ([let-bound]
-                                           (binding-lifted-name mark-list varref))
-                                          ([non-lexical]
-                                           varref)
-                                          (else
-                                           (error 'varref-skip-step? "unexpected value for stepper-binding-type: ~e for variable: ~e\n"
-                                                  (syntax-property varref 'stepper-binding-type)
-                                                  varref))))))))
+                  (syntax-object->datum (re-intern-identifier
+                                         (case (syntax-property varref 'stepper-binding-type)
+                                           ([let-bound]
+                                            (binding-lifted-name mark-list varref))
+                                           ([non-lexical]
+                                            varref)
+                                           (else
+                                            (error 'varref-skip-step? "unexpected value for stepper-binding-type: ~e for variable: ~e\n"
+                                                   (syntax-property varref 'stepper-binding-type)
+                                                   varref)))))))))
     
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
@@ -296,7 +297,6 @@
   ; and returns a list of syntax objects
   
   (define (unwind stx lift-at-highlight?)
-    (printf "stx: ~v\n" (syntax-object->hilite-datum stx))
     (macro-unwind (lift stx lift-at-highlight?)))
   
   ; unwind-no-highlight is really just macro-unwind, but with the 'right' interface that
@@ -699,9 +699,8 @@
          (lambda (skipto)
            (skipto-reconstruct skipto expr
                                skipto-loop))]
-        [(syntax-property expr 'stepper-define-struct-hint) =>
-         (lambda (define-struct-info)
-           (syntax-object->datum (cadr define-struct-info)))]
+        [(syntax-property expr 'stepper-define-struct-hint)
+         (error 'reconstruct-completed "define-structs should not be passed to reconstruct-completed")]
         [else
          (first-of-one (unwind-no-highlight
                         (kernel:kernel-syntax-case expr #f

@@ -103,7 +103,10 @@
     (match expected
       [`(before-after ,before ,after)
        (and (before-after-result? actual)
-            (andmap (lambda (fn expected) (noisy-equal? (map syntax-object->hilite-datum (fn actual)) expected))
+            (andmap (lambda (fn expected) 
+                      (unless (list? (fn actual))
+                        (printf "not a list: ~v\n" (syntax-object->hilite-datum (fn actual))))
+                      (noisy-equal? (map syntax-object->hilite-datum (fn actual)) expected))
                     (list before-after-result-exp before-after-result-post-exp)
                     (list before after)))]
       [`(before-after-waiting ,before ,after ,waiting)
@@ -208,7 +211,7 @@
   (t if-bool
      (test-upto-int/lam "(if (if true false true) false true)"
                      `((before-after ((if (hilite (if true false true)) false true))
-                                     ((if (hi-wrap false) false true)))
+                                     ((if (hilite false) false true)))
                        (before-after ((hilite (if false false true))) ((hilite true)))
                        (finished (true)))))
 
@@ -328,7 +331,7 @@
   (test-intermediate/lambda-sequence "(define (b2 x) (and true x)) (b2 false)"
                                      `((before-after-finished ((define (b2 x) (and true x)))
                                                               (((hilite b2) false))
-                                                              (((lambda (x) (and true x)) false)))
+                                                              (((hilite (lambda (x) (and true x))) false)))
                                        (before-after ((hilite ((lambda (x) (and true x)) false))) 
 						     ((hilite (and true false))))
                                        (before-after ((hilite (and true false))) ((hilite false)))
@@ -1016,6 +1019,6 @@
 ;  (finished (true))))
   
   
-  (run-tests '(top-app))
-  ;(run-all-tests)
+  ;(run-tests '(top-app))
+  (run-all-tests)
   )

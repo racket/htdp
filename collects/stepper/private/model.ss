@@ -76,7 +76,6 @@
          ; a highlight-placeholder
          ; (->* ((listof syntax)) (list/p syntax syntax syntax))
          (define (redivide exprs)
-           (printf "redividing: ~v\n" (map syntax-object->hilite-datum exprs))
            (letrec ([contains-highlight
                      (lambda (expr)
                        (or (syntax-property expr 'stepper-highlight)
@@ -151,9 +150,10 @@
                                       
                                       (let*-values
                                           ([(before current after) (redivide reconstructed)])
-                                        (make-before-after-result (append finished-exprs before) (syntax-property #`(... ...)
-                                                                                                                  'stepper-highlight
-                                                                                                                  #t)
+                                        (make-before-after-result (append finished-exprs before) (list 
+                                                                                                  (syntax-property #`(... ...)
+                                                                                                                   'stepper-highlight
+                                                                                                                   #t))
                                                                   current after 'normal)))])
                             (set! held-expr-list no-sexp)
                             (receive-result result)))]
@@ -183,14 +183,13 @@
                      
                      [(define-struct-break)
                       (set! finished-exprs (append finished-exprs
-                                                   (list (syntax-object->datum (car returned-value-list)))))]
+                                                   (list (car returned-value-list))))]
                      
                      [else (error 'break "unknown label on break")])))))
          
          (define (step-through-expression expanded expand-next-expression)
-           (printf "expanded: ~v\n" expanded)
            (let* ([annotated (a:annotate expanded break track-inferred-names?)])
-             (eval annotated)
+             (eval-syntax annotated)
              (expand-next-expression)))
          
          (define (err-display-handler message exn)

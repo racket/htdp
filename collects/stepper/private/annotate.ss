@@ -845,7 +845,7 @@
     
     
     ;; annotate/top-level : syntax-> syntax
-    ;; expandsion of teaching level language programs produces two kinds of 
+    ;; expansion of teaching level language programs produces two kinds of 
     ;; expressions: modules containing all of the code in the def'ns window, and
     ;; require statements that invoke those modules.  In the first case, we must annotate
     ;; the expressions inside the top-level module, and in the second, we should just
@@ -858,6 +858,10 @@
           [(module name lang
              (#%plain-module-begin . bodies))
            #`(module name lang (#%plain-module-begin #,@(map annotate/module-top-level (syntax->list #`bodies))))]
+          ; the 'require' form is used for the test harness
+          [(require module-name)
+           expr]
+          ; the 'dynamic-require' form is used by the actual expander 
           [(let-values ([(done-already?) . rest1])
                 (#%app dynamic-wind
                  void
@@ -882,7 +886,6 @@
                          [defined-name (if (and (pair? name-list) (null? (cdr name-list)))
                                            (car name-list)
                                            #f)])
-                    (printf "rewritten: ~v\n" (top-level-rewrite #`e))
                     #`(define-values (new-vars ...)
                         #,(top-level-annotate/inner (top-level-rewrite #`e) expr defined-name)))]
                  [(define-syntaxes (new-vars ...) e)
