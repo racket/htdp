@@ -3,7 +3,7 @@
 (define-signature guiS
   (setup-gui show-gui hide-gui
    make-text make-choice make-button make-message
-   get-text get-choice draw-message
+   text-contents choice-index draw-message
    create-frame))
   
 (define guessU
@@ -105,14 +105,14 @@
     ;; PROBING ITEMS: 
     ;; ----------------------------------------------------------------------------
 
-    ;; get-text : gui-item[text-field%] -> str
+    ;; text-contents : gui-item[text-field%] -> str
     ;; to determine the contents of a text-item 
-    (define (get-text a-text-gui)
+    (define (text-contents a-text-gui)
       (send ((gui-item-builder a-text-gui) the-panel) get-value))
 
-    ;; get-choice : gui-item[choice%] -> number
+    ;; choice-index : gui-item[choice%] -> number
     ;; to determine which choice is currently selected in a choice-item 
-    (define (get-choice a-choice)
+    (define (choice-index a-choice)
       (send ((gui-item-builder a-choice) the-panel) get-selection))
 
     ))
