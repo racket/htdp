@@ -217,7 +217,7 @@
                 (syntax-property #`(#,put-into-xml-table #,rewritten) 
                                  'stepper-skipto
                                  (list syntax-e cdr car))
-                rewritten)))))
+                (syntax-recertify rewritten stx (current-code-inspector) #f))))))
   
                                                  
    ;                                               
@@ -643,8 +643,8 @@
                       [recertifier
                        (lambda (vals)
                          (let*-2vals ([(new-expr bindings) vals])
-                                         (2vals (syntax-recertify new-expr expr (current-code-inspector) #f)
-                                                bindings)))]
+                           (2vals (syntax-recertify new-expr expr (current-code-inspector) #f)
+                                  bindings)))]
                       
                       )
                  ; find the source expression and associate it with the parsed expression

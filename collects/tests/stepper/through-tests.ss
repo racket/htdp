@@ -476,10 +476,10 @@
   
   (t lam-let
      (test-intermediate-sequence "(let ([a (lambda (x) (+ x 5))]) (a 6))"
-                                 `((before-after ((let ([a (lambda (x) (+ x 5))]) (a 6)))
-                                                 ((hilite (define a_0 (lambda (x) (+ x 5)))) (hilite (a 6))))
+                                 `((before-after ((hilite (let ([a (lambda (x) (+ x 5))]) (a 6))))
+                                                 ((hilite (define a_0 (lambda (x) (+ x 5)))) (hilite (a_0 6))))
                                    (before-after-finished ((define a_0 (lambda (x) (+ x 5))))
-                                                          ((hilite (a 6)))
+                                                          ((hilite (a_0 6)))
                                                           ((hilite (+ 6 5))))
                                    (before-after ((hilite (+ 6 5)))
                                                  ((hilite 11)))
@@ -1193,6 +1193,6 @@
      (test-teachpack-sequence " (define (f2c x) x) (convert-gui f2c)" `() ; placeholder
                                ))
   
-  (run-tests '(lam-let) #;(let-scoping1))
-  #;(run-all-tests)
+  #;(run-tests '(let-scoping1))
+  (run-all-tests)
   )
