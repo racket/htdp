@@ -57,7 +57,9 @@
       (datum->syntax-object
        (quote-syntax here)
        (list* (quote-syntax #%plain-module-begin)
-	      (quote-syntax 
-	       (require-for-syntax (rename mzscheme syntax-rules syntax-rules)))
+	      (list 'require-for-syntax 
+		    (datum->syntax-object
+		     stx
+		     '(rename mzscheme syntax-rules syntax-rules)))
 	      (cdr (syntax-e stx)))
        stx))))
