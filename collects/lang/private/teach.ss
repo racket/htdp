@@ -181,14 +181,18 @@
     ;; argument is a syntax list of identifiers.
     (define (check-definitions-new who stx names defn)
       (if (eq? (syntax-local-context) 'top-level)
-	  (with-syntax ([(name ...) names]
-			[defn defn]
+	  (with-syntax ([defn defn]
 			[who who])
-	    (syntax/loc stx
-	      (begin
-		(check-top-level-not-defined 'who #'name)
-		...
-		defn)))
+	    (with-syntax ([(check ...)
+			   (map (lambda (name)
+				  (with-syntax ([name name])
+				    (syntax/loc stx
+				      (check-top-level-not-defined 'who #'name))))
+				names)])
+	      (syntax/loc stx
+		(begin
+		  check ...
+		  defn))))
 	  defn))
 
     ;; Same as above, but for one name
