@@ -911,61 +911,19 @@
 		[G (- 1 R)])
 	   (change-color index (make-rgb R G B))))))
 
-   (define viewport-snipclass
-     (make-object
-      (class wx:snip-class% ()
-	     (inherit set-classname)
-	     (sequence
-	       (super-init)
-	       (set-classname "viewport-snip"))
-	     (public
-	      [complained? #f]
-	      [write-header
-	       (lambda ()
-		 (set! complained? #f)
-		 #t)]
-	      [write-complain
-	       (lambda ()
-		 (unless complained?
-			 (set! complained? #t)
-			 (wx:message-box "Can't save viewport images" "Warning")))]))))
-   
-   (define viewport-snip%
-     (class wx:snip% (mem-dc bitmap)
-	    (inherit set-snipclass)
-	    (sequence 
-	      (super-init)
-	      (set-snipclass viewport-snipclass))
-	    (public
-	     [get-extent
-	      (lambda (dc x y w h descent space lspace rspace)
-		(let ([zero! (lambda (x) (unless (null? x)
-						 (set-box! x 0.0)))])
-		  (unless (null? w)
-			  (set-box! w (send bitmap get-width)))
-		  (unless (null? h)
-			  (set-box! h (send bitmap get-height)))
-		  (zero! descent)
-		  (zero! space)
-		  (zero! lspace)
-		  (zero! rspace)))]
-	     [draw
-	      (lambda (dc x y left top right bottom dx dy draw-caret)
-		(let ([w (send bitmap get-width)]
-		      [h (send bitmap get-height)])
-		  (send dc blit x y w h mem-dc 0 0)))]
-	     [copy
-	      (lambda ()
-		(make-object viewport-snip% mem-dc bitmap))]
-	     [write
-	      (lambda ()
-		(send viewport-snipclass write-complain))])))
-
    (define viewport->snip
      (lambda (viewport)
-       (let* ([dc (viewport-buffer-DC viewport)]
-	      [bitmap (ivar (viewport-canvas viewport) bitmap)]
-	      [snip (make-object viewport-snip% dc bitmap)])
-	 snip)))
-	 
+       (let ([orig-bitmap (ivar (viewport-canvas viewport) bitmap)]
+	     [orig-dc (viewport-buffer-DC viewport)])
+	 (let* ([h (send orig-bitmap get-height)]
+		[w (send orig-bitmap get-width)]
+		[new-bitmap (make-object wx:bitmap% w h)]
+		[tmp-mem-dc (make-object wx:memory-dc%)])
+	   (send tmp-mem-dc select-object new-bitmap)
+	   (send tmp-mem-dc blit 0 0 w h orig-dc 0 0)
+	   (send tmp-mem-dc select-object null)
+	   (let ([snip (make-object wx:image-snip%)])
+	     (send snip set-bitmap new-bitmap)
+	     snip)))))
+   
    (create-cmap)))
