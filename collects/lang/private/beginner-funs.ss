@@ -8,7 +8,7 @@
   ;; Implements the procedures:
   (require "teachprims.ss"
 	   "../posn.ss"
-	   "../imageeq.ss")
+	   "../image.ss")
 
   ;; Test-suite support (require is really an effect
   ;;  to make sure that it's loaded)
@@ -427,13 +427,44 @@
       (format (string any ... -> string)
 	"to format a string, possibly embedding values"))
 
+    ("Images"
+     (image? (any -> boolean)
+	     "to determine whether a value is an image")
+     (image=? (image image -> boolean)
+	      "to determine whether two images are equal")
+     (image+ (image image -> boolean)
+	     "to add the non-white pixels of the second image onto the first image at its top-left corner")
+     (offset-image+ (image int int image -> boolean)
+		    "to add the non-white pixels of the second image onto the first at a number of pixels right and down")
+     (offset-masked-image+ (image int int image image -> boolean)
+			   "to add the second image onto the first, using a third as a mask")
+     (image-width (image -> int)
+		  "to obtain an image's width in pixels")
+     (image-height (image -> int)
+		   "to obtain an image's height in pixels")
+     
+     (solid-box (int int symbol -> image)
+		"to create an image of a solid color")
+     (outline-box (int int symbol -> image)
+		  "to create an image of a colored frame")
+     (solid-dot (int int symbol -> image)
+		"to create an image of a solid dot of a color")
+     (outline-dot (int int symbol -> image)
+		  "to create an image of a solid dot of a color")
+
+     (image-inside? (image image -> boolean)
+		    "to determine whether the non-white pixels of the secon dimage appear in the first")
+     (find-image (image image -> posn)
+		 "to determine where the non-white pixels of the second image appear in the first")
+	     
+     (image->color-list (image -> (listof color))
+			"to convert an image to a list of colors")
+     (color-list->image ((listof color) int int -> image)
+			"to convert a list of colors to an image of a given width and height"))
+
     ("Misc"
       (identity (any -> any)
 	"to return the argument unchanged")
-      (image? (any -> boolean)
-	"to determine whether a value is an image")
-      (image=? (image image -> boolean)
-	"to determine whether two images are equal")
       ((beginner-error error) (symbol string -> void) "to signal an error")
       ((beginner-struct? struct?) (any -> boolean)
        "to determine whether some value is a structure")
