@@ -111,8 +111,11 @@
   ; multiple-highlight is used to indicate multiple highlighted expressions
   (define multiple-highlight (gensym "multiple-highlight-"))
   
-  ; *unevaluated* is the value assigned to temps before they are evaluated.
-  (define *unevaluated* (gensym "unevaluated-"))
+  ; *unevaluated* is the value assigned to temps before they are evaluated. It's not a symbol so
+  ; it won't need quoting in the source.  Bit of a hack, I know.
+  (define *unevaluated* 
+    (let ([sym (gensym "unevaluated-")])
+      (lambda () sym)))
  
   ; if-temp : uninterned-symbol
   (define if-temp (create-bogus-binding "if-temp-"))
