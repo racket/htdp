@@ -1,8 +1,8 @@
 (unit/sig stepper:reconstruct^
   (import [z : zodiac:system^]
           mzlib:function^
-	  [e : stepper:error^]
-          [utils : cogen-utils^]
+          [e : stepper:error^]
+          [utils : stepper:cogen-utils^]
           [b : userspace:basis^]
           stepper:marks^
           [s : stepper:model^]

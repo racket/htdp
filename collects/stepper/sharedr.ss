@@ -1,7 +1,7 @@
 (unit/sig stepper:shared^
   (import [z : zodiac:system^]
 	  [e : stepper:error^]
-          stepper:zodiac-client-procs^)
+          stepper:client-procs^)
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
