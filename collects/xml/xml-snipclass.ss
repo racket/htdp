@@ -11,21 +11,13 @@
       
       (define/public (read-special file line col pos)
         (xml-read-special eliminate-whitespace-in-empty-tags?
-			  translate-xml-exn-to-rep-exn
 			  this
 			  file
 			  line
 			  col
 			  pos))
       
-      (super-instantiate ())))
-  
-  ;; this simpler version of translate-...-exn 
-  ;; doesn't allow for showing the red highlighting
-  ;; (but this code doesn't run inside DrScheme anyways)
-  (define (translate-xml-exn-to-rep-exn editor)
-    (lambda (exn)
-      (raise exn)))
+      (super-new)))
   
   (define xml-snipclass%
     (class snip-class%
@@ -35,7 +27,7 @@
                        (eliminate-whitespace-in-empty-tags? eliminate-whitespace-in-empty-tags?))])
           (send (send snip get-editor) read-from-file stream-in #f)
           snip))
-      (super-instantiate ())))
+      (super-new)))
   
   (define snip-class (make-object xml-snipclass%))
   (send snip-class set-version 1)
