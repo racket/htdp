@@ -10,7 +10,8 @@ languages for other modules (i.e., as the initial import):
    following MzLib libraries: etc.ss, file.ss, list.ss,
    class.ss, unit.ss, unitsig.ss, include.ss, defmacro.ss,
    pretty.ss, string.ss, thread.ss, math.ss, match.ss, and
-   shared.ss
+   shared.ss. It also provides the posn, color, and image
+   functions of Beginning Student.
 
  * _plt-pretty-big.ss_ - provides plt-pretty-big-text.ss
     plus the MrEd classes. This corresponds to the
