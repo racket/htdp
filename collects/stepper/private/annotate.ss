@@ -245,17 +245,20 @@
   ; with the syntax-property 'stepper-binding-type, which is set to either let-bound, lambda-bound, or non-lexical.
   
   (define (top-level-rewrite stx)
-    (let loop ([stx stx] [let-bound-bindings null] [cond-test (lambda (x) #f)])
+    (let loop ([stx stx] [let-bound-bindings null] [cond-test (lambda (x) #f)] [and/or-test (lambda (x) #f)])
       (let* ([recur-regular 
               (lambda (stx)
-                (loop stx let-bound-bindings #f #f))]
+                (loop stx let-bound-bindings (lambda (x) #f) (lambda (x) #f)))]
              [recur-with-bindings
               (lambda (vars exps)
-                (map (lambda (stx) (loop stx (append vars let-bound-bindings) #f #f)) 
+                (map (lambda (stx) (loop stx (append vars let-bound-bindings) (lambda (x) #f) (lambda (x) #f))) 
                      exps))]
              [recur-in-cond
               (lambda (stx new-cond-test)
-                (loop stx let-bound-bindings #t new-cond-test))]
+                (loop stx let-bound-bindings new-cond-test (lambda (x) #f)))]
+             [recur-in-and/or
+              (lambda (stx new-and/or-test)
+                (loop stx let-bound-bindings (lambda (x) #f) new-and/or-test))]
              [do-let/rec
               (lambda (stx rec?)
                 (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
@@ -267,14 +270,41 @@
                                        (map recur-regular (syntax->list (syntax (rhs ...)))))]
                          [new-bodies (recur-with-bindings vars-list (syntax->list (syntax bodies)))]
                          [new-bindings (map list labelled-vars-list rhs-list)])
-                    (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))])
+                    (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))]
+             [do-and/or
+              (lambda (new-and/or-test stx tag)
+                (kernel:kernel-syntax-case stx #f
+                  [(let-values [(part-0 test)] (if part-1 part-2 rest))
+                   (let ([new-if (syntax-property (rebuild-stx `(if ,(recur-regular (syntax part-1))
+                                                                    ,(recur-regular (syntax part-2))
+                                                                    ,(recur-in-and/or (syntax rest) new-and/or-test)))
+                                                  'stepper-hint
+                                                  tag)])
+                     (syntax-property (rebuild-stx `(let-values ([,(recur-regular (syntax part-0))
+                                                                  ,(recur-regular (syntax test))])
+                                                      ,new-if))
+                                      'stepper-hint
+                                      tag))]))])
         (kernel:kernel-syntax-case stx #f
-          [(let-values x ...) (do-let/rec stx #f)]
-          [(letrec-values x ...) (do-let/rec stx #t)]
-          [(begin body) ; else clauses of conds
-           (cond-test stx)
-           (let ([new-body (syntax-property (recur-regular (syntax body)) 'stepper-else #t)])
-             (syntax-property (rebuild-stx `(begin ,new-body) stx) 'stepper-skipto (list syntax-e cdr car)))]
+
+          ; and/or :
+          [(let-values x ...)
+           (let ([origin (syntax-property stx 'origin)])
+             (and origin (pair? origin) (pair? (cdr origin)) (or (eq? (syntax-e (cadr origin)) 'or)
+                                                                 (eq? (syntax-e (cadr origin)) 'and))))
+           (let* ([origin-tag (syntax-e (cadr (syntax-property stx 'origin)))]
+                  [tag (cond [(eq? origin-tag 'or) 'comes-from-or]
+                            [(eq? origin-tag 'and) 'comes-from-and])])
+             (do-and/or (lambda (test-stx) (and (eq? (syntax-source stx) (syntax-source test-stx))
+                                                (eq? (syntax-position stx) (syntax-position test-stx))
+                                                tag)) 
+                        stx
+                        tag))]
+          [(let-values x ...)
+           (and/or-test stx)
+           (do-and/or and/or-test stx (and/or-test stx))]
+          
+          ; cond :
           [(if test (begin then) else-stx)
            (let ([origin (syntax-property stx 'origin)]
                  [rebuild-if
@@ -297,6 +327,15 @@
                                        (eq? (syntax-position stx) (syntax-position test-stx)))))]
                    [else
                     (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) stx)]))]
+          [(begin body) ; else clauses of conds
+           (cond-test stx)
+           (let ([new-body (syntax-property (recur-regular (syntax body)) 'stepper-else #t)])
+             (syntax-property (rebuild-stx `(begin ,new-body) stx) 'stepper-skipto (list syntax-e cdr car)))]
+          
+          
+          ; let/letrec :
+          [(let-values x ...) (do-let/rec stx #f)]
+          [(letrec-values x ...) (do-let/rec stx #t)]
           [var
            (identifier? (syntax var))
            (if (eq? (identifier-binding (syntax var)) 'lexical)

@@ -270,6 +270,7 @@
 ;                    (comes-from-cond? expr))
 ;               (in-inserted-else-clause (cdr mark-list))))))
   
+  (define (lift-lets stx-list)
   (define (unwind stx-list highlights)
     (local
         ((define highlight-queue-src (make-queue))
@@ -289,6 +290,7 @@
                        ((comes-from-cond) (unwind-cond stx 
                                             (syntax-property stx 'user-source)
                                             (syntax-property stx 'user-position)))
+                       ((comes-from-and/or) 
                        (else (recur-on-pieces)))
                      (recur-on-pieces)))))
          
@@ -846,10 +848,10 @@
                    (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
                                          (recon-source-expr (mark-source (car mark-list)) mark-list)
                                          (recon-value (car returned-value-list)))]
-                          [recon-expr (recon null highlight-placeholder-stx (cdr mark-list) #f)])
+                          [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
                      (unwind (list recon-expr) (list innermost))))
                   ((normal-break)
-                   (let ([recon-expr (recon null nothing-so-far mark-list #t)])
+                   (let ([recon-expr (recon nothing-so-far mark-list #t)])
                      (unwind (list recon-expr) (list redex))))
                   ((double-break late-let-break)
                    (error 'answer "lifting turned off"))
