@@ -34,7 +34,7 @@
   (define-syntax (module-begin stx)
     (syntax-case stx ()
      [(_ the-test lang to-export . rest)
-      #'(#%module-begin
+      #`(#%module-begin
 	 (require (rename tester the-test test))
 	 (require lang)
          #,@(if (syntax-object->datum (syntax to-export))
@@ -61,7 +61,11 @@
 	  (err/rt-test (eval #`(require #,name)) exn?)
 	  (eval #`(require #,name))))))
 
-(define (htdp-eval stx)
+(define-syntax (htdp-eval stx)
+  (syntax-case stx ()
+    [(_ arg) (syntax (do-htdp-eval #'arg))]))
+
+(define (do-htdp-eval stx)
   (let ([name (gensym 'm)])
     (eval
      #`(module #,name helper

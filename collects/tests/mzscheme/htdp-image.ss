@@ -119,8 +119,8 @@
 
 (htdp-top (define (p00 i) (move-pinhole i (- (pinhole-x i)) (- (pinhole-y i)))))
 
-(eval `(htdp-top (define image-snip1 (p00 ,image-snip1))))
-(eval `(htdp-top (define image-snip2 (p00 ,image-snip2))))
+(eval `(htdp-top (define image-snip1 ,image-snip1)))
+(eval `(htdp-top (define image-snip2 ,image-snip2)))
 
 (htdp-test 3 
            'pinhole-x
@@ -261,6 +261,15 @@
 	   (image=? (color-list->image (list blue red blue red) 2 2 0 0)
 		    (overlay (p00 (rectangle 2 2 'solid 'red))
                              (p00 (rectangle 1 2 'solid 'blue)))))
+
+(htdp-test #t
+	   'overlay/multiple
+	   (image=? (overlay (rectangle 6 6 'solid 'red)
+                             (overlay (rectangle 4 4 'solid 'white)
+                                      (rectangle 2 2 'solid 'blue)))
+		    (overlay (rectangle 6 6 'solid 'red)
+                             (rectangle 4 4 'solid 'white)
+                             (rectangle 2 2 'solid 'blue))))
 
 (htdp-test #t
            'overlay/empty-spaces-are-unmasked
@@ -474,6 +483,185 @@
                               3 -1
                               'red)))
 
+(htdp-test 7
+           'add-line3
+           (image-width (add-line (rectangle 7 7 'solid 'black)
+                                  -3 0
+                                  2 0
+                                  'red)))
+
+(htdp-test #t
+           'add-line4
+           (image=? (overlay (rectangle 6 6 'solid 'blue)
+                             (rectangle 6 1 'solid 'red))
+                    (add-line (rectangle 6 6 'solid 'blue)
+                              -3 0
+                              2 0
+                              'red)))
+
+(htdp-test 26
+           'add-line-w1
+           (image-width
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      -20 -20
+                      0 0
+                      'red)))
+(htdp-test 26
+           'add-line-w2
+           (image-width
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      -20 20
+                      0 0
+                      'red)))
+(htdp-test 26
+           'add-line-w3
+           (image-width
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      20 -20
+                      0 0
+                      'red)))
+(htdp-test 26
+           'add-line-w4
+           (image-width
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      20 20
+                      0 0
+                      'red)))
+
+(htdp-test 26
+           'add-line-w5
+           (image-width
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      0 0
+                      -20 -20
+                      'red)))
+(htdp-test 26
+           'add-line-w6
+           (image-width
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      0 0
+                      -20 20
+                      'red)))
+(htdp-test 26
+           'add-line-w7
+           (image-width
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      0 0
+                      20 -20
+                      'red)))
+(htdp-test 26
+           'add-line-w8
+           (image-width
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      0 0
+                      20 20
+                      'red)))
+
+(htdp-test 26
+           'add-line-h1
+           (image-height
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      -20 -20
+                      0 0
+                      'red)))
+(htdp-test 26
+           'add-line-h2
+           (image-height
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      -20 20
+                      0 0
+                      'red)))
+(htdp-test 26
+           'add-line-h3
+           (image-height
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      20 -20
+                      0 0
+                      'red)))
+(htdp-test 26
+           'add-line-h4
+           (image-height
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      20 20
+                      0 0
+                      'red)))
+
+(htdp-test 26
+           'add-line-h5
+           (image-height
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      0 0
+                      -20 -20
+                      'red)))
+(htdp-test 26
+           'add-line-h6
+           (image-height
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      0 0
+                      -20 20
+                      'red)))
+(htdp-test 26
+           'add-line-h7
+           (image-height
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      0 0
+                      20 -20
+                      'red)))
+(htdp-test 26
+           'add-line-h8
+           (image-height
+            (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                      0 0
+                      20 20
+                      'red)))
+
+(htdp-test (list 3 4)
+           'ph-ellipse
+           (list (pinhole-x (ellipse 6 8 'solid 'red))
+                 (pinhole-y (ellipse 6 8 'solid 'red))))
+(htdp-test (list 3 3)
+           'ph-circle
+           (list (pinhole-x (circle 3 'solid 'red))
+                 (pinhole-y (circle 3 'solid 'red))))
+(htdp-test (list 0 0)
+           'ph-line
+           (list (pinhole-x (line 10 10 'red))
+                 (pinhole-y (line 10 10 'red))))
+(htdp-test (list 0 0)
+           'ph-text
+           (list (pinhole-x (text "10" 10 'red))
+                 (pinhole-y (text "10" 10 'red))))
+
+(htdp-test (list 3 3)
+           'ph-add-line
+           (list (pinhole-x (add-line (rectangle 6 6 'solid 'red)
+                                      0 0
+                                      3 3
+                                      'black))
+                 (pinhole-y (add-line (rectangle 6 6 'solid 'red)
+                                      0 0
+                                      3 3
+                                      'black))))
+(htdp-test (list 3 4)
+           'ph-overlay1
+           (list (pinhole-x (overlay (rectangle 6 8 'solid 'red) (rectangle 2 4 'solid 'red)))
+                 (pinhole-y (overlay (rectangle 6 8 'solid 'red) (rectangle 2 4 'solid 'red)))))
+(htdp-test (list 0 0)
+           'ph-overlay2
+           (list (pinhole-x (overlay (move-pinhole (rectangle 6 8 'solid 'red) -3 -4)
+                                     (move-pinhole (rectangle 2 4 'solid 'red) -1 -2)))
+                 (pinhole-y (overlay (move-pinhole (rectangle 6 8 'solid 'red) -3 -4)
+                                     (move-pinhole (rectangle 2 4 'solid 'red) -1 -2)))))
+(htdp-test (list 5 5)
+           'ph-overlay/xy1
+           (list (pinhole-x (overlay/xy (move-pinhole (rectangle 6 8 'solid 'red) -3 -4)
+                                        -5 -5
+                                        (move-pinhole (rectangle 2 4 'solid 'red) -1 -2)))
+                 (pinhole-y (overlay/xy (move-pinhole (rectangle 6 8 'solid 'red) -3 -4)
+                                        -5 -5
+                                        (move-pinhole (rectangle 2 4 'solid 'red) -1 -2)))))
+
+
 (check-on-bitmap 'solid-rect (htdp-eval (rectangle 2 2 'solid 'red)))
 (check-on-bitmap 'outline-rect (htdp-eval (rectangle 2 2 'outline 'red)))
 (check-on-bitmap 'solid-ellipse (htdp-eval (ellipse 2 4 'solid 'red)))
@@ -508,6 +696,55 @@
                    -10 -10
                    110 110
                    'red)))
+
+(check-on-bitmap 'add-line1
+                 (htdp-eval
+                  (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                            -20 -20
+                            0 0
+                            'red)))
+(check-on-bitmap 'add-line2
+                 (htdp-eval
+                  (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                            -20 20
+                            0 0
+                            'red)))
+(check-on-bitmap 'add-line3
+                 (htdp-eval
+                  (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                            20 -20
+                            0 0
+                            'red)))
+(check-on-bitmap 'add-line4
+                 (htdp-eval
+                  (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                            20 20
+                            0 0
+                            'red))) 
+(check-on-bitmap 'add-line5
+                 (htdp-eval
+                  (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                            0 0
+                            -20 -20
+                            'red)))
+(check-on-bitmap 'add-line6
+                 (htdp-eval
+                  (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                            0 0
+                            -20 20
+                            'red)))
+(check-on-bitmap 'add-line7
+                 (htdp-eval
+                  (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                            0 0
+                            20 -20
+                            'red)))
+(check-on-bitmap 'add-line8
+                 (htdp-eval
+                  (add-line (overlay (rectangle 11 11 'solid 'black) (rectangle 3 3 'solid 'green))
+                            0 0
+                            20 20
+                            'red)))
 
 #|
 
@@ -569,5 +806,11 @@ snips as arguments
            'bs-image->alpha-color-list
            (equal? (image->alpha-color-list image-snip1)
                    (image->alpha-color-list image-snip2)))
+(htdp-test 1
+           'bs-pinhole-x
+           (pinhole-x image-snip1))
+(htdp-test 1
+           'bs-pinhole-y
+           (pinhole-y image-snip2))
 
 (report-errs)
