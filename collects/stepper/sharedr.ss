@@ -97,6 +97,14 @@
 		   (else (e:static-error "unknown expression type in sequence" expr)))))
 	      (else (e:static-error "unknown read type" expr)))))))
   
+  ; label structures are used to communicate information to the reconstructor
+  ; about what part of a macro this particular expression comes from.
   
+  (define-struct label)
+  
+  ; cond-label: the cond-label structure holds a natural number, and indicates
+  ; which branch of a cond a given if was generated from.
+  
+  (define-struct (cond-label struct:label) (clause-num))
   
 ) 
