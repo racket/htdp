@@ -3,7 +3,8 @@
 ; Originally written by Johnathan Franklin
 
 (unit/sig graphics^
-  (import mzlib:file^)
+  (import mzlib:file^
+	  (mred : mred^))
   
   (define-struct viewport (label canvas))
   (define-struct posn (x y))
@@ -19,8 +20,10 @@
     (values 0 0 0 0))
   
   (define wx:sixlib-canvas%
-    (class-asi wx:canvas% 
-      (inherit get-parent set-size)
+    (class-asi mred:canvas% 
+      (inherit get-parent set-size
+	       user-min-client-width user-min-client-height
+	       stretchable-in-x stretchable-in-y)
       (private
 	[current-mouse-posn (make-posn 0 0)]
 	[queue%
@@ -60,13 +63,10 @@
 	 (lambda ()
 	   (let ([width (* scale width)]
 		 [height (* scale height)])
-	     (let ([f (get-parent)])
-	       (send f set-size -1 -1 
-		     (+ FRAME-W-DELTA width)
-		     (+ FRAME-H-DELTA height)))
-	     (set-size -1 -1 
-		       (+ CANVAS-W-DELTA width) 
-		       (+ CANVAS-H-DELTA height))
+	     (user-min-client-width width)
+	     (user-min-client-height height)
+	     (stretchable-in-x #f)
+	     (stretchable-in-y #f)
 	     (set! bitmap (make-object wx:bitmap% width height))
 	     (send buffer-DC select-object bitmap)
 	     (send buffer-DC set-brush (send DC get-brush))
@@ -174,7 +174,7 @@
 	   (send press-queue flush))])))
   
   (define sixlib-frame%
-    (class-asi wx:frame%
+    (class-asi mred:frame%
       (rename [super-on-close on-close])
       (public
 	canvas
@@ -198,7 +198,7 @@
   
   (define viewport-frame
     (lambda (viewport)
-      (send (viewport-canvas viewport) get-parent)))
+      (send (send (viewport-canvas viewport) get-parent) get-parent)))
   
   (define viewport-height
     (lambda (viewport)
@@ -890,14 +890,16 @@
 			 ([frame
 			   (make-object sixlib-frame% '() label 1 1 
 					(* scale width) (* scale height))]
+			  [panel (make-object mred:vertical-panel% frame)]
 			  [canvas
 			   (make-object wx:sixlib-canvas%
-					frame 0 0 
+					panel 0 0 
 					(* scale width) (* scale height)
 					0 "canvas")]
 			  [DC (send canvas get-dc)]
 			  [buffer-DC (make-object wx:memory-dc% DC)]
 			  [viewport (make-viewport label canvas)])
+		       (send panel major-align-center)
 		       (send frame set-canvas canvas)
 		       (send canvas set-viewport viewport)
 		       (send canvas set-DC DC)
