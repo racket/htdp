@@ -293,9 +293,11 @@
                 (define (update-view/existing new-view)
                   (set! view new-view)                  
                   (let ([e (list-ref view-history view)])
+                    (send e begin-edit-sequence)
                     (send canvas set-editor e)
                     (send e reset-width canvas)
-                    (send e set-position (send e last-position)))
+                    (send e set-position (send e last-position))
+                    (send e end-edit-sequence))
                   (en/dis-able-buttons))
                 
                 (define (en/dis-able-buttons)
