@@ -1,7 +1,7 @@
 (module model-settings mzscheme
   (require "mred-extensions.ss"
            "my-macros.ss"
-           (lib "contracts.ss")
+           (lib "contract.ss")
            (lib "pconvert.ss"))
   
   ; there are two separate reasons to use units here, but it's just too painful.

@@ -2,7 +2,7 @@
   
   (require "my-macros.ss"
 	   "highlight-placeholder.ss"
-	   (lib "contracts.ss")
+	   (lib "contract.ss")
            (lib "etc.ss")
            (lib "list.ss")
            (lib "class.ss")

@@ -34,7 +34,7 @@
 
 
 (module model mzscheme
-  (require (lib "contracts.ss")
+  (require (lib "contract.ss")
            (lib "etc.ss")
            (lib "list.ss")
            (lib "mred.ss" "mred")

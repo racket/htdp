@@ -7,7 +7,7 @@
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
            (lib "list.ss")
            (lib "etc.ss")
-	   (lib "contracts.ss")
+	   (lib "contract.ss")
            "marks.ss"
            "model-settings.ss"
            "shared.ss"

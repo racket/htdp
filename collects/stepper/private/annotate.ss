@@ -1,6 +1,6 @@
 (module annotate mzscheme
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
-           (lib "contracts.ss")
+           (lib "contract.ss")
 	   (lib "list.ss")
            (lib "etc.ss")
            "marks.ss"
