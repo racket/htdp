@@ -64,27 +64,46 @@
   (define user-eventspace (make-eventspace))
          
   ;; user eventspace management
+  
+  ; here's how this stuff works.  To prevent the processing of any old events
+  ; on the user's eventspace queue, suspend-user-computation basically sits
+  ; on the thread.  The only way to get anything done on this thread is to 
+  ; release the stepper-semaphore, either with a command of 'step, which 
+  ; allows the user-eventspace thread to return to whatever it was doing
+  ; when it was suspended, or with a thunk command, in which case the 
+  ; user eventspace thread goes and executes that thunk before resuming
+  ; waiting.  The stepper-command-waiting semaphore is used to prevent 
+  ; stacked requests from demolishing each other. It might be better to 
+  ; use a queue for this.
+  
   (define stepper-semaphore (make-semaphore))
+  (define stepper-command-waiting-semaphore (make-semaphore))
+  (semaphore-post stepper-command-waiting-semaphore)
   (define stepper-return-val-semaphore (make-semaphore))
   (define stepper-awaken-arg #f)
   (define eval-depth 0)
   
   (define (suspend-user-computation)
     (semaphore-wait stepper-semaphore)
-    (cond 
-      [(eq? stepper-awaken-arg 'step)
-       (void)]
-      [(procedure? stepper-awaken-arg)
-       (set! eval-depth (+ eval-depth 1))
-       (stepper-awaken-arg)
-       (set! eval-depth (- eval-depth 1))
-       (suspend-user-computation)]))
+    (let ([local-awaken-arg stepper-awaken-arg])
+      (semaphore-post stepper-command-waiting-semaphore)
+      (cond 
+        [(eq? local-awaken-arg 'step)
+         (void)]
+        [(procedure? local-awaken-arg)
+         (set! eval-depth (+ eval-depth 1))
+         (local-awaken-arg)
+         (set! eval-depth (- eval-depth 1))
+         (suspend-user-computation)]
+        [else (e:internal-error "unknown value in stepper-awaken-arg.")])))
 
   (define (continue-user-computation)
+    (semaphore-wait stepper-command-waiting-semaphore)
     (set! stepper-awaken-arg 'step)
     (semaphore-post stepper-semaphore))
   
   (define (send-to-user-eventspace thunk)
+    (semaphore-wait stepper-command-waiting-semaphore)
     (set! stepper-awaken-arg thunk)
     (semaphore-post stepper-semaphore))
   
@@ -100,13 +119,11 @@
     (z:read i:text-stream
             (z:make-location 1 1 0 "stepper-text")))
   
-  (printf "preparing to initialize~n")
-  (send-to-user-eventspace 
+  (send-to-user-eventspace
    (lambda ()
-     (printf "in the user's eventspace~n")
      (set! user-primitive-eval (current-eval))
      (d:basis:initialize-parameters (make-custodian) i:settings)
-     (d:rep:invoke-library)
+     (d:rep:invoke-teachpack)
      (set! user-namespace (current-namespace))
      (set! user-pre-defined-vars (map car (make-global-value-list)))
      (set! user-vocabulary (d:basis:current-vocabulary))
@@ -119,12 +136,8 @@
         (if (image? v)
             v
             (basic-convert v))))
-     (printf "finished initialization~n")
-     (semaphore-post stepper-return-val-semaphore)
-     (printf "released semaphore~n"))
-   (printf "now waiting for semaphore~n")
-   (semaphore-wait stepper-return-val-semaphore)
-   (printf "semaphore released~n"))
+     (semaphore-post stepper-return-val-semaphore)))
+  (semaphore-wait stepper-return-val-semaphore)
   
   (define print-convert
     (let ([print-convert-result 'not-a-real-value])    
@@ -162,7 +175,7 @@
     (let/ec k
       (let ([exn-handler (make-exception-handler k)])
         (if (z:eof? read)
-            (stored-return-thunk (make-finished-result finished-exprs))
+            (i:receive-result (make-finished-result finished-exprs))
             (let*-values ([(annotated-list envs) (a:annotate (list read) (list parsed) packaged-envs break)]
                           [(annotated) (car annotated-list)])
               (set! packaged-envs envs)
@@ -170,7 +183,7 @@
               (check-for-repeated-names parsed exn-handler)
               (send-to-user-eventspace
                (lambda ()
-                 (let/cc k
+                 (let/ec k
                    (current-exception-handler (make-exception-handler k))
                    (user-primitive-eval annotated)
                    (send-to-drscheme-eventspace
@@ -185,7 +198,7 @@
       (when (z:define-values-form? expr)
         (for-each (lambda (name) 
                     (when (check-global-defined name)
-                      (error 'check-for-repeated-names
+                      (e:static-error 'check-for-repeated-names
                              "name is already bound: ~s" name)))
                   (map z:varref-var (z:define-values-form-vars expr))))))
          
@@ -195,7 +208,6 @@
   
   (define held-expr no-sexp)
   (define held-redex no-sexp)
-  (define user-process-held-continuation #f)
   
   (define (break mark-list break-kind returned-value-list)
     (let ([reconstruct-helper
@@ -226,19 +238,30 @@
                         (not (r:skip-result-step? mark-list))))
            (reconstruct-helper 
             (lambda (reconstructed reduct)
+;              ; this invariant (contexts should be the same)
+;              ; fails in the presence of unannotated code.  For instance,
+;              ; currently (map my-proc (cons 3 empty)) goes to
+;              ; (... <body-of-my-proc> ...), where the context of the first one is
+;              ; empty and the context of the second one is (... ...).
+;              ; so, I'll just disable this invariant test.
+;              (when (not (equal? reconstructed held-expr))
+;                (e:internal-error 'reconstruct-helper
+;                                  "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
+;                                  held-expr reconstructed))
               (let ([result (make-before-after-result finished-exprs
-                                                      reconstructed
+                                                      held-expr
                                                       held-redex
+                                                      reconstructed
                                                       reduct)])
                 (set! held-expr no-sexp)
                 (set! held-redex no-sexp)
-                (stored-return-thunk result))))
+                (i:receive-result result))))
            (suspend-user-computation))])))
   
   (define (handle-exception exn)
     (if held-expr
-        (stored-return-thunk (make-before-error-result finished-exprs held-expr held-redex (exn-message exn)))
-        (stored-return-thunk (make-error-result finished-exprs (exn-message exn)))))
+        (i:receive-result (make-before-error-result finished-exprs held-expr held-redex (exn-message exn)))
+        (i:receive-result (make-error-result finished-exprs (exn-message exn)))))
            
   (define (make-exception-handler k)
     (lambda (exn)
@@ -246,10 +269,13 @@
        (lambda ()
          (handle-exception exn)))
       (k)))
-
-  (define stored-return-thunk 'no-thunk-here)
   
-  ; result of invoking stepper-instance : ((stepper-text-args ->) ->)
-  (lambda (return-thunk)
-    (set! stored-return-thunk return-thunk)
-    (read-next-expr)))
+  ; start the ball rolling with a "fake" user computation
+  (send-to-user-eventspace
+   (lambda ()
+     (suspend-user-computation)
+     (send-to-drscheme-eventspace
+      read-next-expr)))
+
+  ; result of invoking stepper-instance : (->)
+  continue-user-computation)

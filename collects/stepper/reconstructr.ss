@@ -142,7 +142,8 @@
                     (or (z:bound-varref? expr)
                         (let ([var (z:varref-var expr)])
                           (or (and (s:check-pre-defined-var var)
-                                   (procedure? (s:global-lookup var)))
+                                   (or (procedure? (s:global-lookup var))
+                                       (eq? var 'empty)))
                               (call-with-current-continuation
                                (lambda (k)
                                  (with-handlers ([exn:variable?
@@ -499,7 +500,7 @@
                       (begin
                         (set! redex reconstructed)
                         highlight-placeholder)
-                      so-far)
+                      reconstructed)
                   (cdr mark-list)
                   #f))))
          

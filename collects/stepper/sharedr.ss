@@ -8,7 +8,7 @@
   ; or (make-before-error-result finished-exprs exp redex err-msg)
   ; or (make-error-result finished-exprs err-msg)
   ; or (make-finished-result finished-exprs)
-  (define-struct before-after-result (finished-exprs exp redex reduct))
+  (define-struct before-after-result (finished-exprs exp redex post-exp reduct))
   (define-struct before-error-result (finished-exprs exp redex err-msg))
   (define-struct error-result (finished-exprs err-msg))
   (define-struct finished-result (finished-exprs))
