@@ -1,3 +1,5 @@
+(require-library "files.ss")
+
 (define-signature graphics^
   (viewport?
 

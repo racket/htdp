@@ -275,13 +275,30 @@
   
   (define draw-viewport
     (lambda (viewport)
-      (let* ([draw (ivar (viewport-DC viewport) draw-rectangle)]
-	     [draw2 (ivar (viewport-buffer-DC viewport) draw-rectangle)]
+      (let* ([DC (viewport-DC viewport)]
+	     [buffer-DC (viewport-buffer-DC viewport)]
+	     [draw (ivar DC draw-rectangle)]
+	     [draw2 (ivar buffer-DC draw-rectangle)]
 	     [w (viewport-width viewport)]
 	     [h (viewport-height viewport)])
-	(lambda ()
-	  (draw 0 0 w h)
-	  (draw2 0 0 w h)))))
+	(rec draw-viewport/color
+	     (case-lambda
+	      [(color)
+	       (let ([new-pen (send mred:the-pen-list find-or-create-pen color 1 'solid)]
+		     [new-brush (send mred:the-brush-list find-or-create-brush color 'solid)]
+		     [old-pen (send DC get-pen)]
+		     [old-brush (send DC get-brush)])
+		 (send DC set-pen new-pen)
+		 (send DC set-brush new-brush)
+		 (send buffer-DC set-pen new-pen)
+		 (send buffer-DC set-brush new-brush)
+		 (draw 0 0 w h)
+		 (draw2 0 0 w h)
+		 (send DC set-pen old-pen)
+		 (send buffer-DC set-pen old-pen)
+		 (send DC set-brush old-brush)
+		 (send buffer-DC set-brush old-brush))]
+	      [() (draw-viewport/color (make-rgb 0 0 0))])))))
   
   (define flip-viewport
     (lambda (viewport)
