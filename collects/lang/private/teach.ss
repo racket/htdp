@@ -15,7 +15,8 @@
   (require (lib "etc.ss")
 	   (lib "list.ss")
 	   (lib "math.ss"))
-  (require-for-syntax (lib "kerncase.ss" "syntax")
+  (require-for-syntax "teachhelp.ss"
+		      (lib "kerncase.ss" "syntax")
 		      (lib "stx.ss" "syntax")
 		      (lib "struct.ss" "syntax")
 		      (lib "include.ss"))
@@ -56,8 +57,9 @@
 	 ;; if it's not top-level, raise an exn
 	 (if b
 	     'bad
-	     ;; raises an exn if not defined:
-	     (namespace-variable-binding (syntax-e id))))
+	     ;; At top-level, might be bound to syntax or value:
+	     (with-handlers ([exn:syntax? (lambda (exn) void)])
+	       (eval id))))
        (lambda () (error 'define "cannot redefine name: ~a" (syntax-e id))))))
 
   ;; For quasiquote and shared:
@@ -181,29 +183,6 @@
 	       (expanding-for-intermediate-local))))
     
     (define expanding-for-intermediate-local (make-parameter #f))
-
-    (define (make-undefined-check check-proc tmp-id)
-      (let ([set!-stx (datum->syntax-object check-proc 'set!)])
-	(make-set!-transformer
-	 (lambda (stx)
-	   (syntax-case stx ()
-	     [(set! id expr)
-	      (module-identifier=? (syntax set!) set!-stx)
-	      (with-syntax ([tmp-id tmp-id])
-		(syntax (set! tmp-id expr)))]
-	     [(id . args)
-	      (datum->syntax-object
-	       check-proc
-	       (cons (list check-proc 
-			   (list 'quote (syntax id))
-			   tmp-id)
-		     (syntax args)))]
-	     [id
-	      (datum->syntax-object
-	       check-proc
-	       (list check-proc 
-		     (list 'quote (syntax id))
-		     tmp-id))])))))
 
     (define (check-single-expression who where stx exprs)
       (when (null? exprs)
@@ -397,7 +376,7 @@
     ;; define-struct (beginner)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     
-    (define (beginner-define-struct/proc stx)
+    (define (do-define-struct stx setters? struct-info-is-useful?)
       
       (unless (or (ok-definition-context)
 		  (identifier? stx))
@@ -450,28 +429,27 @@
 		(if (null? (cdr rest))
 		    ""
 		    (format " (plus ~a more)" (length (cdr rest)))))))
-	   (with-syntax ([(to-define-name ...)
-			  (let ([n (symbol->string (syntax-e name))]
-				[+ string-append])
-			    (map (lambda (s)
-				   (datum->syntax-object name (string->symbol s) name))
-				 (append
-				  (list 
-				   (+ "make-" n)
-				   (+ n "?"))
-				  (map
-				   (lambda (f) 
-				     (+ n "-" (symbol->string (syntax-e f))))
-				   fields))))])
-	     (let ([defn
-		     (syntax/loc stx
-		       (define-values (to-define-name ...)
-			 (let ()
-			   (define-struct name_ (field_ ...))
-			   (values to-define-name ...))))])
-	       (check-definitions-new stx 
-				      (syntax (to-define-name ...)) 
-				      defn))))]
+	   (let ([to-define-names (build-struct-names name fields #f (not setters?))])
+	     (with-syntax ([(to-define-name ...) to-define-names]
+			   [compile-info (if struct-info-is-useful?
+					     (build-struct-expand-info name fields #f (not setters?) null null)
+					     (syntax
+					      (lambda (stx)
+						(raise-syntax-error
+						 'expression
+						 "expected an expression, but found a structure name"
+						 stx))))])
+	       (let ([defn
+		       (syntax/loc stx
+			 (begin
+			   (define-syntaxes (name_) compile-info)
+			   (define-values (to-define-name ...)
+			     (let ()
+			       (define-struct name_ (field_ ...))
+			       (values to-define-name ...)))))])
+		 (check-definitions-new stx 
+					(syntax (name_ to-define-name ...)) 
+					defn)))))]
 	[(_ name_ something . rest)
 	 (teach-syntax-error
 	  'define-struct
@@ -494,6 +472,9 @@
 	  #f
 	  "expected a structure type name after `define-struct', but nothing's there")]
 	[_else (bad-use-error 'define-struct stx)]))
+
+    (define (beginner-define-struct/proc stx)
+      (do-define-struct stx #f #f))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; application (beginner and intermediate)
@@ -705,47 +686,86 @@
       (syntax-case stx ()
 	[(_ (definition ...) . exprs)
 	 (let ([defns (syntax->list (syntax (definition ...)))])
-	   (let ([partly-expanded-defns 
-		  (map (lambda (d)
-			 ;; The following parameter lets teaching-language definition
-			 ;;  forms know that it's ok to expand in this internal
-			 ;;  definition context.
-			 (parameterize ([expanding-for-intermediate-local #t])
-			   (local-expand
-			    d
-			    'internal-define
-			    (kernel-form-identifier-list (quote-syntax here)))))
-		       defns)])
-	     (let ([local-ids
-		    (apply
-		     append
-		     (map (lambda (partly-expanded orig)
-			    (syntax-case partly-expanded (define-values)
-			      [(define-values (id ...) expr)
-			       (andmap identifier? (syntax->list (syntax (id ...))))
-			       (syntax->list (syntax (id ...)))]
-			      [_else
-			       (teach-syntax-error
-				'local
-				stx
-				orig
-				"expected only definitions within the definition sequence, but found ~a"
-				(something-else orig))]))
-			  partly-expanded-defns defns))])
-	       (let ([dup (check-duplicate-identifier local-ids)])
-		 (when dup
-		   (teach-syntax-error
-		    'local
-		    stx
-		    dup
-		    "found a name that was defined locally more than once: ~a"
-		    (syntax-e dup))))
+	   (let* ([partly-expanded-defns 
+		   (map (lambda (d)
+			  ;; The following parameter lets teaching-language definition
+			  ;;  forms know that it's ok to expand in this internal
+			  ;;  definition context.
+			  (parameterize ([expanding-for-intermediate-local #t])
+			    (local-expand
+			     d
+			     'internal-define
+			     (kernel-form-identifier-list (quote-syntax here)))))
+			defns)]
+		  [flattened-defns
+		   (let loop ([l partly-expanded-defns][origs defns])
+		     (apply
+		      append
+		      (map (lambda (d orig)
+			     (syntax-case d (begin define-values define-syntaxes)
+			       ;; we don't have to check for ill-formed `define-values'
+			       ;; or `define-syntaxes', because only macros can generate
+			       ;; them
+			       [(begin defn ...)
+				(let ([l (syntax->list (syntax (defn ...)))])
+				  (loop l l))]
+			       [(define-values . _)
+				(list d)]
+			       [(define-syntaxes . _)
+				(list d)]
+			       [_else
+				(teach-syntax-error
+				 'local
+				 stx
+				 orig
+				 "expected only definitions within the definition sequence, but found ~a"
+				 (something-else orig))]))
+			   l origs)))]
+		  [val-defns
+		   (apply
+		    append
+		    (map (lambda (partly-expanded)
+			   (syntax-case partly-expanded (define-values)
+			     [(define-values (id ...) expr)
+			      (list partly-expanded)]
+			     [_else
+			      null]))
+			 flattened-defns))]
+		  [stx-defns
+		   (apply
+		    append
+		    (map (lambda (partly-expanded)
+			   (syntax-case partly-expanded (define-syntaxes)
+			     [(define-syntaxes (id ...) expr)
+			      (list partly-expanded)]
+			     [_else
+			      null]))
+			 flattened-defns))]
+		  [get-ids (lambda (l)
+			     (apply
+			      append
+			      (map (lambda (partly-expanded)
+				     (syntax-case partly-expanded ()
+				       [(_ (id ...) expr)
+					(syntax->list (syntax (id ...)))]))
+				   l)))]
+		  [val-ids (get-ids val-defns)]
+		  [stx-ids (get-ids stx-defns)])
+	     (let ([dup (check-duplicate-identifier (append val-ids stx-ids))])
+	       (when dup
+		 (teach-syntax-error
+		  'local
+		  stx
+		  dup
+		  "found a name that was defined locally more than once: ~a"
+		  (syntax-e dup)))
 	       (let ([exprs (syntax->list (syntax exprs))])
 		 (check-single-expression 'local
 					  "after the local definition sequence"
 					  stx
 					  exprs))
-	       (with-syntax ([((d-v (def-id ...) def-expr) ...) partly-expanded-defns])
+	       (with-syntax ([((d-v (def-id ...) def-expr) ...) val-defns]
+			     [(stx-def ...) stx-defns])
 		 (with-syntax ([((tmp-id ...) ...)
 				;; Generate tmp-ids that at least look like the defined
 				;;  ids, for the purposes of error reporting, etc.:
@@ -757,24 +777,26 @@
 						(symbol->string (syntax-e def-id)))))
 					    (syntax->list def-ids)))
 				     (syntax->list (syntax ((def-id ...) ...))))])
-		   (with-syntax ([mappings
+		   (with-syntax ([(mapping ...)
 				  (apply
 				   append
 				   (map
 				    syntax->list
 				    (syntax->list
 				     (syntax
-				      (([def-id (make-undefined-check 
-						 (quote-syntax check-not-undefined)
-						 (quote-syntax tmp-id))]
+				      (((define-syntaxes (def-id) 
+					  (make-undefined-check 
+					   (quote-syntax check-not-undefined)
+					   (quote-syntax tmp-id)))
 					...)
 				       ...)))))])
 		     (syntax/loc stx
-		       (letrec-values ([(tmp-id ...)
-					(let-syntax mappings def-expr)]
-				       ...)
-			 (let-syntax mappings
-			   . exprs)))))))))]
+		       (let ()
+			 mapping ...
+			 stx-def ...
+			 (define-values (tmp-id ...) def-expr)
+			 ...
+			 . exprs))))))))]
 	[(_ def-non-seq . __)
 	 (teach-syntax-error
 	  'local
@@ -1281,11 +1303,23 @@
       (syntax-case stx ()
 	[(_ name fields)
 	 (identifier? (syntax name))
-	 (beginner-define-struct/proc stx)]
-	[(_ (name sup) fields)
+	 (do-define-struct stx #t #t)]
+	[(_ (name sup) fields_)
 	 (and (identifier? (syntax name))
 	      (identifier? (syntax sup)))
-	 (syntax/loc stx (define-struct (name sup) fields))]
+	 (let ([fields (syntax->list (syntax fields_))])
+	   (unless (and fields
+			(andmap identifier? fields))
+	     (teach-syntax-error
+	      'define-struct
+	      stx
+	      (syntax fields_)
+	      "expected a parenthesized sequence of structure names, but found ~a"
+	      (something-else (syntax fields_))))
+	   (check-definitions-new 
+	    stx
+	    (cons (syntax name) (build-struct-names (syntax name) fields #f #f))
+	    (syntax/loc stx (define-struct (name sup) fields_))))]
 	[(_ name/sup fields)
 	 (teach-syntax-error
 	  'define-struct
