@@ -22,28 +22,28 @@
                                            (apply implementation argv))])
                                name)])
 	 #'(define-syntax (name stx)
+             (with-syntax ([tagged-impl (syntax-property
+                                         (syntax-property (quote-syntax impl) 'stepper-skip-completely #t)
+                                         'stepper-prim-name
+                                         (quote-syntax name))])
 	     (syntax-case stx ()
 	       [(__ . ___)
 		;; HACK: we disable all checks if #%app is not beginner-app
 		(not (module-identifier=? #'beginner-app (datum->syntax-object stx '#%app)))
-		(syntax/loc stx (impl . ___))]
+                (syntax/loc stx (tagged-impl . ___))]
 	       [__
 		;; HACK: see above
 		(not (module-identifier=? #'beginner-app (datum->syntax-object stx '#%app)))
-		(syntax/loc stx impl)]
+                (syntax/loc stx tagged-impl)]
 	       [(id . args)
-                (with-syntax ([tagged-impl (syntax-property
-                                            (syntax-property (quote-syntax impl) 'stepper-skip-completely #t)
-                                            'stepper-prim-name
-                                            (quote-syntax name))])
-                  (syntax/loc stx (#%app tagged-impl . args)))]
+                (syntax/loc stx (#%app tagged-impl . args))]
 	       [_else
 		(raise-syntax-error
 		 #f
 		 (string-append
 		  "this primitive operator must be applied to arguments; "
 		  "expected an open parenthesis before the operator name")
-		 stx)])))]))
+		 stx)]))))]))
 
   (define-syntax (define-higher-order-primitive stx)
     (define (is-proc-arg? arg)
@@ -80,26 +80,30 @@
 			       args new-args)]
 			 [num-arguments (length args)])
 	     (with-syntax ([impl #'(let ([name (lambda (new-arg ...)
-						  (implementation new-arg ...))])
-				      name)])
+                                                 (implementation new-arg ...))])
+                                     name)])
 	       (syntax/loc stx
 		   (define-syntax (name s)
-		     (syntax-case s ()
+		     (with-syntax ([tagged-impl (syntax-property
+                                                 (syntax-property (quote-syntax impl) 'stepper-skip-completely #t)
+                                                 'stepper-prim-name
+                                                 (quote-syntax name))])
+                         (syntax-case s ()
 		       [(__ . ___)
 			;; HACK: see above
 			(not (module-identifier=? #'beginner-app (datum->syntax-object s '#%app)))
-                        (syntax/loc s (impl . ___))]
+                        (syntax/loc s (tagged-impl . ___))]
 		       [__
 			;; HACK: see above
 			(not (module-identifier=? #'beginner-app (datum->syntax-object s '#%app)))
-                        (syntax/loc s impl)]
+                        (syntax/loc s tagged-impl)]
 		       [(__ new-arg ...)
-			(begin
+                        (begin
 			  checks ...
 			  ;; s is a well-formed use of the primitive;
 			  ;; generate the primitive implementation
-                          (with-syntax ([tagged-impl (syntax-property (quote-syntax impl) 'stepper-skip-completely #t)])
-                            (syntax/loc s (tagged-impl wrapped-arg ...))))]
+                          (syntax/loc s (tagged-impl wrapped-arg ...))
+                          )]
 		       [(__ . rest)
 			(raise-syntax-error
 			 #f
@@ -113,7 +117,7 @@
 			 (string-append
 			  "this primitive operator must be applied to arguments; "
 			  "expected an open parenthesis before the operator name")
-			 s)])))))))]))
+			 s)]))))))))]))
 
   (define-syntax (fo->ho stx)
     (syntax-case stx ()
