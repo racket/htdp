@@ -104,12 +104,19 @@
 (define blue (make-color 0 0 255))
 (define black (make-color 0 0 0))
 (define white (make-color 255 255 255))
+
+(define awhite (make-alpha-color 0 255 255 255))
+(define ablack (make-alpha-color 0 0 0 0))
 (define ared (make-alpha-color 0 255 0 0))
 (define aclr (make-alpha-color 255 0 0 0))
+
 (htdp-top (define red (make-color 255 0 0)))
 (htdp-top (define blue (make-color 0 0 255)))
 (htdp-top (define black (make-color 0 0 0)))
 (htdp-top (define white (make-color 255 255 255)))
+
+(htdp-top (define awhite (make-alpha-color 0 255 255 255)))
+(htdp-top (define ablack (make-alpha-color 0 0 0 0)))
 (htdp-top (define ared (make-alpha-color 0 255 0 0)))
 (htdp-top (define aclr (make-alpha-color 255 0 0 0)))
 
@@ -202,6 +209,32 @@
                          red  blue red)))
 
 (htdp-test #t
+           'image=?1
+           (image=? (alpha-color-list->image (list (make-alpha-color 200 100 150 175)) 1 1)
+                    (alpha-color-list->image (list (make-alpha-color 200 100 150 175)) 1 1)))
+
+(htdp-test #t
+           'image=?2
+           (image=? (alpha-color-list->image (list (make-alpha-color 255 100 100 100)) 1 1)
+                    (alpha-color-list->image (list (make-alpha-color 255 200 200 200)) 1 1)))
+
+(htdp-test #f
+           'image=?3
+           (image=? (alpha-color-list->image (list (make-alpha-color 200 100 100 100)) 1 1)
+                    (alpha-color-list->image (list (make-alpha-color 200 200 200 200)) 1 1)))
+
+(htdp-test #f
+           'image=?4
+           (image=? (alpha-color-list->image (list (make-alpha-color 200 100 150 175)
+                                                   (make-alpha-color 200 100 150 175))
+                                             1
+                                             2)
+                    (alpha-color-list->image (list (make-alpha-color 200 100 150 175)
+                                                   (make-alpha-color 200 100 150 175)) 
+                                             2
+                                             1)))
+
+(htdp-test #t
 	   'image+
 	   (image=? (color-list->image (list blue red blue red) 2 2)
 		    (image+ (filled-rect 2 2 'red)
@@ -245,10 +278,10 @@
 
 (htdp-test #t
            'offset-image+/white
-           (image=? (color-list->image (list black black black
-                                             black white black
-                                             black black black)
-                                       3 3)
+           (image=? (alpha-color-list->image (list ablack ablack ablack
+                                                   ablack awhite ablack
+                                                   ablack ablack ablack)
+                                             3 3)
                     (offset-image+ (filled-rect 3 3 'black)
                                    1 1
                                    (filled-rect 1 1 'white))))
