@@ -535,8 +535,8 @@
 	       [real-set-pen-1 (ivar/proc (viewport-dc viewport) 'set-pen)]
 	       [real-set-pen-2 (ivar/proc (viewport-buffer-dc viewport) 'set-pen)])
 	  (lambda (color go)
-	    (when (and color (not (eq? color (current-pen))))
-	      (set-viewport-pen viewport color))
+	    (when color
+	      (set-viewport-pen viewport (get-color color)))
 	    (go draw-1 draw-2
 		(lambda (draw)
 		  (let ([pen (real-get-pen)]
