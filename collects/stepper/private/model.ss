@@ -47,16 +47,18 @@
  
 
   (define program-expander-contract
-    (-> (-> void?) ; init
-        (-> (union eof-object? syntax? (cons/p string? any?)) (-> void?) void?) ; iter
-        void?))
+    ((-> void?) ; init
+     ((union eof-object? syntax? (cons/p string? any?)) (-> void?) . -> . void?) ; iter
+     . -> .
+     void?))
     
 
-  (provide/contract [go (-> program-expander-contract       ; program-expander
-                            (-> step-result? void?)         ; receive-result
-                            (union render-settings? false?) ; render-settings
-                            boolean?                        ; track-inferred-names?
-                            void?)])
+  (provide/contract [go (program-expander-contract       ; program-expander
+                         (step-result? . -> . void?)     ; receive-result
+                         (union render-settings? false?) ; render-settings
+                         boolean?                        ; track-inferred-names?
+                         . -> .
+                         void?)])
   
   ; go starts a stepper instance
   ; see provide stmt for contract 

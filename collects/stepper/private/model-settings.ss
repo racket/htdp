@@ -21,18 +21,22 @@
   (provide/contract [check-global-defined (-> symbol? boolean?)]
                     [global-lookup (-> any? any)]
 
-                    [render-settings? (-> any? boolean?)]
-                    [render-settings-true-false-printed? (-> render-settings? boolean?)]
-                    [render-settings-constructor-style-printing? (-> render-settings? boolean?)]
-                    [render-settings-abbreviate-cons-as-list? (-> render-settings? boolean?)]
-                    [render-settings-render-to-sexp (-> any? any)]
-                    [render-settings-lifting? (-> render-settings? boolean?)]
+                    [struct render-settings 
+                            ([true-false-printed? (-> render-settings? boolean?)]
+                             [constructor-style-printing? (-> render-settings? boolean?)]
+                             [abbreviate-cons-as-list? (-> render-settings? boolean?)]
+                             [render-to-sexp (-> any? any)]
+                             [lifting? (-> render-settings? boolean?)])]
                     
-                    [get-render-settings (-> (-> any? string?) ; render-to-string
-                                             (-> any? any) ; render-to-sexp
-                                             boolean? ; lifting?
-                                             render-settings?)]
                     
+                    [get-render-settings ((any? . -> . string?) ; render-to-string
+                                          (any? . -> . any) ; render-to-sexp
+                                          boolean? ; lifting?
+                                          . -> .
+                                          render-settings?)]
+                    
+                    ;; the 'fake' render-settings structures are used for testing, so that the test suite
+                    ;; can be run without access to a drscheme frame.
                     [fake-beginner-render-settings render-settings?]
                     [fake-beginner-wla-render-settings render-settings?]
                     [fake-intermediate-render-settings render-settings?]
@@ -66,6 +70,8 @@
   
   (define-struct test-struct () (make-inspector))
   
+  ;; get-render-settings : infer aspects of the current language's print conversion by explicitly testing 
+  ;;  assorted test expressions
   (define (get-render-settings render-to-string render-to-sexp lifting?)
     (let* ([true-false-printed? (string=? (render-to-string #t) "true")]
            [constructor-style-printing? (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]

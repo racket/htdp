@@ -247,8 +247,8 @@
                
       (define (reformat-sexp width)
         (when (not (eq? pretty-printed-width width))
-          (set! pretty-printed-width width)
-          (format-whole-step)))
+          (format-whole-step)
+          (set! pretty-printed-width width)))
                
       (define highlight-begin #f)
                

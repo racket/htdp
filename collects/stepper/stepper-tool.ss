@@ -23,22 +23,13 @@
 	     (object-name v))
 	(print-convert v)))
     
-  
-  ; have to define this as a macro because string-constant is a macro
-  (define-syntax string-constant-list
-    (lambda (stx)
-      (syntax-case stx ()
-        [(_ (constant-name ...))
-         #`(list (string-constant constant-name) ...)])))
-  
+
   ; hidden invariant: this list should be a sublist of the language-level dialog (i.e., same order):
   (define stepper-works-for
-    (string-constant-list
-     (beginning-student
-      beginning-student/abbrev
-      intermediate-student
-      intermediate-student/lambda
-      )))
+    (list ((string-constant beginning-student)
+           (string-constant beginning-student/abbrev)
+           (string-constant intermediate-student)
+           (string-constant intermediate-student/lambda))))
   
   (provide stepper-tool@)
   
@@ -47,6 +38,7 @@
       (import drscheme:tool^
               (xml-snip% scheme-snip%))
       
+      ; tool magic here:
       (define (phase1) (void))
       (define (phase2) (void))
       
@@ -59,6 +51,9 @@
         (class (drscheme:frame:basics-mixin (frame:frame:standard-menus-mixin frame:frame:basic%))
           
           (init-field drscheme-frame)
+          
+          ;; PRINTING-PROC 
+          
           (public set-printing-proc)
           
           (define (set-printing-proc proc)
@@ -69,15 +64,23 @@
           
           (define (file-menu:print a b) (printing-proc a b))
           
+          ;; MENUS
+          
           (define/override (edit-menu:between-find-and-preferences edit-menu) (void))
           (define/override (edit-menu:between-select-all-and-find edit-menu) (void))
           (define/override (file-menu:between-save-as-and-print file-menu) (void))
           
-          ;; CUSTODIAN:
+          ;; CUSTODIANS
           
           (define custodian #f)
           (define/public (set-custodian! cust)
             (set! custodian cust))
+                    (override on-close)
+          (define (on-close)
+            (when custodian
+              (custodian-shutdown-all custodian))
+            (send drscheme-frame on-stepper-close)
+            (super on-close))
           
           ;; WARNING BOXES:
           
@@ -113,18 +116,16 @@
             (add-warning-message window-closed-warning-str))
           
           
-          (override  on-close) ; file-menu:print
-          (define (on-close)
-            (when custodian
-              (custodian-shutdown-all custodian))
-            (send drscheme-frame on-stepper-close)
-            (super on-close))
-          
           (super-instantiate ("Stepper" #f stepper-initial-width stepper-initial-height))))
       
       
+      ;; view-controller-go: called when the stepper starts; starts the stepper's view&controller
+      ;; drscheme-frame : the drscheme frame which is starting the stepper
+      ;; program-expander : see "model.ss" for the contract on a program-expander
+      ;;  -> returns the new frame%
       (define (view-controller-go drscheme-frame program-expander)
         
+       
         (define language-settings 
           (send (send drscheme-frame get-definitions-text) get-next-settings))
         (define language
@@ -219,9 +220,11 @@
                        (error 'check-for-stepper-waiting "queue is empty, even though a step was just added."))
                      (add-view-triple try-get)
                      (if (right-kind-of-step? (caddr try-get))
+                         ; got the desired step; show the user:
                          (begin 
                            (set! stepper-is-waiting? #f)
                            (update-view/existing (- (length view-history) 1)))
+                         ; nope, keep running:
                          (begin
                            (en/dis-able-buttons)
                            (semaphore-post new-semaphore)))))))
@@ -237,10 +240,12 @@
             [(#f) (error 'right-kind-of-step "this code should be unreachable with stepper-is-waiting? set to #f")]
             [else (error 'right-kind-of-step "unknown value for stepper-is-waiting?: ~a" stepper-is-waiting?)]))
         
+        ;; add-view-triple : set the release-semaphore to be the new one, add the view to the list.
         (define (add-view-triple view-triple)
           (set! release-for-next-step (cadr view-triple))
           (set! view-history (append view-history (list (list (car view-triple) (caddr view-triple))))))
         
+        ;; find-later-application-step : search through the history, starting at 'n', for an application step.
         (define (find-later-application-step n)
           (let ([history-length (length view-history)])
             (let loop ([step (+ n 1)])
@@ -248,6 +253,7 @@
                     [(application-step? (list-ref view-history step)) step]
                     [else (loop (+ step 1))]))))
         
+        ;; is this an application step?
         (define (application-step? history-entry)
           (case (cadr history-entry)
             [(user-application finished stepping) #t]
@@ -255,11 +261,13 @@
         
         ; build gui object:
         
+        ;; home : the action of the 'home' button
         (define (home)
           (when stepper-is-waiting?
             (set! stepper-is-waiting? #f))
           (update-view/existing 0))
         
+        ;; next : the action of the 'next' button
         (define (next)
           (let ([new-view (+ view 1)])
             (if (< new-view (length view-history))
@@ -277,6 +285,9 @@
                           (set! stepper-is-waiting? 'waiting-for-any-step)
                           (en/dis-able-buttons))))))))
         
+        ;; next-application : the action of the 'next-application' button
+        ;; NB: while this function looks a lot like (next), the abstractions of the two that I came up with
+        ;; were hard to read. So I left them separate -- JBC
         (define (next-application)
           (let ([next-application-step (find-later-application-step view)])
             (if next-application-step
@@ -297,13 +308,8 @@
                         (begin
                           (set! stepper-is-waiting? 'waiting-for-application)
                           (en/dis-able-buttons))))))))
-        
-        ; make this into a special last step
-        ;(message-box "Stepper"
-        ;             (string-append
-        ;              "The source text for this program has changed or is no longer "
-        ;              "available.  No further steps can be computed."))
-        
+                
+        ;; previous : the action of the 'previous' button 
         (define (previous)
           (when stepper-is-waiting?
             (set! stepper-is-waiting? #f))
@@ -311,6 +317,7 @@
             (error 'previous-application "previous-step button should not be enabled in view zero."))
           (update-view/existing (- view 1)))
         
+        ;; previous-application : the action of the 'previous-application' button
         (define (previous-application)
           (when stepper-is-waiting?
             (set! stepper-is-waiting? #f))
@@ -324,8 +331,8 @@
                   [else
                    (loop (- new-view 1))])))
         
+        ;; GUI ELEMENTS:
         (define s-frame (make-object stepper-frame% drscheme-frame))
-        
         (define button-panel (make-object horizontal-panel% (send s-frame get-area-container)))
         (define home-button (make-object button% "Home" button-panel
                               (lambda (_1 _2) (home))))
@@ -337,9 +344,9 @@
                               (lambda (_1 _2) (next))))
         (define next-application-button (make-object button% "Application >|" button-panel
                                           (lambda (dc-1 dc-2) (next-application))))
-        
         (define canvas (make-object x:stepper-canvas% (send s-frame get-area-container)))
-        
+
+        ;; update-view/existing : set an existing step as the one shown in the frame
         (define (update-view/existing new-view)
           (set! view new-view)                  
           (let ([e (car (list-ref view-history view))])
@@ -350,26 +357,24 @@
             (send e end-edit-sequence))
           (en/dis-able-buttons))
         
+        ;; en/dis-able-buttons : set enable & disable the stepper buttons, based on view-controller state
         (define (en/dis-able-buttons)
           (let* ([can-go-back? (> view 0)])
-          (send previous-button enable can-go-back?)
-          (send previous-application-button enable can-go-back?)
-          (send home-button enable can-go-back?)
-          (send next-button enable (not (and (>= view (- (length view-history) 1)) stepper-is-waiting?)))
-          (send next-application-button enable (or (find-later-application-step view) (not stepper-is-waiting?)))))
+            (send previous-button enable can-go-back?)
+            (send previous-application-button enable can-go-back?)
+            (send home-button enable can-go-back?)
+            (send next-button enable (not (and (>= view (- (length view-history) 1)) stepper-is-waiting?)))
+            (send next-application-button enable (or (find-later-application-step view) (not stepper-is-waiting?)))))
         
         (define (print-current-view item evt)
           (send (send canvas get-editor) print))
         
-        ; receive-result takes a result from the model and renders it on-screen
+        ; receive-result takes a result from the model and renders it on-screen. Runs on the user thread.
         ; : (step-result -> void)
         (define (receive-result result)
-          (fprintf (current-error-port) "result: ~v\n" result)
-          (fprintf (current-error-port) "trying to call render-to-string: ~v\n" (render-to-string (exact->inexact 1/3)))
           (let ([step-text
                  (cond [(before-after-result? result) 
                         (instantiate x:stepper-text% () 
-                          [render-to-string render-to-string]
                           [finished-exprs (before-after-result-finished-exprs result)]
                           [exps (before-after-result-exp result)]
                           [post-exps (before-after-result-post-exp result)]
@@ -377,7 +382,6 @@
                           [after-exprs (before-after-result-after-exprs result)])]
                        [(before-error-result? result)
                         (instantiate x:stepper-text% ()
-                          [render-to-string render-to-string]
                           [finished-exprs (before-error-result-finished-exprs result)]
                           [exps (before-error-result-exp result)]
                           [post-exps null]
@@ -385,7 +389,6 @@
                           [after-exprs (before-error-result-after-exprs result)])]
                        [(error-result? result)
                         (instantiate x:stepper-text% ()
-                          [render-to-string render-to-string]
                           [finished-exprs (error-result-finished-exprs result)]
                           [exps null]
                           [post-exps null]
@@ -393,7 +396,6 @@
                           [after-exprs null])]
                        [(finished-result? result)
                         (instantiate x:stepper-text% ()
-                          [render-to-string render-to-string]
                           [finished-exprs (finished-result-finished-exprs result)]
                           [exps null]
                           [post-exps null]
@@ -414,6 +416,7 @@
                               (apply init args))
                             iter))
         
+        ;; CONFIGURE GUI ELEMENTS
         (send s-frame set-printing-proc print-current-view)
         (send button-panel stretchable-width #f)
         (send button-panel stretchable-height #f)
@@ -421,22 +424,27 @@
         (en/dis-able-buttons)
         (send (send s-frame edit-menu:get-undo-item) enable #f)
         (send (send s-frame edit-menu:get-redo-item) enable #f)
+        
+        ; START THE MODEL
         (model:go program-expander-prime receive-result (get-render-settings render-to-string render-to-sexp #t)
                   (not (string=? language-level-name (string-constant intermediate-student/lambda))))
         (send s-frame show #t)
         
         s-frame)
   
+      ;; stepper-bitmap : the image used for the stepper button
       (define stepper-bitmap
         (drscheme:unit:make-bitmap
          "Step"
          (build-path (collection-path "icons") "foot.bmp")))
 
+      ;; stepper-unit-frame<%> : the interface that the extended drscheme frame fulfils
       (define stepper-unit-frame<%>
         (interface ()
           get-stepper-frame
           on-stepper-close))
       
+      ;; stepper-unit-frame-mixin : the mixin that is applied to the drscheme frame to interact with a possible stepper window
       (define (stepper-unit-frame-mixin super%)
         (class* super% (stepper-unit-frame<%>)
           
@@ -450,13 +458,9 @@
           
           (super-instantiate ())
           
-          (define program-expander
-            (contract
-             (-> (-> void?) ; init
-                 (-> (union eof-object? syntax? (cons/p string? any?)) (-> void?) void?) ; iter
-                 void?)
-             (lambda (init iter)
-               (let* ([lang-settings 
+          ;; program-expander : produces expanded expressions from the definitions window one at a time and calls 'iter' on each one
+          (define (program-expander init iter)
+            (let* ([lang-settings 
                        (send (get-definitions-text) get-next-settings)]
                       [lang (drscheme:language-configuration:language-settings-language lang-settings)]
                       [settings (drscheme:language-configuration:language-settings-settings lang-settings)])
@@ -479,8 +483,8 @@
                                (string-append (substring str 0 (max 0 (- len 3))) "...")))))))
                   void ; kill
                   iter)))
-             'program-expander
-             'caller))
+          
+          ;; STEPPER BUTTON
           
           (define/public (get-stepper-button) stepper-button)
           (define stepper-button 
@@ -501,25 +505,26 @@
                                         "Currently, the stepper works only for the \"" (car stepper-works-for)
                                         "\" through the \"" (car (reverse stepper-works-for)) "\" language levels."))))))))
           
-          (rename [super-enable-evaluation enable-evaluation])
+          
           (define/override (enable-evaluation)
             (send stepper-button enable #t)
-            (super-enable-evaluation))
+            (super enable-evaluation))
           
-          (rename [super-disable-evaluation disable-evaluation])
           (define/override (disable-evaluation)
             (send stepper-button enable #f)
-            (super-disable-evaluation))
+            (super disable-evaluation))
           
           (define/override (on-close)
             (when stepper-frame
               (send stepper-frame original-program-gone))
-            (super-on-close))
+            (super on-close))
           
+          ; add the stepper button to the button panel:
           (send (get-button-panel) change-children
                 (lx (cons stepper-button (remq stepper-button _))))))
       
-
+      ;; stepper-definitions-text-mixin : a mixin for the definitions text that alerts thet stepper when the definitions
+      ;;  text is altered or destroyed
       (define (stepper-definitions-text-mixin %)
         (class %
           
@@ -531,14 +536,12 @@
                   (when stepper-window
                     (send stepper-window original-program-changed))))))
           
-          (rename [super-on-insert on-insert])
           (define/override (on-insert x y)
-            (super-on-insert x y)
+            (super on-insert x y)
             (notify-stepper-frame-of-change))
           
-          (rename [super-on-delete on-delete])
           (define/override (on-delete x y)
-            (super-on-delete x y)
+            (super on-delete x y)
             (notify-stepper-frame-of-change))
           
           (super-instantiate ())))
@@ -563,5 +566,6 @@
           (error 'stepper-tool "language object does not contain set-printing-parameters method"))
         (send language set-printing-parameters simple-settings thunk))
       
+      ;; apply the mixins dynamically to the drscheme unit frame and definitions text:
       (drscheme:get/extend:extend-unit-frame stepper-unit-frame-mixin)
       (drscheme:get/extend:extend-definitions-text stepper-definitions-text-mixin))))
