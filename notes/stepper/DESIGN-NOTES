@@ -761,4 +761,21 @@ store is guaranteed to fail when continuations are invoked.
 
 2002-06-21
 
+*********
+
+Well, another year has passed.  How swiftly they fly!  Nathan is
+almost walking, Alex is almost three, and I'm about to graduate.
+But I'd better get the Intermediate stepper working first.
+
+A note about lifting; I keep looking for the right idiom in which
+to code the search for the highlight. In fact, the real problem 
+is my inability to cleanly express the location of the highlight.
+The one I've settled on as the least egregious is this: a location
+in a syntax object is expressed as a list of context records, where
+each one contains an index indicating the location of the subterm.
+This index makes coding the search less pleasant than it might 
+otherwise be; right now, I'm searching by constructing a list 
+of subterms paired with indices, and then iterating through these.
+
+2003-07-13
 
