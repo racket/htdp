@@ -50,9 +50,10 @@
       (unless (ok? b)
 	(raise
 	 (make-exn:fail:contract
-	  (format "~a: second argument must be of type <~a>, given ~e and ~e"
-		  prim-name type
-		  a b)
+	  (string->immutable-string
+	   (format "~a: second argument must be of type <~a>, given ~e and ~e"
+		   prim-name type
+		   a b))
 	  (current-continuation-marks))))))
 
   (define check-second 
@@ -71,14 +72,15 @@
 	    (unless (ok? last)
 	      (raise
 	       (make-exn:fail:contract
-		(format "~a: last argument must be of type <~a>, given ~e; other args:~a"
-			prim-name type
-			last
-			(build-arg-list
-			 (let loop ([args args])
-			   (cond
-			    [(null? (cdr args)) null]
-			    [else (cons (car args) (loop (cdr args)))]))))
+		(string->immutable-string
+		 (format "~a: last argument must be of type <~a>, given ~e; other args:~a"
+			 prim-name type
+			 last
+			 (build-arg-list
+			  (let loop ([args args])
+			    (cond
+			     [(null? (cdr args)) null]
+			     [else (cons (car args) (loop (cdr args)))])))))
 		(current-continuation-marks)))))]
 	 [else (loop (cdr l))]))))
 
@@ -93,9 +95,10 @@
 	   (lambda (v which type)
 	     (raise
 	      (make-exn:fail:contract
-	       (format "~a: ~a argument must be of type <~a>, given ~e, ~e, and ~e"
-		       prim-name which type
-		       a b c)
+	       (string->immutable-string
+		(format "~a: ~a argument must be of type <~a>, given ~e, ~e, and ~e"
+			prim-name which type
+			a b c))
 	       (current-continuation-marks))))])
       (unless (ok1? a)
 	(bad a "first" 1type))
@@ -112,8 +115,9 @@
       (unless (boolean? a)
 	(raise
 	 (make-exn:fail:contract
-	  (format "not: expected either true or false; given ~e"
-		  a)
+	  (string->immutable-string
+	   (format "not: expected either true or false; given ~e"
+		   a))
 	  (current-continuation-marks))))
       (not a)))
 
@@ -150,8 +154,9 @@
 		   (string? str))
 	(raise
 	 (make-exn:fail:contract
-	  (format "error: expected a symbol and a string, got ~e and ~e"
-		  sym str)
+	  (string->immutable-string
+	   (format "error: expected a symbol and a string, got ~e and ~e"
+		   sym str))
 	  (current-continuation-marks))))
       (error sym "~a" str)))
 
