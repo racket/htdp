@@ -78,7 +78,9 @@
 	       (unless (null? f)
 		 (send buffer-DC set-font f)))
 	     (send buffer-DC clear)
-	     (send DC clear)))])
+	     (send DC clear)))]
+
+	[event-sema #f])
       
       
       (public
@@ -118,7 +120,9 @@
 		(send click-queue add sixm)]
 	       [(send mouse-event button-up?)
 		(send release-queue add sixm)]
-	       [else (void)])))]
+	       [else (void)])
+	     (when event-sema
+		   (semaphore-post event-sema))))]
 	
 	[on-char
 	 (lambda (key-event)
@@ -127,7 +131,7 @@
 	[get-click
 	 (lambda ()
 	   (send click-queue remove))]
-	
+
 	[get-release
 	 (lambda ()
 	   (send release-queue remove))]
@@ -135,6 +139,12 @@
 	[get-press
 	 (lambda ()
 	   (send press-queue remove))]
+
+	[wait-event
+	 (lambda ()
+	   (set! event-sema (make-semaphore))
+	   (wx:yield event-sema)
+	   (set! event-sema #f))]
 	
 	[get-posn (lambda () current-mouse-posn)]
 	[set-DC (lambda (new-DC) (set! DC new-DC))]
@@ -206,21 +216,18 @@
   
   
   (define (get-mouse-click viewport) 
-    (let*
-	([status (ready-mouse-click viewport)]
-	 [icon-change
-	  (send (viewport-canvas viewport) set-cursor arrow-cursor)])
+    (let* ([status (ready-mouse-click viewport)]
+	   [icon-change (send (viewport-canvas viewport) set-cursor arrow-cursor)])
       (cond
-	[status status]
-	[else (wx:yield) (get-mouse-click viewport)])))
+       [status status]
+       [else (send (viewport-canvas viewport) wait-event) (get-mouse-click viewport)])))
   
   
   (define (get-key-press viewport) 
-    (let*
-	([status (ready-key-press viewport)])
+    (let* ([status (ready-key-press viewport)])
       (cond
-	[status status]
-	[else (wx:yield) (get-key-press viewport)])))
+       [status status]
+       [else (send (viewport-canvas viewport) wait-event) (get-key-press viewport)])))
   
   (define ready-mouse-click
     (lambda (viewport) (send (viewport-canvas viewport) get-click)))
@@ -868,7 +875,9 @@
 		       (send DC set-optimization #f)
 		       (send buffer-DC set-optimization #f)
 		       (send canvas set-geometry width height scale)
-		       (if show? (send frame show #t))
+		       (when show? 
+			     (send frame show #t)
+			     (send canvas set-focus))
 		       (set-text-foreground viewport black)
 		       (set-text-background viewport white)
 		       (set-viewport-background viewport white-brush)
