@@ -41,7 +41,7 @@
      (define-higher-order-primitive on-key-event on-key-event/proc (handle-event))
      (define-higher-order-primitive on-tick-event on-tick-event/proc (_ handle-tick))
      (define-primitive big-bang big-bang/proc)
-     (define-primitive end-of-time stop-time/proc)
+     (define-primitive end-of-time end-of-time/proc)
           
      (define the-error (lambda x (error "evaluate (start <num> <num>) first")))
      (define-syntax (define-hook stx)
@@ -81,7 +81,7 @@
      (define-hook big-bang)     
      (define-hook on-key-event)
      (define-hook on-tick-event)
-     (define-hook stop-time)
+     (define-hook end-of-time)
      
      (define (make-true f) (lambda x (apply f x) #t))
      (define sleep-for-a-while/proc (make-true mred:sleep/yield))
@@ -197,7 +197,8 @@
                (lambda (f)
                  (check-proc 'on-key-event f 2 'first 'two)
                  ((set-on-key-event @vp) 
-                  (lambda (x y) (f (key-value x) y)))))
+                  (lambda (x y) (f (key-value x) y)))
+                 #t))
          
          (set! %on-tick-event
                (lambda (w0 f)
@@ -214,24 +215,19 @@
                               "first"
                               w)
                    (check-proc 'on-key-event f 1 'second 'one)
-                   ((set-on-tick-event @vp) w f))))
+                   ((set-on-tick-event @vp) w f)
+                   #t)))
+                 
          
-         (set! %big-bang
-               (lambda (w) 
-                 ((init-world @vp) w)
-                 #t))
+         (set! %big-bang (lambda (w) ((init-world @vp) w) #t))
          
-         (set! %stop-time
-               (lambda () 
-                 ((stop-tick @vp))
-                 #t))
+         (set! %end-of-time (lambda () ((stop-tick @vp))))
 
 	 (set! %get-mouse-event
                (lambda ()
                  (cond
                    [(ready-mouse-click @vp) => mouse-click-posn]
                    [else false])))
-
          #t))
      
      (define (stop)

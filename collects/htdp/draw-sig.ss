@@ -6,7 +6,6 @@
 ;; interferes with the existing xxx-solid-rectangle name in our unit
 ;; calculus -- mf 
 
-
   (define-signature core-draw^
        (start 
         start/cartesian-plane
@@ -24,7 +23,7 @@
         big-bang        ; World -> true
         on-key-event    ; (union char symbol) World -> World 
         on-tick-event   ; World -> World 
-        end-of-time     ; -> true
+        end-of-time     ; -> World
         ))
   
   (define-signature draw^ core-draw^))
