@@ -455,7 +455,12 @@
 		(if (null? (cdr rest))
 		    ""
 		    (format " (plus ~a more)" (length (cdr rest)))))))
-	   (let ([to-define-names (build-struct-names name fields #f (not setters?))])
+	   (let ([to-define-names (let ([l (build-struct-names name fields #f (not setters?))])
+				    (if struct-info-is-useful?
+					;; All names:
+					l
+					;; Skip `struct:' name:
+					(cdr l)))])
 	     (with-syntax ([(to-define-name ...) to-define-names]
 			   [compile-info (if struct-info-is-useful?
 					     (build-struct-expand-info name fields #f (not setters?) null null)
@@ -1328,45 +1333,11 @@
 		(mk 'unless (quote-syntax unless)))))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ;; define-struct (advanced)         >> weak errors <<
+    ;; define-struct (advanced)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     (define (advanced-define-struct/proc stx)
-      (syntax-case stx ()
-	[(_ name fields)
-	 (identifier? (syntax name))
-	 (do-define-struct stx #t #t)]
-	[(_ (name sup) fields_)
-	 (and (identifier? (syntax name))
-	      (identifier? (syntax sup)))
-	 (let ([fields (syntax->list (syntax fields_))])
-	   (unless (and fields
-			(andmap identifier? fields))
-	     (teach-syntax-error
-	      'define-struct
-	      stx
-	      (syntax fields_)
-	      "expected a parenthesized sequence of structure names, but found ~a"
-	      (something-else (syntax fields_))))
-	   (check-definitions-new 
-	    stx
-	    (cons (syntax name) (build-struct-names (syntax name) fields #f #f))
-	    (syntax/loc stx (define-struct (name sup) fields_))))]
-	[(_ name/sup fields)
-	 (teach-syntax-error
-	  'define-struct
-	  stx
-	  (syntax name/sup)
-	  "expected a name or parenthesized name--supername sequence after `define-struct', but found ~a"
-	  (something-else (syntax name/sup)))]
-	[(_ . rest)
-	 (teach-syntax-error
-	  'define-struct
-	  stx
-	  #f
-	  "expected two parts after `define-struct'")]
-	[_else (bad-use-error 'define-struct stx)]))
-
+      (do-define-struct stx #t #t))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; let (advanced)       >> mz errors in named case <<
