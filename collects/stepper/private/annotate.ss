@@ -213,23 +213,24 @@
      
   (define make-debug-info
     (checked-lambda (source (tail-bound BINDING-SET) (free-vars VARREF-SET) label lifting?)
-                    (let* ([kept-vars (binding-set-varref-set-intersect tail-bound free-vars)]
-                           [var-clauses (map (lambda (x) 
-                                               (list x (d->so `(quote-syntax ,x))))
-                                             kept-vars)]
-                           [let-bindings (filter (lambda (var) 
-                                                   (case (syntax-property var 'stepper-binding-type)
-                                                     ((let-bound) #t)
-                                                     ((lambda-bound) #f)
-                                                     (else (error 'make-debug-info 
-                                                                  "varref's binding-type info was not recognized: ~a"
-                                                                  (syntax-property var 'stepper-binding-type)))))
-                                                 kept-vars)
-                           [lifter-syms (map get-lifted-var let-bindings)]
-                           [quoted-lifter-syms (map (lambda (b) 
-                                                      (d->so `(quote-syntax ,b))) 
-                                                    lifter-syms)]
-                           [let-clauses (map list lifter-syms quoted-lifter-syms)])
+                    (let*-2vals ([kept-vars (binding-set-varref-set-intersect tail-bound free-vars)]
+                                 [var-clauses (map (lambda (x) 
+                                                     (list x (d->so `(quote-syntax ,x))))
+                                                   kept-vars)]
+                                 [let-bindings (filter (lambda (var) 
+                                                         (case (syntax-property var 'stepper-binding-type)
+                                                           ((let-bound) #t)
+                                                           ((lambda-bound stepper-temp top-level) #f)
+                                                           (else (error 'make-debug-info 
+                                                                        "varref ~a's binding-type info was not recognized: ~a"
+                                                                        (syntax-e var)
+                                                                        (syntax-property var 'stepper-binding-type)))))
+                                                       kept-vars)]
+                                 [lifter-syms (map get-lifted-var let-bindings)]
+                                 [quoted-lifter-syms (map (lambda (b) 
+                                                            (d->so `(quote-syntax ,b))) 
+                                                          lifter-syms)]
+                                 [let-clauses (map list lifter-syms quoted-lifter-syms)])
                       (make-full-mark source label (append var-clauses (if lifting? let-clauses null))))))
   
   ; cheap-wrap for non-debugging annotation
@@ -722,7 +723,11 @@
                                                                                              ,(late-let-break-wrap binding-list
                                                                                                                    lifted-vars
                                                                                                                    tagged-body))))]
-                                      [wrapped-begin (wcm-wrap (make-debug-info-let-body free-varrefs binding-list) middle-begin)]
+                                      ; this next step is necessary because the binding-list flows into the free-varref list:
+                                      [tagged-binding-list (map (lambda (binding)
+                                                                  (syntax-property binding 'stepper-binding-type 'let-bound))
+                                                                binding-list)]
+                                      [wrapped-begin (wcm-wrap (make-debug-info-let-body free-varrefs tagged-binding-list) middle-begin)]
                                       [whole-thing (datum->syntax-object expr `(,output-identifier ,outer-initialization ,wrapped-begin))])
                                  (2vals whole-thing free-varrefs))]))))]
 
@@ -958,14 +963,16 @@
                                (let ([debug-info (make-debug-info-app tail-bound free-varrefs 'called)])
                                  (wcm-break-wrap debug-info annotated-terms))
                                
-                               (let* ([arg-temps (build-list (length annotated-terms) get-arg-var)] 
-                                      [let-clauses (d->so `((,arg-temps 
-                                                             (values ,@(map (lambda (_) *unevaluated*) arg-temps)))))]
+                               (let* ([arg-temps (build-list (length annotated-terms) get-arg-var)]
+                                      [tagged-arg-temps (map (lambda (var) (syntax-property var 'stepper-binding-type 'stepper-temp))
+                                                             arg-temps)]
+                                      [let-clauses (d->so `((,tagged-arg-temps 
+                                                             (values ,@(map (lambda (_) *unevaluated*) tagged-arg-temps)))))]
                                       [set!-list (map (lambda (arg-symbol annotated-sub-expr)
                                                         (d->so `(set! ,arg-symbol ,annotated-sub-expr)))
-                                                      arg-temps annotated-terms)]
-                                      [new-tail-bound (binding-set-union (list tail-bound arg-temps))]
-                                      [app-debug-info (make-debug-info-app new-tail-bound arg-temps 'called)]
+                                                      tagged-arg-temps annotated-terms)]
+                                      [new-tail-bound (binding-set-union (list tail-bound tagged-arg-temps))]
+                                      [app-debug-info (make-debug-info-app new-tail-bound tagged-arg-temps 'called)]
                                       [final-app (break-wrap (simple-wcm-wrap app-debug-info
                                                                               (if (syntax-case expr (#%app #%top)
                                                                                     [(#%app (#%top . var) . _)
@@ -973,9 +980,9 @@
                                                                                           (non-annotated-proc? (syntax var)))]
                                                                                     [else #f])
                                                                                   (return-value-wrap (datum->syntax-object expr arg-temps))
-                                                                                  (datum->syntax-object expr arg-temps))))]
+                                                                                  (datum->syntax-object expr tagged-arg-temps))))]
                                       [debug-info (make-debug-info-app new-tail-bound
-                                                                       (varref-set-union (list free-varrefs arg-temps)) ; NB using bindings as vars
+                                                                       (varref-set-union (list free-varrefs tagged-arg-temps)) ; NB using bindings as vars
                                                                        'not-yet-called)]
                                       [let-body (wcm-wrap debug-info (d->so `(begin ,@set!-list ,final-app)))])
                                  (d->so `(let-values ,let-clauses ,let-body))))])
@@ -1013,10 +1020,10 @@
                
                [var-stx
                 (identifier? (syntax var-stx))
-                (let*-2vals ([var (syntax (var-stx))]
-                             [tagged (if (andmap (lambda (binding)
-                                                   (bound-identifier=? binding var))
-                                                 let-bound-vars)
+                (let*-2vals ([var (syntax var-stx)]
+                             [tagged (if (ormap (lambda (binding)
+                                                  (bound-identifier=? binding var))
+                                                let-bound-vars)
                                          (syntax-property var 'stepper-binding-type 'let-bound)
                                          (syntax-property var 'stepper-binding-type 'lambda-bound))]
                              [free-varrefs (list tagged)])
@@ -1025,7 +1032,7 @@
                            (appropriate-wrap tagged free-varrefs)]
                           ; as far as I can tell, we can skip the result-break on lexical vars (unless we need it for module-vars)...
                           [foot-wrap? 
-                           (wcm-break-wrap (make-debug-info-normal free-varrefs) annotated)])
+                           (wcm-break-wrap (make-debug-info-normal free-varrefs) tagged)])
                    free-varrefs))]
                
                [else ; require, require-for-syntax, define-syntaxes, module, provide

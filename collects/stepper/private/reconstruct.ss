@@ -259,6 +259,13 @@
 
   ; rectify-source-expr (SYNTAX-OBJECT (list-of Mark) BINDING-SET -> sexp)
   
+  ; rectify-source-expr produces the reconstructed version of a given source epxression, using the binding
+  ; information contained in the binding-list.  This happens during reconstruction whenever we come upon
+  ; expressions that we haven't yet evaluated.
+  
+  ; NB: the variable 'lexically-bound-bindings' contains a list of bindings which occur INSIDE the expression
+  ; being evaluated, and hence do NOT yet have values.
+  
   (define rectify-source-expr
     (checked-lambda ((expr SYNTAX-OBJECT) (mark-list MARK-LIST) (lexically-bound-bindings BINDING-SET))
                     (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-bindings))]
@@ -266,8 +273,17 @@
                       (kernel:kernel-syntax-case expr #f
                                                  
                          ; varref                        
-                         [id
+                         [var-stx
                           (identifier? expr)
+                          (let* ([var (syntax var)])
+                            (cond [(eq? (identifier-binding var) 'lexical)
+                                   ; has this varref's binding not been evaluated yet?
+                                   (if (ormap (lambda (binding)
+                                                (bound-identifier=? binding var))
+                                              lexically-bound-bindings)
+                                       (syntax-e var)
+                                       (
+                                       
                            [(z:varref? expr)
                              (cond [(z:bound-varref? expr)
                                     (let ([binding (z:bound-varref-binding expr)])

@@ -119,11 +119,14 @@
   
   ; get-lifted-var maintains the mapping between let-bindings and the syntax object
   ; which is used to capture its index at runtime.
+  ; unfortunately, it can't use "make-binding-source" because you need to compare the items 
+  ; with free-variable=?, which means that hash tables won't work.
   
   (define lifted-index 0)
   (define (next-lifted-symbol str)
     (let ([index lifted-index]) 
       (set! lifted-index (+ lifted-index 1))
+      (fprintf (current-error-port) "lifting: ~a~n" str)
       (datum->syntax-object #f (string->symbol (string-append str (number->string index))))))
 
   (define get-lifted-var
