@@ -13,14 +13,18 @@
       [(_ name implementation)
        #'(define-syntax (name stx)
 	   (syntax-case stx ()
-	     [(id . args)
-	      (syntax/loc stx (#%app implementation . args))]
-	     [id
+	     [(__ . ___)
 	      ;; HACK: we disable all checks if #%top is 
 	      ;; the usual one, which indicates that we're
 	      ;; not in beginner
 	      (module-identifier=? #'#%top (datum->syntax-object stx '#%top))
+	      (syntax/loc stx (implementation . ___))]
+	     [__
+	      ;; HACK: see above
+	      (module-identifier=? #'#%top (datum->syntax-object stx '#%top))
 	      (syntax/loc stx implementation)]
+	     [(id . args)
+	      (syntax/loc stx (#%app implementation . args))]
 	     [_else
 	      (raise-syntax-error
 	       #f
@@ -47,13 +51,7 @@
                                (if (not (is-proc-arg? arg))
                                    #'(void)
                                    #`(unless (and (identifier? (#,#'syntax #,new-arg))
-                                                  (or
-                                                   (not (identifier-binding (#,#'syntax #,new-arg)))
-						   ;; HACK - see note above
-                                                   (module-identifier=? #'#%top 
-                                                                        (datum->syntax-object 
-                                                                         (#,#'syntax #,new-arg)
-                                                                         '#%top))))
+						  (not (identifier-binding (#,#'syntax #,new-arg))))
                                        (raise-syntax-error
                                         #f
                                         (format
@@ -74,6 +72,14 @@
             stx
             (define-syntax (name s)
               (syntax-case s ()
+		[(__ . ___)
+		 ;; HACK: see above
+		 (module-identifier=? #'#%top (datum->syntax-object s '#%top))
+		 (syntax/loc s (implementation . ___))]
+		[__
+		 ;; HACK: see above
+		 (module-identifier=? #'#%top (datum->syntax-object s '#%top))
+		 (syntax/loc s implementation)]
                 [(__ new-arg ...)
                  (begin
                    checks ...
