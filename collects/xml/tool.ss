@@ -51,14 +51,19 @@
           (rename [super-draw draw])
           (define/override draw
             (lambda (dc x y left top right bottom dx dy draw-caret)
-              (let ([bl (box 0)]
-                    [br (box 0)]
-                    [bt (box 0)]
-                    [bb (box 0)]
+              (let ([bil (box 0)]
+                    [bit (box 0)]
+                    [bir (box 0)]
+                    [bib (box 0)]
                     [bw (box 0)]
-                    [bh (box 0)])
+                    [bh (box 0)]
+                    [bml (box 0)]
+                    [bmt (box 0)]
+                    [bmr (box 0)]
+                    [bmb (box 0)])
                 (get-extent dc x y bw bh #f #f #f #f)
-                (get-inset bl br bt bb)
+                (get-inset bil bit bir bib)
+                (get-margin bml bmt bmr bmb)
                 (super-draw dc x y left top right bottom dx dy draw-caret)
                 (let* ([old-pen (send dc get-pen)]
                        [old-brush (send dc get-brush)]
@@ -66,20 +71,32 @@
                        [bm-w (send bm get-width)]
                        [bm-h (send bm get-height)])
 
+                  (send dc set-pen (send the-pen-list find-or-create-pen "white" 1 'transparent))
+                  (send dc set-brush (send the-brush-list find-or-create-brush "white" 'solid))
+                  (send dc draw-rectangle 
+                        (+ x (unbox bml))
+                        (+ y (unbox bit))
+                        (max 0 (- (unbox bw) (unbox bml) (unbox bmr)))
+                        (- (unbox bmt) (unbox bit)))
+                  
                   (send dc set-pen (send the-pen-list find-or-create-pen "black" 1 'solid))
                   (send dc set-brush (send the-brush-list find-or-create-brush "black" 'solid))
                   (send dc draw-bitmap
                         bm
-                        (+ x (unbox bw) (- (unbox br)) (- bm-w) 1)
-                        (+ y (unbox bt) 1))
+                        (+ x (max 0
+                                  (- (unbox bw)
+                                     (unbox bmr)
+                                     bm-w)))
+                        ;; leave two pixels above and two below (see super-instantiate below)
+                        (+ y (unbox bit) 2))
                   
                   (send dc set-pen pen)
                   (send dc set-brush brush)
                   (send dc draw-rectangle
-                        (+ x (unbox bl))
-                        (+ y (unbox bt))
-                        (- (unbox bw) (unbox bl) (unbox br))
-                        (- (unbox bh) (unbox bt) (unbox bb)))
+                        (+ x (unbox bil))
+                        (+ y (unbox bit))
+                        (max 0 (- (unbox bw) (unbox bil) (unbox bir)))
+                        (max 0 (- (unbox bh) (unbox bit) (unbox bib))))
                   
                   
                   (send dc set-pen old-pen)
@@ -102,18 +119,17 @@
           (super-instantiate ()
             (editor (make-editor))
             (with-border? #f)
-            (top-margin (+ 2 (send (get-corner-bitmap) get-height))))
+            (top-margin (+ 4 (send (get-corner-bitmap) get-height))))
 
           (inherit set-min-width get-margin)
-          (let ([lb (box 0)]
-                [rb (box 0)])
-            (get-margin lb (box 0) rb (box 0))
+          (let ([lib (box 0)]
+                [rib (box 0)]
+                [lmb (box 0)]
+                [rmb (box 0)])
+            (get-inset lib (box 0) rib (box 0))
+            (get-margin lmb (box 0) rmb (box 0))
             (set-min-width 
-             (max 0
-                  (- (send (get-corner-bitmap) get-width)
-                     -1
-                     (unbox lb)
-                     (unbox rb)))))))
+             (max 0 (send (get-corner-bitmap) get-width))))))
 
       (define xml-snip%
         (class* renderable-editor-snip% (drscheme:snip:special<%>) 
