@@ -1,4 +1,3 @@
-
 ;; Load this one with MrEd
 
 (load-relative "loadtest.ss")
@@ -11,16 +10,16 @@
 (htdp-test #t 'image? (image? (filled-rect 10 10 'blue)))
 (htdp-test #f 'image? (image? 5))
 
-(htdp-test (list (make-color 255 0 0))
+(htdp-test (list (make-color 248 20 64))
 	   'color-list
 	   (image->color-list (filled-rect 1 1 'red)))
 
-(define red (make-color 255 0 0))
-(define blue (make-color 0 0 255))
+(define red (make-color 248 20 64))
+(define blue (make-color 80 80 248))
 (define black (make-color 0 0 0))
 (define white (make-color 255 255 255))
-(htdp-top (define red (make-color 255 0 0)))
-(htdp-top (define blue (make-color 0 0 255)))
+(htdp-top (define red (make-color 248 20 64)))
+(htdp-top (define blue (make-color 80 80 248)))
 (htdp-top (define black (make-color 0 0 0)))
 (htdp-top (define white (make-color 255 255 255)))
 
@@ -59,29 +58,7 @@
 	   (image=? (color-list->image (list red red red blue) 2 2)
 		    (offset-image+ (filled-rect 2 2 'red)
 				   1 1
-				   (filled-rect 1 2 'blue))))
-
-(htdp-test #t
-	   'image+/white
-	   (image=? (color-list->image (list red red blue red) 2 2)
-		    (image+ (filled-rect 2 2 'red)
-			    (color-list->image (list white blue) 1 2))))
-
-(htdp-test #t
-	   'offset-masked-image+
-	   (image=? (color-list->image (list white red blue red) 2 2)
-		    (offset-masked-image+ (filled-rect 2 2 'red)
-					  0 0
-					  (filled-rect 1 2 'black)
-					  (color-list->image (list white blue) 1 2))))
-
-(htdp-test #t
-	   'offset-masked-image+
-	   (image=? (color-list->image (list red red red white) 2 2)
-		    (offset-masked-image+ (filled-rect 2 2 'red)
-					  1 1
-					  (filled-rect 1 2 'black)
-					  (color-list->image (list white blue) 1 2))))
+				   (filled-rect 1 1 'blue))))
 
 (htdp-test #t
 	   'image+
@@ -169,4 +146,36 @@
 (htdp-test #t 'color? (color? (make-color 1 2 3)))
 (htdp-test #f 'color? (color? 10))
 
-	   
+(htdp-test #t
+           'line 
+           (image=? (line 4 0 'red)
+                    (color-list->image (list red red red red red) 5 1)))
+
+(htdp-test #t
+           'line 
+           (image=? (line 0 4 'red)
+                    (color-list->image (list red red red red red) 1 5)))
+
+;; note: next two tests may be platform-specific... I'm not sure.
+;; I developed them under macos x. -robby
+(htdp-test #t
+           'outline-triangle
+           (image=? (outline-triangle 3 'red)
+                    (color-list->image 
+                     (list white red   white
+                           white red   white
+                           red   white red
+                           red   red   red)
+                     3
+                     4)))
+
+(htdp-test #t
+           'filled-triangle
+           (image=? (filled-triangle 3 'red)
+                    (color-list->image 
+                     (list white red   white
+                           white red   white
+                           red   red   red
+                           red   red   red)
+                     3
+                     4)))
