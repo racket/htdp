@@ -1,18 +1,17 @@
+
 (module tool mzscheme
-  (require (lib "unitsig.ss")
+  (require "private/xml-snip-helpers.ss"
+           (lib "unitsig.ss")
            (lib "class.ss")
            (lib "mred.ss" "mred")
            (lib "framework.ss" "framework")
            (lib "tool.ss" "drscheme")
            (lib "xml.ss" "xml")
-           (lib "readerr.ss" "syntax")
-           (lib "list.ss")
            (lib "string-constant.ss" "string-constants"))
   
   (provide tool@)
   
   (define orig (current-output-port))
-  
   (define tool@
     (unit/sig drscheme:tool-exports^
       (import drscheme:tool^)
@@ -27,7 +26,7 @@
       (define xml-box-color "forest green")
       (define scheme-splice-box-color "blue")
       (define scheme-box-color "purple")
-
+      
       ;; get-bm : string -> (union (is-a?/c bitmap%) false?)
       (define (get-bm name)
         (let ([bm (make-object bitmap% (build-path (collection-path "icons") name))])
@@ -45,25 +44,6 @@
                [sn (make-object string-snip% (string-length str))])
           (send sn insert str (string-length str) 0)
           sn))
-      
-      
-                                                                                                 
-                                                                                                 
-                                                                                                 
-        ;                              ;  ;                                           ;          
-        ;                              ;                                                         
-        ;                              ;      ;                                                  
-  ;;;   ; ;;;    ;;;;       ;;;    ;;; ;  ;  ;;;;   ;;;;   ; ;;         ;;;;  ; ;;;   ;   ; ;;;  
- ;   ;  ;;   ;  ;          ;   ;  ;   ;;  ;   ;    ;    ;  ;;          ;      ;;   ;  ;   ;;   ; 
-     ;  ;    ;  ;          ;   ;  ;    ;  ;   ;    ;    ;  ;           ;      ;    ;  ;   ;    ; 
-  ;;;;  ;    ;   ;;;       ;;;;;  ;    ;  ;   ;    ;    ;  ;    ;;;;;   ;;;   ;    ;  ;   ;    ; 
- ;   ;  ;    ;      ;      ;      ;    ;  ;   ;    ;    ;  ;               ;  ;    ;  ;   ;    ; 
- ;   ;  ;;   ;      ;      ;      ;   ;;  ;   ;    ;    ;  ;               ;  ;    ;  ;   ;;   ; 
-  ;;;;; ; ;;;   ;;;;        ;;;;   ;;; ;  ;    ;;   ;;;;   ;           ;;;;   ;    ;  ;   ; ;;;  
-                                                                                          ;      
-                                                                                          ;      
-                                                                                          ;      
-
       
       (define renderable-editor-snip%
         (class editor-snip% 
@@ -105,7 +85,7 @@
                    (send admin popup-menu menu this (+ sx 1) (+ sy 1)))]
                 [else
                  (super-on-event dc x y editorx editory evt)])))
-
+          
           ;; get-menu : -> (is-a?/c popup-menu%)
           ;; returns the popup menu that should appear
           ;; when clicking in the top part of the snip.
@@ -135,7 +115,7 @@
                        [bm (get-corner-bitmap)]
                        [bm-w (send bm get-width)]
                        [bm-h (send bm get-height)])
-
+                  
                   (send dc set-pen (send the-pen-list find-or-create-pen "white" 1 'transparent))
                   (send dc set-brush (send the-brush-list find-or-create-brush "white" 'solid))
                   (send dc draw-rectangle 
@@ -196,33 +176,14 @@
             (editor (make-editor))
             (with-border? #f)
             (top-margin (+ 4 (send (get-corner-bitmap) get-height))))
-
+          
           (reset-min-width)))
-
-
-                                                          
-                                                          
-                                                          
-                     ;                         ;          
-                     ;                                    
-                     ;                                    
-;     ;  ; ;;; ;;    ;           ;;;;  ; ;;;   ;   ; ;;;  
- ;   ;   ;;  ;;  ;   ;          ;      ;;   ;  ;   ;;   ; 
-  ; ;    ;   ;   ;   ;          ;      ;    ;  ;   ;    ; 
-   ;     ;   ;   ;   ;   ;;;;;   ;;;   ;    ;  ;   ;    ; 
-  ; ;    ;   ;   ;   ;              ;  ;    ;  ;   ;    ; 
- ;   ;   ;   ;   ;   ;              ;  ;    ;  ;   ;;   ; 
-;     ;  ;   ;   ;   ;          ;;;;   ;    ;  ;   ; ;;;  
-                                                   ;      
-                                                   ;      
-                                                   ;      
-
       
       (define xml-snip%
-        (class* renderable-editor-snip% (drscheme:snip:special<%>) 
+        (class* renderable-editor-snip% (readable-snip<%> xml-snip<%>)
           (inherit get-editor)
           
-          (field [eliminate-whitespace-in-empty-tags? (preferences:get 'drscheme:xml-eliminate-whitespace)])
+          (init-field eliminate-whitespace-in-empty-tags?)
           
           (define/override (make-editor) (make-object xml-text%))
           (define/override (get-corner-bitmap) 
@@ -232,7 +193,7 @@
           
           (define/override (get-menu)
             (let* ([menu (instantiate popup-menu% ()
-                          (title (string-constant xml-tool-xml-box)))]
+                           (title (string-constant xml-tool-xml-box)))]
                    [leave-alone-item
                     (make-object checkable-menu-item%
                       (string-constant xml-tool-leave-whitespace-alone)
@@ -258,50 +219,35 @@
               (let ([admin (get-admin)])
                 (when admin
                   (send admin resized this #t)))))
-
-          (define/public (read-special file line col pos)
-            (let ([editor (get-editor)]
-                  [old-locked #f])
-              (when (= 0 (send editor last-position))
-                (let-values ([(txt line col pos) (find-position-in-outer this)])
-                  (raise-read-error "read: bad syntax: empty xml box"
-                                    txt line col pos 1)))
-              (dynamic-wind
-               (lambda () 
-                 (set! old-locked (send editor is-locked?))
-                 (send editor lock #t))
-               (lambda ()
-                 (let* ([fill-chars (make-fill-chars editor)]
-                        [port (make-custom-input-port #f fill-chars #f void)]
-                        [xml (with-handlers ([exn:xml? (translate-xml-exn-to-rep-exn editor)])
-                               (read-xml port))]
-                        [xexpr (xml->xexpr (document-element xml))]
-                        [clean-xexpr (if eliminate-whitespace-in-empty-tags?
-                                         (eliminate-whitespace-in-empty-tags xexpr)
-                                         xexpr)]
-                        [expd-xexpr (expand-embedded clean-xexpr)]
-                        [qq-body (datum->syntax-object #'here expd-xexpr (list editor #f #f #f #f))])
-                   (values
-                    (with-syntax ([qq-body qq-body])
-                      (syntax (quasiquote qq-body)))
-                    1)))
-               (lambda () (send editor lock old-locked)))))
+          
+          (define/public (read-one-special index file line col pos)
+            (xml-read-one-special eliminate-whitespace-in-empty-tags?
+                                  translate-xml-exn-to-rep-exn
+                                  this
+                                  file
+                                  line
+                                  col
+                                  pos))
           
           (define/override (write stream-out)
+            (send stream-out put (if eliminate-whitespace-in-empty-tags?
+                                     0
+                                     1))
             (send (get-editor) write-to-file stream-out 0 'eof))
           (define/override (make-snip)
-            (make-object xml-snip%))
+            (instantiate xml-snip% ()
+              [eliminate-whitespace-in-empty-tags? eliminate-whitespace-in-empty-tags?]))
           
           (define/override (get-color) xml-box-color)
           
           (inherit show-border set-snipclass)
           (super-instantiate ())
           (show-border #t)
-          (set-snipclass xml-snipclass)))
-
-      ;; translate-xml-exn-to-rep-exn : editor -> exn -> alpha
-      ;; translates a xml exn to a drscheme:rep:make-exn:locs exn
-      ;; using `editor' as the location. raises the exn.
+          (set-snipclass lib-xml-snipclass)))
+      
+      ; translate-xml-exn-to-rep-exn : editor -> exn -> alpha
+      ; translates a xml exn to a drscheme:rep:make-exn:locs exn
+      ; using `editor' as the location. raises the exn.
       (define (translate-xml-exn-to-rep-exn editor)
         (lambda (exn)
           (raise
@@ -314,140 +260,42 @@
                      (list editor (- start 1) (- end 1))))
                  (exn:xml-locs exn))))))
       
-      ;; find-in-position-in-outer : 
-      ;;    editor-snip -> (values (union #f text%) (union #f number) (union #f number) (union #f number))
-      (define (find-position-in-outer editor-snip)
-        (let/ec k
-          (let ([fail (lambda () (k #f #f #f #f))])
-            (let ([admin (send editor-snip get-admin)])
-              (unless admin (fail))
-              (let ([outer-editor (send admin get-editor)])
-                (unless (is-a? outer-editor text%) (fail))
-                (let ([pos (send outer-editor get-snip-position editor-snip)])
-                  (unless pos (fail))
-                  (let* ([line (send outer-editor position-paragraph pos)]
-                         [line-start (send outer-editor paragraph-start-position line)])
-                    (values outer-editor (+ line 1) (+ (- pos line-start) 1) (+ pos 1)))))))))
-
-      ;; eliminate-whitespace-in-empty-tags : xexpr -> xexpr
-      (define (eliminate-whitespace-in-empty-tags xexpr)
-        (cond
-          [(and (pair? xexpr)
-                (symbol? (car xexpr)))
-           (list* (car xexpr)
-                  (cadr xexpr)
-                  (map eliminate-whitespace-in-empty-tags
-                       (eliminate-whitespace-in-list (cddr xexpr))))]
-          [else xexpr]))
-      
-      ;; eliminate-whitespace-in-list (listof xexpr) -> (listof xexpr)
-      ;; if each string in xexprs is a whitespace string, remove all strings
-      ;; otherwise, return input.
-      (define (eliminate-whitespace-in-list xexprs)
-        (cond
-          [(andmap (lambda (x) (or (not (string? x))
-                                   (string-whitespace? x)))
-                   xexprs)
-           (filter (lambda (x) (not (string? x))) xexprs)]
-          [else xexprs]))
-      
-      ;; string-whitespace? : string -> boolean
-      ;; return #t if the input string consists entirely of whitespace
-      (define (string-whitespace? str)
-        (let loop ([i (string-length str)])
-          (cond
-            [(zero? i) #t]
-            [(char-whitespace? (string-ref str (- i 1)))
-             (loop (- i 1))]
-            [else #f])))
-      
-      ;; wrapped = (make-wraped sexp text number number number)
-      (define-struct wrapped (snip text line col pos))
-      
-      ;; make-fill-chars : text -> string -> (union (tst number number number -> (values snip number)) number)
-      ;; given an editor, makes the second argument to `make-custom-port'
-      ;; that reads from the editor. If it finds a transformable?
-      ;; snip, it returns snip via the ``special'' functionality of custom ports.
-      (define (make-fill-chars text)
-        (let ([ptr 0]
-              [sema (make-semaphore 1)])
-          (lambda (str)
-            (semaphore-wait sema)
-            (let ([snip (send text find-snip ptr 'after-or-none)])
-              (begin0
-                (cond
-                  [(not snip)
-                   eof]
-                  [(transformable? snip)
-                   (set! ptr (+ ptr 1))
-                   (lambda (src line col pos)
-                     (values (make-wrapped snip text line col pos) 1))]
-                  [else
-                   (string-set! str 0 (send text get-character ptr))
-                   (set! ptr (+ ptr 1))
-                   1])
-                (semaphore-post sema))))))
-      
-      ;; expand-embedded : xexpr -> xexpr
-      ;; constructs a new xexpr that has the embedded snips expanded 
-      ;; and wrapped with unquotes
-      (define (expand-embedded _xexpr)
-        (let loop ([xexpr _xexpr])
-          (cond
-            [(pair? xexpr)
-             (cons (loop (car xexpr))
-                   (loop (cdr xexpr)))]
-            [(wrapped? xexpr)
-             (let* ([snip (wrapped-snip xexpr)]
-                    [text (wrapped-text xexpr)]
-                    [pos (wrapped-pos xexpr)]
-                    [line (wrapped-line xexpr)]
-                    [col (wrapped-col xexpr)])
-               (let-values ([(stx wid) (send snip read-special text line col pos)])
-                 (with-syntax ([stx stx])
-                   (if (and (is-a? snip scheme-snip%)
-                            (send snip get-splice?))
-                       (with-syntax ([err (syntax/loc 
-                                           (syntax stx)
-                                           (error 'scheme-splice-box "expected a list, found: ~e" lst))])
-                         (syntax ,@(let ([lst stx])
-                                     (if (list? lst)
-                                         lst
-                                         err))))
-                       (syntax ,stx)))))]
-            [else xexpr])))
-      
       (define xml-snipclass%
         (class snip-class%
           (define/override (read stream-in)
-            (let* ([snip (make-object xml-snip%)])
+            (let* ([snip (instantiate xml-snip% ()
+                           [eliminate-whitespace-in-empty-tags?
+                            (preferences:get 'drscheme:xml-eliminate-whitespace)])])
               (send (send snip get-editor) read-from-file stream-in)
               snip))
           (super-instantiate ())))
+      
+      ;; this snipclass is for old, saved files (no snip has it set)
       (define xml-snipclass (make-object xml-snipclass%))
       (send xml-snipclass set-version 1)
       (send xml-snipclass set-classname "drscheme:xml-snip")
       (send (get-the-snip-class-list) add xml-snipclass)
-
-
-                                                                                  
-                                                                                  
-                                                                                  
-               ;                                                       ;          
-               ;                                                                  
-               ;                                                                  
-  ;;;;   ;;;;  ; ;;;    ;;;   ; ;;; ;;     ;;;           ;;;;  ; ;;;   ;   ; ;;;  
- ;      ;      ;;   ;  ;   ;  ;;  ;;  ;   ;   ;         ;      ;;   ;  ;   ;;   ; 
- ;      ;      ;    ;  ;   ;  ;   ;   ;   ;   ;         ;      ;    ;  ;   ;    ; 
-  ;;;   ;      ;    ;  ;;;;;  ;   ;   ;   ;;;;;  ;;;;;   ;;;   ;    ;  ;   ;    ; 
-     ;  ;      ;    ;  ;      ;   ;   ;   ;                 ;  ;    ;  ;   ;    ; 
-     ;  ;      ;    ;  ;      ;   ;   ;   ;                 ;  ;    ;  ;   ;;   ; 
- ;;;;    ;;;;  ;    ;   ;;;;  ;   ;   ;    ;;;;         ;;;;   ;    ;  ;   ; ;;;  
-                                                                           ;      
-                                                                           ;      
-                                                                           ;      
+      
+      ;; this snipclass overrides the actual one in (lib "xml-snipclass.ss" "xml")
+      ;; as a full-fledged snipclass, for use in DrScheme.
+      
+      (define lib-xml-snipclass%
+        (class snip-class%
+          (define/override (read stream-in)
+            (let* ([eliminate-whitespace-in-empty-tags? (zero? (send stream-in get-exact))]
+                   [snip (instantiate xml-snip% ()
+                           [eliminate-whitespace-in-empty-tags? eliminate-whitespace-in-empty-tags?])])
+              (send (send snip get-editor) read-from-file stream-in)
+              snip))
+          (super-instantiate ())))
+      
+      (define lib-xml-snipclass (make-object lib-xml-snipclass%))
+      (send lib-xml-snipclass set-version 1)
+      (send lib-xml-snipclass set-classname (format "~s" '(lib "xml-snipclass.ss" "xml")))
+      (send (get-the-snip-class-list) add lib-xml-snipclass)
+      
       (define scheme-snip%
-        (class* renderable-editor-snip% (drscheme:snip:special<%>)
+        (class* renderable-editor-snip% (scheme-snip<%> readable-snip<%>)
           (init-field splice?)
           (define/public (get-splice?) splice?)
           
@@ -469,7 +317,7 @@
                 (parent menu)
                 (callback (lambda (x y) (toggle-splice))))
               menu))
-
+          
           (inherit get-admin reset-min-width)
           (define/private (toggle-splice)
             (let ([admin (get-admin)])
@@ -477,29 +325,12 @@
               (reset-min-width)
               (when admin
                 (send admin resized this #t))))
-
+          
           (inherit get-editor)
           
-          (define/public (read-special file line col pos)
-            (let ([text (get-editor)])
-              (when (= 0 (send text last-position))
-                (let-values ([(txt line col pos) (find-position-in-outer this)])
-                  (raise-read-error 
-                   (if splice?
-                       "read: bad syntax: empty scheme splice box"
-                       "read: bad syntax: empty scheme box")
-                   txt line col pos 1)))
-              (let ([stx (read-syntax
-                          text
-                          (drscheme:language:open-input-text text 0 (send text last-position)))])
-                (when (eof-object? stx)
-                  (raise-read-error
-                   (if splice?
-                       "read: bad syntax: empty scheme splice box"
-                       "read: bad syntax: empty scheme box")
-                   text 1 1 1 (send text last-position)))
-                (values stx 1))))
-                    
+          (define/public (read-one-special index file line col pos)
+            (scheme-read-one-special this file line col pos))
+          
           (define/override (make-editor)
             (make-object (drscheme:unit:program-editor-mixin 
                           (add-file-keymap-mixin
@@ -521,7 +352,7 @@
           
           (super-instantiate ())
           (show-border #t)
-          (set-snipclass scheme-snipclass)))
+          (set-snipclass lib-scheme-snipclass)))
       
       (define (add-file-keymap-mixin %)
         (class %
@@ -540,10 +371,18 @@
               snip))
           (super-instantiate ())))
       
+      ;; this snipclass is for old, saved files (no snip has it set)
       (define scheme-snipclass (make-object scheme-snipclass%))
       (send scheme-snipclass set-version 2)
       (send scheme-snipclass set-classname "drscheme:scheme-snip")
       (send (get-the-snip-class-list) add scheme-snipclass)
+      
+      ;; this snipclass overrides the one in (lib "scheme-snipclass.ss" "xml")
+      ;; as a full-fledged snipclass, for use in DrScheme.
+      (define lib-scheme-snipclass (make-object scheme-snipclass%))
+      (send lib-scheme-snipclass set-version 1)
+      (send lib-scheme-snipclass set-classname (format "~s" '(lib "scheme-snipclass.ss" "xml")))
+      (send (get-the-snip-class-list) add lib-scheme-snipclass)
       
       (define plain-text%
         (class text:keymap% 
@@ -579,7 +418,7 @@
               (when (is-a? x text%)
                 (matching-xml x))))
       (send xml-keymap map-function ">" "matching-xml")
-
+      
       (define xml-keymap-mixin
         (mixin (editor:keymap<%>) ()
           (rename [super-get-keymaps get-keymaps])
@@ -591,24 +430,7 @@
         (drscheme:unit:program-editor-mixin 
          (xml-keymap-mixin
           plain-text%)))
-                                                   
-                                                                         
-                                                                         
-                                              ;       ;                  
-                                              ;                          
-                                  ;           ;                          
- ;             ; ;;; ;;     ;;;  ;;;;   ;;;;  ; ;;;   ;   ; ;;;    ;;; ; 
-  ;;           ;;  ;;  ;   ;   ;  ;    ;      ;;   ;  ;   ;;   ;  ;   ;; 
-    ;;;        ;   ;   ;       ;  ;    ;      ;    ;  ;   ;    ;  ;    ; 
-       ;;      ;   ;   ;    ;;;;  ;    ;      ;    ;  ;   ;    ;  ;    ; 
-    ;;;        ;   ;   ;   ;   ;  ;    ;      ;    ;  ;   ;    ;  ;    ; 
-  ;;           ;   ;   ;   ;   ;  ;    ;      ;    ;  ;   ;    ;  ;   ;; 
- ;             ;   ;   ;    ;;;;;  ;;   ;;;;  ;    ;  ;   ;    ;   ;;; ; 
-                                                                       ; 
-                                                                  ;    ; 
-                                                                   ;;;;  
 
-      
       ;; matching-xml : (is-a?/c text) -> void
       ;; inserts > and if there is an XML tag just
       ;; before the caret, inserts the corresponding
@@ -654,26 +476,6 @@
                   (loop (- pos 1) pos)]
                  [else (loop (- pos 1) last-space)]))])))
       
-      
-
-                                                                      
-                      ;;;                           ;                 
-                        ;                   ;                         
-                        ;                   ;                         
-  ;;;  ;;; ;;; ;;;;     ;   ;;  ;;  ;;;;   ;;;;;  ;;;     ;;;  ; ;;;  
- ;   ;  ;   ;      ;    ;    ;   ;      ;   ;       ;    ;   ;  ;;  ; 
- ;;;;;  ;   ;   ;;;;    ;    ;   ;   ;;;;   ;       ;    ;   ;  ;   ; 
- ;       ; ;   ;   ;    ;    ;   ;  ;   ;   ;       ;    ;   ;  ;   ; 
- ;   ;   ;;;   ;   ;    ;    ;   ;  ;   ;   ;   ;   ;    ;   ;  ;   ; 
-  ;;;     ;     ;;; ; ;;;;;;  ;;; ;  ;;; ;   ;;;  ;;;;;   ;;;  ;;;  ;;
-                                                                      
-                                                                      
-                                                                      
-      
-      (define (transformable? snip)
-        (or (is-a? snip xml-snip%)
-            (is-a? snip scheme-snip%)))
-      
       (define (xml-box-frame-extension super%)
         (class super%
           (inherit get-editor get-special-menu get-edit-target-object)
@@ -711,7 +513,10 @@
               (callback
                (lambda (menu evt)
                  (insert-snip
-                  (lambda () (make-object xml-snip%))))))
+                  (lambda () 
+                    (instantiate xml-snip% ()
+                      [eliminate-whitespace-in-empty-tags?
+                       (preferences:get 'drscheme:xml-eliminate-whitespace)]))))))
             (instantiate menu:can-restore-menu-item% ()
               (label (string-constant xml-tool-insert-scheme-box))
               (parent menu)
