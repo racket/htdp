@@ -520,30 +520,27 @@
     (or (number? val)
         (boolean? val)
         (string? val)
-        (symbol? val))))
-
-;(require mred-extensions)
-;(require (lib "mred.ss" "mred"))
-;
-;(define (stepper-text-test . args)
-;  (let* ([new-frame (make-object frame% "test-frame")]
-;         [new-text (apply make-object stepper-text% args)]
-;         [new-canvas (make-object stepper-canvas% new-frame new-text)])
-;    (send new-canvas min-width 500)
-;    (send new-canvas min-height 100)
-;    (send new-frame show #t)
-;    (send new-text reset-width new-canvas)
-;    new-canvas))
-;  
-;  (define a
-;  (stepper-text-test `((define x 3) 14)
-;                     `((* 13 ,highlight-placeholder))
-;                     `((* 15 16))
-;                     `(,highlight-placeholder (define y 4) 13 (+ ,highlight-placeholder ,highlight-placeholder) 13
-;                       298 (+ (x 398 ,highlight-placeholder) ,highlight-placeholder) ,highlight-placeholder)
-;                     `((+ 3 4) 13 #f (+ x 398) (x 398 (+ x 398)) #f)
-;                     #f
-;                     `((define y (+ 13 14)) 80)))
+        (symbol? val)))
+  
+  (define (stepper-text-test . args)
+  (let* ([new-frame (make-object frame% "test-frame")]
+         [new-text (apply make-object stepper-text% args)]
+         [new-canvas (make-object stepper-canvas% new-frame new-text)])
+    (send new-canvas min-width 500)
+    (send new-canvas min-height 100)
+    (send new-frame show #t)
+    (send new-text reset-width new-canvas)
+    new-canvas))
+  
+  (define a
+  (stepper-text-test `((define x 3) 14)
+                     `((* 13 ,highlight-placeholder))
+                     `((* 15 16))
+                     `(,highlight-placeholder (define y 4) 13 (+ ,highlight-placeholder ,highlight-placeholder) 13
+                       298 (+ (x 398 ,highlight-placeholder) ,highlight-placeholder) ,highlight-placeholder)
+                     `((+ 3 4) 13 #f (+ x 398) (x 398 (+ x 398)) #f)
+                     #f
+                     `((define y (+ 13 14)) 80)))
   
 ;  (stepper-text-test `()
 ;                     `('uninteresting)
@@ -567,3 +564,6 @@
 ;  (stepper-text-test `() `(uninteresting but long series of lines) `() `() `() "This is an error message" `((define x 3 4 5)))
   
 ;(stepper-text-test `() `() `() `() `() "This is another error message" `(poomp))
+
+  )
+
