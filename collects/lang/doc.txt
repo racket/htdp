@@ -4,7 +4,8 @@ languages for other modules (i.e., as the initial import):
 
  * _r5rs.ss_ - provides R5RS Scheme, plus _#%provide_ (instead of
    `provide'), _#%require_ (instead of `#%require'), `#%app',
-   `%datum', etc.
+   `%datum', etc.  The `letrec' of this language is defined exactly as
+   in R5RS, and not as in MzScheme.
 
  * _plt-pretty-big-text.ss_ - provides MzScheme plus the
    following MzLib libraries: etc.ss, file.ss, list.ss,
