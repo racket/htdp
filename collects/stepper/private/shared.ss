@@ -6,7 +6,6 @@
 
   (provide
    step-result?
-   (struct renderable (value))
    exp-without-holes?
    exp-with-holes?
    (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs))
@@ -61,13 +60,10 @@
   ; an exp-with-holes is either:
   ; - a pair,
   ; - null,
-  ; - a symbol,
-  ; - the highlight-placeholder, or
-  ; - (make-renderable value)
+  ; - a symbol, or
+  ; - the highlight-placeholder
   
-  (define-struct renderable (value))
-  
-  (define exp-without-holes-base-case? (or/f symbol? null? renderable?))
+  (define exp-without-holes-base-case? (or/f symbol? null?))
   (define exp-without-holes?
     (lambda (val)
       (or (and (pair? val) (exp-without-holes? (car val)) (exp-without-holes? (cdr val)))

@@ -2,7 +2,7 @@
   (require "mred-extensions.ss"
            "my-macros.ss"
            (lib "specs.ss" "framework")
-           "pconvert.ss")
+           (lib "pconvert.ss"))
   
   ; there are two separate reasons to use units here, but it's just too painful.
   ; reason 1) the drscheme:language procedures are linked at runtime into the
@@ -14,8 +14,9 @@
   ; implementatian.
   
   ; HOWEVER, like I said, it's just too painful. Once this is a unit, then 
-  ; everything else wants to be a unit too. Yecch.  I'm not explaining this
-  ; well, I know.
+  ; everything else wants to be a unit too. For instance, ta make sure that 
+  ; the reconstructor gets the right invocation of the unit, it needs to be a 
+  ; unit as well.  Pretty soon, everything is units.
   
   (provide
 
@@ -23,49 +24,61 @@
    check-global-defined ; : (symbol -> boolean)
    global-lookup
    
-   print-convert ; (-> any any)
-   
    get-render-settings ; (-> render-settings?)
    fake-beginner-render-settings ; render-settings?
+   fake-mz-render-settings ; render-settings?
    
    render-settings? ; predicate
    
-   set-render! ; (-> (-> any? string?) void?)
-   set-set-print-settings ; (-> (-> (-> any) any) void?)
+   set-render-to-string! ; (-> (-> any? string?) void?)
+   set-render-to-sexp! ; (-> (-> (-> any) any) void?)
    )
   
   ; contracts for procedures in the settings unit:
   ; true-false-printed? ; : ( -> boolean)
   ; constructor-style-printing? ; : ( -> boolean)
   ; abbreviate-cons-as-list? ; : ( -> boolean)
-  (define proposition-contract (-> boolean?))
-  (define render-settings? (vectorof/n proposition-contract proposition-contract proposition-contract))
+  ; render-to-sexp ; (TST -> TST)
+  (define render-settings? (vectorof/n procedure? procedure? procedure? procedure?))
   
-  (define (render val)
+  (define (render-to-string val)
     (error 'model-settings "render not set yet"))
-  (define (set-print-settings val)
+  (define (render-to-sexp val)
     (error 'model-settings "set-print-settings not set yet"))
   
-  (define set-render!
+  (define set-render-to-string!
     (contract
      (-> (-> any? string?) void?)
-     (lx (set! render _))
+     (lx (set! render-to-string _))
      'model-settings
      'caller))
   
-  (define set-set-print-settings!
+  (define set-render-to-sexp!
     (contract
      (-> (-> (-> any)
              any)
          void?)
-     (lx (set! set-print-settings _))
+     (lx (set! render-to-sexp _))
      'model-settings
      'caller))
   
+  (define (fake-beginner-render-to-sexp val)
+    (parameterize ([booleans-as-true/false #t]
+                   [constructor-style-printing #t]
+                   [abbreviate-cons-as-list #f])
+      (print-convert val)))
+    
   (define fake-beginner-render-settings
     (contract
      render-settings?
-     (vector (lx #t) (lx #t) (lx #f))
+     (vector (lambda () #t) (lambda () #t) (lambda () #f) fake-beginner-render-to-sexp)
+     'model-settings
+     'caller))
+  
+  (define fake-mz-render-settings
+    (contract
+     render-settings?
+     (vector booleans-as-true/false constructor-style-printing abbreviate-cons-as-list print-convert)
      'model-settings
      'caller))
   
@@ -75,40 +88,17 @@
     (contract
      (-> render-settings?)
      (lambda ()
-       (let* ([true-false-printed/bool (string=? (render #t) "true")]
-              [constructor-style-printing/bool (string=? (render (make-test-struct)) "(make-test-struct)")]
+       (let* ([true-false-printed/bool (string=? (render-to-string #t) "true")]
+              [constructor-style-printing/bool (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
               [abbreviate-cons-as-list/bool (and constructor-style-printing/bool
-                                                 (string=? (substring (render '(3)) 0 5) "(cons"))])
-        (vector
-         (lx true-false-printed/bool)
-         (lx constructor-style-printing/bool)
-         (lx abbreviate-cons-as-list/bool))))
+                                                 (string=? (substring (render-to-string '(3)) 0 5) "(cons"))])
+         (vector
+          (lambda () true-false-printed/bool)
+          (lambda () constructor-style-printing/bool)
+          (lambda () abbreviate-cons-as-list/bool)
+          render-to-sexp)))
      'model-settings
      'caller))
-  
-  ;; print-convert : (-> any any)
-  (define print-convert
-    (contract
-     (-> any any)
-     (lambda (val)
-       (set-print-settings
-        (lambda ()
-          (simple-module-based-language 
-      
-  ;; COPIED FROM drscheme/private/language.ss
-  ;; simple-module-based-language-convert-value : TST settings -> TST
-  (define (simple-module-based-language-convert-value value settings)
-        (case (simple-settings-printing-style settings)
-          [(write) value]
-          [(constructor)
-           (parameterize ([constructor-style-printing #t]
-                          [show-sharing (simple-settings-show-sharing settings)])
-             (print-convert value))]
-          [(quasiquote)
-           (parameterize ([constructor-style-printing #f]
-                          [show-sharing (simple-settings-show-sharing settings)])
-             (print-convert value))]))
-  
   
   (define check-global-defined
     (contract

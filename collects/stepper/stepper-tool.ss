@@ -10,7 +10,8 @@
            (prefix model: "private/model.ss")
            (prefix x: "private/mred-extensions.ss")
            "private/shared.ss"
-           "private/model-settings.ss")
+           "private/model-settings.ss"
+           (lib "pconvert.ss"))
   
   (provide tool@)
   
@@ -50,7 +51,32 @@
   
       (define (view-controller-go drscheme-frame program-expander)
         
-        (local ((define view-history null)
+        (local ((define settings 
+		  (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol)))
+		(define language
+		  (drscheme:language-configuration:language-settings-language settings))
+		(define simple-settings
+		  (drscheme:language-configuration:language-settings-settings settings))
+           
+		;; VALUE CONVERSION CODE:
+		
+		;; render-to-string : TST -> string
+		(define (render-to-string val)
+		  (let ([string-port (open-output-string)])
+		    (send language
+			  render-value
+			  val
+			  simple-settings
+			  string-port
+			  #f)
+		    (get-output-string string-port)))
+		
+		;; render-to-sexp : TST -> sexp
+		(define (render-to-sexp val)
+		  (set-print-settings
+		   (lambda () (simple-module-based-language-convert-value val simple-settings))))
+
+		(define view-history null)
                 (define view-currently-updating #f)
                 (define final-view #f)
                 (define view 0)
@@ -149,7 +175,10 @@
                     (set! view-history (append view-history (list step-text))) 
                     (update-view view-currently-updating))))
           
-          (send drscheme-frame stepper-frame s-frame)
+	  (set-render-to-string! render-to-string)
+	  (set-render-to-sexp! render-to-sexp)           
+
+	  (send drscheme-frame stepper-frame s-frame)
           (send s-frame set-printing-proc print-current-view)
           (set! view-currently-updating 0)
           (send button-panel stretchable-width #f)
@@ -184,31 +213,6 @@
            
            (super-instantiate ())
            
-           (define settings 
-             (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol)))
-           (define language
-             (drscheme:language-configuration:language-settings-language settings))
-           
-           
-           ;; render-to-string : TST -> string
-           (define (render-to-string val)
-                (let ([string-port (open-output-string)])
-                  (send language
-                        render-value
-                        val
-                        settings
-                        string-port
-                        #f)
-                  (get-output-string string-port)))
-           
-           ;; set-print-settings ; ( -> TST) -> TST
-           (define (set-print-settings thunk)
-             (unless (method-in-interface? 'set-print-settings (object-interface language))
-               (error 'stepper-tool "language object does nat contain set-print-settings method"))
-             (send language set-print-settings thunk))
-              
-           (set-render! render-to-string)
-           (set-set-print-settings! set-print-settings)           
                  
            (define program-expander
              (contract
@@ -264,4 +268,30 @@
            
            (send (get-button-panel) change-children
                  (lambda (l)
-                   (cons stepper-button (remq stepper-button l))))))))))
+                   (cons stepper-button (remq stepper-button l)))))))
+
+
+      ;; COPIED FROM drscheme/private/language.ss
+      ;; simple-module-based-language-convert-value : TST settings -> TST
+      (define (simple-module-based-language-convert-value value simple-settings)
+	(case (drscheme:language:simple-settings-printing-style simple-settings)
+	  [(write) value]
+	  [(constructor)
+	   (parameterize ([constructor-style-printing #t]
+			  [show-sharing (drscheme:language:simple-settings-show-sharing simple-settings)])
+			 (print-convert value))]
+	  [(quasiquote)
+	   (parameterize ([constructor-style-printing #f]
+			  [show-sharing (drscheme:language:simple-settings-show-sharing simple-settings)])
+			 (print-convert value))]))
+      
+      (unless (method-in-interface? 'render-value (object-interface language))
+	      (error 'stepper-tool "language object does not contain render-value method"))
+      (unless (method-in-interface? 'set-printing-parameters (object-interface language))
+	      (error 'stepper-tool "language object does not contain set-printing-parameters method"))
+      
+      ;; set-print-settings ; ( -> TST) -> TST
+      (define (set-print-settings thunk)
+	(unless (method-in-interface? 'set-printing-parameters (object-interface language))
+		(error 'stepper-tool "language object does not contain set-printing-parameters method"))
+	(send language set-printing-parameters thunk)))))

@@ -26,9 +26,9 @@
    (-> syntax? mark-list? symbol? (listof any?)
        (vectorof/n (listof exp-with-holes?) (listof exp-without-holes?))))
   
-  (define-values (true-false-printed? constructor-style-printing? abbreviate-cons-as-list?)
+  (define-values (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? render-to-sexp)
     (let ([not-set-yet (lx (error 'reconstruct "render-settings not yet set"))])
-      (values not-set-yet not-set-yet not-set-yet)))
+      (values not-set-yet not-set-yet not-set-yet not-set-yet)))
   
   (define set-render-settings!
     (contract
@@ -36,7 +36,8 @@
      (lambda (render-settings)
        (set! true-false-printed? (vector-ref render-settings 0))
        (set! constructor-style-printing? (vector-ref render-settings 1))
-       (set! abbreviate-cons-as-list? (vector-ref render-settings 2)))
+       (set! abbreviate-cons-as-list? (vector-ref render-settings 2))
+       (set! render-to-sexp (vector-ref render-settings 3)))
      'reconstruct
      'caller))
   
@@ -154,8 +155,7 @@
                 (let ([mark (closure-record-mark closure-record)])
                   (recon-source-expr (mark-source mark) (list mark) null))])]
         [else
-         (d->so (make-renderable val))]))
-    )
+         (d->so (datum->syntax-object #'here (render-to-sexp val)))])))
   
   (define (let-rhs-recon-value val)
     (recon-value val 'let-rhs))
