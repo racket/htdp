@@ -1,4 +1,4 @@
-(module master mzscheme
+#cs(module master mzscheme
   (provide master)
   
   (require "error.ss"

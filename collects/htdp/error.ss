@@ -1,4 +1,4 @@
-(module error mzscheme
+#cs(module error mzscheme
   (require (lib "etc.ss") (lib "list.ss"))
   ;; --------------------------------------------------------------------------
   (provide check-arg check-arity check-proc check-result check-list-list find-non)

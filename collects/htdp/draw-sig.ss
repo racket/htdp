@@ -1,12 +1,13 @@
+#cs(module draw-sig mzscheme
+  (provide core-draw^ draw^)
+  (require (lib "unitsig.ss"))
+  
 ;; xxx-solid-rect cannot be called xxx-solid-rectangle because that
 ;; interferes with the existing xxx-solid-rectangle name in our unit
 ;; calculus -- mf 
 
-(module draw-sig mzscheme
-  (provide core-draw^ draw^)
-  (require (lib "unitsig.ss"))
-  
-  #cs(define-signature core-draw^
+
+  (define-signature core-draw^
        (start 
         start/cartesian-plane
         stop 

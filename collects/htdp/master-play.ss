@@ -1,4 +1,4 @@
-(module master-play mzscheme
+#cs(module master-play mzscheme
   (require 
    "master.ss"
    (lib "prim.ss" "lang"))

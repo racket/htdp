@@ -1,4 +1,4 @@
-(module lkup-gui mzscheme
+#cs(module lkup-gui mzscheme
   (require (lib "error.ss" "htdp")
 	   (lib "class.ss")
            (lib "prim.ss" "lang")

@@ -1,4 +1,4 @@
-#cs(module guess mzscheme
+#cs#cs(module guess mzscheme
      (require (lib "error.ss" "htdp")
               (lib "unitsig.ss")
               (lib "etc.ss")

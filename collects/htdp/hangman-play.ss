@@ -1,12 +1,3 @@
-#|
-
-Matthias writes, about this file:
-> I just remembered. I removed it because I didn't think kids should be able
-> to look up the solution to the exercise. They don't need to be able to play 
-> the game before they write it. -- Matthias
-
-|#
-
 (module hangman-play mzscheme
   (require "hangman.ss"
            "big-draw.ss"

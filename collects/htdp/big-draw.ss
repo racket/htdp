@@ -1,4 +1,4 @@
-(module big-draw mzscheme
+#cs(module big-draw mzscheme
   (require "error.ss"
            "draw-sig.ss"
            (lib "etc.ss")

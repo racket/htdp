@@ -1,4 +1,4 @@
-(module elevator mzscheme
+#cs(module elevator mzscheme
   (require (lib "big-draw.ss" "htdp")
 	   (lib "error.ss" "htdp")
 	   (lib "posn.ss" "lang")

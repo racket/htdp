@@ -1,4 +1,4 @@
-(module gui mzscheme
+#cs(module gui mzscheme
   (require (lib "error.ss" "htdp")
            (lib "mred.ss" "mred")
            (lib "class.ss")

@@ -1,6 +1,4 @@
-;; TODO: docs, htdp update 
-
-(module convert mzscheme
+#cs(module convert mzscheme
   (require (lib "unitsig.ss")
            (lib "etc.ss")
            (lib "class.ss")

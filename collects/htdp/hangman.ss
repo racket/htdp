@@ -1,5 +1,4 @@
-
-(module hangman mzscheme
+#cs(module hangman mzscheme
   (require "error.ss"
 	   "draw-sig.ss"
 	   "big-draw.ss"

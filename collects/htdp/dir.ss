@@ -1,4 +1,4 @@
-(module dir mzscheme
+#cs(module dir mzscheme
   (require (lib "error.ss" "htdp")
            (lib "list.ss")
            (lib "prim.ss" "lang"))

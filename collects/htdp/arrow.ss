@@ -1,4 +1,4 @@
-(module arrow mzscheme
+#cs(module arrow mzscheme
   
   (require (lib "error.ss" "htdp")
            (lib "big-draw.ss" "htdp")

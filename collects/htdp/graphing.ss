@@ -1,4 +1,4 @@
-(module graphing mzscheme
+#cs(module graphing mzscheme
   (require (lib "error.ss" "htdp")
 	   (lib "unitsig.ss")
 	   (lib "draw-sig.ss" "htdp")
@@ -61,6 +61,12 @@
   ;; draw-tab : (list-of (make-posn num num)) symbol -> true
   (define (draw-tab lop color)
     (for-each (lambda (p) (draw-solid-disk p DOT color)) lop)
+    (unless (or (null? lop) (null? (cdr lop)))
+      (let loop ([f (car lop)][r (cdr lop)])
+        (unless (null? r) 
+          (let ([next (car r)])
+            (draw-solid-line f next color)
+            (loop next (cdr r))))))
     #t)
   
   (define EAST  400)

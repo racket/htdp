@@ -1,4 +1,4 @@
-(module guess-gui mzscheme
+#cs(module guess-gui mzscheme
   (require (lib "error.ss" "htdp")
 	   (lib "mred.ss" "mred")
 	   (lib "class.ss")
