@@ -2,7 +2,9 @@
 The "lang" collection defines a number of modules that can serve as
 languages for other modules (i.e., as the initial import):
 
- * _r5rs.ss_ - provides R5RS Scheme
+ * _r5rs.ss_ - provides R5RS Scheme, plus _#%provide_ (instead of
+   `provide'), _#%require_ (instead of `#%require'), `#%app',
+   `%datum', etc.
 
  * _plt-pretty-big-text.ss_ - provides MzScheme plus the
    following MzLib libraries: etc.ss, file.ss, list.ss,

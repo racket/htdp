@@ -47,7 +47,10 @@
 	   ;; We have to include the following MzScheme-isms to do anything,
 	   ;; but they're not legal R5RS names, anyway.
 	   #%app #%datum #%top 
-	   (rename synrule-in-stx-module-begin #%module-begin))
+	   (rename synrule-in-stx-module-begin #%module-begin)
+	   (rename require #%require)
+	   (rename provide #%provide))
+	   
 
   (define-syntax synrule-in-stx-module-begin
     (lambda (stx)
