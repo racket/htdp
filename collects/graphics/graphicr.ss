@@ -112,13 +112,13 @@
 		  [sixm (make-sixmouse x y left? middle? right?)])
 	     (set! current-mouse-posn (make-posn x y))
 	     (cond
-	       [(send mouse-event button-down?) 
+	       [(send mouse-event button-down?)
 		(send click-queue add sixm)]
 	       [(send mouse-event button-up?)
 		(send release-queue add sixm)]
 	       [else (void)])
 	     (when event-sema
-		   (semaphore-post event-sema))))]
+	       (semaphore-post event-sema))))]
 	
 	[on-char
 	 (lambda (key-event)
@@ -230,7 +230,9 @@
        [else (send (viewport-canvas viewport) wait-event) (get-key-press viewport)])))
   
   (define ready-mouse-click
-    (lambda (viewport) (send (viewport-canvas viewport) get-click)))
+    (lambda (viewport)
+      (mred:yield)
+      (send (viewport-canvas viewport) get-click)))
   
   (define ready-mouse-release
     (lambda (viewport) (send (viewport-canvas viewport) get-release)))
@@ -801,13 +803,13 @@
 	(values (opt-lambda (viewport posn [color #f])
 		  (when color
 		    (set-viewport-pen viewport (get-pen color)))
-		  (do-job viewport posn 'copy))
+		  (do-job viewport posn 'solid))
 		(lambda (viewport posn)
 		  (do-job viewport posn 'xor))
 		(opt-lambda (viewport posn [color #f])
 		  (when color
 		    (set-viewport-pen viewport (get-pen color)))
-		  (do-job viewport posn 'opaque))))))
+		  (do-job viewport posn 'solid))))))
 
   (define-values (draw-pixmap-posn
 		  clear-pixmap-posn
