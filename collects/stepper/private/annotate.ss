@@ -474,16 +474,13 @@
             (define (break-wrap expr)
               #`(begin (#,normal-break) #,expr))
             
-            ; turning off both kinds of let-wrapping :
-            
             (define (double-break-wrap expr)
-              expr)
-            ;#`(begin (#,(make-break 'double-break)) #,expr))
+              #`(begin (#,(make-break 'double-break)) #,expr))
             
             (define (late-let-break-wrap var-names lifted-gensyms expr)
-              expr)
-            ;(let* ([interlaced (apply append (map list var-names lifted-gensyms))])
-            ;      #`(begin (#,(make-break 'late-let-break) #,@interlaced) #,expr)))
+              (let* ([interlaced (apply append (map list var-names lifted-gensyms))])
+                #`(begin (#,(make-break 'late-let-break) #,@interlaced) #,expr)))
+            
             
             (define (return-value-wrap expr)
               #`(let* ([result #,expr])
@@ -760,22 +757,21 @@
                                               (map (lambda (binding-set val)
                                                      #`(set!-values #,binding-set #,val))
                                                    binding-sets
-                                                   annotated-vals)]
-                                             [interlaced-clauses
-                                              (foldl (lambda (a b) (append b a)) null 
-                                                     (zip set!-clauses counter-clauses))] 
+                                                   annotated-vals)] 
                                              ; time to work from the inside out again
                                              ; without renaming, this would all be much much simpler.
-                                             [middle-begin
-                                              (double-break-wrap #`(begin #,@interlaced-clauses 
-                                                                          #,(late-let-break-wrap binding-list
-                                                                                                 lifted-vars
-                                                                                                 tagged-body)))]
                                              [wrapped-begin (wcm-wrap (make-debug-info-let free-varrefs
                                                                                            binding-list
                                                                                            let-counter) 
-                                                                      middle-begin)])
-                                        (2vals (quasisyntax/loc expr (#,output-identifier #,outer-initialization #,wrapped-begin)) free-varrefs)))))]
+                                                                      (double-break-wrap
+                                                                       #`(begin #,@(apply append (zip set!-clauses counter-clauses)) 
+                                                                                #,(late-let-break-wrap binding-list
+                                                                                                       lifted-vars
+                                                                                                       tagged-body))))])
+                                        (2vals (quasisyntax/loc 
+                                                expr 
+                                                (#,output-identifier #,outer-initialization #,wrapped-begin)) 
+                                               free-varrefs)))))]
                                
                                ; if-abstraction: (-> syntax? syntax? (or/f false? syntax?) (values syntax? varref-set?))
                                [if-abstraction

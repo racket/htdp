@@ -66,22 +66,24 @@
    )
   
   ; an exp-with-holes is either:
-  ; - a pair,
+  ; - a pair of exp-with-holes's,
   ; - null,
   ; - a symbol, or
   ; - the highlight-placeholder
   
   (define exp-without-holes-base-case? (or/f symbol? null?))
   (define exp-without-holes?
-    (lambda (val)
-      (or (and (pair? val) (exp-without-holes? (car val)) (exp-without-holes? (cdr val)))
-          (exp-without-holes-base-case? val))))
+    (or/f exp-without-holes-base-case?
+          (and/f pair?
+                 (lambda (val)
+                   (and (exp-without-holes? (car val)) (exp-without-holes? (cdr val)))))))
   
   (define exp-with-holes-base-case? (or/f exp-without-holes-base-case? (lx (eq? _ highlight-placeholder))))
   (define exp-with-holes?
-    (lambda (val)
-      (or (and (pair? val) (exp-with-holes? (car val)) (exp-with-holes? (cdr val)))
-          (exp-with-holes-base-case? val))))
+    (or/f exp-with-holes-base-case?
+          (and/f pair? 
+                 (lambda (val)
+                   (and (exp-with-holes? (car val)) (exp-with-holes? (cdr val)))))))
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)

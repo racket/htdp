@@ -17,26 +17,21 @@
   (provide/contract 
    [reconstruct-completed (-> syntax? any? any)]
    [reconstruct-current (-> syntax? mark-list? symbol? (listof any?)
-       (vector/p (listof exp-with-holes?) (listof exp-without-holes?)))]
-   final-mark-list?
+       (list/p (listof exp-with-holes?) (listof exp-without-holes?)))]
+   [final-mark-list? (-> mark-list? boolean?)]
    [skip-step? (-> break-kind? mark-list? boolean?)]
-   [set-render-settings! (-> render-settings-contract any)]
+   [set-render-settings! (-> render-settings? any)]
    )
   
   (define-values (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? render-to-sexp)
     (let ([not-set-yet (lx (error 'reconstruct "render-settings not yet set"))])
       (values not-set-yet not-set-yet not-set-yet not-set-yet)))
   
-  (define set-render-settings!
-    (contract
-     (-> render-settings? void?)
-     (lambda (render-settings)
-       (set! true-false-printed? (vector-ref render-settings 0))
+  (define (set-render-settings! render-settings)
+     (set! true-false-printed? (vector-ref render-settings 0))
        (set! constructor-style-printing? (vector-ref render-settings 1))
        (set! abbreviate-cons-as-list? (vector-ref render-settings 2))
        (set! render-to-sexp (vector-ref render-settings 3)))
-     'reconstruct
-     'caller))
   
   (define the-undefined-value (letrec ([x x]) x))
   
@@ -91,13 +86,6 @@
   ; test cases
   ; (test (2vals '(a b c) '(d e f)) n-split-list 3 '(a b c d e f))
 
-  ; multi-append : (('a list) list) -> ('a list)
-  ; applies append to a bunch of lists.  Would be trivial, except I'm trying to avoid
-  ; using 'apply'.
-  
-  (define (multi-append lol)
-    (foldl (lambda (a b) (append b a)) null lol))
-  
   ; reshape-list : ('a list) ('b sexp) -> ('a tree)
   ; reshape-list produces a new sexp with the shape of <template> whose in-order leaf traversal
   ; is <source>.
@@ -452,7 +440,7 @@
                        (lambda ()
                          (with-syntax ([(label  ((vars val) ...) body) expr])
                            (let* ([bindings (map syntax->list (syntax->list (syntax (vars ...))))]
-                                  [binding-list (multi-append bindings)]
+                                  [binding-list (apply append bindings)]
                                   [right-sides (map recur (syntax->list (syntax (val ...))))]
                                   [recon-body (let-recur (syntax body) binding-list)])
                              (with-syntax ([(recon-val ...) right-sides]
@@ -699,21 +687,22 @@
                   [recon-let
                    (lambda ()
                      (with-syntax ([(label ((vars rhs) ...) . bodies) expr])
-                       (let*-2vals ([binding-sets (map syntax->list (syntax->list (syntax (vars ...))))]
-                                    [binding-list (multi-append binding-sets)]
-                                    [rhs-vals (map (lambda (arg-binding) 
-                                                     (lookup-binding mark-list arg-binding))
-                                                   binding-list)]
-                                    [rhs-val-sets (reshape-list rhs-vals binding-sets)]
-                                    [rhs-name-sets
-                                     (map (lambda (binding-set)
-                                            (map (lambda (binding)
+                       (let*-2vals ([binding-sets (map syntax->list (syntax->list #'(vars ...)))]
+                                    [binding-list (apply append binding-sets)]
+                                    [glumps 
+                                     (map (lambda (binding-set rhs)
+                                            (make-let-glump
+                                             (map (lambda (binding)
                                                    (syntax-property binding
                                                                     'stepper-lifted-name
-                                                                    (binding-lifted-name mark-list binding)))
-                                                 binding-set))
-                                          binding-sets)]
-                                    [glumps (map make-let-glump rhs-name-sets (syntax->list (syntax (rhs ...))) rhs-val-sets)]
+                                                                     (binding-lifted-name mark-list binding)))
+                                                 binding-set)
+                                             rhs
+                                             (map (lambda (arg-binding) 
+                                                     (lookup-binding mark-list arg-binding))
+                                                  binding-set)))
+                                          binding-sets
+                                          (syntax->list #`(rhs ...)))]
                                     [num-defns-done (lookup-binding mark-list let-counter)]
                                     [(done-glumps not-done-glumps)
                                      (n-split-list num-defns-done glumps)]
@@ -725,7 +714,7 @@
                                      (lambda (names expr)
                                        #`(#,names #,expr))]
                                     [before-bindings
-                                     (multi-append
+                                     (apply append
                                       (map
                                        (lambda (glump)
                                          (let* ([rhs-val-set (let-glump-val-set glump)]
@@ -748,7 +737,7 @@
                                     [recon-bindings (append before-bindings after-bindings)]
                                     [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list))
                                                            (syntax->list (syntax bodies)))])
-                         (attach-info #`(#,(syntax label) #,recon-bindings #,@rectified-bodies) expr))))])
+                         (attach-info #`(label #,recon-bindings #,@rectified-bodies) expr))))])
              (kernel:kernel-syntax-case expr #f 
                ; variable references
                [id
@@ -890,7 +879,8 @@
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
                      (unwind (list recon-expr) (list redex))))
                   ((double-break late-let-break)
-                   (error 'answer "lifting turned off"))
+                   (let ([recon-expr (recon nothing-so-far mark-list #t)])
+                     (unwind (list recon-expr) (list redex))))
                   ;                  ((double-break)
                   ;                   (rectify-let-values-step))
                   ;                  ((late-let-break)
