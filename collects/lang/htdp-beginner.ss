@@ -150,7 +150,7 @@
 	     "to determine the closest integer above a real number")
     
     (round (real -> int)
-	   "to round a real number to an integer")
+	   "to round a real number to an integer (rounds to even to break ties)")
     
     (complex? (any -> bool)
 	      "to determine whether some value is complex")
