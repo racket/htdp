@@ -291,7 +291,7 @@ tracing todo:
         (class %
           (inherit get-manual)
           (define/override (order-manuals x) 
-            (values (list (get-manual) "teachpack" "drscheme" "help") #f))
+            (values (list (get-manual) #"teachpack" #"drscheme" #"help") #f))
           
           (inherit get-module get-transformer-module get-init-code
                    use-namespace-require/copy?)
@@ -912,7 +912,7 @@ tracing todo:
          (instantiate htdp-language% ()
            (one-line-summary (string-constant advanced-one-line-summary))
            (module '(lib "htdp-advanced.ss" "lang"))
-           (manual "advanced")
+           (manual #"advanced")
            (language-position
             (list (string-constant teaching-languages)
                   (string-constant how-to-design-programs)
@@ -926,7 +926,7 @@ tracing todo:
          (instantiate htdp-language% ()
            (one-line-summary (string-constant intermediate/lambda-one-line-summary))
            (module '(lib "htdp-intermediate-lambda.ss" "lang"))
-           (manual "intermediate-lambda")
+           (manual #"intermediate-lambda")
            (language-position
             (list (string-constant teaching-languages)
                   (string-constant how-to-design-programs)
@@ -949,7 +949,7 @@ tracing todo:
          (instantiate htdp-language% ()
            (one-line-summary (string-constant intermediate-one-line-summary))
            (module '(lib "htdp-intermediate.ss" "lang"))
-           (manual "intermediate")
+           (manual #"intermediate")
            (language-position
             (list (string-constant teaching-languages)
                   (string-constant how-to-design-programs)
@@ -964,7 +964,7 @@ tracing todo:
          (instantiate htdp-language% ()
            (one-line-summary (string-constant beginning/abbrev-one-line-summary))
            (module '(lib "htdp-beginner-abbr.ss" "lang"))
-           (manual "beginning-abbr")
+           (manual #"beginning-abbr")
            (language-position
             (list (string-constant teaching-languages)
                   (string-constant how-to-design-programs)
@@ -978,7 +978,7 @@ tracing todo:
          (instantiate htdp-language% ()
            (one-line-summary (string-constant beginning-one-line-summary))
            (module '(lib "htdp-beginner.ss" "lang"))
-           (manual "beginning")
+           (manual #"beginning")
            (language-position
             (list (string-constant teaching-languages)
                   (string-constant how-to-design-programs)
