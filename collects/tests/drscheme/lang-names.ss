@@ -159,15 +159,12 @@
       cdr
       list?
       list
-      memq
-      assq
       -))
   
   (define intermediate-adds
     '(time
       let 
       unquote-splicing
-      let-struct
       letrec
       let*
       unquote
@@ -178,6 +175,8 @@
   (define advanced-adds
     '(procedure?
       assf
+      memq
+      assq
       mergesort
       set-cdr!
       string-copy
