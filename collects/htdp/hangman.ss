@@ -245,7 +245,7 @@
             ;; abstraction breaking hack.
             (parameterize ([current-inspector (dynamic-require 'drscheme-secrets 'drscheme-inspector)])
               (unless (struct? a-word)
-                (error 'hangman "expected a struct, got: ~a" a-word))
+                (error 'hangman "expected a struct, got: ~e" a-word))
               (let ([word-vec (struct->vector a-word)])
                 (unless (= (vector-length word-vec) 4)
                   (error 'hangman "expected words to be structures with three fields, found ~a fields"
