@@ -86,26 +86,25 @@
   
   (define recon-value
     (opt-lambda (val render-settings [assigned-name #f])
-      (let ([closure-record (closure-table-lookup val (lambda () #f))])     
-        (if closure-record
-            (let* ([mark (closure-record-mark closure-record)]
-                   [base-name (closure-record-name closure-record)])
-              (if base-name
-                  (let* ([lifted-index (closure-record-lifted-index closure-record)]
-                         [name (if lifted-index
-                                   (construct-lifted-name base-name lifted-index)
-                                   base-name)])
-                    (if (and assigned-name (free-identifier=? base-name assigned-name))
-                        (recon-source-expr (mark-source mark) (list mark) null null render-settings)
-                        #`#,name))
-                  (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
-            (let* ([rendered ((render-settings-render-to-sexp render-settings) val)]
-                   [it (if (hash-table-get finished-xml-box-table val)
-                           (syntax-property #`#,rendered 'stepper-xml-value-hint 'from-xml-box)
-                           #`#,rendered)])
-              (if (symbol? rendered)
-                  #`#,it
-                  #`(#%datum . #,it)))))))
+      (if (hash-table-get finished-xml-box-table val)
+          (syntax-property #`(#%datum . #,val) 'stepper-xml-value-hint 'from-xml-box)
+          (let ([closure-record (closure-table-lookup val (lambda () #f))])     
+            (if closure-record
+                (let* ([mark (closure-record-mark closure-record)]
+                       [base-name (closure-record-name closure-record)])
+                  (if base-name
+                      (let* ([lifted-index (closure-record-lifted-index closure-record)]
+                             [name (if lifted-index
+                                       (construct-lifted-name base-name lifted-index)
+                                       base-name)])
+                        (if (and assigned-name (free-identifier=? base-name assigned-name))
+                            (recon-source-expr (mark-source mark) (list mark) null null render-settings)
+                            #`#,name))
+                      (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
+                (let* ([rendered ((render-settings-render-to-sexp render-settings) val)])
+                  (if (symbol? rendered)
+                      #`#,rendered
+                      #`(#%datum . #,rendered))))))))
     
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))

@@ -574,6 +574,44 @@
       [else (if (syntax? stx)
                 (syntax-object->datum stx)
                 stx)]))
+  
+  
+  ;; the xml-snip-creation@ unit accepts the xml-snip% and scheme-snip% classes and provides
+  ;; functions which map a "spec" to an xml-snip.
+  ;; An xml-spec is (listof xml-spec-elt)
+  ;; An xml-spec-elt is either
+  ;;  - a string,
+  ;;  - (cons/p 'scheme-box scheme-spec), or
+  ;;  - (cons/p 'splice-box scheme-spec)
+  ;;
+  ;; A scheme-spec is (listof scheme-spec-elt)
+  ;; A scheme-spec-elt is either
+  ;;  - a string, or
+  ;;  - (cons ... oh crud.
+  #;(define xml-snip-creation@
+    (unit/sig (create-xml-snip create-scheme-snip create-splice-snip)
+      (import (xml-snip% scheme-snip%))
+      
+      (define (construct-xml-box spec)
+        (let* ([new-xml-box (instantiate xml-snip% () 
+                              [eliminate-whitespace-in-empty-tags? #t])] ;  need to check what the languages themselves do here
+               [xml-editor (send new-xml-box get-editor)])
+          (for-each
+           (match-lambda
+            [`(scheme-box ,@(schemeboxspec ...)) (send new-xml-box insert (construct-scheme-box #f schemeboxspec))]
+            [`(splice-box ,@(spliceboxspec ...)) (send new-xml-box insert (construct-scheme-box #f spliceboxspec))]
+            [(? string? text) (send xml-editor insert text)])
+           spec)
+          new-xml-box))
+      
+      (define (construct-scheme-box splice? spec)
+        (let* ([new-scheme-box (instantiate scheme-snip% () [splice? splice?])]
+               [scheme-editor (send new-scheme-box get-editor)])
+          (for-each 
+           (match-lambda
+            [`(xml-box ,@(xmlspec ...)) (send scheme-editor insert (construct-xml-box xmlspec))]
+            [(? string? text) (send scheme-editor insert text)])
+           spec)))))
 
   )
   

@@ -1,12 +1,13 @@
 (module info (lib "infotab.ss" "setup")
   (define name "Stepper")
-  (define tools '(("stepper-tool.ss")
+  (define tools '(("stepper+xml-tool.ss")
                   ("debugger-tool.ss")
-		  ))
+                  ))
   (define tool-names (list "The Stepper" 
 			   "The Debugger"
 			   ))
   (define tool-icons (list '("foot-up.png" "icons") 
 			   '("foot-up.png" "icons")
 			   ))
-  (define compile-omit-files `("private/test-annotate.ss")))
+  (define compile-omit-files `("private/test-annotate.ss"))
+)

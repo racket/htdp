@@ -1,6 +1,6 @@
 
 (module xml-tool mzscheme
-  (require "private/xml-snip-helpers.ss"
+  (require "xml-snip-helpers.ss"
            (lib "unitsig.ss")
            (lib "class.ss")
            (lib "mred.ss" "mred")
