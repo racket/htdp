@@ -203,7 +203,7 @@
        (bad-use-error 'lambda stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; define-struct
+  ;; define-struct (beginner)
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
   (define-syntax (beginner-define-struct stx)
@@ -269,8 +269,18 @@
       [_else (bad-use-error 'define-struct stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; application
+  ;; application (beginner)
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  ;; This application form disallows rator expressions that aren't
+  ;; top-level identifiers or of the form `(check-not-undefined ...)'.
+
+  ;; The latter is probably surprising. It turns out that every use of
+  ;; a `local'-bound identifier gets converted to an undefined check,
+  ;; and the call to `check-not-udnefined' can't be forged by the
+  ;; programmer. So the pattern-match effectively recognizes uses of
+  ;; `local'-bound identifiers, which are legal as rator
+  ;; expressions. (`let' and `letrec' get converted to `local'.)
 
   (define-syntax (beginner-app stx)
     (syntax-case stx ()
