@@ -255,12 +255,11 @@
       
       (define (xml-box-frame-extension super%)
         (class super%
-          (inherit get-editor get-menu-bar get-edit-target-object)
+          (inherit get-editor get-special-menu get-edit-target-object)
           
           (super-instantiate ())
           
-          (let* ([mb (get-menu-bar)]
-                 [menu (make-object menu% (string-constant xml-tool-menu) mb)]
+          (let* ([menu (get-special-menu)]
                  [insert-snip
                   (lambda (make-obj)
                     (let ([editor (get-edit-target-object)])
@@ -276,13 +275,11 @@
             (make-object menu:can-restore-menu-item% (string-constant xml-tool-xml-box) menu
               (lambda (menu evt)
                 (insert-snip
-                 (lambda () (make-object xml-snip%))))
-              #\m)
+                 (lambda () (make-object xml-snip%)))))
             (make-object menu:can-restore-menu-item% (string-constant xml-tool-scheme-box) menu
               (lambda (menu evt)
                 (insert-snip 
-                 (lambda () (make-object evaluated-snip%))))
-              #\r))
+                 (lambda () (make-object evaluated-snip%))))))
           
           (frame:reorder-menus this)))
       
