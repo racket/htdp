@@ -846,13 +846,19 @@
 					   (quote-syntax tmp-id)))
 					...)
 				       ...)))))])
-		     (syntax/loc stx
-		       (let ()
-			 mapping ...
-			 stx-def ...
-			 (define-values (tmp-id ...) def-expr)
-			 ...
-			 . exprs))))))))]
+		     (syntax-property
+		      (syntax/loc stx
+			  (let ()
+			    mapping ...
+			    stx-def ...
+			    (define-values (tmp-id ...) def-expr)
+			    ...
+			    . exprs))
+		      'binding-in-source
+		      (apply list* (apply append 
+					  (map
+					   syntax->list
+					   (syntax->list (syntax ((def-id ...) ...)))))))))))))]
 	[(_ def-non-seq . __)
 	 (teach-syntax-error
 	  'local

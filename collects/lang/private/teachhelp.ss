@@ -11,18 +11,28 @@
 	   [(set! id expr)
 	    (module-identifier=? (syntax set!) set!-stx)
 	    (with-syntax ([tmp-id tmp-id])
-	      (syntax (set! tmp-id expr)))]
+	      (syntax-property
+	       (syntax (set! tmp-id expr))
+	       'bound-in-source
+	       (syntax id)))]
 	   [(id . args)
-	    (datum->syntax-object
-	     check-proc
-	     (cons (list check-proc 
-			 (list 'quote (syntax id))
-			 tmp-id)
-		   (syntax args)))]
+	    (syntax-property
+	     (datum->syntax-object
+	      check-proc
+	      (cons (list check-proc 
+			  (list 'quote (syntax id))
+			  tmp-id)
+		    (syntax args)))
+	     'bound-in-source
+	     (syntax id))]
 	   [id
-	    (datum->syntax-object
-	     check-proc
-	     (list check-proc 
-		   (list 'quote (syntax id))
-		   tmp-id))]))))))
+	    (syntax-property
+	     (datum->syntax-object
+	      check-proc
+	      (list check-proc 
+		    (list 'quote (syntax id))
+		    tmp-id))
+	     'bound-in-source
+	     (syntax id))]))))))
+
 

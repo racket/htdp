@@ -9,19 +9,19 @@
 
 ;; Check export names:
 (require (lib "docprovide.ss" "syntax"))
-(let ([docs (lookup-documentation '(lib "advanced.ss" "lang") 'procedures)])
+(let ([docs (lookup-documentation '(lib "htdp-advanced.ss" "lang") 'procedures)])
   (for-each
    (lambda (row)
      (for-each
       (lambda (doc)
-	(let ([v (dynamic-require '(lib "advanced.ss" "lang") (car doc))])
+	(let ([v (dynamic-require '(lib "htdp-advanced.ss" "lang") (car doc))])
 	  (when (and (procedure? v)
 		     (not (eq? v call/cc)))
 	    (test (car doc) object-name v))))
       (cdr row)))
    docs))
 
-(require (lib "advanced.ss" "lang"))
+(require (lib "htdp-advanced.ss" "lang"))
 
 (load-relative "beg-adv.ss")
 (load-relative "bega-adv.ss")

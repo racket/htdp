@@ -17,18 +17,18 @@
 
 ;; Check export names:
 (require (lib "docprovide.ss" "syntax"))
-(let ([docs (lookup-documentation '(lib "beginner-abbr.ss" "lang") 'procedures)])
+(let ([docs (lookup-documentation '(lib "htdp-beginner-abbr.ss" "lang") 'procedures)])
   (for-each
    (lambda (row)
      (for-each
       (lambda (doc)
-	(let ([v (dynamic-require '(lib "beginner-abbr.ss" "lang") (car doc))])
+	(let ([v (dynamic-require '(lib "htdp-beginner-abbr.ss" "lang") (car doc))])
 	  (when (procedure? v)
 	    (test (car doc) object-name v))))
       (cdr row)))
    docs))
 
-(require (lib "beginner-abbr.ss" "lang"))
+(require (lib "htdp-beginner-abbr.ss" "lang"))
 
 (load-relative "beg-adv.ss")
 (load-relative "beg-intml.ss")
