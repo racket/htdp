@@ -19,7 +19,7 @@
   
   (define-values (FRAME-W-DELTA FRAME-H-DELTA CANVAS-W-DELTA CANVAS-H-DELTA)
     (values 0 0 0 0))
-  
+    
   (define wx:sixlib-canvas%
     (class-asi mred:canvas% 
       (inherit get-parent set-size
@@ -130,17 +130,14 @@
 	
 	[get-click
 	 (lambda ()
-	   (wx:yield) ;; this may add entries to the queue
 	   (send click-queue remove))]
 
 	[get-release
 	 (lambda ()
-	   (wx:yield) ;; this may add entries to the queue
 	   (send release-queue remove))]
 	
 	[get-press
 	 (lambda ()
-	   (wx:yield) ;; this may add entries to the queue
 	   (send press-queue remove))]
 
 	[wait-event
@@ -878,8 +875,12 @@
 	      (viewport-height source)
 	      source-DC 0 0 wx:const-copy))))
   
+  (define sixlib-eventspace #f)
+
   (define make-open-viewport
     (lambda (name show?)
+      (unless sixlib-eventspace
+	(set! sixlib-eventspace (wx:make-eventspace)))
       (letrec ([open-viewport
 		(case-lambda
 		 [(label point) 
@@ -894,8 +895,9 @@
 		    [graphics-flag
 		     (let*
 			 ([frame
-			   (make-object sixlib-frame% '() label 1 1 
-					(* scale width) (* scale height))]
+			   (parameterize ([wx:current-eventspace sixlib-eventspace])
+			     (make-object sixlib-frame% '() label 1 1 
+					  (* scale width) (* scale height)))]
 			  [panel (make-object mred:vertical-panel% frame)]
 			  [canvas
 			   (make-object wx:sixlib-canvas%
