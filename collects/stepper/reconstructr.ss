@@ -3,6 +3,7 @@
           mzlib:function^
 	  [e : stepper:error^]
           [p : mzlib:print-convert^]
+          [b : userspace:basis^]
 	  stepper:shared^)
     
   (define nothing-so-far (gensym "nothing-so-far-"))
@@ -88,7 +89,10 @@
              (if recorded-name
                  recorded-name
                  'unknown-procedure))]
-          [else (p:print-convert val)]))
+          [else (parameterize
+                    ([p:constructor-style-printing #t]
+                     [p:abbreviate-cons-as-list #f])
+                  (p:print-convert val))]))
   
   (define (o-form-case-lambda->lambda o-form)
     (cond [(eq? (car o-form) 'lambda)
@@ -115,9 +119,7 @@
                         [var-top-level? (z:top-level-varref? expr)])
                    (if var-top-level?
                        (z:varref-var expr)
-                       (begin
-                         (printf "non-top-level-var: ~a~n" (z:varref-var expr))
-                         (rectify-value (var-val-thunk))))))]
+                       (rectify-value (var-val-thunk)))))]
             
             [(z:app? expr)
              (map recur (cons (z:app-fun expr) (z:app-args expr)))]
