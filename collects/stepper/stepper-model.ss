@@ -53,8 +53,6 @@
     (parameterize ([current-namespace user-namespace])
       (global-defined-value identifier)))
     
-  (define stepper-semaphore (make-semaphore))
-
   (define finished-exprs null)
 
   (define current-expr #f)
@@ -62,9 +60,34 @@
          
   (define user-eventspace (make-eventspace))
          
+  ;; user eventspace management
+  (define stepper-semaphore (make-semaphore))
+  (define stepper-awaken-arg #f)
+  (define eval-depth 0)
+  
+  (define (suspend-user-computation)
+    (semaphore-wait stepper-semaphore)
+    (cond 
+      [(eq? stepper-awaken-arg 'step)
+       (void)]
+      [(procedure? stepper-awaken-arg)
+       (stepper-awaken-arg)
+       (suspend-user-computation)]))
+
+  (define (continue-user-computation)
+    (set! stepper-awaken-arg 'step)
+    (semaphore-post stepper-semaphore))
+  
   (define (send-to-user-eventspace thunk)
-    (send-to-other-eventspace user-eventspace thunk))
-         
+    (set! stepper-awaken-arg thunk)
+    (semaphore-post stepper-semaphore))
+  
+  ;; start user thread going
+  (send-to-other-eventspace
+   user-eventspace
+   (lambda ()
+     
+
   (define user-primitive-eval #f)
   (define user-vocabulary #f)
          
