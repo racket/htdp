@@ -1,11 +1,8 @@
 ;; MrEd or MrED Debug language levels required
-(require-library "errortrace.ss" "errortrace")
-(require-library "turtle.ss" "graphics")
-
-(require-library "math.ss")
-(require-library "macro.ss")
-
-(require-library "turex.ss" "graphics")
+(require (lib "errortrace.ss" "errortrace")
+	 (lib "math.ss")
+	 (lib "turex.ss" "graphics")
+	 (lib "turtle.ss" "graphics"))
 
 (define frame (make-object frame% "Turtle Examples"))
 
@@ -35,7 +32,7 @@
 			  (car test)
 			  frame
 			  (lambda x 
-			    (turtles #t)
+                            (turtles #t)
 			    (clear)
 			    (yield)
 			    ((cadr test))))

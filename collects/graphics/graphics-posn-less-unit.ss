@@ -2,11 +2,30 @@
 ; Simple graphics routines for MrEd
 ; Originally written by Johnathan Franklin
 
+(module graphics-posn-less-unit mzscheme
+  (require (lib "unitsig.ss")
+	   (lib "mred-sig.ss" "mred")
+	   (lib "class.ss")
+	   (lib "class100.ss")
+	   (lib "etc.ss")
+	   "graphics-sig.ss")
+  (provide graphics-posn-less@)
+
+(define graphics-posn-less@
+
 (unit/sig graphics:posn-less^
-  (import mzlib:file^
-	  (mred : mred^)
+  (import (mred : mred^)
           graphics:posn^)
   
+  (define send/proc
+    (lambda (class method . args)
+      (send-generic class (make-generic mred:dc<%> method) . args)))
+
+  (define send/proc2
+    (lambda (class method . args)
+      (send-generic class (make-generic sixlib-canvas% method) . args)))
+
+
   (define-struct viewport (label canvas))
   (define-struct sixmouse (x y left? middle? right?))
   (define-struct sixkey (value))
@@ -18,15 +37,15 @@
   (define default-font (make-object mred:font% 12 'roman 'normal 'normal))
   
   (define sixlib-canvas%
-    (class-asi mred:canvas% 
+    (class100-asi mred:canvas% 
       (inherit get-parent
 	       min-client-width min-client-height
 	       stretchable-width stretchable-height)
-      (private
-	[current-mouse-posn (make-posn 0 0)]
+      (private-field
+        [current-mouse-posn (make-posn 0 0)]
 	[queue%
-	 (class object% ()
-	   (private
+	 (class100 object% ()
+	   (private-field
 	     [queue '()]
 	     [last #f]
 	     [lock (make-semaphore 1)]
@@ -73,8 +92,9 @@
 	     (super-init)))]
 	[click-queue (make-object queue%)]
 	[release-queue (make-object queue%)]
-	[press-queue (make-object queue%)]
-	[reset-size
+	[press-queue (make-object queue%)])
+      (private
+        [reset-size
 	 (lambda ()
            (min-client-width width)
            (min-client-height height)
@@ -92,10 +112,8 @@
            (send buffer-dc clear)
            (send dc clear))])
       
-      
-      (public
-	viewport
-	[set-viewport (lambda (x) (set! viewport x))]
+      (private-field ; were public
+        viewport
 	[height 0]
 	[width 0]
 	[label 0]
@@ -103,12 +121,21 @@
 	[current-brush 'uninitialized-brush]
 	[bitmap 'uninitalized-bitmap]
 	[dc 'uninitialized-dc]
-	[buffer-dc 'uninitialized-buffer-dc]
+	[buffer-dc 'uninitialized-buffer-dc])
+      
+      (public
+        [get-viewport (lambda () viewport)]
+	[set-viewport (lambda (x) (set! viewport x))]
+	[get-sixlib-height (lambda () height)]
+	[get-sixlib-width (lambda () width)]
 	[get-current-pen (lambda () current-pen)]
 	[get-current-brush (lambda () current-brush)]
+	[get-bitmap (lambda () bitmap)]
+	[get-sixlib-dc (lambda () dc)]
+	[get-buffer-dc (lambda () buffer-dc)]
 	[remember-pen (lambda (pen) (set! current-pen pen))]
 	[remember-brush (lambda (brush) (set! current-brush brush))])
-      
+
       (override
        [on-paint
 	(lambda ()
@@ -186,15 +213,16 @@
   (define open-frames-timer (make-object mred:timer%))
 
   (define sixlib-frame%
-    (class mred:frame% args
+    (class100 mred:frame% args
       (rename [super-on-close on-close])
+      (private-field ;was public
+	[canvas #f])
       (public
-	[canvas #f]
 	[set-canvas (lambda (x) (set! canvas x))])
       (override
        [on-close
 	(lambda ()
-	  (close-viewport (ivar canvas viewport))
+	  (close-viewport (send canvas get-viewport))
 	  (semaphore-wait open-frames-sema)
 	  (set! open-frames (- open-frames 1))
 	  (when (zero? open-frames)
@@ -214,15 +242,15 @@
   
   (define viewport-dc 
     (lambda (viewport)
-      (ivar (viewport-canvas viewport) dc)))
+      (send (viewport-canvas viewport) get-sixlib-dc)))
   
   (define viewport-buffer-dc
     (lambda (viewport)
-      (ivar (viewport-canvas viewport) buffer-dc)))
+      (send (viewport-canvas viewport) get-buffer-dc)))
 
   (define viewport-bitmap
     (lambda (viewport)
-      (ivar (viewport-canvas viewport) bitmap)))
+      (send (viewport-canvas viewport) get-bitmap)))
   
   (define viewport-frame
     (lambda (viewport)
@@ -230,11 +258,11 @@
   
   (define viewport-height
     (lambda (viewport)
-      (ivar (viewport-canvas viewport) height)))
+      (send (viewport-canvas viewport) get-sixlib-height)))
   
   (define viewport-width
     (lambda (viewport)
-      (ivar (viewport-canvas viewport) width)))
+      (send (viewport-canvas viewport) get-sixlib-width)))
   
   (define (get-mouse-click viewport)
     (send (viewport-canvas viewport) get-click-now))
@@ -274,18 +302,18 @@
   
   (define clear-viewport
     (lambda (viewport)
-      (let* ([clear (ivar (viewport-dc viewport) clear)]
-	     [clear2 (ivar (viewport-buffer-dc viewport) clear)])
+      (let* ([vdc (viewport-dc viewport)]
+	     [vbdc (viewport-buffer-dc viewport)])
 	(lambda ()
-	  (clear)
-	  (clear2)))))
+	  (send vdc clear)
+	  (send vbdc clear)))))
+
+
   
   (define draw-viewport
     (lambda (viewport)
       (let* ([dc (viewport-dc viewport)]
 	     [buffer-dc (viewport-buffer-dc viewport)]
-	     [draw (ivar dc draw-rectangle)]
-	     [draw2 (ivar buffer-dc draw-rectangle)]
 	     [w (viewport-width viewport)]
 	     [h (viewport-height viewport)])
 	(rec draw-viewport/color
@@ -299,8 +327,8 @@
 		 (send dc set-brush new-brush)
 		 (send buffer-dc set-pen new-pen)
 		 (send buffer-dc set-brush new-brush)
-		 (draw 0 0 w h)
-		 (draw2 0 0 w h)
+		 (send dc draw-rectangle 0 0 w h)
+		 (send buffer-dc draw-rectangle 0 0 w h)
 		 (send dc set-pen old-pen)
 		 (send buffer-dc set-pen old-pen)
 		 (send dc set-brush old-brush)
@@ -311,12 +339,6 @@
     (lambda (viewport)
       (let* ([dc (viewport-dc viewport)]
 	     [dc2 (viewport-buffer-dc viewport)]
-	     [set-pen (ivar dc set-pen)]
-	     [set-pen2 (ivar dc2 set-pen)]
-	     [set-brush (ivar dc set-brush)]
-	     [set-brush2 (ivar dc2 set-brush)]
-	     [draw (ivar dc draw-rectangle)]
-	     [draw2 (ivar dc2 draw-rectangle)]
 	     [w (viewport-width viewport)]
 	     [h (viewport-height viewport)])
 	(lambda ()
@@ -324,16 +346,16 @@
 		[pen2 (send dc2 get-pen)]
 		[brush (send dc get-brush)]
 		[brush2 (send dc2 get-brush)])
-	    (set-pen xor-pen)
-	    (set-pen2 xor-pen)
-	    (set-brush xor-brush)
-	    (set-brush2 xor-brush)
-	    (draw 0 0 w h)
-	    (draw2 0 0 w h)
-	    (set-pen pen)
-	    (set-pen2 pen2)
-	    (set-brush brush)
-	    (set-brush2 brush2))))))
+	    (send dc set-pen xor-pen)
+	    (send dc2 set-pen xor-pen)
+	    (send dc set-brush xor-brush)
+	    (send dc2 set-brush xor-brush)
+	    (send dc draw-rectangle 0 0 w h)
+	    (send dc2 draw-rectangle 0 0 w h)
+	    (send dc set-pen pen)
+	    (send dc2 set-pen pen2)
+	    (send dc set-brush brush)
+	    (send dc2 set-brush brush2))))))
   
   (define close-viewport
     (lambda (viewport)
@@ -514,52 +536,42 @@
   (define clear-it (lambda (draw flip clear) (clear)))
   
   (define make-draw-proc
-    (lambda (draw-name get-pen-name set-pen-name 
-		       get-current-pen-name set-viewport-pen white-pen)
+    (lambda (get-pen-name set-pen-name 
+	     get-current-pen-name set-viewport-pen white-pen)
       (lambda (viewport) 
-	(let* ([current-pen (ivar/proc (viewport-canvas viewport) get-current-pen-name)]
-	       [draw-1 (ivar/proc (viewport-dc viewport) draw-name)]
-	       [draw-2 (ivar/proc (viewport-buffer-dc viewport) draw-name)]
-	       [get-pen (ivar/proc (viewport-dc viewport) get-pen-name)]
-	       [real-get-brush (ivar/proc (viewport-dc viewport) 'get-brush)]
-	       [real-get-pen (ivar/proc (viewport-dc viewport) 'get-pen)]
-	       [set-pen-1 (ivar/proc (viewport-dc viewport) set-pen-name)]
-	       [set-pen-2 (ivar/proc (viewport-buffer-dc viewport) set-pen-name)]
-	       [real-set-brush-1 (ivar/proc (viewport-dc viewport) 'set-brush)]
-	       [real-set-brush-2 (ivar/proc (viewport-buffer-dc viewport) 'set-brush)]
-	       [real-set-pen-1 (ivar/proc (viewport-dc viewport) 'set-pen)]
-	       [real-set-pen-2 (ivar/proc (viewport-buffer-dc viewport) 'set-pen)])
+	(let* ([vdc (viewport-dc viewport)]
+	       [vbdc (viewport-buffer-dc viewport)])
 	  (lambda (color go)
 	    (let ([orig (and color
 			     (begin0
-			      (current-pen)
+			      (send/proc2 (viewport-canvas viewport) 
+					  get-current-pen-name)
 			      (set-viewport-pen viewport (get-color color))))])
-	      (go draw-1 draw-2
-		  (lambda (draw)
-		    (let ([pen (real-get-pen)]
-			  [brush (real-get-brush)])
-		      (real-set-brush-1 xor-brush)
-		      (real-set-brush-2 xor-brush)
-		      (real-set-pen-1 xor-pen)
-		      (real-set-pen-2 xor-pen)
+	      (go (lambda (draw)
+		    (let ([pen (send vdc get-pen)]
+			  [brush (send vdc get-brush)])
+		      (send vdc set-brush xor-brush)
+		      (send vbdc set-brush xor-brush)
+		      (send vdc set-pen xor-pen)
+		      (send vbdc set-pen xor-pen)
 		      (draw)
-		      (real-set-brush-1 brush)
-		      (real-set-brush-2 brush)
-		      (real-set-pen-1 pen)
-		      (real-set-pen-2 pen)))
+		      (send vdc set-brush brush)
+		      (send vbdc set-brush brush)
+		      (send vdc set-pen pen)
+		      (send vbdc set-pen pen)))
 		  (lambda (draw)
-		    (let ([pen (get-pen)])
-		      (set-pen-1 white-pen)
-		      (set-pen-2 white-pen)
+		    (let ([pen (send/proc vdc get-pen-name)])
+		      (send/proc vdc set-pen-name white-pen)
+		      (send/proc vbdc set-pen-name white-pen)
 		      (draw)
-		      (set-pen-1 pen)
-		      (set-pen-2 pen))))
+		      (send/proc vdc set-pen-name pen)
+		      (send/proc vbdc set-pen-name pen))))
 	      (when orig
-		(set-viewport-pen viewport orig))))))))
+	        (set-viewport-pen viewport orig))))))))
   
   (define make-do-line
     (lambda (go)
-      (let ([f (make-draw-proc 'draw-line 'get-pen 'set-pen 
+      (let ([f (make-draw-proc 'get-pen 'set-pen 
 			       'get-current-pen set-viewport-pen white-pen)])
 	(lambda (viewport)
 	  (let ([f (f viewport)])
@@ -568,14 +580,18 @@
 		       [(posn1 posn2) (the-function posn1 posn2 #f)]
 		       [(posn1 posn2 color)
 			(f color
-			   (lambda (draw-1 draw-2 flip clear)
+			   (lambda (flip clear)
 			     (let* ([x1 (posn-x posn1)]
 				    [y1 (posn-y posn1)]
 				    [x2 (posn-x posn2)]
 				    [y2 (posn-y posn2)]
 				    [draw (lambda ()
-					    (draw-1 x1 y1 x2 y2)
-					    (draw-2 x1 y1 x2 y2))])
+					    (send (viewport-dc viewport) 
+						  draw-line 
+						  x1 y1 x2 y2)
+					    (send (viewport-buffer-dc viewport)
+						  draw-line
+						  x1 y1 x2 y2))])
 			       (go draw
 				   (lambda () (flip draw))
 				   (lambda () (clear draw))))))])])
@@ -599,8 +615,8 @@
 	    [buffer-dc (viewport-buffer-dc viewport)])
 	(init-dc dc)
 	(init-dc buffer-dc)
-	((ivar/proc dc ivar) (posn-x p) (posn-y p) width height)
-	((ivar/proc buffer-dc ivar) (posn-x p) (posn-y p) width height))))
+	(send/proc dc ivar (posn-x p) (posn-y p) width height)
+	(send/proc buffer-dc ivar (posn-x p) (posn-y p) width height))))
   
   (define draw/clear/flip-rectangle (draw/clear/flip 'draw-rectangle))
   (define draw/clear/flip-ellipse (draw/clear/flip 'draw-ellipse))
@@ -801,32 +817,38 @@
     (lambda (go name get-pen-name set-pen-name
 		get-current-pen-name set-viewport-pen white-pen
 		get-brush-name set-brush-name invisi-brush)
-      (let ([f (make-draw-proc name get-pen-name set-pen-name 
+      (let ([f (make-draw-proc get-pen-name set-pen-name 
 			       get-current-pen-name set-viewport-pen white-pen)])
 	(lambda (viewport)
 	  (let ([f (f viewport)]
-		[get-brush (ivar/proc (viewport-dc viewport) get-brush-name)]
-		[set-brush-1 (ivar/proc (viewport-dc viewport) set-brush-name)]
-		[set-brush-2 (ivar/proc (viewport-buffer-dc viewport) set-brush-name)])
+		[vdc (viewport-dc viewport)]
+		[vbdc (viewport-buffer-dc viewport)])
 	    (letrec ([the-function
 		      (case-lambda
 		       [(posns offset) (the-function posns offset #f)]
 		       [(posns offset color)
 			(f color
-			   (lambda (draw-1 draw-2 flip clear)
+			   (lambda (flip clear)
 			     (let* ([points (map (lambda (p)
 						   (make-object mred:point% (posn-x p) (posn-y p)))
 						 posns)]
 				    [x (posn-x offset)]
 				    [y (posn-y offset)]
-				    [orig (get-brush)]
+				    [orig (send/proc vdc get-brush-name)]
 				    [draw (lambda ()
-					    (set-brush-1 invisi-brush)
-					    (set-brush-2 invisi-brush)
-					    (draw-1 points x y)
-					    (draw-2 points x y)
-					    (set-brush-1 orig)
-					    (set-brush-2 orig))])
+					    (send/proc vdc set-brush-name
+						       invisi-brush)
+					    (send/proc vbdc set-brush-name
+						       invisi-brush)
+					    (send/proc 
+					     (viewport-dc viewport) name
+					     points x y)
+					    (send/proc 
+					     (viewport-buffer-dc viewport) name
+					     points x y)
+					    (send/proc vdc set-brush-name orig)
+					    (send/proc vbdc set-brush-name
+						       orig))])
 			       (go draw
 				   (lambda () (flip draw))
 				   (lambda () (clear draw))))))])])
@@ -870,7 +892,7 @@
   
   (define make-do-pixel
     (lambda (go)
-      (let ([f (make-draw-proc 'draw-point 'get-pen 'set-pen  
+      (let ([f (make-draw-proc 'get-pen 'set-pen  
 			       'get-current-pen set-viewport-pen white-pen)])
 	(lambda (viewport)
 	  (let ([f (f viewport)])
@@ -879,12 +901,17 @@
 		       [(posn) (the-function posn #f)]
 		       [(posn color)
 			(f color
-			   (lambda (draw-1 draw-2 flip clear)
+			   (lambda (flip clear)
 			     (let* ([x (posn-x posn)]
 				    [y (posn-y posn)]
 				    [draw (lambda ()
-					    (draw-1 x y)
-					    (draw-2 x y))])
+					    (send 
+					     (viewport-dc viewport) draw-point
+					     x y)
+					    (send 
+					     (viewport-buffer-dc viewport)
+					     draw-point 
+					     x y))])
 			       (go draw 
 				   (lambda () (flip draw)) 
 				   (lambda () (clear draw))))))])])
@@ -957,43 +984,39 @@
     (case-lambda
      [(viewport) (get-string-size viewport default-font)]
      [(viewport font)
-      (let ([get-extent (ivar (viewport-dc viewport) get-text-extent)])
-	(lambda (text)
-	  (let-values ([(w h d a) (get-extent text font)])
-	    (list w h))))]))
+      (lambda (text)
+	(let-values ([(w h d a) (send (viewport-dc viewport) get-text-extent text font)])
+	  (list w h)))]))
   
   (define get-color-pixel 
     (lambda (viewport)
-      (let ([get-pixel (ivar (viewport-buffer-dc viewport) get-pixel)])
-	(lambda (posn)
-	  (let ([c (make-object mred:color%)]
-		[x (posn-x posn)]
-		[y (posn-y posn)])
-	    (unless (get-pixel x y c)
-	      (error 'get-color-pixel "specified point is out-of-range"))
-	    c)))))
+      (lambda (posn)
+	(let ([c (make-object mred:color%)]
+	      [x (posn-x posn)]
+	      [y (posn-y posn)])
+	  (unless (send (viewport-buffer-dc viewport) get-pixel x y c)
+	    (error 'get-color-pixel "specified point is out-of-range"))
+	  c))))
   
   (define get-pixel 
     (lambda (viewport)
-      (let ([get-pixel (ivar (viewport-buffer-dc viewport) get-pixel)])
-	(lambda (posn)
-	  (let ([c (make-object mred:color%)]
-		[x (posn-x posn)]
-		[y (posn-y posn)])
-	    (unless (get-pixel x y c)
-	      (error 'get-pixel "specified point is out-of-range"))
-	    (if (or (< (send c blue) 255)
-		    (< (send c red) 255)
-		    (< (send c green) 255))
-		1
-		0))))))
+      (lambda (posn)
+	(let ([c (make-object mred:color%)]
+	      [x (posn-x posn)]
+	      [y (posn-y posn)])
+	  (unless (send (viewport-buffer-dc viewport) get-pixel x y c)
+	    (error 'get-pixel "specified point is out-of-range"))
+	  (if (or (< (send c blue) 255)
+		  (< (send c red) 255)
+		  (< (send c green) 255))
+	      1
+	      0)))))
   
   (define (test-pixel viewport)
-    (let ([try-color (ivar (viewport-buffer-dc viewport) try-color)])
-      (lambda (color)
-        (let ([c (make-object mred:color%)])
-          (try-color color c)
-          c))))
+    (lambda (color)
+      (let ([c (make-object mred:color%)])
+	(send (viewport-buffer-dc viewport) try-color color c)
+	c)))
 
   (define draw-pixmap-posn
     (opt-lambda (filename [type 'unknown])
@@ -1121,7 +1144,7 @@
   
   (define viewport->snip
     (lambda (viewport)
-      (let ([orig-bitmap (ivar (viewport-canvas viewport) bitmap)]
+      (let ([orig-bitmap (send (viewport-canvas viewport) get-bitmap)]
 	    [orig-dc (viewport-buffer-dc viewport)])
 	(let* ([h (send orig-bitmap get-height)]
 	       [w (send orig-bitmap get-width)]
@@ -1179,3 +1202,4 @@
     (lambda (TST)
       (andmap (lambda (p) (p TST)) preds)))
   )
+))
