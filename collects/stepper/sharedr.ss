@@ -1,6 +1,8 @@
+(require-library "errortrace.ss" "errortrace")
+
 (unit/sig stepper:shared^
   (import [z : zodiac:system^]
-	  stepper:error)
+	  [e : stepper:error^])
   
   ; copied from aries
   
@@ -74,10 +76,7 @@
   
   (define-values (expr-read set-expr-read!)
     (let-values ([(getter setter) 
-                  (z:register-client 'stepper:read 
-                                     (lambda () 
-                                       (e:dynamic-error
-                                        "no source expression set for this parsed expression")))])
+                  (z:register-client 'stepper:read (lambda () #f))])
       (values
        (lambda (parsed) (getter (z:parsed-back parsed)))
        (lambda (parsed read) (setter (z:parsed-back parsed) read)))))
