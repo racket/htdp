@@ -12,7 +12,7 @@
            "shared.ss"
            "highlight-placeholder.ss"
            "my-macros.ss"
-           (lib "specs.ss" "framework"))
+	   (lib "contracts.ss"))
 
   (provide
    reconstruct-completed ; : reconstruct-completed-contract
@@ -24,7 +24,7 @@
   
   (define reconstruct-current-contract
    (-> syntax? mark-list? symbol? (listof any?)
-       (vectorof/n (listof exp-with-holes?) (listof exp-without-holes?))))
+       (vector/p (listof exp-with-holes?) (listof exp-without-holes?))))
   
   (define-values (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? render-to-sexp)
     (let ([not-set-yet (lx (error 'reconstruct "render-settings not yet set"))])

@@ -1,5 +1,5 @@
 (module stepper-tool mzscheme
-  (require (lib "specs.ss" "framework")
+  (require (lib "contracts.ss")
            (lib "tool.ss" "drscheme")
            (lib "mred.ss" "mred")  
            (prefix frame: (lib "framework.ss" "framework"))

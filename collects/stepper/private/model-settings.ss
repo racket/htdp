@@ -1,7 +1,7 @@
 (module model-settings mzscheme
   (require "mred-extensions.ss"
            "my-macros.ss"
-           (lib "specs.ss" "framework")
+           (lib "contracts.ss")
            (lib "pconvert.ss"))
   
   ; there are two separate reasons to use units here, but it's just too painful.
@@ -40,7 +40,7 @@
   ; constructor-style-printing? ; : ( -> boolean)
   ; abbreviate-cons-as-list? ; : ( -> boolean)
   ; render-to-sexp ; (TST -> TST)
-  (define render-settings? (vectorof/n procedure? procedure? procedure? procedure?))
+  (define render-settings? (vector/p procedure? procedure? procedure? procedure?))
   
   (define (render-to-string val)
     (error 'model-settings "render not set yet"))

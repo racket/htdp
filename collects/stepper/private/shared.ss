@@ -1,8 +1,8 @@
 (module shared mzscheme
   
-  (require "my-macros.ss")
-  (require "highlight-placeholder.ss")
-  (require (lib "specs.ss" "framework"))
+  (require "my-macros.ss"
+	   "highlight-placeholder.ss"
+	   (lib "contracts.ss"))
 
   (provide
    step-result?

@@ -34,7 +34,7 @@
 
 
 (module model mzscheme
-  (require (lib "specs.ss" "framework")
+  (require (lib "contracts.ss")
            (lib "etc.ss")
            (lib "mred.ss" "mred")  
            (prefix frame: (lib "framework.ss" "framework"))

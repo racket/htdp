@@ -1,6 +1,6 @@
 (module annotate mzscheme
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
-           (lib "specs.ss" "framework")
+           (lib "contracts.ss")
 	   (lib "list.ss")
            (lib "etc.ss")
            "marks.ss"
@@ -650,7 +650,7 @@
             
             (define annotate/inner
               (contract 
-               (-> syntax? binding-set? boolean? boolean? any? (vectorof/n syntax? binding-set?))
+               (-> syntax? binding-set? boolean? boolean? any? (vector/p syntax? binding-set?))
                (lambda (expr tail-bound pre-break? top-level? procedure-name-info)
                  
                  (when (syntax-property expr 'stepper-define-struct-hint)
