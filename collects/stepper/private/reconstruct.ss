@@ -173,7 +173,7 @@
       ((normal-break)
        (skip-redex-step? mark-list))
       ((double-break late-let-break)
-       (error 'answer "lifting turned off"))))  
+       #f)))  
   
   (define (skip-redex-step? mark-list)
     (and (pair? mark-list)
