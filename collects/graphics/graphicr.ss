@@ -3,8 +3,7 @@
 ; Originally written by Johnathan Franklin
 
 (unit/sig graphics^
-  (import [wx : wx^]
-	  mzlib:file^
+  (import mzlib:file^
 	  (mred : mred^))
   
   (define-struct viewport (label canvas))
@@ -20,11 +19,11 @@
   (define-values (FRAME-W-DELTA FRAME-H-DELTA CANVAS-W-DELTA CANVAS-H-DELTA)
     (values 0 0 0 0))
     
-  (define wx:sixlib-canvas%
+  (define sixlib-canvas%
     (class-asi mred:canvas% 
-      (inherit get-parent set-size
-	       user-min-client-width user-min-client-height
-	       stretchable-in-x stretchable-in-y)
+      (inherit get-parent
+	       min-client-width min-client-height
+	       stretchable-width stretchable-height)
       (private
 	[current-mouse-posn (make-posn 0 0)]
 	[queue%
@@ -64,12 +63,12 @@
 	 (lambda ()
 	   (let ([width (* scale width)]
 		 [height (* scale height)])
-	     (user-min-client-width width)
-	     (user-min-client-height height)
-	     (stretchable-in-x #f)
-	     (stretchable-in-y #f)
-	     (set! bitmap (make-object wx:bitmap% width height))
-	     (send buffer-DC select-object bitmap)
+	     (min-client-width width)
+	     (min-client-height height)
+	     (stretchable-width #f)
+	     (stretchable-height #f)
+	     (set! bitmap (make-object mred:bitmap% width height))
+	     (send buffer-DC set-bitmap bitmap)
 	     (send buffer-DC set-brush (send DC get-brush))
 	     (send buffer-DC set-pen (send DC get-pen))
 	     (let ([f (send DC get-font)])
@@ -96,13 +95,12 @@
 	[get-current-pen (lambda () current-pen)]
 	[get-current-brush (lambda () current-brush)]
 	[remember-pen (lambda (pen) (set! current-pen pen))]
-	[remember-brush (lambda (brush) (set! current-brush brush))]
-	[leaving-event
-	 (make-object wx:mouse-event% wx:const-event-type-leave-window)]
+	[remember-brush (lambda (brush) (set! current-brush brush))])
 	
+      (override
 	[on-paint
 	 (lambda ()
-	   (send DC blit 0 0 width height buffer-DC 0 0 wx:const-copy))]
+	   (send DC draw-bitmap 0 0 (send buffer-DC get-bitmap)))]
 	
 	[on-event 
 	 (lambda (mouse-event)
@@ -126,8 +124,9 @@
 	 (lambda (key-event)
 	   (send press-queue add (make-sixkey (send key-event key-code)))
 	   (when event-sema 
-		 (semaphore-post event-sema)))]
+		 (semaphore-post event-sema)))])
 	
+      (public
 	[get-click
 	 (lambda ()
 	   (send click-queue remove))]
@@ -143,7 +142,7 @@
 	[wait-event
 	 (lambda ()
 	   (set! event-sema (make-semaphore))
-	   (wx:yield event-sema)
+	   (mred:yield event-sema)
 	   (set! event-sema #f))]
 	
 	[get-posn (lambda () current-mouse-posn)]
@@ -165,8 +164,8 @@
 		     (reset-size))]
 	[set-scale (lambda (new-scale)
 		     (set! scale new-scale)
-		     (send DC set-user-scale scale scale)
-		     (send buffer-DC set-user-scale scale scale)
+		     (send DC set-scale scale scale)
+		     (send buffer-DC set-scale scale scale)
 		     (reset-size))]
 	
 	
@@ -180,8 +179,9 @@
     (class-asi mred:frame%
       (rename [super-on-close on-close])
       (public
-	canvas
-	[set-canvas (lambda (x) (set! canvas x))]
+	[canvas #f]
+	[set-canvas (lambda (x) (set! canvas x))])
+      (override
 	[on-close
 	 (lambda ()
 	   (close-viewport (ivar canvas viewport))
@@ -212,7 +212,7 @@
       (ivar (viewport-canvas viewport) width)))
   
   (define arrow-cursor
-    (make-object wx:cursor% wx:const-cursor-arrow))
+    (make-object mred:cursor% 'arrow))
   
   
   (define (get-mouse-click viewport) 
@@ -283,25 +283,27 @@
 	     [dc2 (viewport-buffer-DC viewport)]
 	     [set-pen (ivar dc set-pen)]
 	     [set-pen2 (ivar dc2 set-pen)]
+	     [set-brush (ivar dc set-brush)]
+	     [set-brush2 (ivar dc2 set-brush)]
 	     [draw (ivar dc draw-rectangle)]
 	     [draw2 (ivar dc2 draw-rectangle)]
-	     [set-lf (ivar dc set-logical-function)]
-	     [set-lf2 (ivar dc2 set-logical-function)]
 	     [w (viewport-width viewport)]
 	     [h (viewport-height viewport)])
 	(lambda ()
-	  (let ([pen (send dc get-pen)])
-	    (set-lf wx:const-xor)
-	    (set-lf2 wx:const-xor)
-	    (set-pen invisi-pen)
-	    (set-pen2 invisi-pen)
+	  (let ([pen (send dc get-pen)]
+		[pen2 (send dc2 get-pen)]
+		[brush (send dc get-brush)]
+		[brush2 (send dc2 get-brush)])
+	    (set-pen xor-pen)
+	    (set-pen2 xor-pen)
+	    (set-brush xor-brush)
+	    (set-brush2 xor-brush)
 	    (draw 0 0 w h)
 	    (draw2 0 0 w h)
 	    (set-pen pen)
-	    (set-pen2 pen)
-	    (set-lf wx:const-copy)
-	    (set-lf2 wx:const-copy))))))
-  
+	    (set-pen2 pen2)
+	    (set-brush brush)
+	    (set-brush2 brush2))))))
   
   (define close-viewport
     (lambda (viewport)
@@ -337,7 +339,7 @@
 	     [nred (convert red)]
 	     [ngreen (convert green)]
 	     [nblue (convert blue)])
-	(make-object wx:colour% nred ngreen nblue))))
+	(make-object mred:color% nred ngreen nblue))))
   
   (define make-color make-rgb)
   
@@ -365,30 +367,30 @@
   (define get-color
     (lambda (index)
       (cond
-	[(is-a? index wx:colour%) index]
-	[(string? index) (make-object wx:colour% index)]
+	[(is-a? index mred:color%) index]
+	[(string? index) (make-object mred:color% index)]
 	[else (vector-ref GLOBAL-COLOR-VECTOR index)])))
   
   (define get-pen
     (lambda (index)
       (cond
-	[(is-a? index wx:pen%) index]
-	[(or (string? index) (is-a? index wx:colour%))
-	 (send wx:the-pen-list find-or-create-pen index 0 wx:const-solid)]
+	[(is-a? index mred:pen%) index]
+	[(or (string? index) (is-a? index mred:color%))
+	 (send mred:the-pen-list find-or-create-pen index 1 'solid)]
 	[else (vector-ref GLOBAL-PEN-VECTOR index)])))
   
   (define get-brush
     (lambda (index)
       (cond
-	[(is-a? index wx:brush%) index]
-	[(or (string? index) (is-a? index wx:colour%))
-	 (send wx:the-brush-list find-or-create-brush index wx:const-solid)]
+	[(is-a? index mred:brush%) index]
+	[(or (string? index) (is-a? index mred:color%))
+	 (send mred:the-brush-list find-or-create-brush index 'solid)]
 	[else (vector-ref GLOBAL-BRUSH-VECTOR index)])))
   
-  (define rgb? (lambda (object) (is-a? object wx:colour%)))
+  (define rgb? (lambda (object) (is-a? object mred:color%)))
   (define color? rgb?)
-  (define pen? (lambda (object) (is-a? object wx:pen%)))
-  (define brush? (lambda (object) (is-a? object wx:brush%)))
+  (define pen? (lambda (object) (is-a? object mred:pen%)))
+  (define brush? (lambda (object) (is-a? object mred:brush%)))
   
   (define display-color-vector
     (lambda ()
@@ -401,30 +403,24 @@
     (lambda (name)
       (cond
 	[(eq? name 'large-deco)
-	 (make-object 
-	  wx:font% 40 wx:const-decorative wx:const-normal wx:const-normal)]
+	 (make-object mred:font% 40 'decorative 'normal 'normal)]
 	[(eq? name 'small-roman)
-	 (make-object 
-	  wx:font% 13 wx:const-roman wx:const-normal wx:const-normal)]
+	 (make-object mred:font% 12 'roman 'normal 'normal)]
 	[(eq? name 'medium-roman)
-	 (make-object 
-	  wx:font% 25 wx:const-roman wx:const-normal wx:const-normal)]
+	 (make-object mred:font% 24 'roman 'normal 'normal)]
 	[(eq? name 'large-roman)
-	 (make-object 
-	  wx:font% 40 wx:const-roman wx:const-normal wx:const-normal)]
-	[else "no such font"]
-	)))
+	 (make-object mred:font% 32 'roman 'normal 'normal)]
+	[else "no such font ~a; only 'large-deco, 'small-roman, 'medium-roman, and 'large-roman"
+	      name])))
   
   (define custom-roman
     (lambda (size)
-      (make-object
-       wx:font% size wx:const-roman wx:const-normal wx:const-normal)))
+      (make-object mred:font%
+	size 'roman 'normal 'normal)))
   
   (define custom-deco
     (lambda (size)
-      (make-object
-       wx:font% size wx:const-decorative wx:const-normal
-       wx:const-normal)))
+      (make-object mred:font% size 'decorative 'normal 'normal)))
   
   (define set-viewport-pen
     (lambda (viewport pen)
@@ -489,8 +485,11 @@
   (define green-brush (get-brush green))
   (define blue-brush (get-brush blue))
   
-  (define invisi-pen (make-object wx:pen% "WHITE" 0 wx:const-transparent))
-  (define invisi-brush (make-object wx:brush% "WHITE" wx:const-transparent))
+  (define invisi-pen (send mred:the-pen-list find-or-create-pen "WHITE" 0 'transparent))
+  (define invisi-brush (send mred:the-brush-list find-or-create-brush "WHITE" 'transparent))
+
+  (define xor-pen (send mred:the-pen-list find-or-create-pen "BLACK" 1 'xor))
+  (define xor-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'xor))
   
   (define draw-it (lambda (draw flip clear) (draw)))
   (define flip-it (lambda (draw flip clear) (flip)))
@@ -500,24 +499,34 @@
     (lambda (draw-name get-pen-name set-pen-name 
 		       get-current-pen-name set-viewport-pen white-pen)
       (lambda (viewport) 
-	(let ([current-pen (ivar/proc (viewport-canvas viewport) get-current-pen-name)]
-	      [draw-1 (ivar/proc (viewport-DC viewport) draw-name)]
-	      [draw-2 (ivar/proc (viewport-buffer-DC viewport) draw-name)]
-	      [get-pen (ivar/proc (viewport-DC viewport) get-pen-name)]
-	      [set-pen-1 (ivar/proc (viewport-DC viewport) set-pen-name)]
-	      [set-pen-2 (ivar/proc (viewport-buffer-DC viewport) set-pen-name)]
-	      [set-logical-function-1 (ivar (viewport-DC viewport) set-logical-function)]
-	      [set-logical-function-2 (ivar (viewport-buffer-DC viewport) set-logical-function)])
+	(let* ([current-pen (ivar/proc (viewport-canvas viewport) get-current-pen-name)]
+	       [draw-1 (ivar/proc (viewport-DC viewport) draw-name)]
+	       [draw-2 (ivar/proc (viewport-buffer-DC viewport) draw-name)]
+	       [get-pen (ivar/proc (viewport-DC viewport) get-pen-name)]
+	       [real-get-brush (ivar/proc (viewport-DC viewport) 'get-brush)]
+	       [real-get-pen (ivar/proc (viewport-DC viewport) 'get-pen)]
+	       [set-pen-1 (ivar/proc (viewport-DC viewport) set-pen-name)]
+	       [set-pen-2 (ivar/proc (viewport-buffer-DC viewport) set-pen-name)]
+	       [real-set-brush-1 (ivar/proc (viewport-DC viewport) 'set-brush)]
+	       [real-set-brush-2 (ivar/proc (viewport-buffer-DC viewport) 'set-brush)]
+	       [real-set-pen-1 (ivar/proc (viewport-DC viewport) 'set-pen)]
+	       [real-set-pen-2 (ivar/proc (viewport-buffer-DC viewport) 'set-pen)])
 	  (lambda (color go)
 	    (when (and color (not (eq? color (current-pen))))
 	      (set-viewport-pen viewport color))
 	    (go draw-1 draw-2
 		(lambda (draw)
-		  (set-logical-function-1 wx:const-xor)
-		  (set-logical-function-2 wx:const-xor)
-		  (draw)
-		  (set-logical-function-1 wx:const-copy)
-		  (set-logical-function-2 wx:const-copy))
+		  (let ([pen (real-get-pen)]
+			[brush (real-get-brush)])
+		    (real-set-brush-1 xor-brush)
+		    (real-set-brush-2 xor-brush)
+		    (real-set-pen-1 xor-pen)
+		    (real-set-pen-2 xor-pen)
+		    (draw)
+		    (real-set-brush-1 brush)
+		    (real-set-brush-2 brush)
+		    (real-set-pen-1 pen)
+		    (real-set-pen-2 pen)))
 		(lambda (draw)
 		  (let ([pen (get-pen)])
 		    (set-pen-1 white-pen)
@@ -644,7 +653,7 @@
 			(f color
 			   (lambda (draw-1 draw-2 flip clear)
 			     (let* ([points (map (lambda (p)
-						   (make-object wx:point% (posn-x p) (posn-y p)))
+						   (make-object mred:point% (posn-x p) (posn-y p)))
 						 posns)]
 				    [x (posn-x offset)]
 				    [y (posn-y offset)]
@@ -732,18 +741,16 @@
 					(send buffer draw-text text x y))])
 				(cond
 				  [(eq? string-op 'draw)
-				   (if color
-				       (set-text-foreground viewport color))
+				   (when color
+				     (set-text-foreground viewport color))
 				   (set-viewport-font viewport font)
 				   (send DC draw-text text x y)
 				   (send buffer draw-text text x y)]
 				  [(eq? string-op 'flip)
-				   (set-viewport-logical-function viewport wx:const-xor)
-				   (if color
-				       (set-text-foreground viewport color))
+				   (when color
+				     (set-text-foreground viewport color))
 				   (set-viewport-font viewport font)
-				   (string-create)
-				   (set-viewport-logical-function viewport wx:const-copy)]
+				   (string-create)]
 				  [(eq? string-op 'clear)
 				   (set-text-foreground viewport white)
 				   (set-viewport-font viewport font)
@@ -753,9 +760,9 @@
 	outer-function)))
   
   (define draw-string (string-functions 'draw))
-  
   (define clear-string (string-functions 'clear))
   (define flip-string (string-functions 'flip))
+
   (define get-string-size
     (letrec ([outer-function
 	      (case-lambda
@@ -773,7 +780,7 @@
     (lambda (viewport)
       (let ([get-pixel (ivar (viewport-DC viewport) get-pixel)])
 	(lambda (posn)
-	  (let ([c (make-object wx:colour%)]
+	  (let ([c (make-object mred:color%)]
 		[x (posn-x posn)]
 		[y (posn-y posn)])
 	    (get-pixel x y c)
@@ -788,40 +795,28 @@
     (opt-lambda (filename [type (string->symbol (filename-extension filename))])
       (let* ([type
 	      (case type
-		[(gif) wx:const-bitmap-type-gif]
-		[(xbm) wx:const-bitmap-type-xbm]
-		[(xpm) wx:const-bitmap-type-xpm]
-		[(bmp) wx:const-bitmap-type-bmp]
-		[(pict) wx:const-bitmap-type-pict]
+		[(gif xbm xpm bmp pict) type]
 		[else 
 		 (error 'pixmap "unrecognized file type: ~a~n" type)])]
-	     [bitmap (make-object wx:bitmap% filename type)]
-	     [mdc (make-object wx:memory-dc%)]
+	     [bitmap (make-object mred:bitmap% filename type)]
 	     [do-job
 	      (lambda (viewport posn op)
-		(let ([x (posn-x posn)] 
+		(let ([x (posn-x posn)]
 		      [y (posn-y posn)]
 		      [DC (viewport-DC viewport)]
 		      [buffer (viewport-buffer-DC viewport)])
-		(send DC blit x y
-		      (send bitmap get-width)
-		      (send bitmap get-height)
-		      mdc 0 0 op)
-		(send buffer blit x y
-		      (send bitmap get-width)
-		      (send bitmap get-height)
-		      mdc 0 0 op)))])
-	(send mdc select-object bitmap)
+		(send DC draw-bitmap bitmap x y op)
+		(send buffer draw-bitmap bitmap x y op)))])
 	(values (opt-lambda (viewport posn [color #f])
 		  (when color
 		    (set-viewport-pen viewport (get-pen color)))
-		  (do-job viewport posn wx:const-copy))
+		  (do-job viewport posn 'copy))
 		(lambda (viewport posn)
-		  (do-job viewport posn wx:const-xor))
+		  (do-job viewport posn 'xor))
 		(opt-lambda (viewport posn [color #f])
 		  (when color
 		    (set-viewport-pen viewport (get-pen color)))
-		  (do-job viewport posn wx:const-nand))))))
+		  (do-job viewport posn 'opaque))))))
 
   (define-values (draw-pixmap-posn
 		  clear-pixmap-posn
@@ -861,26 +856,20 @@
 	(((clear-pixmap-posn filename 'xbm) pixmap) p))))
   
   (define DEFAULT-PEN black-pen)
-  (define DEFAULT-FONT
-    (make-object wx:font% 13 wx:const-roman
-		 wx:const-normal wx:const-normal))
+  (define DEFAULT-FONT (make-object mred:font% 12 'roman 'normal 'normal))
   
   (define copy-viewport 
     (lambda (source target)
-      (let*
-	  ([source-DC (ivar source DC)]
-	   [target-DC (ivar target DC)])
-	(send target-DC blit 0 0 
-	      (viewport-width source)
-	      (viewport-height source)
-	      source-DC 0 0 wx:const-copy))))
+      (let* ([source-DC (ivar source DC)]
+	     [target-DC (ivar target DC)])
+	(send target-DC draw-bitmap (send source-DC get-bitmap) 0 0))))
   
   (define sixlib-eventspace #f)
 
   (define make-open-viewport
     (lambda (name show?)
       (unless sixlib-eventspace
-	(set! sixlib-eventspace (wx:make-eventspace)))
+	(set! sixlib-eventspace (mred:make-eventspace)))
       (letrec ([open-viewport
 		(case-lambda
 		 [(label point) 
@@ -895,25 +884,23 @@
 		    [graphics-flag
 		     (let*
 			 ([frame
-			   (parameterize ([wx:current-eventspace sixlib-eventspace])
+			   (parameterize ([mred:current-eventspace sixlib-eventspace])
 			     (make-object sixlib-frame% '() label 1 1 
 					  (* scale width) (* scale height)))]
 			  [panel (make-object mred:vertical-panel% frame)]
 			  [canvas
-			   (make-object wx:sixlib-canvas%
+			   (make-object sixlib-canvas%
 					panel 0 0 
 					(* scale width) (* scale height)
 					0 "canvas")]
 			  [DC (send canvas get-dc)]
-			  [buffer-DC (make-object wx:memory-dc% DC)]
+			  [buffer-DC (make-object mred:bitmap-dc%)]
 			  [viewport (make-viewport label canvas)])
 		       (send panel major-align-center)
 		       (send frame set-canvas canvas)
 		       (send canvas set-viewport viewport)
 		       (send canvas set-DC DC)
 		       (send canvas set-buffer-DC buffer-DC)
-		       (send DC set-optimization #f)
-		       (send buffer-DC set-optimization #f)
 		       (send canvas set-geometry width height scale)
 		       (when show? 
 			     (send frame show #t)
@@ -932,12 +919,12 @@
   (define open-viewport (make-open-viewport 'open-viewport #t))
   (define open-pixmap (make-open-viewport 'open-pixmap #f))
   
-  (define default-display-is-color? wx:colour-display?)
+  (define (default-display-is-color?) (mred:is-color-display?))
   
   (define position-display
     (lambda (viewport counter)
       (cond
-	[(eq? counter 0) '()]
+	[(equal? counter 0) '()]
 	[else (begin 
 		(display (query-mouse-posn viewport))
 		(position-display viewport (- counter 1)))])))
@@ -945,8 +932,7 @@
   
   (define create-cmap
     (lambda ()
-      (do
-	  ([index 0 (+ 1 index)])
+      (do ([index 0 (+ 1 index)])
 	((> index 20))
 	(let* ([R (* 0.05 index)]
 	       [B (- 1 R)]
@@ -959,12 +945,12 @@
 	    [orig-dc (viewport-buffer-DC viewport)])
 	(let* ([h (send orig-bitmap get-height)]
 	       [w (send orig-bitmap get-width)]
-	       [new-bitmap (make-object wx:bitmap% w h)]
-	       [tmp-mem-dc (make-object wx:memory-dc%)])
-	  (send tmp-mem-dc select-object new-bitmap)
-	  (send tmp-mem-dc blit 0 0 w h orig-dc 0 0)
-	  (send tmp-mem-dc select-object null)
-	  (let ([snip (make-object wx:image-snip%)])
+	       [new-bitmap (make-object mred:bitmap% w h)]
+	       [tmp-mem-dc (make-object mred:bitmap-dc%)])
+	  (send tmp-mem-dc set-bitmap new-bitmap)
+	  (send tmp-mem-dc draw-bitmap (send orig-dc get-bitmap) 0 0 0 0)
+	  (send tmp-mem-dc set-bitmap #f)
+	  (let ([snip (make-object mred:image-snip%)])
 	    (send snip set-bitmap new-bitmap)
 	    snip)))))
   
