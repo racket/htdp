@@ -693,3 +693,26 @@ was anyway.
 
 2002-01-08
 
+***********
+
+Why, for the love of God, do we need to put a wcm around a quote? I 
+can see how we need one if there's a pre-break there, but otherwise,
+it seems totally useless.
+
+Ditto for quote-syntax
+
+2002-01-08
+
+***********
+
+Here's a nice optimization I'm not taking advantage of: the application
+of all lambda-bound vars doesn't need all those temp vars.  OTOH, this won't
+help much with beginner/intermediate, because you never have a lexical
+var in the application position.  I suppose you can generalize this to
+say that you only need arg-temps for things that are not lambda-bound
+vars.  Well, maybe some other day...
+
+2002-01-08
+
+***********
+
