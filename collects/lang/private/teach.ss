@@ -43,17 +43,15 @@
     (if (or (eq? b #t) (eq? b #f))
 	b
 	(raise
-	 (make-exn:application:type
+	 (make-exn:fail:contract
 	  (format "~a: question result is not true or false: ~e" where b)
-	  (current-continuation-marks)
-	  b
-	  'boolean))))
+	  (current-continuation-marks)))))
 
   ;; Wrapped around uses of local-bound variables:
   (define (check-not-undefined name val)
     (if (eq? val undefined)
 	(raise
-	 (make-exn:variable
+	 (make-exn:fail:contract:variable
 	  (format "local variable used before its definition: ~a" name)
 	  (current-continuation-marks)
 	  name))
@@ -67,8 +65,8 @@
 	    (if b
 		#t
 		;; At top-level, might be bound to syntax or value:
-		(with-handlers ([exn:variable? (lambda (exn) #f)]
-				[exn:syntax? (lambda (exn) #t)])
+		(with-handlers ([exn:fail:contract:variable? (lambda (exn) #f)]
+				[exn:fail:syntax? (lambda (exn) #t)])
 		  (namespace-variable-value (syntax-e id) #t)
 		  #t)))
       (error who "cannot redefine name: ~a" (syntax-e id))))
@@ -1714,7 +1712,7 @@
 		    (identifier? (syntax id))
 		    (let ([exprs (syntax->list (syntax (expr ...)))])
 		      ;; Check that id isn't syntax, and not lexical.
-		      (when ((with-handlers ([not-break-exn? (lambda (exn) (lambda () #t))])
+		      (when ((with-handlers ([exn:fail? (lambda (exn) (lambda () #t))])
 			       ;; First try syntax:
 			       (let ([binding (syntax-local-value (syntax id))])
 				 ;; If it's a transformer binding, then it can take care of itself...

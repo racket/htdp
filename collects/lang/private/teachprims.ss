@@ -49,13 +49,11 @@
     (lambda (prim-name a b)
       (unless (ok? b)
 	(raise
-	 (make-exn:application:type
+	 (make-exn:fail:contract
 	  (format "~a: second argument must be of type <~a>, given ~e and ~e"
 		  prim-name type
 		  a b)
-	  (current-continuation-marks)
-	  b
-	  prim-name)))))
+	  (current-continuation-marks))))))
 
   (define check-second 
     (mk-check-second beginner-list? "list"))
@@ -72,7 +70,7 @@
 	  (let ([last (car l)])
 	    (unless (ok? last)
 	      (raise
-	       (make-exn:application:type
+	       (make-exn:fail:contract
 		(format "~a: last argument must be of type <~a>, given ~e; other args:~a"
 			prim-name type
 			last
@@ -81,9 +79,7 @@
 			   (cond
 			    [(null? (cdr args)) null]
 			    [else (cons (car args) (loop (cdr args)))]))))
-		(current-continuation-marks)
-		last
-		'list))))]
+		(current-continuation-marks)))))]
 	 [else (loop (cdr l))]))))
 
   (define check-last 
@@ -96,13 +92,11 @@
     (let ([bad
 	   (lambda (v which type)
 	     (raise
-	      (make-exn:application:type
+	      (make-exn:fail:contract
 	       (format "~a: ~a argument must be of type <~a>, given ~e, ~e, and ~e"
 		       prim-name which type
 		       a b c)
-	       (current-continuation-marks)
-	       v
-	       prim-name)))])
+	       (current-continuation-marks))))])
       (unless (ok1? a)
 	(bad a "first" 1type))
       (unless (ok2? b)
@@ -117,12 +111,10 @@
     (lambda (a)
       (unless (boolean? a)
 	(raise
-	 (make-exn:application:type
+	 (make-exn:fail:contract
 	  (format "not: expected either true or false; given ~e"
 		  a)
-	  (current-continuation-marks)
-	  a
-	  'not)))
+	  (current-continuation-marks))))
       (not a)))
 
   (define-teach beginner +
@@ -157,12 +149,10 @@
       (unless (and (symbol? sym)
 		   (string? str))
 	(raise
-	 (make-exn:application:type
+	 (make-exn:fail:contract
 	  (format "error: expected a symbol and a string, got ~e and ~e"
 		  sym str)
-	  (current-continuation-marks)
-	  (if (symbol? sym) str sym)
-	  (if (symbol? sym) 'string 'symbol))))
+	  (current-continuation-marks))))
       (error sym "~a" str)))
 
   (define-teach beginner struct?
