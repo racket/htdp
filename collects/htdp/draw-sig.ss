@@ -10,7 +10,6 @@
   (define-signature core-draw^
        (start 
         start/cartesian-plane
-        get-key-event
         stop 
         draw-circle draw-solid-disk draw-solid-rect draw-solid-line
 	draw-solid-string
@@ -19,6 +18,8 @@
         clear-all
         sleep-for-a-while
         wait-for-mouse-click ; -> posn
+        get-key-event ; -> (union #f char symbol)
+	get-mouse-event ; -> (union #f posn)
         get-@VP
         ))
   
