@@ -73,44 +73,56 @@
   
   (define sleep-for-a-while/proc (make-true mred:sleep/yield))
   
-  ;; i wish i could abstract these functions ...
-  (define (make-line name f)
-    (make-true
-     (lambda x
-       (apply (lambda (p1 p2 . c)
-                (check-arg name (posn? p1) "posn" "first" p1)
-                (check-arg name (posn? p2) "posn" "second" p2)
-		(if (pair? c)
-		    (begin
-		      (check-arity name 3 (cons p1 (cons p2 c)))
-		      (check-arg name (symbol? (car c)) "symbol" "third" (car c)))
-		    (check-arity name 3 x))
-                (f p1 p2 (symbol->color (if (null? c) 'black (car c)))))
-              x))))
-  
-  (define (make-rect name f)
-    (make-true
-     (lambda x
-       (check-arity name 3 x)
-       (apply (lambda (p w h . c)
-                (check-arg name (posn? p) "posn" "first" p)
-                (check-arg name (and (integer? w) (> w 0)) "positive integer" "second" w)
-                (check-arg name (and (integer? h) (> h 0)) "positive integer" "third" h)
-                (f p w h  (symbol->color (if (null? c) 'black (car c)))))
-              x))))
-  
-  (define (make-circle name f)
-    (make-true
-     (lambda x
-       (check-arity name 2 x)
-       (apply (lambda (p r . c)
-                (check-arg name (posn? p) "posn" "first" p)
-                (check-arg name (and (integer? r) (> r 0)) "positive integer" "second" r)
-                (let ((d (* r 2))
-                      (c (symbol->color (if (null? c) 'black (car c)))))
-                  (f (make-posn (- (posn-x p) r) (- (posn-y p) r)) d d c)))
-              x))))
-  
+     ;; i wish i could abstract these functions ...
+     (define (make-line name f)
+       (make-true
+        (lambda x
+          (apply (lambda (p1 p2 . c)
+                   (check-arg name (posn? p1) "posn" "first" p1)
+                   (check-arg name (posn? p2) "posn" "second" p2)
+                   (f p1 p2 (check-optional name 3 c "third" x)))
+                 x))))
+     
+     (define (make-rect name f)
+       (make-true
+        (lambda x
+          (apply (lambda (p w h . c)
+                   (check-arg name (posn? p) "posn" "first" p)
+                   (check-arg
+                    name (and (integer? w) (> w 0)) "positive integer" "second" w)
+                   (check-arg
+                    name (and (integer? h) (> h 0)) "positive integer" "third" h)
+                   (f p w h (check-optional name 4 c "fourth" x)))
+                 x))))
+
+     ;; Local function for make-circle 
+     ;; (Posn Number Symbol[color] -> void) -> (Posn Number Symbol[color] -> void)
+     (define (ellipsis-2-circle f)
+       (lambda (p r c)
+         (let ((d (* r 2)))
+           (f (make-posn (- (posn-x p) r) (- (posn-y p) r)) d d c))))
+
+     (define (make-circle name f)
+       (make-true
+        (lambda x
+          (apply (lambda (p r . c)
+                   (check-arg name (posn? p) "posn" "first" p)
+                   (check-arg 
+                    name (and (integer? r) (> r 0)) "positive integer" "second" r)
+                   ((ellipsis-2-circle f) p r (check-optional name 3 c "third" x)))
+                 x))))
+
+     ;; (Listof _) String (Listof _) -> Symbol[color]
+     ;; contract: c is shared suffix of all
+     ;; check whether c contains a single color symbol and all has proper length
+     (define (check-optional name n c position x)
+       (if (pair? c)
+           (begin
+             (check-arity name n x)
+             (check-arg name (symbol? (car c)) "symbol" position (car c)))
+           (check-arity name (- n 1) x))
+       (symbol->color (if (null? c) 'black (car c))))
+     
   (define (start WIDTH HEIGHT)
     (check-arg 'start (and (integer? WIDTH) (> WIDTH 0)) "positive integer" "first" WIDTH)
     (check-arg 'start (and (integer? HEIGHT) (> HEIGHT 0)) "positive integer" "second" HEIGHT)
