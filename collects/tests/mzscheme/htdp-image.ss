@@ -94,7 +94,7 @@
 (load-relative "htdp-test.ss")
 (require (lib "htdp-beginner.ss" "lang"))
 
-(htdp-test #t 'image? (image? (filled-rect 10 10 'blue)))
+(htdp-test #t 'image? (image? (rectangle 10 10 'solid 'blue)))
 (htdp-test #f 'image? (image? 5))
 
 (define red (make-color 255 0 0))
@@ -122,44 +122,44 @@
 
 (htdp-test (list red)
 	   'color-list
-	   (image->color-list (filled-rect 1 1 'red)))
+	   (image->color-list (rectangle 1 1 'solid 'red)))
 
 (htdp-test (list (list red) (list blue) (list black) (list white))
 	   'colors-set-up-properly
-	   (list (image->color-list (filled-rect 1 1 'red))
-                 (image->color-list (filled-rect 1 1 'blue))
-                 (image->color-list (filled-rect 1 1 'black))
-                 (image->color-list (filled-rect 1 1 'white))))
+	   (list (image->color-list (rectangle 1 1 'solid 'red))
+                 (image->color-list (rectangle 1 1 'solid 'blue))
+                 (image->color-list (rectangle 1 1 'solid 'black))
+                 (image->color-list (rectangle 1 1 'solid 'white))))
 
 (htdp-test (list blue blue blue blue)
 	   'color-list
-	   (image->color-list (filled-rect 2 2 'blue)))
+	   (image->color-list (rectangle 2 2 'solid 'blue)))
 
 (htdp-test #t
 	   'color-list
-	   (image=? (color-list->image (list blue blue blue blue) 2 2)
-		    (filled-rect 2 2 'blue)))
+	   (image=? (color-list->image (list blue blue blue blue) 2 2 0 0)
+		    (rectangle 2 2 'solid 'blue)))
 (htdp-test #f
 	   'color-list
-	   (image=? (color-list->image (list blue blue blue blue) 2 2)
-		    (filled-rect 1 4 'blue)))
+	   (image=? (color-list->image (list blue blue blue blue) 2 2 0 0)
+		    (rectangle 1 4 'solid 'blue)))
 (htdp-test #t
 	   'color-list
-	   (image=? (color-list->image (list blue blue blue blue) 1 4)
-		    (filled-rect 1 4 'blue)))
+	   (image=? (color-list->image (list blue blue blue blue) 1 4 0 0)
+		    (rectangle 1 4 'solid 'blue)))
 
 (htdp-test #t
 	   'alpha-color-list1
 	   (equal? (make-alpha-color 0 255 0 0)
-                   (car (image->alpha-color-list (filled-rect 1 1 'red)))))
+                   (car (image->alpha-color-list (rectangle 1 1 'solid 'red)))))
 (htdp-test #t
 	   'alpha-color-list2
 	   (equal? (make-alpha-color 0 0 255 0)
-                   (car (image->alpha-color-list (filled-rect 1 1 'green)))))
+                   (car (image->alpha-color-list (rectangle 1 1 'solid 'green)))))
 (htdp-test #t
 	   'alpha-color-list3
 	   (equal? (make-alpha-color 0 0 0 255)
-                   (car (image->alpha-color-list (filled-rect 1 1 'blue)))))
+                   (car (image->alpha-color-list (rectangle 1 1 'solid 'blue)))))
 
 (htdp-test #t
            'alpha-color-list4
@@ -168,7 +168,9 @@
                 (list ared aclr ared
                       aclr aclr aclr)
                 3
-                2))
+                2
+                0
+                0))
               3))
 
 (htdp-test #t
@@ -178,7 +180,9 @@
                 (list ared aclr ared
                       aclr aclr aclr)
                 3
-                2))
+                2
+                0
+                0))
               2))
 
 (htdp-test #t
@@ -187,176 +191,183 @@
                     (alpha-color-list->image
                      (list ared aclr ared
                            aclr aclr aclr)
-                     3 2))
+                     3 2 0 0))
                    (list red   white red
                          white white white)))
 (htdp-test #t
            'alpha-color-list7
            (equal? (image->color-list
-                    (image+
-                     (filled-rect 3 3 'blue)
+                    (overlay
+                     (rectangle 3 3 'solid 'blue)
                      (alpha-color-list->image
                       (list ared aclr ared
                             aclr aclr aclr
                             ared aclr ared)
                       3
-                      3)))
+                      3
+                      0
+                      0)))
                    (list red  blue red
                          blue blue blue
                          red  blue red)))
 
 (htdp-test #t
            'image=?1
-           (image=? (alpha-color-list->image (list (make-alpha-color 200 100 150 175)) 1 1)
-                    (alpha-color-list->image (list (make-alpha-color 200 100 150 175)) 1 1)))
+           (image=? (alpha-color-list->image (list (make-alpha-color 200 100 150 175)) 1 1 0 0)
+                    (alpha-color-list->image (list (make-alpha-color 200 100 150 175)) 1 1 0 0)))
 
 (htdp-test #t
            'image=?2
-           (image=? (alpha-color-list->image (list (make-alpha-color 255 100 100 100)) 1 1)
-                    (alpha-color-list->image (list (make-alpha-color 255 200 200 200)) 1 1)))
+           (image=? (alpha-color-list->image (list (make-alpha-color 255 100 100 100)) 1 1 0 0)
+                    (alpha-color-list->image (list (make-alpha-color 255 200 200 200)) 1 1 0 0)))
 
 (htdp-test #f
            'image=?3
-           (image=? (alpha-color-list->image (list (make-alpha-color 200 100 100 100)) 1 1)
-                    (alpha-color-list->image (list (make-alpha-color 200 200 200 200)) 1 1)))
+           (image=? (alpha-color-list->image (list (make-alpha-color 200 100 100 100)) 1 1 0 0)
+                    (alpha-color-list->image (list (make-alpha-color 200 200 200 200)) 1 1 0 0)))
 
 (htdp-test #f
            'image=?4
            (image=? (alpha-color-list->image (list (make-alpha-color 200 100 150 175)
                                                    (make-alpha-color 200 100 150 175))
                                              1
-                                             2)
+                                             2
+                                             0
+                                             0)
                     (alpha-color-list->image (list (make-alpha-color 200 100 150 175)
                                                    (make-alpha-color 200 100 150 175)) 
                                              2
-                                             1)))
+                                             1
+                                             0
+                                             0)))
 
 (htdp-test #t
-	   'image+
-	   (image=? (color-list->image (list blue red blue red) 2 2)
-		    (image+ (filled-rect 2 2 'red)
-			    (filled-rect 1 2 'blue))))
+	   'overlay
+	   (image=? (color-list->image (list blue red blue red) 2 2 0 0)
+		    (overlay (rectangle 2 2 'solid 'red)
+                             (rectangle 1 2 'solid 'blue))))
 
 (htdp-test #t
-           'image+/empty-spaces-are-unmasked
-           (image=? (color-list->image (list red red red blue) 2 2)
-                    (image+
-                     (filled-rect 2 2 'blue)
-                     (image+ (filled-rect 1 2 'red)
-                             (filled-rect 2 1 'red)))))
+           'overlay/empty-spaces-are-unmasked
+           (image=? (color-list->image (list red red red blue) 2 2 0 0)
+                    (overlay
+                     (rectangle 2 2 'solid 'blue)
+                     (overlay (rectangle 1 2 'solid 'red)
+                              (rectangle 2 1 'solid 'red)))))
 
 (htdp-test #t
 	   'offset-image+1
-	   (image=? (color-list->image (list red blue red blue) 2 2)
-		    (offset-image+ (filled-rect 2 2 'red)
+	   (image=? (color-list->image (list red blue red blue) 2 2 0 0)
+		    (offset-image+ (rectangle 2 2 'solid 'red)
 				   1 0
-				   (filled-rect 1 2 'blue))))
+				   (rectangle 1 2 'solid 'blue))))
 
 (htdp-test #t
 	   'offset-image+2
-	   (image=? (color-list->image (list red red red blue) 2 2)
-		    (offset-image+ (filled-rect 2 2 'red)
+	   (image=? (color-list->image (list red red red blue) 2 2 0 0)
+		    (offset-image+ (rectangle 2 2 'solid 'red)
 				   1 1
-				   (filled-rect 1 1 'blue))))
+				   (rectangle 1 1 'solid 'blue))))
 
 (htdp-test #t
 	   'offset-image+3
-	   (image=? (color-list->image (list red red blue blue) 2 2)
-		    (offset-image+ (filled-rect 2 1 'red)
+	   (image=? (color-list->image (list red red blue blue) 2 2 0 0)
+		    (offset-image+ (rectangle 2 1 'solid 'red)
 				   0 1
-				   (filled-rect 2 1 'blue))))
+				   (rectangle 2 1 'solid 'blue))))
 
 (htdp-test #t
 	   'offset-image+4
-	   (image=? (color-list->image (list blue blue red red) 2 2)
-		    (offset-image+ (filled-rect 2 1 'red)
+	   (image=? (color-list->image (list blue blue red red) 2 2 0 0)
+		    (offset-image+ (rectangle 2 1 'solid 'red)
 				   0 -1
-				   (filled-rect 2 1 'blue))))
+				   (rectangle 2 1 'solid 'blue))))
 
 (htdp-test #t
            'offset-image+/white
            (image=? (alpha-color-list->image (list ablack ablack ablack
                                                    ablack awhite ablack
                                                    ablack ablack ablack)
-                                             3 3)
-                    (offset-image+ (filled-rect 3 3 'black)
+                                             3 3 0 0)
+                    (offset-image+ (rectangle 3 3 'solid 'black)
                                    1 1
-                                   (filled-rect 1 1 'white))))
+                                   (rectangle 1 1 'solid 'white))))
 
 (htdp-test #t
            'color-list->image/white-in-mask
            (image=? (color-list->image (list black red   black
                                              red   red   red
                                              black red   black)
-                                       3 3)
-                    (image+ (filled-rect 3 3 'red)
+                                       3 3 0 0)
+                    (image+ (rectangle 3 3 'solid 'red)
                             (color-list->image (list black white black
                                                      white white white
                                                      black white black)
-                                               3 3))))
+                                               3 3 0 0))))
 
 
 (htdp-test #t
 	   'image+
-	   (image=? (color-list->image (list red blue red red blue red) 3 2)
-		    (offset-image+ (filled-rect 3 2 'red)
+	   (image=? (color-list->image (list red blue red red blue red) 3 2 0 0)
+		    (offset-image+ (rectangle 3 2 'solid 'red)
 				   1 0
-				   (filled-rect 1 2 'blue))))
+				   (rectangle 1 2 'solid 'blue))))
 
 (htdp-test #t
 	   'image-inside?1
-	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
+	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
 					 1 0
-					 (filled-rect 1 2 'blue))
-			  (filled-rect 1 2 'blue)))
+					 (rectangle 1 2 'solid 'blue))
+			  (rectangle 1 2 'solid 'blue)))
 
 (htdp-test #f
 	   'image-inside?2
-	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
+	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
 					 1 0
-					 (filled-rect 1 2 'blue))
-			  (filled-rect 1 2 'black)))
+					 (rectangle 1 2 'solid 'blue))
+			  (rectangle 1 2 'solid 'black)))
 
 (htdp-test #t
 	   'image-inside?3
-	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
+	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
 					 1 0
-					 (filled-rect 1 2 'blue))
-			  (filled-rect 1 2 'red)))
+					 (rectangle 1 2 'solid 'blue))
+			  (rectangle 1 2 'solid 'red)))
 
 (htdp-test #f
 	   'image-inside?4
-	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
+	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
 					 1 0
-					 (filled-rect 1 2 'blue))
-			  (filled-rect 2 1 'red)))
+					 (rectangle 1 2 'solid 'blue))
+			  (rectangle 2 1 'solid 'red)))
 
 (htdp-test #t
            'image-inside?5
-           (image-inside? (alpha-color-list->image (list (make-alpha-color 0 255 0 0)) 1 1)
-                          (alpha-color-list->image (list (make-alpha-color 255 0 0 0)) 1 1)))
+           (image-inside? (alpha-color-list->image (list (make-alpha-color 0 255 0 0)) 1 1 0 0)
+                          (alpha-color-list->image (list (make-alpha-color 255 0 0 0)) 1 1 0 0)))
 
 (htdp-test #f
 	   'image-inside?6
-	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
+	   (image-inside? (offset-image+ (rectangle 3 2 'solid 'red)
 					 1 0
-					 (filled-rect 1 2 'blue))
+					 (rectangle 1 2 'solid 'blue))
 			  (color-list->image (list blue white white) 
-					     3 1)))
+					     3 1 0 0)))
 
 (htdp-test #t
 	   'image-inside?7
-	   (image-inside? (offset-image+ (filled-rect 16 16 'red)
+	   (image-inside? (offset-image+ (rectangle 16 16 'solid 'red)
                                          2 5
-                                         (outline-circle 6 6 'blue))
-                          (outline-circle 6 6 'blue)))
+                                         (ellipse 6 6 'outline 'blue))
+                          (ellipse 6 6 'outline 'blue)))
 
 (htdp-test #t
            'image-inside?8
            (image-inside?
-            (image+ (filled-rect (image-width (text "x" 12 'red))
-                                 (image-height (text "x" 12 'red))
-                                 'white)
+            (image+ (rectangle (image-width (text "x" 12 'red))
+                               (image-height (text "x" 12 'red))
+                               'solid 
+                               'white)
                     (text "x" 12 'red))
             (text "x" 12 'red)))
 
@@ -368,23 +379,23 @@
 
 (htdp-test (make-posn 2 5)
 	   'find-image
-	   (find-image (offset-image+ (filled-rect 16 16 'red)
+	   (find-image (offset-image+ (rectangle 16 16 'solid 'red)
 				      2 5
-				      (outline-circle 6 6 'blue))
-		       (outline-circle 6 6 'blue)))
+				      (ellipse 6 6 'outline 'blue))
+		       (ellipse 6 6 'outline 'blue)))
 
 (htdp-test (make-posn 0 0)
 	   'find-image
-	   (find-image (filled-rect 16 16 'blue)
-		       (outline-circle 6 6 'blue)))
+	   (find-image (rectangle 16 16 'solid 'blue)
+		       (ellipse 6 6 'outline 'blue)))
 
 (htdp-test 5
 	   'image-width
-	   (image-width (filled-rect 5 7 'red)))
+	   (image-width (rectangle 5 7 'solid 'red)))
 
 (htdp-test 7
 	   'image-height
-	   (image-height (filled-rect 5 7 'red)))
+	   (image-height (rectangle 5 7 'solid 'red)))
 
 (htdp-test 1 'color-red (color-red (make-color 1 2 3)))
 (htdp-test 2 'color-green (color-green (make-color 1 2 3)))
@@ -395,81 +406,89 @@
 (htdp-test #t
            'line 
            (image=? (line 4 0 'red)
-                    (color-list->image (list red red red red red) 5 1)))
+                    (color-list->image (list red red red red red) 5 1 0 0)))
 
 (htdp-test #t
            'line 
            (image=? (line 0 4 'red)
-                    (color-list->image (list red red red red red) 1 5)))
+                    (color-list->image (list red red red red red) 1 5 0 0)))
 
 ;; note: next two tests may be platform-specific... I'm not sure.
 ;; I developed them under macos x. -robby
 (htdp-test #t
-           'outline-triangle
-           (image=? (outline-triangle 3 'red)
+           'triangle1
+           (image=? (triangle 3 'outline 'red)
                     (color-list->image 
                      (list white red   white
                            white red   white
                            red   white red
                            red   red   red)
                      3
-                     4)))
+                     4
+                     0
+                     0)))
 
 (htdp-test #t
-           'filled-triangle
-           (image=? (filled-triangle 3 'red)
+           'triangle2
+           (image=? (triangle 3 'solid 'red)
                     (color-list->image 
                      (list white red   white
                            white red   white
                            red   red   red
                            red   red   red)
                      3
-                     4)))
+                     4
+                     0
+                     0)))
 
 (htdp-test #t
            'add-line
-           (image=? (image+ (filled-rect 5 4 'black)
-                            (filled-rect 1 4 'red))
-                    (add-line (filled-rect 4 4 'black)
+           (image=? (image+ (rectangle 5 4 'solid 'black)
+                            (rectangle 1 4 'solid 'red))
+                    (add-line (rectangle 4 4 'solid 'black)
                               (make-posn -1 0)
                               (make-posn -1 3)
                               'red)))
 
 (htdp-test #t
            'add-line
-           (image=? (image+ (filled-rect 4 5 'black)
-                            (filled-rect 4 1 'red))
-                    (add-line (filled-rect 4 4 'black)
+           (image=? (image+ (rectangle 4 5 'solid 'black)
+                            (rectangle 4 1 'solid 'red))
+                    (add-line (rectangle 4 4 'solid 'black)
                               (make-posn 0 -1)
                               (make-posn 3 -1)
                               'red)))
 
-(check-on-bitmap 'filled-rect (htdp-eval (filled-rect 2 2 'red)))
-(check-on-bitmap 'outline-rect (htdp-eval (outline-rect 2 2 'red)))
-(check-on-bitmap 'filled-circle (htdp-eval (filled-circle 2 4 'red)))
-(check-on-bitmap 'outline-circle (htdp-eval (outline-circle 2 4 'red)))
-(check-on-bitmap 'filled-triangle (htdp-eval (filled-triangle 10 'red)))
-(check-on-bitmap 'outline-triangle (htdp-eval (outline-triangle 10 'red)))
+(check-on-bitmap 'solid-rect (htdp-eval (rectangle 2 2 'solid 'red)))
+(check-on-bitmap 'outline-rect (htdp-eval (rectangle 2 2 'outline 'red)))
+(check-on-bitmap 'solid-ellipse (htdp-eval (ellipse 2 4 'solid 'red)))
+(check-on-bitmap 'outline-ellipse (htdp-eval (ellipse 2 4 'outline 'red)))
+(check-on-bitmap 'solid-ellipse (htdp-eval (circle 4 'solid 'red)))
+(check-on-bitmap 'outline-ellipse (htdp-eval (circle 4 'outline 'red)))
+(check-on-bitmap 'solid-triangle (htdp-eval (triangle 10 'solid 'red)))
+(check-on-bitmap 'outline-triangle (htdp-eval (triangle 10 'outline 'red)))
 (check-on-bitmap 'line (htdp-eval (line 10 7 'red)))
 (check-on-bitmap 'text (htdp-eval (text "XX" 12 'red)))
-(check-on-bitmap 'image+ (htdp-eval (image+ (filled-rect 1 4 'blue) (filled-rect 4 1 'green))))
-(check-on-bitmap 'image+ (htdp-eval (offset-image+ (filled-rect 4 4 'blue)
+(check-on-bitmap 'image+ (htdp-eval (image+ (rectangle 1 4 'solid 'blue) (rectangle 4 1 'solid 'green))))
+(check-on-bitmap 'image+ (htdp-eval (offset-image+ (rectangle 4 4 'solid 'blue)
                                                    2 2
-                                                   (filled-rect 4 4 'green))))
+                                                   (rectangle 4 4 'solid 'green))))
 (check-on-bitmap 'alpha-color-list
                  (htdp-eval
                   (image+
-                   (filled-rect 3 3 'blue)
+                   (rectangle 3 3 'solid 'blue)
                    (alpha-color-list->image
                     (list ared aclr ared
                           aclr aclr aclr
                           ared aclr ared)
                     3
-                    3))))
+                    3
+                    0
+                    0))))
 (check-on-bitmap 'add-line
                  (htdp-eval
                   (add-line
-                   (filled-rect 100 100 'black)
+                   (rectangle 100 100 'solid 'black)
                    (make-posn -10 -10)
                    (make-posn 110 110)
                    'red)))
