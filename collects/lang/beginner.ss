@@ -432,8 +432,10 @@
 	    "to format a string, possibly embedding values"))
 
    ("Reading and Printing"
+    (print (any -> void)
+	   "to print the argument as a value to stdout")
     (display (any -> void)
-	     "to print the argument to stdout")
+	     "to print the argument to stdout (without quotes on strings, etc.)")
     (read (-> sexp) "to read input from the user"))
    
    ("Misc"

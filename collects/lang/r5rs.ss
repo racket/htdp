@@ -46,4 +46,15 @@
 
 	   ;; We have to include the following MzScheme-isms to do anything,
 	   ;; but they're not legal R5RS names, anyway.
-	   #%app #%datum #%top))
+	   #%app #%datum #%top 
+	   (rename synrule-in-stx-module-begin #%module-begin))
+
+  (define-syntax synrule-in-stx-module-begin
+    (lambda (stx)
+      (datum->syntax-object
+       (quote-syntax here)
+       (list* (quote-syntax #%plain-module-begin)
+	      (quote-syntax 
+	       (require-for-syntax (rename mzscheme syntax-rules syntax-rules)))
+	      (cdr (syntax-e stx)))
+       stx))))

@@ -27,7 +27,7 @@
 	   (rename intermediate-time time)
 	   (rename advanced-begin begin)
 	   (rename advanced-shared shared)
-	   (rename set! set!)
+	   (rename advanced-set! set!)
 	   (rename delay delay)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum

@@ -11,10 +11,6 @@
 ;;    error in `(define 1 2 3)' is "expected an identifier, found 1",
 ;;    not "expected two parts after `define', but found three"
 
-;; Possible bug: keywords are not disallowed as function names or
-;; arguments. (This is a "possible" bug because it's not clear we want
-;; to maintain the restriction.)
-
 (module teach mzscheme
   (require (lib "etc.ss")
 	   (lib "list.ss")
@@ -50,6 +46,7 @@
 	   advanced-define
 	   advanced-lambda
 	   advanced-app
+	   advanced-set!
 	   advanced-define-struct
 	   advanced-let
 	   advanced-recur
@@ -331,7 +328,7 @@
 
   ;; The latter is probably surprising. It turns out that every use of
   ;; a `local'-bound identifier gets converted to an undefined check,
-  ;; and the call to `check-not-udnefined' can't be forged by the
+  ;; and the call to `check-not-undefined' can't be forged by the
   ;; programmer. So the pattern-match effectively recognizes uses of
   ;; `local'-bound identifiers, which are legal as rator
   ;; expressions. (`let' and `letrec' get converted to `local'.)
@@ -972,6 +969,55 @@
 	"expected a defined name or a primitive operation name after an ~
          open parenthesis, but nothing's there")]
       [_else (bad-use-error '#%app stx)]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; set! (advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  ;; We disallow set!s on lambda-bound variables, which we recognize
+  ;; as lexically-bound variables that are not bound to
+  ;; set!-transformer syntax values.
+
+  (define-syntax (advanced-set! stx)
+    (syntax-case stx ()
+      [(_ id expr ...)
+       (identifier? (syntax id))
+       (let ([exprs (syntax->list (syntax (expr ...)))])
+	 ;; Check that id isn't syntax, and not lexical:
+	 (when ((with-handlers ([not-break-exn? (lambda (exn) (lambda () #t))])
+		  ;; First try syntax:
+		  (let ([binding (syntax-local-value (syntax id))])
+		    ;; If it's a transformer binding, then it can take care of itself...
+		    (if (set!-transformer? binding)
+			(lambda () #f) ;; no lex check wanted
+			(lambda ()
+			  (teach-syntax-error
+			   'set!
+			   (syntax id)
+			   "expected a defined name after `set!', but found a keyword"))))))
+	   ;; Now try lexical:
+	   (when (eq? 'lexical (identifier-binding (syntax id)))
+	     (teach-syntax-error
+	      'set!
+	      (syntax id)
+	      "expected a defined name after `set!', but found a function argument name")))
+	 (check-single-expression 'set!
+				  "for the new value"
+				  stx
+				  exprs)
+	 (syntax (set! id expr ...)))]
+      [(_ id . __)
+       (teach-syntax-error
+	'set!
+	(syntax id)
+	"expected a defined name after `set!', but found ~a"
+	(something-else (syntax id)))]
+      [(_)
+       (teach-syntax-error
+	'set!
+	(syntax id)
+	"expected a defined name after `set!', but nothing's there")]
+      [_else (bad-use-error 'set! stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; define-struct (advanced)         >> weak errors <<
