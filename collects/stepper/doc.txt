@@ -1,0 +1,54 @@
+variable references: there are three kinds of variable references:
+1) bound variable refs
+2) unit-bound variable refs
+3) top-level variable refs
+
+You might be forgiven for some confusion: these three appear to overlap 
+heavily.  Here are more accurate defintions for each one:
+
+unit-bound variable references are those which occur as the left-hand sides of 
+top-level definitions within a unit.
+
+bound variable references are those which occur within the scope of a 
+lambda, case-lambda, let, let*, letrec, or other form which introduces a 
+limited lexical scope.  This includes `local', but not the unit-bound 
+variables mentioned above.
+
+top-level references are the rest of the references.
+
+One difference between top-level and bound varrefs are the way that they 
+are handled at runtime.  Top-level varrefs are looked up in a table; if 
+they are not found in this table, a runtime error is signalled.  Note that 
+this lookup occurs only when the varref is evaluated, not when it is first 
+`encountered' (e.g., in the body of a closure). One reason that this 
+mechanism is necessary is that a Scheme REPL permits top-level references 
+to variables that have not yet been defined.
+
+Bound varrefs have a known lexical binding location, and they can be looked 
+up directly, rather than going through the indirection of checking a table.  
+These variables may be introduced by forms like `letrec' or `local', and 
+they may furthermore be used before their binding definition has been 
+evaluated.  In this case, they have the `<undefined>' value.  In most 
+language levels, a reference to a variable which contains the `<undefined>' 
+value is an error.  In such a language level, any variable which may have 
+this value must be checked on every evaluated reference.
+
+So here's the problem: unit-bound varrefs are similar to those inside a 
+`local'.  Syntactically, their bindings are introduced by `define', and their 
+scope extends in both directions. Semantically they are similar to 
+bound variables, in that the interpreter can lexically fix the binding of 
+the variable.  In both of these regards they are similar to the bindings 
+in a `local'.  However, zodiac does not parse them like those in a 
+`local'.  Rather, it parses them as `top-level-varref's.  Why? I forget, 
+and I'm about to ask Matthew yet again.  Then I'll record the answer here.
+
+Now things get a bit more complicated.  Top-level varrefs never need to be 
+checked for the '<undefined>' value; before they are bound, they have no 
+runtime lookup location at all.  Bound varrefs and unit varrefs, on the 
+other hand, may contain the `<undefined>' value.  In particular, those 
+bound by letrec, local, and units may contain this value.  Others, like 
+those bound by lambda, let, and let*, will not.  For the first and third 
+categories, we do not need to check for the undefined value at runtime.  
+Only when we are looking at a bound or unit varref which may contain the 
+`<undefined>' value do we need to insert a runtime check.
+
