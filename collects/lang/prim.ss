@@ -7,6 +7,7 @@
 (module prim mzscheme
   (require (lib "error.ss" "lang")
 	   (rename (lib "htdp-beginner.ss" "lang") beginner-app #%app))
+  (require-for-syntax "private/firstorder.ss")
   
   (provide define-primitive
 	   define-higher-order-primitive)
@@ -58,8 +59,7 @@
 			  (map (lambda (arg new-arg)
 				 (if (not (is-proc-arg? arg))
 				     #'(void)
-				     #`(unless (and (identifier? (#,#'syntax #,new-arg))
-						    (not (identifier-binding (#,#'syntax #,new-arg))))
+				     #`(unless (identifier? (#,#'syntax #,new-arg))
 					 (raise-syntax-error
 					  #f
 					  (format
@@ -71,9 +71,9 @@
 			       args new-args)]
 			 [(wrapped-arg ...)
 			  (map (lambda (arg new-arg)
-				 (if (not (is-proc-arg? arg)) 
-				     new-arg
-				     #`(#%top . #,new-arg)))
+				 (cond
+				  [(not (is-proc-arg? arg)) new-arg]
+				  [else #`(fo->ho #,new-arg)]))
 			       args new-args)]
 			 [num-arguments (length args)])
 	     (with-syntax ([impl #'(let ([name (lambda (new-arg ...)
@@ -110,5 +110,10 @@
 			 (string-append
 			  "this primitive operator must be applied to arguments; "
 			  "expected an open parenthesis before the operator name")
-			 s)])))))))])))
+			 s)])))))))]))
+
+  (define-syntax (fo->ho stx)
+    (syntax-case stx ()
+      [(_ id) (first-order->higher-order #'id)])))
+
 

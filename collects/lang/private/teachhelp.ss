@@ -1,6 +1,7 @@
 
 (module teachhelp mzscheme
-
+  (require "firstorder.ss")
+  
   (provide make-undefined-check 
 	   make-first-order-function)
   
@@ -61,32 +62,34 @@
 
   (define (make-first-order-function what arity orig-id app)
     (make-set!-transformer
-     (lambda (stx)
-       (syntax-case stx (set!)
-	 [(set! . _) (raise-syntax-error 
-		      #f stx #f 
-		      "internal error: assignment to first-order function")]
-	 [id
-	  (identifier? #'id)
-	  (raise-syntax-error
-	   #f
-	   (format "this is a ~a, so it must be ~a (which requires using a parenthesis before the name)"
-		   what
-		   (appropriate-use what))
-	   stx
-	   #f)]
-	 [(id . rest)
-	  (let ([l (length (syntax->list #'rest))])
-	    (unless (= l arity)
-	      (raise-syntax-error
-	       #f
-	       (format "this ~a expects ~a argument~a, here it is provided ~a argument~a"
-		       what 
-		       arity (if (= 1 arity) "" "s")
-		       l (if (= 1 l) "" "s"))
-	       stx
-	       #f))
-	    (datum->syntax-object
-	     app
-	     (list* app (datum->syntax-object orig-id (syntax-e orig-id) #'id #'id) #'rest)
-	     stx stx))])))))
+     (make-first-order
+      (lambda (stx)
+	(syntax-case stx (set!)
+	  [(set! . _) (raise-syntax-error 
+		       #f stx #f 
+		       "internal error: assignment to first-order function")]
+	  [id
+	   (identifier? #'id)
+	   (raise-syntax-error
+	    #f
+	    (format "this is a ~a, so it must be ~a (which requires using a parenthesis before the name)"
+		    what
+		    (appropriate-use what))
+	    stx
+	    #f)]
+	  [(id . rest)
+	   (let ([l (length (syntax->list #'rest))])
+	     (unless (= l arity)
+	       (raise-syntax-error
+		#f
+		(format "this ~a expects ~a argument~a, here it is provided ~a argument~a"
+			what 
+			arity (if (= 1 arity) "" "s")
+			l (if (= 1 l) "" "s"))
+		stx
+		#f))
+	     (datum->syntax-object
+	      app
+	      (list* app (datum->syntax-object orig-id (syntax-e orig-id) #'id #'id) #'rest)
+	      stx stx))]))
+      (syntax-local-introduce orig-id)))))
