@@ -112,7 +112,7 @@
 			      intermediate-let*
 			      intermediate-recur
 			      intermediate-lambda
-			      intermediate-app ;; not currently used!
+			      intermediate-app
 			      intermediate-quasiquote
 			      intermediate-unquote
 			      intermediate-unquote-splicing
@@ -568,7 +568,9 @@
 			   (if lex?
 			       "a function argument name"
 			       (something-else fun))))
-		      ;;The following check disallows calling thunks:
+		      ;; The following check disallows calling thunks.
+		      ;; It's disabled because we need to allow calls to
+		      ;; primitive thunks.
 		      '(when (null? (syntax->list (syntax (rand ...))))
 			 (teach-syntax-error
 			  '|function call|

@@ -9,7 +9,7 @@
   (provide (rename beginner-define define)
 	   (rename beginner-define-struct define-struct)
 	   (rename beginner-lambda lambda)
-	   (rename beginner-app #%app)
+	   (rename intermediate-app #%app)
 	   (rename intermediate-local local)
 	   (rename intermediate-let let)
 	   (rename intermediate-let* let*)
