@@ -35,10 +35,13 @@ special teaching functions:
 
 ----------------------------------------
 
+_Teachpacks, Beginner_
+_Teachpacks, Higher-order Primitives_
+
 The _prim.ss_ module defines two syntactic forms for use by the
 implementors of teachpacks, which the teachpack is to be used with the
 Beginner Student languages. In Beginner Student, primitive names (for
-built-in procedures) are dikstinguished from other types of
+built-in procedures) are distinguished from other types of
 expressions, so that they can be syntactically restricted to
 application positions.
 
