@@ -225,6 +225,8 @@
          (error-display-handler err-display-handler))
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)
-             (receive-result (make-finished-result finished-exprs))
+             (begin
+               (receive-result (make-finished-result finished-exprs))
+               (receive-result (make-finished-stepping)))
              (step-through-expression expanded continue-thunk)))))))
 

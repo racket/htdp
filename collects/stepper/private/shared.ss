@@ -31,6 +31,7 @@
    (struct before-error-result (finished-exprs exp redex err-msg after-exprs))
    (struct error-result (finished-exprs err-msg))
    (struct finished-result (finished-exprs))
+   (struct finished-stepping ())
    list-take
    list-partition
    (struct closure-record (name mark constructor? lifted-name))
@@ -102,8 +103,9 @@
   (define-struct before-error-result (finished-exprs exp redex err-msg after-exprs))
   (define-struct error-result (finished-exprs err-msg))
   (define-struct finished-result (finished-exprs))
+  (define-struct finished-stepping ())
   
-  (define step-result? (union before-after-result? before-error-result? error-result? finished-result?))
+  (define step-result? (union before-after-result? before-error-result? error-result? finished-result? finished-stepping?))
   
   ; the closure record is placed in the closure table
 

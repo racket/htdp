@@ -54,6 +54,8 @@
       
       (define image? x:image?)
   
+      (define drscheme-eventspace (current-eventspace))
+      
       (define stepper-frame%
         (class (drscheme:frame:basics-mixin (frame:frame:standard-menus-mixin frame:frame:basic%))
           
@@ -174,17 +176,74 @@
                             (lambda () 
                               (simple-module-based-language-convert-value val simple-settings)))))
 
+                ; channel for incoming views
                 (define view-channel (create-channel))
-                (define view-history (list x:blank-step))
+                
+                ; the semaphore associated with the view at the end of the view-history
+                (define release-for-next-step #f)
+                
+                ; the list of available views
+                (define view-history null)
+                
+                ; the view in the stepper window
                 (define view 0)
+                
+                ; whether the stepper is waiting for a new view to become available
+                ; (initially true)
+                (define stepper-is-waiting? #t)
+                
+                (define never-step-again #f)
+          
+                ; deadlock is prevented by only running code which updates these variables in the drscheme-eventspace
+                
+                (define (try-to-get-view-pair)
+                  (when stepper-is-waiting?
+                    (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
+                  (let ([try-get (channel-try-get view-channel (lambda () #f))])
+                    (if try-get
+                        try-get
+                        (begin
+                          (set! stepper-is-waiting? #t)
+                          #f))))
+                
+                ; hand-off-and-block : (-> text%? void?)
+                ; hand-off-and-block generates a new semaphore, hands off a thunk to drscheme's eventspace,
+                ; and blocks on the new semaphore.  The thunk adds the text% to the waiting queue, and checks
+                ; to see if the stepper is waiting for a new step.  If so, it takes that new text% out of 
+                ; the queue, puts it on the list of available ones, and updates the view.  The new semaphore
+                ; won't be released until the user clicks next on the last step.
+                
+                (define (hand-off-and-block step-text)
+                  (let ([new-semaphore (make-semaphore)])
+                    (parameterize ([current-eventspace drscheme-eventspace])
+                      (queue-callback
+                       (lambda ()
+                         (when (eq? step-text x:finished-text)
+                           (set! never-step-again #t))
+                         (channel-put view-channel (list step-text new-semaphore))
+                         (when stepper-is-waiting?
+                             (let ([try-get (channel-try-get view-channel (lambda () #f))])
+                               (unless try-get
+                                 (error 'check-for-stepper-waiting "queue is empty, even though a step was just added."))
+                               (set! stepper-is-waiting? #f)
+                               (add-view-pair try-get)
+                               (update-view/existing (length view-history))))))
+                      (semaphore-wait new-semaphore))))
+
+                (define (add-view-pair view-pair)
+                  (set! release-for-next-step (cadr view-pair))
+                  (set! view-history (append view-history (list (car view-pair)))))
                 
                 ; build gui object:
                 
                 (define (home)
-                  (update-view 0))
+                  (unless stepper-is-waiting? ; check to be extra sure that other events didn't slip through.
+                    (update-view 0)))
                 
                 (define (next)
-                  (update-view (+ view 1)))
+                  (unless stepper-is-waiting? ; check to be extra sure that other events didn't slip through.
+                    (disable-buttons)
+                    (update-view (+ view 1))))
                 
                 ; make this into a special last step
                 ;(message-box "Stepper"
@@ -193,7 +252,8 @@
                 ;              "available.  No further steps can be computed."))
                 
                 (define (previous)
-                  (update-view (- view 1)))
+                  (unless stepper-is-waiting? ; check to be extra sure that other events didn't slip through.
+                    (update-view (- view 1))))
                 
                 (define s-frame (make-object stepper-frame% drscheme-frame))
                 
@@ -207,10 +267,25 @@
                 
                 (define canvas (make-object x:stepper-canvas% (send s-frame get-area-container)))
                 
+                ; update-view : (-> number? void?) : display the step with the given number.  If the 
+                ; given step is one past the end of the list, release the semaphore associated with 
+                ; the last step.  Try to get a new view.  If one is not available, simply return
+                ; (all buttons should still be disabled).  If one is available, tack it on to the end
+                ; of the list and display it.
+                
                 (define (update-view new-view)
                   (set! view new-view)
-                  (when (= view (length view-history))
-                    (set! view-history (append view-history (list (channel-get view-channel)))))
+                  (if (= view (length view-history))
+                      (begin
+                        (unless never-step-again
+                          (semaphore-post release-for-next-step)
+                          (let ([try-get (try-to-get-view-pair)])
+                            (when try-get       
+                              (add-view-pair try-get)
+                              (update-view/existing new-view)))))
+                      (update-view/existing new-view)))
+                
+                (define (update-view/existing new-view)
                   (let ([e (list-ref view-history view)])
                     (send canvas set-editor e)
                     (send e reset-width canvas)
@@ -220,7 +295,12 @@
                 (define (en/dis-able-buttons)
                   (send previous-button enable (not (zero? view)))
                   (send home-button enable (not (zero? view)))
-                  (send next-button enable #t))
+                  (send next-button enable (not never-step-again)))
+                
+                (define (disable-buttons)
+                  (send previous-button enable #f)
+                  (send home-button enable #f)
+                  (send next-button enable #f))
                 
                 (define (print-current-view item evt)
                   (send (send canvas get-editor) print))
@@ -264,8 +344,10 @@
                                   null
                                   null
                                   #f
-                                  null)])])
-                    (channel-put step-text)))
+                                  null)]
+                               [(finished-stepping? result)
+                                x:finished-text])])
+                    (hand-off-and-block step-text)))
                 
                 ; need to capture the custodian as the thread starts up:
                 (define (program-expander-prime init iter)
@@ -278,8 +360,7 @@
           (send button-panel stretchable-width #f)
           (send button-panel stretchable-height #f)
           (send canvas stretchable-height #t)
-          (en/dis-able-buttons)
-          (update-view 0)
+          (disable-buttons)
           (send (send s-frame edit-menu:get-undo-item) enable #f)
           (send (send s-frame edit-menu:get-redo-item) enable #f)
           (model:go program-expander-prime receive-result (get-render-settings render-to-string render-to-sexp #t))

@@ -15,12 +15,15 @@
         (parameterize ([current-namespace namespace]
                        [error-escape-handler (lambda () (escape (void)))])
           (let* ([expanded-steps
-                  (map expand-test-spec expected-steps)]
+                  (append (map expand-test-spec expected-steps) 
+			  '((finished-stepping)))]
                  [receive-result
                   (lambda (result)
-                    (if (compare-steps result (car expanded-steps))
-                        (set! expanded-steps (cdr expanded-steps))
-                        (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expanded-steps))))]
+                    (if (null? expanded-steps)
+                        (printf "test-sequence: ran out of expected steps. Given result: ~v\n" result)
+                        (if (compare-steps result (car expanded-steps))
+                            (set! expanded-steps (cdr expanded-steps))
+                            (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expanded-steps)))))]
                  [expand-in-namespace
                   (lambda (sexp)
                     (expand sexp))]
@@ -82,6 +85,8 @@
                                          before-error-result-redex
                                          before-error-result-err-msg)
                                    (cdr expected)))]
+
+      [(finished-stepping) (finished-stepping? actual)]
       
       [else (printf "compare-steps: unexpected expected step type: ~v\n" (car expected))]))
   
