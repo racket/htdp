@@ -8,40 +8,49 @@
            "tests-common.ss")
   
   (reset-namespaces)
+
+  (define test-directory (build-path (collection-path "mzlib")  'up 'up))
   
   (define (test-sequence namespace render-settings exp-str expected-steps)
-    (printf "testing string: ~v\n" exp-str)
-    (let* ([current-error-display-handler (error-display-handler)]) 
-      (let/ec escape
-        (parameterize ([current-namespace namespace]
-                       [error-escape-handler (lambda () (escape (void)))])
-          (let* ([expanded-steps
-                  (append (map expand-test-spec expected-steps) 
-			  '((finished-stepping)))]
-                 [receive-result
-                  (lambda (result)
-                    (if (null? expanded-steps)
-                        (printf "test-sequence: ran out of expected steps. Given result: ~v\n" result)
-                        (begin
-                          (unless (compare-steps result (car expanded-steps))
-                            (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expanded-steps)))
-                          (set! expanded-steps (cdr expanded-steps)))))]
-                 [expand-in-namespace
-                  (lambda (sexp)
-                    (expand sexp))]
-                 [program-expander
-                  (lambda (init iter)
-                    (letrec ([input-port (open-input-string exp-str)]
-                             [read-and-deliver
-                              (lambda ()
-                                (let ([new-exp (read-syntax "test-input" input-port)])
-                                  (if (eof-object? new-exp)
-                                      (iter new-exp void)
-                                      (iter (expand-in-namespace new-exp) read-and-deliver))))])
-                      (init)
-                      (read-and-deliver)))])
-            (go program-expander receive-result render-settings)
-            (error-display-handler current-error-display-handler))))))
+  
+     (let ([filename (build-path test-directory "stepper-test")])
+       (call-with-output-file filename
+         (lambda (port)
+           (fprintf port "~a" exp-str))
+         'truncate)
+       (printf "testing string: ~v\n" exp-str)
+       (let* ([current-error-display-handler (error-display-handler)]) 
+         (let/ec escape
+           (parameterize ([current-namespace namespace]
+                          [error-escape-handler (lambda () (escape (void)))])
+             (let* ([expanded-steps
+                     (append (map expand-test-spec expected-steps) 
+                             '((finished-stepping)))]
+                    [receive-result
+                     (lambda (result)
+                       (if (null? expanded-steps)
+                           (printf "test-sequence: ran out of expected steps. Given result: ~v\n" result)
+                           (begin
+                             (unless (compare-steps result (car expanded-steps))
+                               (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expanded-steps)))
+                             (set! expanded-steps (cdr expanded-steps)))))]
+                    [expand-in-namespace
+                     (lambda (sexp)
+                       (expand sexp))]
+                    [program-expander
+                     (lambda (init iter)
+                       (call-with-input-file filename
+                         (lambda (input-port)
+                           (letrec ([read-and-deliver
+                                     (lambda ()
+                                       (let ([new-exp (read-syntax filename input-port)])
+                                         (if (eof-object? new-exp)
+                                             (iter new-exp void)
+                                             (iter (expand-in-namespace new-exp) read-and-deliver))))])
+                           (init)
+                           (read-and-deliver)))))])
+               (go program-expander receive-result render-settings)
+               (error-display-handler current-error-display-handler))))))))
   
   (define (lang-level-test-sequence ns rs)
     (lambda args
