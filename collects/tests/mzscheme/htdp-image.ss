@@ -57,10 +57,6 @@
 (htdp-test #t 'image? (image? (filled-rect 10 10 'blue)))
 (htdp-test #f 'image? (image? 5))
 
-(htdp-test (list (make-color 248 20 64))
-	   'color-list
-	   (image->color-list (filled-rect 1 1 'red)))
-
 (define red (make-color 248 20 64))
 (define blue (make-color 80 80 248))
 (define black (make-color 0 0 0))
@@ -69,6 +65,17 @@
 (htdp-top (define blue (make-color 80 80 248)))
 (htdp-top (define black (make-color 0 0 0)))
 (htdp-top (define white (make-color 255 255 255)))
+
+(htdp-test (list red)
+	   'color-list
+	   (image->color-list (filled-rect 1 1 'red)))
+
+(htdp-test (list red blue black white)
+	   'colors-set-up-properly
+	   (map car (list (image->color-list (filled-rect 1 1 'red))
+                          (image->color-list (filled-rect 1 1 'black))
+                          (image->color-list (filled-rect 1 1 'blue))
+                          (image->color-list (filled-rect 1 1 'white)))))
 
 (htdp-test (list blue blue blue blue)
 	   'color-list
