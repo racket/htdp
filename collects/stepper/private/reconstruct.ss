@@ -129,8 +129,6 @@
                   (recon-source-expr (mark-source mark) (list mark) null render-settings))])]
         [else
          (let ([rendered ((render-settings-render-to-sexp render-settings) val)])
-           (when #t
-             (fprintf (current-error-port) "rendered: ~v\n" rendered))
            (if (symbol? rendered)
                #`#,rendered
                #`(#%datum . #,rendered)))])))
@@ -920,9 +918,7 @@
                   ((result-value-break result-exp-break)
                    (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
                                          (recon-source-expr (mark-source (car mark-list)) mark-list null render-settings)
-                                         (begin
-                                           (fprintf (current-error-port) "returned value: ~v\n" (car returned-value-list))
-                                         (recon-value (car returned-value-list) render-settings)))]
+                                         (recon-value (car returned-value-list) render-settings))]
                           [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
                      (let-values ([(a b) (unwind recon-expr innermost #f)])
                        (list a b))))

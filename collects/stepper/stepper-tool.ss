@@ -167,14 +167,15 @@
                                    number-snip-type)]))]
                       [else (basic-convert expr)])))
                 
+                (define drscheme-inspector (current-inspector))
 		;; render-to-sexp : TST -> sexp
 		(define (render-to-sexp val)
                   (parameterize ([current-print-convert-hook (make-print-convert-hook simple-settings)])
                     (set-print-settings
-                            language
-                            simple-settings
-                            (lambda () 
-                              (simple-module-based-language-convert-value val simple-settings)))))
+                     language
+                     simple-settings
+                     (lambda () 
+                       (simple-module-based-language-convert-value val simple-settings)))))
 
                 ; channel for incoming views
                 (define view-channel (create-channel))
