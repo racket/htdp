@@ -106,10 +106,7 @@
                         (set! held-redex-list redex-list))]
                    
                    [(result-exp-break result-value-break)
-                    (when (if (not (null? returned-value-list)) ; OOPS! I'M RIGHT HERE
-                              (not (r:skip-redex-step? mark-list))
-                              (and (not (eq? held-expr-list no-sexp))
-                                   (not (r:skip-result-step? mark-list))))
+                    (unless (and (eq? break-kind 'result-exp-break) (eq? held-expr-list no-sexp))
                       (let*-2vals ([(reconstructed reduct-list) (reconstruct-helper)])
                         ;              ; this invariant (contexts should be the same)
                         ;              ; fails in the presence of unannotated code.  For instance,
