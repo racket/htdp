@@ -452,6 +452,12 @@
      (outline-circle (int int symbol -> image)
        "to create an image of an ellipse's outline using the given width, height, and color")
 
+     (line (int int symbol -> image)
+       "to create an image with a colored line from (0,0) to the point with the given coordinates")
+
+     (text (string color -> image)
+       "to create an image from the given string and background color")
+
      (image-inside? (image image -> boolean)
        "to determine whether the non-white pixels of the second image appear in the first")
      (find-image (image image -> posn)
