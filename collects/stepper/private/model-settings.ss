@@ -41,7 +41,7 @@
   ; abbreviate-cons-as-list? ; : ( -> boolean)
   ; render-to-sexp ; (TST -> TST)
   (define render-settings? (vector/p procedure? procedure? procedure? procedure?))
-  
+
   (define (render-to-string val)
     (error 'model-settings "render not set yet"))
   (define (render-to-sexp val)

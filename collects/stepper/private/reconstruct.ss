@@ -245,8 +245,8 @@
   
   (define (find-special-value name valid-args)
     (let ([expanded (car (syntax-e (cdr (syntax-e (expand (cons name valid-args))))))])
-      (fprintf (current-error-port) "identifier-binding: ~e\n" 
-               (identifier-binding expanded))
+      '(fprintf (current-error-port) "identifier-binding: ~e\n" 
+		(identifier-binding expanded))
       (eval expanded)))
   
   (define (second-arg-is-list? mark-list)
@@ -541,7 +541,8 @@
                                                 (error 'recon-source-expr "unknown 'stepper-binding-type property: ~a" 
                                                        (syntax-property var 'stepper-binding-type)))))]
                                         [else ; top-level-varref
-                                         var]))]
+					 (fixup-name
+					  var)]))]
                                [(#%top . var)
                                 (syntax var)]
                                
@@ -552,9 +553,14 @@
      'caller))
  
   
-                                                                                                                                    
-                                                                                                                                    
-                                                                                                                                    
+  ;; mflatt: MAJOR HACK - work around the prefix on
+  ;;         beginner name definitions
+  (define (fixup-name s)
+    (let ([m (regexp-match re:beginner: (symbol->string (syntax-e s)))])
+      (if m
+	  (datum->syntax-object s (string->symbol (cadr m)) s s)
+	  s)))
+  (define re:beginner: (regexp "^beginner:(.*)$"))
                                                                                                         ;                         ; 
                                        ;                     ;                                          ;         ;               ; 
  ; ;;  ;;;    ;;;   ;;;   ; ;;    ;;; ;;;; ; ;; ;   ;   ;;; ;;;;         ;;;   ;;;   ; ;;; ;;   ; ;;;   ;   ;;;  ;;;;  ;;;    ;;; ; 

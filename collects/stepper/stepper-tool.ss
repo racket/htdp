@@ -14,7 +14,14 @@
            "private/model-settings.ss"
            (lib "pconvert.ss")
            (lib "string-constant.ss" "string-constants"))
-  
+
+  ;; mflatt: MINOR HACK - work around temporary
+  ;;         print-convert problems
+  (define (stepper-print-convert v)
+    (or (and (procedure? v)
+	     (object-name v))
+	(print-convert v)))
+    
   (provide tool@)
   
   (define tool@
@@ -406,11 +413,11 @@
 	  [(constructor)
 	   (parameterize ([constructor-style-printing #t]
 			  [show-sharing (drscheme:language:simple-settings-show-sharing simple-settings)])
-			 (print-convert value))]
+			 (stepper-print-convert value))]
 	  [(quasiquote)
 	   (parameterize ([constructor-style-printing #f]
 			  [show-sharing (drscheme:language:simple-settings-show-sharing simple-settings)])
-			 (print-convert value))]))
+			 (stepper-print-convert value))]))
       
       ;; set-print-settings ; settings ( -> TST) -> TST
       (define (set-print-settings language simple-settings thunk)
