@@ -1,4 +1,5 @@
-What is the Foot?
+What is the _Foot_?
+What is the _Stepper_?
 
 The Foot is a "stepper," which means that it proceeds through the 
 evaluation of a set of definitions and expressions, one step at a time. 
