@@ -12,10 +12,10 @@
 ;; RAD : the radius of the simple disk moving across a canvas
 (define RAD 10)
 
-;; move : shape number  -> shape or false 
+;; move : number shape   -> shape or false 
 ;; to move a shape by delta according to translate 
 ;; effect: to redraw it 
-(define (move sh delta)
+(define (move delta sh)
   (cond
     [(and (clear-solid-disk sh RAD)
           (draw-solid-disk (translate sh delta) RAD))
