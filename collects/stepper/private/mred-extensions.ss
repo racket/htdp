@@ -208,7 +208,10 @@
  ;;;    ;;  ;;;;  ; ;;;   ; ;;;    ;;;;  ;           ;;;    ;; ;  ; ;;;           ;;  ;;;; ;    ;   ;;;    ;; 
                   ;       ;                                                                                   
                   ;       ;                                                                                   
-                                                                                                              
+  
+  ; the stepper-sub-text% class is used to hold an individual list of sexps, with one or more highlights.
+  ; there are four of them in the stepper window.
+  
   (define stepper-sub-text%
     (class f:text:basic% ()
       
@@ -364,7 +367,10 @@
  ;;;    ;;  ;;;;  ; ;;;   ; ;;;    ;;;;  ;           ;;;    ;; ;  ; ;;;           ;;;;  ;    ;     ;;;   ;            ;;  ;;;; ;    ;   ;;;    ;; 
                   ;       ;                                                                                                                       
                   ;       ;                                                                                                                       
-                                                                                                                                                  
+  
+  ; the stepper-sub-error-text%, like stepper-sub-text%, fits in one of the four stepper "text" spots.
+  ; it is used for error messages.
+  
   (define stepper-sub-error-text%
     (class f:text:basic% ()
   
@@ -422,7 +428,10 @@
  ;;;    ;;  ;;;;  ; ;;;   ; ;;;    ;;;;  ;            ;;  ;;;; ;    ;   ;;;    ;; 
                   ;       ;                                                       
                   ;       ;                                                       
-                                                                                  
+    
+  ; the stepper-text% is the principal inhabitant of the stepper window. It keeps
+  ; track of all of the sexps & error messages in a given step, reformatting as necessary.
+  
   ; constructor : ((listof sexp) (listof sexp) (listof sexp) (listof sexp) (listof sexp) (union string #f) (listof sexp) -> )
   
   ; redexes MUST NOT OVERLAP. all warranties void if this is violated.
@@ -486,7 +495,9 @@
           (let ([w-box (box 0)]
                 [h-box (box 0)])
             (send vert-separator get-extent #f 0 0 w-box h-box #f #f #f #f)
-            (needs-update vert-separator 0 0 (unbox w-box) (unbox h-box)))))
+            (needs-update vert-separator 0 0 (unbox w-box) (unbox h-box))
+            (send horiz-separator-2 get-extent #f 0 0 w-box h-box #f #f #f #f)
+            (needs-update horiz-separator-2 0 0 (unbox w-box) (unbox h-box)))))
       
       
 
