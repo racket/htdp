@@ -52,8 +52,6 @@
       (define stepper-initial-width 500)
       (define stepper-initial-height 500)
       
-      (define image? x:image?)
-      
       (define drscheme-eventspace (current-eventspace))
       
       (define stepper-frame%
@@ -169,8 +167,6 @@
                            number-snip-type)]))]
               [else (basic-convert expr)])))
         
-        (define drscheme-inspector (current-inspector))
-        
         ;; render-to-sexp : TST -> sexp
         (define (render-to-sexp val)
           (parameterize ([current-print-convert-hook (make-print-convert-hook simple-settings)])
@@ -196,59 +192,103 @@
         
         ; whether the stepper is waiting for a new view to become available
         ; (initially true)
-        (define stepper-is-waiting? #t)
+        ; possible values: #f, 'waiting-for-any-step, 'waiting-for-application
+        (define stepper-is-waiting? 'waiting-for-any-step)
         
         (define never-step-again #f)
-        
-        ; deadlock is prevented by only running code which updates these variables in the drscheme-eventspace
-        
-        (define (try-to-get-view-pair)
-          (when stepper-is-waiting?
-            (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
-          (let ([try-get (async-channel-try-get view-channel)])
-            (if try-get
-                try-get
-                (begin
-                  (set! stepper-is-waiting? #t)
-                  #f))))
         
         ; hand-off-and-block : (-> text%? boolean? void?)
         ; hand-off-and-block generates a new semaphore, hands off a thunk to drscheme's eventspace,
         ; and blocks on the new semaphore.  The thunk adds the text% to the waiting queue, and checks
-        ; to see if the stepper is waiting for a new step.  If so, it takes that new text% out of 
-        ; the queue, puts it on the list of available ones, and updates the view.  The new semaphore
-        ; won't be released until the user clicks next on the last step.
+        ; to see if the stepper is waiting for a new step.  If so, takes that new text% out of the 
+        ; queue and puts it on the list of available ones.  If the stepper is waiting for a new step,
+        ; it checks to see whether this is of the kind that the stepper wants.  If so, display it.
+        ; otherwise, release the stepped program to continue execution.
         
-        (define (hand-off-and-block step-text end-of-stepping?)
+        (define (hand-off-and-block step-text end-of-stepping? step-kind)
           (let ([new-semaphore (make-semaphore)])
             (parameterize ([current-eventspace drscheme-eventspace])
               (queue-callback
                (lambda ()
                  (when end-of-stepping?
                    (set! never-step-again #t))
-                 (async-channel-put view-channel (list step-text new-semaphore))
+                 (async-channel-put view-channel (list step-text new-semaphore step-kind))
                  (when stepper-is-waiting?
                    (let ([try-get (async-channel-try-get view-channel)])
                      (unless try-get
                        (error 'check-for-stepper-waiting "queue is empty, even though a step was just added."))
-                     (set! stepper-is-waiting? #f)
-                     (add-view-pair try-get)
-                     (update-view/existing (- (length view-history) 1))))))
+                     (add-view-triple try-get)
+                     (if (or (right-kind-of-step? (caddr try-get))
+                             end-of-stepping?)
+                         (begin 
+                           (set! stepper-is-waiting? #f)
+                           (update-view/existing (- (length view-history) 1)))
+                         (semaphore-post new-semaphore))))))
               (semaphore-wait new-semaphore))))
         
-        (define (add-view-pair view-pair)
-          (set! release-for-next-step (cadr view-pair))
-          (set! view-history (append view-history (list (car view-pair)))))
+        ; right-kind-of-step? : (boolean? . -> . boolean?)
+        ; is this step the kind of step that the gui is waiting for?
+        (define (right-kind-of-step? step-kind)
+          (case stepper-is-waiting?
+            [(waiting-for-any-step) #t]
+            [(waiting-for-application) (eq? step-kind 'user-application)]
+            [(#f) (error 'right-kind-of-step "this code should be unreachable with stepper-is-waiting? set to #f")]
+            [else (error 'right-kind-of-step "unknown value for stepper-is-waiting?: ~a" stepper-is-waiting?)]))
+        
+        (define (add-view-triple view-triple)
+          (set! release-for-next-step (cadr view-triple))
+          (set! view-history (append view-history (list (list (car view-triple) (caddr view-triple))))))
         
         ; build gui object:
         
         (define (home)
           (when stepper-is-waiting?
             (set! stepper-is-waiting? #f))
-          (update-view 0))
+          (update-view/existing 0))
         
         (define (next)
-          (update-view (+ view 1)))
+          (let ([new-view (+ view 1)])
+            (if (< new-view (length view-history))
+                (update-view/existing new-view)
+                (if never-step-again
+                    (en/dis-able-buttons)
+                    (begin
+                      (semaphore-post release-for-next-step) ; each step has its own semaphore, so releasing one twice is no problem.
+                      (when stepper-is-waiting?
+                        (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
+                      (let ([try-get (async-channel-try-get view-channel)])
+                        (if try-get
+                            (begin 
+                              (add-view-triple try-get)
+                              (update-view/existing new-view))
+                            (begin
+                              (set! stepper-is-waiting? 'waiting-for-any-step)
+                              (en/dis-able-buttons)))))))))
+        
+        (define (next-application)
+          (let loop ([new-view (+ view 1)])
+            (if (= new-view (length view-history))
+                (if never-step-again
+                    (update-view/existing (- new-view 1))
+                    (begin
+                      (semaphore-post release-for-next-step) ; each step has its own semaphore, so releasing one twice is no problem.
+                      (when stepper-is-waiting?
+                        (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
+                      (let ([try-get (async-channel-try-get view-channel)])
+                        (if try-get
+                            (begin
+                              (add-view-triple try-get)
+                              (if (eq? (caddr try-get) 'user-application)
+                                  (update-view/existing new-view)
+                                  (begin
+                                    (set! stepper-is-waiting? 'waiting-for-application)
+                                    (en/dis-able-buttons))))
+                            (begin
+                              (set! stepper-is-waiting? 'waiting-for-application)
+                              (en/dis-able-buttons))))))
+                (if (eq? (cadr (list-ref view-history new-view)) 'user-application)
+                    (update-view/existing new-view)
+                    (loop (+ new-view 1))))))
         
         ; make this into a special last step
         ;(message-box "Stepper"
@@ -259,7 +299,7 @@
         (define (previous)
           (when stepper-is-waiting?
             (set! stepper-is-waiting? #f))
-          (update-view (- view 1)))
+          (update-view/existing (- view 1)))
         
         (define s-frame (make-object stepper-frame% drscheme-frame))
         
@@ -273,28 +313,9 @@
         
         (define canvas (make-object x:stepper-canvas% (send s-frame get-area-container)))
         
-        ; update-view : (-> number? void?) : display the step with the given number.  If the 
-        ; given step is one past the end of the list, release the semaphore associated with 
-        ; the last step.  Try to get a new view.  If one is not available, simply return
-        ; (all buttons should still be disabled).  If one is available, tack it on to the end
-        ; of the list and display it.
-        
-        (define (update-view new-view)
-          (if (= new-view (length view-history))
-              (begin
-                (unless never-step-again
-                  (semaphore-post release-for-next-step)
-                  (let ([try-get (try-to-get-view-pair)])
-                    (if try-get
-                        (begin 
-                          (add-view-pair try-get)
-                          (update-view/existing new-view))
-                        (en/dis-able-buttons)))))
-              (update-view/existing new-view)))
-        
         (define (update-view/existing new-view)
           (set! view new-view)                  
-          (let ([e (list-ref view-history view)])
+          (let ([e (car (list-ref view-history view))])
             (send e begin-edit-sequence)
             (send canvas set-editor e)
             (send e reset-width canvas)
@@ -356,8 +377,10 @@
                           #f
                           null)]
                        [(finished-stepping? result)
-                        x:finished-text])])
-            (hand-off-and-block step-text (final-step? result))))
+                        x:finished-text])]
+                [step-kind (and (before-after-result? result)
+                                (before-after-result-kind result))])
+            (hand-off-and-block step-text (final-step? result) step-kind)))
         
         ; need to capture the custodian as the thread starts up:
         (define (program-expander-prime init iter)
@@ -379,9 +402,6 @@
         
         s-frame)
   
-      (define beginner-level-name-symbol 'beginner)
-      (define intermediate-level-name-symbol 'intermediate)
-      
       (define stepper-bitmap
         (drscheme:unit:make-bitmap
          "Step"

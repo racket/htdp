@@ -41,7 +41,7 @@
    varref-set-remove-bindings
    binding-set-varref-set-intersect
    step-result?
-   (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs))
+   (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs kind))
    (struct before-error-result (finished-exprs exp redex err-msg after-exprs))
    (struct error-result (finished-exprs err-msg))
    (struct finished-result (finished-exprs))
@@ -89,7 +89,7 @@
   ; or (make-error-result finished-exprs err-msg)
   ; or (make-finished-result finished-exprs)
   
-  (define-struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs) (make-inspector))
+  (define-struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs kind) (make-inspector))
   (define-struct before-error-result (finished-exprs exp redex err-msg after-exprs) (make-inspector))
   (define-struct error-result (finished-exprs err-msg) (make-inspector))
   (define-struct finished-result (finished-exprs) (make-inspector))
@@ -276,7 +276,7 @@
        (lambda args ; key or key & failure-thunk
          (apply hash-table-get closure-table args))
        (lambda (key)
-         (with-handlers ([exn:application:mismatch? (lambda (exn) #f)])
+         (with-handlers ([exn:application:mismatch? (lambda (dc-exn) #f)])
            (hash-table-get closure-table key)
            #t)))))
   
@@ -351,7 +351,7 @@
   
   ; functional update package
   
-  (define second-arg (lambda (x y) y))
+  (define second-arg (lambda (dc y) y))
   
   (define up-mappings
     `((rebuild ((,car ,(lambda (stx new) (cons new (cdr stx))))
