@@ -30,11 +30,6 @@
    let-counter
    skipto-annotate
    skipto-reconstruct
-   contract-check-syntax-object?
-   contract-check-binding-set?
-   contract-check-varref-set?
-   contract-check-boolean?
-   contract-check-procedure-list?
    syntax-pair-map
    make-queue ; -> queue
    queue-push ; queue val -> 
@@ -43,6 +38,9 @@
    rebuild-stx ; datum syntax-object -> syntax-object
    break-kind? ; predicate
    break-contract ; contract
+   varref-set? ; predicate
+   binding-set? ; predicate
+   vectorof/n ; (predicate ... -> predicate)
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -53,31 +51,8 @@
   
   ; contracts:
   
-  ; a BINDING is a syntax-object
-  ; a VARREF is a syntax-object
-  
-  ; a BINDING-SET is (union 'all (listof BINDING))
-  ; a VARREF-SET is (listof VARREF)
-  
-  (define binding-set-contract
-  (make-contract-checker BINDING-SET
-                         (lambda (arg)
-                           (or (eq? arg 'all)
-                               (andmap identifier? arg))))
-  (make-contract-checker VARREF-SET
-                         (lambda (arg)
-                           (and (list? arg)
-                                (andmap identifier? arg))))
-  
-  (make-contract-checker BOOLEAN boolean?)
-  (make-contract-checker SYNTAX-OBJECT syntax?)
-  
-  (make-contract-checker PROCEDURE-LIST 
-                         (lambda (arg) 
-                           (and (list? arg)
-                                (andmap procedure? arg))))
-  
-
+  (define varref-set? (listof identifier?))
+  (define binding-set? (or/f varref-set? (symbols 'all)))
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
@@ -370,9 +345,13 @@
  
   
   
-  (define skipto-annotate 
-    (checked-lambda ((fn-list PROCEDURE-LIST) (stx SYNTAX-OBJECT) annotater)
-                    (update fn-list stx annotater 'rebuild)))
+  (define skipto-annotate
+    (contract 
+     (-> (listof procedure?) syntax? (-> syntax? syntax?) syntax?)
+     (lambda (fn-list stx annotater)
+       (update fn-list stx annotater 'rebuild))
+     'skipto-annotate
+     'caller))
 
     ; test cases
 ;  (equal? (syntax-object->datum (skipto-annotate (list syntax-e car syntax-e cdr cdr car) #'((a b c) (d e f) (g h i)) (lambda (dc) #'foo)))
@@ -380,8 +359,12 @@
 
   
   (define skipto-reconstruct
-    (checked-lambda ((fn-list PROCEDURE-LIST) (stx SYNTAX-OBJECT) reconstructer)
-                    (update fn-list stx reconstructer 'discard)))
+    (contract
+     (-> (listof procedure?) syntax? (-> syntax? any?) any?)
+     (lambda (fn-list stx reconstructer)
+       (update fn-list stx reconstructer 'discard))
+     'skipto-reconstruct
+     'caller))
   
   
   (define (make-queue)
@@ -407,8 +390,21 @@
     (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break))
     
   (define break-contract
-    (-> continuation-mark-set? any? break-kind-contract list? any?))
-  )
+    (-> continuation-mark-set? any? break-kind? list? any?))
+  
+  (define (vectorof/n . fs)
+    (for-each
+     (lx (unless (and (procedure? _) 
+                      (procedure-arity-includes? _ 1))
+           (error 'vectorof/n "expected procedures of arity 1, got ~e" _)))
+     fs)
+    (let ([vectorof/n
+           (lambda (v)
+             (and (vector? v)
+                  (andmap (lambda (x y) (x y))
+                          fs
+                          (vector->list v))))])
+      vectorof/n)))
 
 ; test cases
 ;(require shared)

@@ -168,7 +168,7 @@
                                                                                          
   (define skip-step?
     (contract
-     (-> break-kind-contract mark-list? boolean?)
+     (-> break-kind? mark-list? boolean?)
      (lambda (break-kind mark-list)
        (case break-kind
          ((result-value-break)
@@ -183,7 +183,6 @@
   (define (skip-redex-step? mark-list)
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
-           (printf "source: ~a\n" (syntax-object->datum expr)) ; TEMP
            (or (kernel:kernel-syntax-case expr #f
                   [id
                    (identifier? expr)
@@ -285,19 +284,21 @@
                (begin (queue-push highlight-queue-dest (inner (queue-pop highlight-queue-src)))
                       highlight-placeholder-stx)
                (if (syntax-property stx 'user-stepper-hint)
-                   (case (syntax-property stx 'user-stepper-hint)
-                     ((comes-from-cond) (unwind-cond stx 
-                                                     (syntax-property stx 'user-source)
-                                                     (syntax-property stx 'user-position)))
-                     ((comes-from-and) (unwind-and/or stx
-                                                      (syntax-property stx 'user-source)
-                                                      (syntax-property stx 'user-position)
-                                                      'and))
-                     ((comes-from-or) (unwind-and/or stx
-                                                     (syntax-property stx 'user-source)
-                                                     (syntax-property stx 'user-position)
-                                                     'or))
-                     (else (recur-on-pieces stx)))
+                   (begin ; TEMP
+                     (printf "user-stepper-hint: ~e\n" (syntax-property stx 'user-stepper-hint))
+                     (case (syntax-property stx 'user-stepper-hint)
+                       ((comes-from-cond) (unwind-cond stx 
+                                                       (syntax-property stx 'user-source)
+                                                       (syntax-property stx 'user-position)))
+                       ((comes-from-and) (unwind-and/or stx
+                                                        (syntax-property stx 'user-source)
+                                                        (syntax-property stx 'user-position)
+                                                        'and))
+                       ((comes-from-or) (unwind-and/or stx
+                                                       (syntax-property stx 'user-source)
+                                                       (syntax-property stx 'user-position)
+                                                       'or))
+                       (else (recur-on-pieces stx))))
                    (recur-on-pieces stx))))
          
          (define (unwind-cond stx user-source user-position)
@@ -393,7 +394,9 @@
   ; being evaluated, and hence do NOT yet have values.
 
   (define recon-source-expr 
-    (checked-lambda ((expr SYNTAX-OBJECT) (mark-list MARK-LIST) (lexically-bound-bindings BINDING-SET))
+    (contract
+     (-> syntax? mark-list? binding-set? syntax?)
+     (lambda (expr mark-list lexically-bound-bindings)
       (if (syntax-property expr 'stepper-skipto)
                (skipto-reconstruct
                 (syntax-property expr 'stepper-skipto)
@@ -494,7 +497,9 @@
                                
                                [else
                                 (error 'recon-source "no matching clause for syntax: ~a" expr)])])
-                 (attach-info recon expr)))))
+                 (attach-info recon expr))))
+     'recon-source-expr
+     'caller))
  
   
                                                                                                                                     
@@ -558,7 +563,7 @@
 
   (define reconstruct-current
     (contract
-     (-> syntax? mark-list? break-kind-contract list? (listof (listof any?)))
+     (-> syntax? mark-list? break-kind? list? (listof (listof any?)))
      (lambda (expr mark-list break-kind returned-value-list)
        
        (local
