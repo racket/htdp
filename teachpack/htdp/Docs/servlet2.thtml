@@ -18,24 +18,22 @@ use with an HtDP course.
    make-yes-no   ; asking for a Yes-No style answer
    make-boolean  ; asking for a true-false style answer
    make-radio    ; requesting one choice from some mutually exclusive choices 
-   make-button   ; for an alternative way of submitting responses
    
    #| Data Definitions --------------------------------------------------------
 
    Forms ----------------------------------------------------------------------
-   FormElement = (union String
-                        (make-password String)
-                        (make-number   String)
-                        (make-boolean  String)
-                        (make-yes-no   String String String)
-                        (make-radio    String (cons String (listof String)))
-                        (make-button   String))                              
-   FormItem    = (list Symbol FormElement)
-   Form        = (cons FormItem (listof FormItem))
+   Query    = (union String
+		(make-password String)
+		(make-number   String)
+		(make-boolean  String)
+		(make-yes-no   String String String)
+		(make-radio    String (cons String (listof String)))) 
+   FormItem = (list Symbol Query)
+   Form     = (cons FormItem (listof FormItem))
 
-   Response -------------------------------------------------------------------
-   Answer      = (union String Number Boolean)
-   Response    = (listof (list Symbol Answer))
+   Table -------------------------------------------------------------------
+   Response = (union String Number Boolean)
+   Table    = (listof (list Symbol Response))
    |#
   
    ; Functions ---------------------------------------------------------------- 
@@ -46,27 +44,27 @@ use with an HtDP course.
    form-element?       ; TST -> Boolean 
    ; checking the structure of form-elements
 
-   single-query        ; FormElement -> Answer
+   single-query        ; Query -> Response
    ; posing a single question 
 
-   queries             ; (listof FormElement) -> (listof Answer)
+   queries             ; (listof Query) -> (listof Response)
    ; posing a list of questions 
 
-   echo-answers        ; (listof Answers) -> true
+   echo-answers        ; (listof Response) -> true
    ; echoing the answers from a list of questions to a Web page (development)
 
-   form-query          ; Form -> Response
+   form-query          ; Form -> Table
    ; posing a list of questions with tag 
 
-   extract/single      ; Symbol Response -> Answer
+   extract/single      ; Symbol Table -> Response
    ; extracting the answer for a given tag from a response; the tag must
    ; occur exactly once. 
 
-   extract             ; Symbol Response -> (listof Answer)
+   extract             ; Symbol Table -> (listof Response)
    ; extracting all the answers for a given tag from a response; the list
    ; is empty if there is no such tag. 
 
-   echo-response       ; Response -> true
+   echo-response       ; Table -> true
    ; echoing the response from a form to a Web page (development)
    
    inform              ; String String *-> true 
@@ -84,7 +82,7 @@ use with an HtDP course.
 produces: 
 
 <pre>
-  Query                                      GUI Item         Answer
+  Query                                      GUI Item         Response
 ________________________________________________________________________________
   String				     text field       String 
   (make-password String)                     password field   String 
@@ -169,7 +167,7 @@ strings and numbers, respectively.
    (list 'pass (make-password "Password"))
    (list 'yofb (make-number "Year-of-birth"))))
 
-; Response -> true
+; Table -> true
 ; process the response for login-page
 (define (login r)
   (let ([name (extract/single 'name r)])
