@@ -57,6 +57,9 @@
 (syntax-test #'(set! x))
 (syntax-test #'(set! 1 2))
 (syntax-test #'(set! x 2 3))
+(syntax-test #'(set! set! 2))
+(syntax-test #'(lambda (x) (set! x 2)))
+(syntax-test #'(let ([x 5]) (lambda (x) (set! x 2))))
 
 (set! x 'hello)
 (test 'hello 'access-x x)
@@ -64,6 +67,12 @@
 		 (begin
 		   (set! x 18)
 		   x)))
+(test 19 (lambda (x)
+	   (local [(define x 12)]
+		  (begin
+		    (set! x 19)
+		    x)))
+      45)
 
 (syntax-test #'delay)
 (syntax-test #'(delay))
