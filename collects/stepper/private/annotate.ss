@@ -581,11 +581,12 @@
                        (let*-2vals ([args (syntax->ilist (syntax args-stx))]
                                     [marked-args (ilist-map mark-lambda-bound-var args)]
                                     [tagged-args (ilist-map mark-never-undefined marked-args)]
-                                    [(annotated-bodies free-varref-sets)
-                                     (2vals-map lambda-body-recur (syntax->list (syntax (body ...))))]
-                                    [new-free-varrefs (varref-set-remove-bindings (varref-set-union free-varref-sets)
+                                    [(annotated-body free-varrefs)
+                                     (lambda-body-recur (syntax (begin body ...)))]
+                                    [tagged-body (syntax-property annotated-body 'stepper-info 'lambda-body-begin)]
+                                    [new-free-varrefs (varref-set-remove-bindings free-varrefs
                                                                                   (ilist-flatten tagged-args))])
-                         (2vals (datum->syntax-object clause (cons tagged-args annotated-bodies)) new-free-varrefs))))]
+                         (2vals (datum->syntax-object clause (list tagged-args tagged-body)) new-free-varrefs))))]
                   
                   [outer-lambda-abstraction
                    (lambda (annotated-lambda free-varrefs)
@@ -664,7 +665,7 @@
                   
                   [let-abstraction
                    (lambda (stx output-identifier check-fn make-init-list)
-                     (with-syntax ([(_ ([var val] ...) . bodies) stx]
+                     (with-syntax ([(_ ([var val] ...) . body ...) stx]
                                    [(_a (binding ...) . _b) stx])
                        (let*-2vals
                            ([binding-sets (map syntax->list (syntax->list (syntax (var ...))))]
@@ -676,11 +677,12 @@
                             [lifted-vars (apply append lifted-var-sets)]
                             [(annotated-vals free-varref-sets-vals)
                              (2vals-map let-rhs-recur vals binding-name-sets lifted-var-sets)]
-                            [(annotated-bodies free-varref-sets-bodies)
-                             (2vals-map (let-body-recur binding-list) (syntax->list (syntax bodies)))]
+                            [(annotated-body free-varrefs-body)
+                             ((let-body-recur binding-list) (syntax (begin body ...)))]
+                            [tagged-body (syntax-property annotated-body 'stepper-info 'let-body-begin)]
                             [free-bindings (varref-set-remove-bindings 
-                                            (varref-set-union (append free-varref-sets-bodies 
-                                                                      free-varref-sets-vals)) 
+                                            (varref-set-union (cons free-varrefs-body
+                                                                    free-varref-sets-vals)) 
                                             binding-list)])
                        (ccond [cheap-wrap?
                                (let* ([bindings
@@ -690,7 +692,7 @@
                                             tagged-binding-sets
                                             annotated-vals)]
                                       [annotated
-                                       (datum->syntax-object expr `(,output-identifier ,bindings ,@annotated-bodies))])
+                                       (datum->syntax-object expr `(,output-identifier ,bindings ,tagged-body))])
                                  (2vals (appropriate-wrap annotated free-bindings) free-bindings))]
                               [(or ankle-wrap? foot-wrap?)
                                (let* ([unevaluated-list (make-init-list binding-list)]
@@ -758,7 +760,7 @@
                ; (this is true in beginner, intermediate, & advanced)
                
                [(if test then else)
-		(let*-2vals
+                (let*-2vals
                     ([(annotated-test free-varrefs-test) 
                       (non-tail-recur (syntax test))]
                      [(annotated-then free-varrefs-then) 
@@ -779,7 +781,7 @@
                ; yecch: should abstract over if with & without else clauses
                
                [(if test then)
-		(let*-2vals
+                (let*-2vals
                     ([(annotated-test free-varrefs-test) 
                       (non-tail-recur (syntax test))]
                      [(annotated-then free-varrefs-then) 
@@ -949,7 +951,7 @@
                ; where the second set are not annotated ... but stepper runtime is not at a premium.
                
                [(#%app . terms)
-		(let*-2vals
+                (let*-2vals
                     ([(annotated-terms free-varrefs-terms)
                       (2vals-map non-tail-recur (syntax->list (syntax terms)))]
                      [free-varrefs (varref-set-union free-varrefs-terms)]
@@ -999,7 +1001,7 @@
                  null)]
 
                [(define-values vars-stx body)
-		(let*-2vals
+                (let*-2vals
                     ([vars (syntax->list (syntax vars-stx))]
                      [(annotated-val free-varrefs-val)
                       (define-values-recur (syntax body) (if (not (null? vars))
