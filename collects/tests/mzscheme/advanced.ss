@@ -165,5 +165,6 @@
 (test #t (lambda (l) (eq? l (cadr l))) (shared ([x (list x x)]) x))
 (err/rt-test (shared ([x (cons 1 y)][y 5]) x))
 
-(report-errs)
+(load "shared-tests.ss")
 
+(report-errs)

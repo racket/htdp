@@ -139,3 +139,21 @@
 (err/rt-test (/ 1) exn:application:arity?)
 
 (test -9 '- (- 9))
+
+(define-struct an-example-structure (first-field second-field))
+(error-test #'(define an-example-structure 5) exn:user?)
+(error-test #'(define (an-example-structure x) 5) exn:user?)
+(error-test #'(define-struct an-example-structure (y)) exn:user?)
+(error-test #'(define-struct an-example (structure y)) exn:user?)
+
+(define an-example-value 12)
+(error-test #'(define an-example-value 5) exn:user?)
+(error-test #'(define (an-example-value x) 5) exn:user?)
+(error-test #'(define-struct an-example-value (y)) exn:user?)
+(error-test #'(define-struct an-example (value y)) exn:user?)
+
+(define (an-example-function x) x)
+(error-test #'(define an-example-function 5) exn:user?)
+(error-test #'(define (an-example-function x) 5) exn:user?)
+(error-test #'(define-struct an-example-function (y)) exn:user?)
+(error-test #'(define-struct an-example (function y)) exn:user?)

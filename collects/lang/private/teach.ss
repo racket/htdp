@@ -59,15 +59,16 @@
 
   ;; Wrapped around top-level definitions to disallow re-definition:
   (define (check-top-level-not-defined who id)
-    ((with-handlers ([not-break-exn? (lambda (exn) void)])
-       (let ([b (identifier-binding id)])
-	 ;; if it's not top-level, raise an exn
-	 (if b
-	     'bad
-	     ;; At top-level, might be bound to syntax or value:
-	     (with-handlers ([exn:syntax? (lambda (exn) void)])
-	       (eval id))))
-       (lambda () (error who "cannot redefine name: ~a" (syntax-e id))))))
+    (when (let ([b (identifier-binding id)])
+	    ;; if it's not top-level, raise an exn
+	    (if b
+		#t
+		;; At top-level, might be bound to syntax or value:
+		(with-handlers ([exn:variable? (lambda (exn) #f)]
+				[exn:syntax? (lambda (exn) #t)])
+		  (namespace-variable-value (syntax-e id) #t)
+		  #t)))
+      (error who "cannot redefine name: ~a" (syntax-e id))))
 
   ;; Wrapped around uses of top-level variables:
   (define (check-not-a-function name val)
