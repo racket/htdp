@@ -9,7 +9,7 @@
     (define the-error
       (lambda x
 	(error "evaluate (start <num> <num>) first")))  
-
+    
     (define %draw-solid-disk the-error)
     (define draw-solid-disk (lambda a (apply %draw-solid-disk a)))
 
@@ -36,6 +36,9 @@
 
     (define %clear-all the-error)
     (define clear-all (lambda a (apply %clear-all a)))
+
+    (define %wait-for-mouse-click the-error)
+    (define (wait-for-mouse-click) (%wait-for-mouse-click))
 
     (define (make-true f) (lambda x (apply f x) #t))
 
@@ -106,7 +109,14 @@
 	(set! %clear-circle
 	  (make-circle 'clear-circle
 	    (lambda (p r1 r2 c)
-	      ((clear-ellipse current-window) p r1 r2))))))
+	      ((clear-ellipse current-window) p r1 r2))))
+
+	(set! %wait-for-mouse-click
+	  (lambda ()
+	    (mouse-click-posn
+	      (get-mouse-click @VP))))
+	
+	))
   
     (define (stop)
       (close-graphics))

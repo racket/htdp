@@ -8,6 +8,7 @@
    clear-circle clear-solid-disk clear-solid-rect clear-solid-line
    clear-all
    sleep-for-a-while
+   wait-for-mouse-click ; -> posn
 ;   WHITE YELLOW RED BLUE GREEN BLACK
    @VP))
 
