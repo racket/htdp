@@ -1053,6 +1053,6 @@
 ;  (finished (true))))
   
   
-  (run-tests '(let/let*))
-  ;(run-all-tests)
+  ;(run-tests '(let/let*))
+  (run-all-tests)
   )
