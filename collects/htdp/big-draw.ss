@@ -71,7 +71,7 @@
        
   (define (make-true f) (lambda x (apply f x) #t))
   
-  (define sleep-for-a-while/proc (make-true sleep))
+  (define sleep-for-a-while/proc (make-true mred:sleep/yield))
   
   ;; i wish i could abstract these functions ...
   (define (make-line name f)
