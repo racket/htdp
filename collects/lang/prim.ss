@@ -29,7 +29,8 @@
 		(module-identifier=? #'#%top (datum->syntax-object stx '#%top))
 		(syntax/loc stx impl)]
 	       [(id . args)
-		(syntax/loc stx (#%app impl . args))]
+                (with-syntax ([tagged-impl (syntax-property (quote-syntax impl) 'stepper-skip-completely #t)])
+                  (syntax/loc stx (#%app tagged-impl . args)))]
 	       [_else
 		(raise-syntax-error
 		 #f
@@ -74,25 +75,26 @@
 			       args new-args)]
 			 [num-arguments (length args)])
 	     (with-syntax ([impl #'(let ([name (lambda (new-arg ...)
-						 (implementation new-arg ...))])
-				     name)])
+						  (implementation new-arg ...))])
+				      name)])
 	       (syntax/loc stx
 		   (define-syntax (name s)
 		     (syntax-case s ()
 		       [(__ . ___)
 			;; HACK: see above
 			(module-identifier=? #'#%top (datum->syntax-object s '#%top))
-			(syntax/loc s (impl . ___))]
+                        (syntax/loc s (impl . ___))]
 		       [__
 			;; HACK: see above
 			(module-identifier=? #'#%top (datum->syntax-object s '#%top))
-			(syntax/loc s impl)]
+                        (syntax/loc s impl)]
 		       [(__ new-arg ...)
 			(begin
 			  checks ...
 			  ;; s is a well-formed use of the primitive;
 			  ;; generate the primitive implementation
-			  (quasisyntax/loc s (#,(quote-syntax impl) wrapped-arg ...)))]
+                          (with-syntax ([tagged-impl (syntax-property (quote-syntax impl) 'stepper-skip-completely #t)])
+                            (syntax/loc s (tagged-impl wrapped-arg ...))))]
 		       [(__ . rest)
 			(raise-syntax-error
 			 #f

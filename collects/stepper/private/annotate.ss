@@ -291,7 +291,7 @@
                                            (map recur-regular (syntax->list (syntax (rhs ...)))))]
                              [new-bodies (map (lambda (exp) (recur-with-bindings exp vars-list)) (syntax->list (syntax bodies)))]
                              [new-bindings (map list labelled-vars-list rhs-list)])
-                        (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))]
+                        (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies) stx stx))))]
                  [do-or
                   ; NOTE: I maintain my invariants in this section through foreknowledge of the shape of 
                   ; the or macro. Therefore, this code is fragile.
@@ -1146,7 +1146,7 @@
                                                   [final-app (break-wrap (simple-wcm-wrap 
                                                                           app-debug-info
                                                                           (let ([first-term (car (syntax->list (syntax terms)))])
-                                                                          (if (syntax-case first-term (#%top)
+                                                                          (if (syntax-case first-term (#%top let-values)
                                                                                 [(#%top . var)
                                                                                  (and foot-wrap? 
                                                                                       (non-annotated-proc? first-term))]
@@ -1154,6 +1154,8 @@
                                                                                  (identifier? (syntax var)) ; guard
                                                                                  (and foot-wrap?
                                                                                       (non-annotated-proc? first-term))]
+                                                                                [(let-values . stuff) ; presumably, the expansion of a teachpack primitive
+                                                                                 #t]
                                                                                 [else #f])
                                                                               (return-value-wrap app-term)
                                                                               app-term))))]
