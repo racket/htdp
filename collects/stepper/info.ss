@@ -1,5 +1,6 @@
 (module info (lib "infotab.ss" "setup")
   (define name "Stepper")
-  (define tools '(("stepper-tool.ss")))
+  (define tools '(("stepper-tool.ss")
+                  ("debugger-tool.ss")))
   (define tool-names (list "The Stepper"))
   (define tool-icons (list '("foot-up.gif" "icons"))))
