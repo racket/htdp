@@ -48,14 +48,14 @@
 
   (define program-expander-contract
     ((-> void?) ; init
-     ((union eof-object? syntax? (cons/c string? any?)) (-> void?) . -> . void?) ; iter
+     ((union eof-object? syntax? (cons/c string? any/c)) (-> void?) . -> . void?) ; iter
      . -> .
      void?))
     
 
   (provide/contract [go (program-expander-contract       ; program-expander
                          (step-result? . -> . void?)     ; receive-result
-                         (union render-settings? false?) ; render-settings
+                         (union render-settings? false/c) ; render-settings
                          boolean?                        ; track-inferred-names?
                          . -> .
                          void?)])

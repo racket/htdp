@@ -23,8 +23,8 @@
    ;[binding-set-union (-> (listof binding-set?) binding-set?)]
    ;[varref-set-union (-> (listof varref-set?) varref-set?)]
    [skipto-annotate (-> (listof procedure?) syntax? (-> syntax? syntax?) syntax?)]
-   [skipto-reconstruct (-> (listof procedure?) syntax? (-> syntax? any?) any?)]
-   [in-closure-table (-> any? boolean?)]
+   [skipto-reconstruct (-> (listof procedure?) syntax? (-> syntax? any/c) any/c)]
+   [in-closure-table (-> any/c boolean?)]
    [sublist (-> number? number? list? list?)]
    [attach-info (-> syntax? syntax? syntax?)]
    [transfer-info (-> syntax? syntax? syntax?)]
@@ -517,7 +517,7 @@
   (provide/contract [syntax-object->hilite-datum ((syntax?) ; input
                                                   (boolean?) ; ignore-highlight?
                                                   . opt-> .
-                                                  any?)]) ; sexp with explicit tags
+                                                  any/c)]) ; sexp with explicit tags
   
   ;; syntax-object->hilite-datum : takes a syntax object with zero or more
   ;; subexpressions tagged with the 'stepper-highlight', 'stepper-xml-hint', and 'stepper-xml-value-hint' syntax-properties

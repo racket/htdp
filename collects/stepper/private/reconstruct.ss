@@ -15,13 +15,13 @@
            "lifting.ss")
 
   (provide/contract 
-   [reconstruct-completed (-> mark-list? (listof any?) render-settings? 
+   [reconstruct-completed (-> mark-list? (listof any/c) render-settings? 
                               syntax?)]
-   [reconstruct-current (-> mark-list? symbol? (listof any?) render-settings?
+   [reconstruct-current (-> mark-list? symbol? (listof any/c) render-settings?
                             (union (listof syntax?)
                                    (list/c (listof syntax?) (listof syntax?))))]
    [final-mark-list? (-> mark-list? boolean?)]
-   [skip-step? (-> break-kind? (union mark-list? false?) render-settings? boolean?)]
+   [skip-step? (-> break-kind? (union mark-list? false/c) render-settings? boolean?)]
    [step-was-app? (-> mark-list? boolean?)])
   
   (define nothing-so-far (gensym "nothing-so-far-"))
@@ -212,7 +212,7 @@
 ;                      new-index)]))))
   
   ; construct-lifted-name 
-  ; (-> syntax? (union num? false?) symbol?)
+  ; (-> syntax? (union num? false/c) symbol?)
   
   (define/contract construct-lifted-name
     (-> syntax? number? syntax?)

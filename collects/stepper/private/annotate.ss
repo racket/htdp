@@ -16,10 +16,10 @@
   (provide/contract
    [annotate
     (-> syntax?                         ; syntax to annotate
-        (opt->* ((union continuation-mark-set? false?) 
+        (opt->* ((union continuation-mark-set? false/c) 
                  break-kind?)
                 (list?)
-                (any?))                 ; procedure for runtime break
+                (any/c))                 ; procedure for runtime break
         boolean?                        ; track-inferred-name?
         syntax?)]                       ; results
    [top-level-rewrite (-> syntax? syntax?)])
@@ -369,7 +369,7 @@
                                                       ;                                 
     
     (define annotate/inner
-      ;(-> syntax? binding-set? boolean? (union false? syntax? (list/p syntax? syntax?)) (vector/p syntax? binding-set?))
+      ;(-> syntax? binding-set? boolean? (union false/c syntax? (list/p syntax? syntax?)) (vector/p syntax? binding-set?))
       (lambda (expr tail-bound pre-break? procedure-name-info)
         
         (cond [(syntax-property expr 'stepper-skipto)
@@ -570,7 +570,7 @@
                                          (#,output-identifier #,outer-initialization #,wrapped-begin))) 
                                       free-varrefs)))))]
                       
-                      ; if-abstraction: (-> syntax? syntax? (union false? syntax?) (values syntax? varref-set?))
+                      ; if-abstraction: (-> syntax? syntax? (union false/c syntax?) (values syntax? varref-set?))
                       [if-abstraction
                        (lambda (test then else) 
                          (let*-2vals

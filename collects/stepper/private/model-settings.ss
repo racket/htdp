@@ -19,19 +19,19 @@
   (define-struct render-settings (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? #;render-to-sexp render-to-string lifting?))
   
   (provide/contract [check-global-defined (-> symbol? boolean?)]
-                    [global-lookup (-> any? any)]
+                    [global-lookup (-> any/c any)]
 
                     [struct render-settings 
                             ([true-false-printed? (-> render-settings? boolean?)]
                              [constructor-style-printing? (-> render-settings? boolean?)]
                              [abbreviate-cons-as-list? (-> render-settings? boolean?)]
-                             #;[render-to-sexp (-> any? any)]
-                             [render-to-string (any? . -> . any?)]
+                             #;[render-to-sexp (-> any/c any)]
+                             [render-to-string (any/c . -> . any/c)]
                              [lifting? (-> render-settings? boolean?)])]
                     
                     
-                    [get-render-settings ((any? . -> . string?) ; render-to-string
-                                          #;(any? . -> . any) ; render-to-sexp
+                    [get-render-settings ((any/c . -> . string?) ; render-to-string
+                                          #;(any/c . -> . any) ; render-to-sexp
                                           boolean? ; lifting?
                                           . -> .
                                           render-settings?)]
