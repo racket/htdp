@@ -42,6 +42,8 @@
   
   (define nothing-so-far (gensym "nothing-so-far-"))
   
+  (define highlight-placeholder-stx (datum->syntax-object #f highlight-placeholder))
+  
 ;  (define memoized-read->raw
 ;    (let ([table (make-hash-table-weak)])
 ;      (lambda (read)
@@ -488,12 +490,12 @@
                                                      [(#%app . terms) (d->so (map recur (syntax->list (syntax terms))))]
                                                      
                                                      ; #%datum
-                                                     [(#%datum . datum) (recon-value (syntax-e (syntax body)))]
+                                                     [(#%datum . datum) (recon-value (syntax-e (syntax datum)))]
                                                      
                                                      ; varref                        
                                                      [var-stx
                                                       (identifier? expr)
-                                                      (let* ([var (syntax var)])
+                                                      (let* ([var (syntax var-stx)])
                                                         (cond [(eq? (identifier-binding var) 'lexical)
                                                                ; has this varref's binding not been evaluated yet?
                                                                (if (ormap (lambda (binding)
@@ -662,8 +664,7 @@
                                          null)]
                                     [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list))
                                                            (syntax->list (syntax bodies)))])
-                         (values before-defs after-defs (d->so `(begin ,@rectified-bodies))))))])
-             (attach-info
+                         (values before-defs after-defs (attach-info (d->so `(begin ,@rectified-bodies)) expr)))))])
               (kernel:kernel-syntax-case expr #f 
                 ; variable references
                 [id
@@ -676,29 +677,31 @@
                 ; applications
                 [(#%app . terms)
                  (so-far-only
-                  (let* ([sub-exprs (syntax->list (syntax terms))]
-                         [arg-temps (build-list (length sub-exprs) get-arg-var)]
-                         [arg-vals (map (lambda (arg-temp) 
-                                          (mark-binding-value (lookup-binding mark-list arg-temp)))
-                                        arg-temps)])
-                    (case (mark-label (car mark-list))
-                      ((not-yet-called)
-                       (let*-2vals ([(evaluated unevaluated) (split-list (lambda (x) (eq? x *unevaluated*))
-                                                                         (zip sub-exprs arg-vals))]
-                                    [rectified-evaluated (map recon-value evaluated)])
-                                   (d->so
-                                    (if (null? unevaluated)
-                                        rectified-evaluated
-                                        `(,@rectified-evaluated
-                                          so-far 
-                                          ,@(map recon-source-current-marks (cdr unevaluated)))))))
-                      ((called)
-                       (d->so
-                        (if (eq? so-far nothing-so-far)
-                            `(...) ; in unannotated code
-                            `(... ,so-far ...))))
-                      (else
-                       (error "bad label in application mark in expr: ~a" expr)))))]
+                  (attach-info
+                   (let* ([sub-exprs (syntax->list (syntax terms))]
+                          [arg-temps (build-list (length sub-exprs) get-arg-var)]
+                          [arg-vals (map (lambda (arg-temp) 
+                                           (mark-binding-value (lookup-binding mark-list arg-temp)))
+                                         arg-temps)])
+                     (case (mark-label (car mark-list))
+                       ((not-yet-called)
+                        (let*-2vals ([(evaluated unevaluated) (split-list (lambda (x) (eq? (cadr x) *unevaluated*))
+                                                                          (zip sub-exprs arg-vals))]
+                                     [rectified-evaluated (map recon-value (map cadr evaluated))])
+                                    (d->so
+                                     (if (null? unevaluated)
+                                         rectified-evaluated
+                                         `(,@rectified-evaluated
+                                           ,so-far 
+                                           ,@(map recon-source-current-marks (cdr (map car unevaluated))))))))
+                       ((called)
+                        (d->so
+                         (if (eq? so-far nothing-so-far)
+                             `(...) ; in unannotated code
+                             `(... ,so-far ...))))
+                       (else
+                        (error "bad label in application mark in expr: ~a" expr))))
+                   expr))]
                 
                 ; define-struct 
                 ;               
@@ -717,12 +720,14 @@
                 ; if
                 [(if test then else)
                  (so-far-only
-                  (let ([test-exp (if (eq? so-far nothing-so-far)
-                                      (recon-source-current-marks (syntax test))
-                                      so-far)])
-                    (d->so `(if ,test-exp 
-                                ,(recon-source-current-marks (syntax then))
-                                ,(recon-source-current-marks (syntax else))))))]
+                  (attach-info
+                   (let ([test-exp (if (eq? so-far nothing-so-far)
+                                       (recon-source-current-marks (syntax test))
+                                       so-far)])
+                     (d->so `(if ,test-exp 
+                                 ,(recon-source-current-marks (syntax then))
+                                 ,(recon-source-current-marks (syntax else)))))
+                   expr))]
                 
                 ; quote : there is no break on a quote.
                 
@@ -740,8 +745,7 @@
                 
                 [else
                  (error
-                  "stepper:reconstruct: unknown object to reconstruct, ~a" expr)])
-              expr)))
+                  "stepper:reconstruct: unknown object to reconstruct, ~a" expr)])))
            
          
          (define redex #f)
@@ -757,32 +761,32 @@
                   (if first
                       (begin
                         (set! redex reconstructed)
-                        highlight-placeholder)
+                        highlight-placeholder-stx)
                       reconstructed)
                   (cdr mark-list)
                   #f))))
          
          (define (rectify-let-values-step)
            (let*-values ([(redex) (recon-source-expr (mark-source (car mark-list)) mark-list)]
-                         [(before-step) (recon null highlight-placeholder (cdr mark-list) #f)]
+                         [(before-step) (recon null highlight-placeholder-stx (cdr mark-list) #f)]
                          [(r-before r-after reduct) (recon-inner mark-list nothing-so-far)]
                          [(new-defs) (append r-before r-after)]
                          [(after-step) (recon (build-list (length new-defs) 
-                                                          (lambda (x) highlight-placeholder))
-                                              highlight-placeholder
+                                                          (lambda (x) highlight-placeholder-stx))
+                                              highlight-placeholder-stx
                                               (cdr mark-list) 
                                               #f)])
              (list before-step (list redex)
                    after-step (append new-defs (list reduct)))))
            
          (define answer
-           (map syntax-object->datum
+           (map (lambda (x) (map syntax-object->datum x))
                 (case break-kind
                   ((result-break)
                    (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
                                          (recon-source-expr (mark-source (car mark-list)) mark-list)
                                          (recon-value (car returned-value-list)))]
-                          [current-defs (recon null highlight-placeholder (cdr mark-list) #f)])
+                          [current-defs (recon null highlight-placeholder-stx (cdr mark-list) #f)])
                      (list current-defs (list innermost))))
                   ((normal-break)
                    (let ([current-defs (recon null nothing-so-far mark-list #t)])

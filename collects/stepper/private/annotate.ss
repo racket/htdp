@@ -146,8 +146,11 @@
         
   (define (closure-key-maker closure)
     closure)
-
-              
+  
+  (define-struct bogus-mark-struct ())
+  (define bogus-mark
+    (datum->syntax-object #'here (make-bogus-mark-struct)))
+  
   ;;;;;;;;;;
   ;;
   ;; make-debug-info builds the thunk which will be the mark at runtime.  It contains 
@@ -963,14 +966,19 @@
                                                       tagged-arg-temps annotated-terms)]
                                       [new-tail-bound (binding-set-union (list tail-bound tagged-arg-temps))]
                                       [app-debug-info (make-debug-info-app new-tail-bound tagged-arg-temps 'called)]
-                                      [final-app (break-wrap (simple-wcm-wrap app-debug-info
-                                                                              (if (syntax-case expr (#%app #%top)
-                                                                                    [(#%app (#%top . var) . _)
-                                                                                     (and foot-wrap?
-                                                                                          (non-annotated-proc? (syntax var)))]
-                                                                                    [else #f])
-                                                                                  (return-value-wrap (datum->syntax-object expr arg-temps))
-                                                                                  (datum->syntax-object expr tagged-arg-temps))))]
+                                      [final-app (break-wrap (simple-wcm-wrap 
+                                                              app-debug-info
+                                                              (if (syntax-case (car (syntax->list (syntax terms))) (#%top)
+                                                                    [(#%top . var)
+                                                                     (and foot-wrap? 
+                                                                          (non-annotated-proc? (syntax var)))]
+                                                                    [var
+                                                                     (and (not (eq? (identifier-binding (syntax var)) 'lexical))
+                                                                          foot-wrap?
+                                                                          (non-annotated-proc? (syntax var)))]
+                                                                    [else #f])
+                                                                  (return-value-wrap (datum->syntax-object expr arg-temps))
+                                                                  (datum->syntax-object expr tagged-arg-temps))))]
                                       [debug-info (make-debug-info-app new-tail-bound
                                                                        (varref-set-union (list free-varrefs tagged-arg-temps)) ; NB using bindings as vars
                                                                        'not-yet-called)]
@@ -982,7 +990,7 @@
                 (2vals
                  (if (or cheap-wrap? ankle-wrap?)
                      expr
-                     (wcm-wrap (make-debug-info-normal null) expr))
+                     (wcm-wrap bogus-mark expr))
                  null)]
 
                [(define-values vars-stx body)
