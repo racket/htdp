@@ -38,10 +38,42 @@
 	   call-with-values values eval port? scheme-report-environment null-environment 
 	   interaction-environment dynamic-wind)
 
+  ;; Copied from R5rS:
+  (define undefined (letrec ([u u]) u))
+  (define-syntax r5rs:letrec
+    (syntax-rules ()
+      ((r5rs:letrec ((var1 init1) ...) body ...)
+       (r5rs:letrec "generate_temp_names"
+	 (var1 ...)
+	 ()
+	 ((var1 init1) ...)
+	 body ...))
+      ((r5rs:letrec "generate_temp_names"
+	 ()
+	 (temp1 ...)
+	 ((var1 init1) ...)
+	 body ...)
+       (let ((var1 undefined) ...)
+	 (let ((temp1 init1) ...)
+	   (set! var1 temp1)
+	   ...
+	   body ...)))
+      ((r5rs:letrec "generate_temp_names"
+	 (x y ...)
+	 (temp ...)
+	 ((var1 init1) ...)
+	 body ...)
+       (r5rs:letrec "generate_temp_names"
+	 (y ...)
+	 (newtemp temp ...)
+	 ((var1 init1) ...)
+	 body ...))))
+
   ;; syntax
   (provide quasiquote unquote unquote-splicing 
 	   if let and or cond case define delay do
-	   letrec let* begin lambda quote set!
+	   (rename r5rs:letrec letrec)
+	   let* begin lambda quote set!
 	   define-syntax let-syntax letrec-syntax
 
 	   ;; We have to include the following MzScheme-isms to do anything,
