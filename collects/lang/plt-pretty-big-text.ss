@@ -14,8 +14,7 @@
 	   (lib "math.ss")
 	   (lib "match.ss")
 	   (lib "shared.ss")
-	   "posn.ss"
-	   "image.ss")
+	   "posn.ss")
 
   (provide (all-from mzscheme)
 	   (all-from (lib "etc.ss"))
@@ -32,5 +31,4 @@
 	   (all-from (lib "math.ss"))
 	   (all-from (lib "match.ss"))
 	   (all-from (lib "shared.ss"))
-	   (all-from "posn.ss")
-	   (all-from "image.ss")))
+	   (all-from "posn.ss")))
