@@ -217,8 +217,7 @@
   (define (has-right-name id val)
     (let ([closure-record (closure-table-lookup val (lambda () #f))])     
                     (if closure-record
-                        (let* ([mark (closure-record-mark closure-record)]
-                               [base-name (closure-record-name closure-record)])
+                        (let* ([base-name (closure-record-name closure-record)])
                           (if base-name
                               (let* ([lifted-index (closure-record-lifted-index closure-record)]
                                      [name (if lifted-index
@@ -709,20 +708,20 @@
                           (recon-value value render-settings)]))))]))
   
   ; : (-> syntax? syntax? sexp?)
-  ; DESPERATELY SEEKING ABSTRACTION
-  (define (reconstruct-top-level source reconstructed)
+  (define (reconstruct-define source reconstructed)
     (cond 
       [(syntax-property source 'stepper-skipto) =>
        (lambda (skipto)
          (skipto-reconstruct skipto source
                              (lambda (expr)
-                               (reconstruct-top-level expr reconstructed))))]
+                               (reconstruct-define expr reconstructed))))]
       [else
        (kernel:kernel-syntax-case source #f
           [(define-values vars-stx body)
            (attach-info #`(define-values vars-stx #,reconstructed)
                         source)]
           [else
+           ()
            reconstructed])]))
   
                                                                                                                 
@@ -745,7 +744,7 @@
   ; (the result of reconstruction) --- which may contain holes, indicated by the 
   ; highlight-placeholder --- and a list of sexps which go in the holes
   
-  (define (reconstruct-current expr mark-list break-kind returned-value-list render-settings)
+  (define (reconstruct-current mark-list break-kind returned-value-list render-settings)
     (local
         (
          
@@ -933,17 +932,24 @@
          ; recon : (syntax-object mark-list boolean -> syntax-object)
          
          (define (recon so-far mark-list first)
-           (if (null? mark-list)
-               (reconstruct-top-level expr so-far)
-               (let ([reconstructed (recon-inner mark-list so-far)])
-                 (recon
-                  (if first
-                      (begin
-                        (set! redex reconstructed)
-                        highlight-placeholder-stx)
-                      reconstructed)
-                  (cdr mark-list)
-                  #f))))
+           (cond [(null? mark-list)
+                  so-far]
+                 [else
+                  (case (mark-label (car mark-list)) 
+                    [(top-level-define)
+                     (if (null? (cdr mark-list))
+                         (reconstruct-define (mark-source (car mark-list)) so-far)
+                         (error 'recon "top-level-define mark found not at end of mark list"))]
+                    [else
+                     (let ([reconstructed (recon-inner mark-list so-far)])
+                       (recon
+                        (if first
+                            (begin
+                              (set! redex reconstructed)
+                              highlight-placeholder-stx)
+                            reconstructed)
+                        (cdr mark-list)
+                        #f))])]))
          
          (define answer
            (map (lambda (x) (map syntax-object->datum x))

@@ -352,23 +352,15 @@
                 (set! binding-index (+ binding-index 1))
                 index))
             
-            ; wrap creates the w-c-m expression.
-            
-            
-            
             ; here are the possible configurations of wcm's, pre-breaks, and breaks (not including late-let & double-breaks):
             
             ; (for full-on stepper)
             ; wcm, result-break, normal-break
             ; wcm, normal-break
-            
-            ; simple-wcm-wrap : just put the w-c-m on the expression
-            (define (simple-wcm-wrap debug-info expr)
-              #`(with-continuation-mark #,debug-key #,debug-info #,expr))
-            
-            ; wcm-pre-break-wrap : call simple-wcm-wrap with a pre-break on the expr
+                        
+            ; wcm-pre-break-wrap : call wcm-wrap with a pre-break on the expr
             (define (wcm-pre-break-wrap debug-info expr)
-              (simple-wcm-wrap debug-info #`(begin (#,result-exp-break) #,expr)))
+              (wcm-wrap debug-info #`(begin (#,result-exp-break) #,expr)))
             
             (define (break-wrap expr)
               #`(begin (#,normal-break) #,expr))
@@ -394,18 +386,20 @@
             ;              (,(make-break 'result-break) result-values)
             ;              (#%apply #%values result-values))))
             
+ 
+            (define (top-level-annotate/inner expr defined-name)
+              (let*-2vals ([(annotated dont-care)
+                            (annotate/inner expr 'all #f defined-name)])
+                annotated))
             
-            (define (top-level-annotate/inner expr)
-              (annotate/inner expr 'all #f #t #f))
             
+
             ; annotate/inner takes 
             ; a) an expression to annotate
             ; b) a list of all bindings which this expression is tail w.r.t. 
             ;    or 'all to indicate that this expression is tail w.r.t. _all_ bindings.
             ; d) a boolean indicating whether this expression will be the r.h.s. of a reduction
             ;    (and therefore should be broken before)
-            ; e) a boolean indicating whether this expression is top-level (and therefore should
-            ;    not be wrapped, if a begin).
             ; g) information about the binding name of the given expression.  This is used 
             ;    to associate a name with a closure mark (though this may now be redundant)
             
@@ -432,9 +426,9 @@
                                                               ;                                 
                                                               ;                                 
             
-            (define/contract annotate/inner
-               (-> syntax? binding-set? boolean? boolean? (union false? syntax? (list/p syntax? syntax?)) (vector/p syntax? binding-set?))
-               (lambda (expr tail-bound pre-break? top-level? procedure-name-info)
+            (define annotate/inner
+               ;(-> syntax? binding-set? boolean? (union false? syntax? (list/p syntax? syntax?)) (vector/p syntax? binding-set?))
+               (lambda (expr tail-bound pre-break? procedure-name-info)
                  
                  (when (syntax-property expr 'stepper-define-struct-hint)
                    (let ([struct-names (car (syntax-property expr 'stepper-define-struct-hint))])
@@ -443,46 +437,40 @@
                  
                  (cond [(syntax-property expr 'stepper-skipto)
                         (let* ([free-vars-captured #f] ; this will be set!'ed
+                               ;[dont-care (printf "expr: ~a\nskipto: ~a\n" expr (syntax-property expr 'stepper-skipto))]
                                ; WARNING! I depend on the order of evaluation in application arguments here:
                                [annotated (skipto-annotate
                                            (syntax-property expr 'stepper-skipto) 
                                            expr 
                                            (lambda (subterm)
-                                             (let*-2vals ([(stx free-vars) (annotate/inner subterm tail-bound pre-break? top-level? procedure-name-info)])
+                                             (let*-2vals ([(stx free-vars) (annotate/inner subterm tail-bound pre-break? procedure-name-info)])
                                                          (set! free-vars-captured free-vars)
                                                          stx)))])
-                          (2vals (if top-level?
-                                     annotated
-                                     (simple-wcm-wrap
+                          (2vals (wcm-wrap
                                       skipto-mark
-                                      annotated))
+                                      annotated)
                                  free-vars-captured))]
                        
                        [(syntax-property expr 'stepper-skip-completely)
-                        (if top-level?
-                              (2vals expr null)
-                              (2vals (simple-wcm-wrap 13 expr) null))]
+                        (2vals (wcm-wrap 13 expr) null)]
                      
                        [else
-                        (let* ([tail-recur (lambda (expr) (annotate/inner expr tail-bound #t #f procedure-name-info))]
-                               [define-values-recur (lambda (expr name) 
-                                                      (annotate/inner expr tail-bound #f #f name))]
-                               [non-tail-recur (lambda (expr) (annotate/inner expr null #f #f #f))]
-                               [result-recur (lambda (expr) (annotate/inner expr null #f #f procedure-name-info))]
-                               [set!-rhs-recur (lambda (expr name) (annotate/inner expr null #f #f name))]
+                        (let* ([tail-recur (lambda (expr) (annotate/inner expr tail-bound #t procedure-name-info))]
+                               [non-tail-recur (lambda (expr) (annotate/inner expr null #f #f))]
+                               [result-recur (lambda (expr) (annotate/inner expr null #f procedure-name-info))]
+                               [set!-rhs-recur (lambda (expr name) (annotate/inner expr null #f name))]
                                [let-rhs-recur (lambda (expr binding-names dyn-index-syms)
                                                 (let* ([proc-name-info 
                                                         (if (not (null? binding-names))
                                                             (list (car binding-names) (car dyn-index-syms))
                                                             #f)])
-                                                  (annotate/inner expr null #f #f proc-name-info)))]
-                               [lambda-body-recur (lambda (expr) (annotate/inner expr 'all #t #f #f))]
+                                                  (annotate/inner expr null #f proc-name-info)))]
+                               [lambda-body-recur (lambda (expr) (annotate/inner expr 'all #t #f))]
                                ; note: no pre-break for the body of a let; it's handled by the break for the
                                ; let itself.
                                [let-body-recur (lambda (bindings)
                                                  (lambda (expr) 
-                                                   (annotate/inner expr (binding-set-union (list tail-bound bindings)) #f 
-                                                                   #f procedure-name-info)))]
+                                                   (annotate/inner expr (binding-set-union (list tail-bound bindings)) #f procedure-name-info)))]
                                [make-debug-info-normal (lambda (free-bindings)
                                                          (make-debug-info expr tail-bound free-bindings 'none foot-wrap?))]
                                [make-debug-info-app (lambda (tail-bound free-bindings label)
@@ -499,7 +487,7 @@
                                                                        foot-wrap?))]
                                [wcm-wrap (if pre-break?
                                              wcm-pre-break-wrap
-                                             simple-wcm-wrap)]
+                                             wcm-wrap)]
                                [wcm-break-wrap (lambda (debug-info expr)
                                                  (wcm-wrap debug-info (break-wrap expr)))]
                                
@@ -705,26 +693,18 @@
                             [(if test then) (if-abstraction (syntax test) (syntax then) #f)]
                             
                             [(begin . bodies-stx)
-                             (if top-level? 
-                                    (let*-2vals
-                                        ([(annotated-bodies free-varref-sets)
-                                          (2vals-map (lambda (expr)
-                                                       (top-level-annotate/inner expr)) 
-                                                     (syntax->list (syntax bodies-stx)))])
-                                      (2vals (quasisyntax/loc expr (begin #,@annotated-bodies))
-                                             (varref-set-union free-varref-sets)))
-                                    (if (null? (syntax->list (syntax bodies-stx)))
-                                        (normal-bundle null expr)
-                                        (let*-2vals 
-                                            ([reversed-bodies (reverse (syntax->list (syntax bodies-stx)))]
-                                             [last-body (car reversed-bodies)]
-                                             [all-but-last (reverse (cdr reversed-bodies))]
-                                             [(annotated-a free-varrefs-a)
-                                              (2vals-map non-tail-recur all-but-last)]
-                                             [(annotated-final free-varrefs-final)
-                                              (tail-recur last-body)])
-                                          (normal-bundle (varref-set-union (cons free-varrefs-final free-varrefs-a))
-                                                         (quasisyntax/loc expr (begin #,@annotated-a #,annotated-final))))))]
+                             (if (null? (syntax->list (syntax bodies-stx)))
+                                 (normal-bundle null expr)
+                                 (let*-2vals 
+                                     ([reversed-bodies (reverse (syntax->list (syntax bodies-stx)))]
+                                      [last-body (car reversed-bodies)]
+                                      [all-but-last (reverse (cdr reversed-bodies))]
+                                      [(annotated-a free-varrefs-a)
+                                       (2vals-map non-tail-recur all-but-last)]
+                                      [(annotated-final free-varrefs-final)
+                                       (tail-recur last-body)])
+                                   (normal-bundle (varref-set-union (cons free-varrefs-final free-varrefs-a))
+                                                  (quasisyntax/loc expr (begin #,@annotated-a #,annotated-final)))))]
                             
                             [(begin0 . bodies-stx)
                              (let*-2vals
@@ -850,7 +830,7 @@
                                                                        'not-yet-called)]
                                       [let-body (wcm-wrap debug-info #`(begin #,@set!-list
                                                                               #,(break-wrap
-                                                                                 (simple-wcm-wrap
+                                                                                 (wcm-wrap
                                                                                   app-debug-info
                                                                                   #`(if (#,in-closure-table #,(car tagged-arg-temps))
                                                                                         #,app-term
@@ -861,18 +841,6 @@
                             
                             [(#%datum . _)
                              (normal-bundle null expr)]
-                            
-                            [(define-values vars-stx body)
-                             (let*-2vals
-                                 ([vars (syntax->list (syntax vars-stx))]
-                                  [(annotated-val free-varrefs-val)
-                                   (define-values-recur (syntax body) (if (not (null? vars))
-                                                                          (car vars)
-                                                                          #f))])
-                               (2vals
-                                (quasisyntax/loc expr (define-values vars-stx #,annotated-val))
-                                free-varrefs-val))]
-                            
                             
                             [(#%top . var-stx)
                              (let*-2vals ([var (syntax var-stx)]
@@ -907,13 +875,58 @@
                             
                             [else ; require, require-for-syntax, define-syntaxes, module, provide
                              (2vals expr null)]))])))
+
             
-            (define (annotate/top-level expr)
-              (let*-2vals ([(annotated dont-care)
-                            (top-level-annotate/inner (top-level-rewrite expr))])
-                annotated)))
+            ;; annotate/top-level : syntax-> syntax
+            ;; expandsion of teaching level language programs produces two kinds of 
+            ;; expressions: modules containing all of the code in the def'ns window, and
+            ;; require statements that invoke those modules.  In the first case, we must annotate
+            ;; the expressions inside the top-level module, and in the second, we should just
+            ;; leave it alone.
+            
+            (define/contract annotate/top-level
+              (syntax? . -> . syntax?)
+              (lambda (expr)
+                (syntax-case expr (module #%plain-module-begin)
+                  [(module name lang
+                     (#%plain-module-begin . bodies))
+                   #`(module name lang (#%plain-module-begin #,@(map annotate/module-top-level (syntax->list #`bodies))))]
+                  [(require #%htdp)
+                   expr]
+                  [else (error `annotate/top-level "unexpected top-level expression: ~a\n" (syntax-object->datum expr))])))
+            
+            (define/contract annotate/module-top-level
+              (syntax? . -> . syntax?)
+              (lambda (expr)
+                (cond [(syntax-property expr 'stepper-skip-completely) expr]
+                      [(syntax-property expr 'stepper-skipto)
+                       (skipto-annotate (syntax-property expr 'stepper-skipto) expr annotate/module-top-level)] 
+                      [else 
+                       (syntax-case expr (#%app call-with-values define-values define-syntaxes require require-for-syntax provide begin lambda)
+                         [(define-values (new-vars ...) e)
+                          (let* ([name-list (syntax->list #`(new-vars ...))]
+                                 [defined-name (if (and (pair? name-list) (null? (cdr name-list)))
+                                                   (car name-list)
+                                                   #f)])
+                          #`(define-values (new-vars ...)
+                              #,(top-level-annotate/inner (top-level-rewrite #`e) defined-name)))]
+                         [(define-syntaxes (new-vars ...) e)
+                          expr]
+                         [(require specs ...)
+                          expr]
+                         [(require-for-syntax specs ...)
+                          expr]
+                         [(provide specs ...)
+                          expr]
+                         [(begin .  bodies)
+                          #`(begin #,@(map annotate/module-top-level (syntax->list #`bodies)))]
+                         [(#%app call-with-values (lambda () body) print-values)
+                          #`(#%app call-with-values (lambda () #,(top-level-annotate/inner (top-level-rewrite #`body) #f)) print-values)]
+                         [else
+                          (error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax-object->datum expr))])]))))
          
          ; body of local
+         (printf "input: ~a\n" (syntax-object->datum expr))
          (let* ([annotated-expr (annotate/top-level expr)])
            (fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
            (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index))))))

@@ -24,6 +24,8 @@
    ;[binding-set-varref-set-intersect (-> binding-set? varref-set? binding-set?)]
    ;[binding-set-union (-> (listof binding-set?) binding-set?)]
    ;[varref-set-union (-> (listof varref-set?) varref-set?)]
+   [skipto-annotate (-> (listof procedure?) syntax? (-> syntax? syntax?) syntax?)]
+   [skipto-reconstruct (-> (listof procedure?) syntax? (-> syntax? any?) any?)]
    [in-closure-table (-> any? boolean?)]
    [sublist (-> number? number? list? list?)]
    [attach-info (-> syntax? syntax? syntax?)]
@@ -60,8 +62,6 @@
    get-arg-var
    zip
    let-counter
-   skipto-annotate
-   skipto-reconstruct
    syntax-pair-map
    make-queue ; -> queue
    queue-push ; queue val -> 
@@ -369,28 +369,16 @@
                [up (cadr (assq down (cadr (assq traversal up-mappings))))])
           (up val (update (cdr fn-list) (down val) fn traversal)))))
  
-  
-  
-  (define skipto-annotate
-    (contract 
-     (-> (listof procedure?) syntax? (-> syntax? syntax?) syntax?)
-     (lambda (fn-list stx annotater)
-       (update fn-list stx annotater 'rebuild))
-     'skipto-annotate
-     'caller))
+  (define (skipto-annotate fn-list stx annotater)
+    (update fn-list stx annotater 'rebuild))
 
     ; test cases
 ;  (equal? (syntax-object->datum (skipto-annotate (list syntax-e car syntax-e cdr cdr car) #'((a b c) (d e f) (g h i)) (lambda (dc) #'foo)))
 ;          '((a b foo) (d e f) (g h i)))
 
   
-  (define skipto-reconstruct
-    (contract
-     (-> (listof procedure?) syntax? (-> syntax? any?) any?)
-     (lambda (fn-list stx reconstructer)
-       (update fn-list stx reconstructer 'discard))
-     'skipto-reconstruct
-     'caller))
+  (define (skipto-reconstruct fn-list stx reconstructer)
+    (update fn-list stx reconstructer 'discard))
   
   
   (define (make-queue)
