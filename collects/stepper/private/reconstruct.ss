@@ -96,7 +96,59 @@
   ; test cases
   ; (test '((1 2 3) (4 5 6)) reshape-list '(1 2 3 4 5 6) '((a b c) (d e f)))
   ; (test '(() () 1 (2 3) ()) reshape-list '(1 2 3) '(() () a (b c) ()))
-                                                                     
+  
+  
+  
+;                                                                                          
+;                                                                                          
+;                                                                                          
+;                    ;                                                                     
+;                                                                                          
+;          ;                             ;                                                 
+;    ;;;  ;;;;  ; ;  ;   ; ;;           ;;;;   ;;;             ;;;    ;;;  ;     ;  ; ;;   
+;   ;      ;    ;;   ;   ;;  ;           ;    ;   ;           ;      ;   ;  ;   ;   ;;  ;  
+;   ;;     ;    ;    ;   ;    ;          ;   ;     ;          ;;    ;    ;   ; ;    ;    ; 
+;    ;;    ;    ;    ;   ;    ;  ;;;;;;  ;   ;     ;  ;;;;;;   ;;   ;;;;;;    ;     ;    ; 
+;      ;   ;    ;    ;   ;    ;          ;   ;     ;             ;  ;        ; ;    ;    ; 
+;      ;   ;    ;    ;   ;;  ;           ;    ;   ;              ;   ;      ;   ;   ;;  ;  
+;   ;;;     ;;  ;    ;   ; ;;             ;;   ;;;            ;;;     ;;;; ;     ;  ; ;;   
+;                        ;                                                          ;      
+;                        ;                                                          ;      
+;                        ;                                                          ;      
+
+  
+  ; strip-to-sexp transforms a syntax-object to an s-expression.  The reason we can't
+  ; just use syntax-object->datum for this is that certain syntax-objects must be
+  ; represented by a gensym'ed pointer into a table.
+                           
+  (define (strip-to-sexp stx)
+    (let ([highlight-table (make-hash-table 'weak)]
+          [xml-box-table (make-hash-table 'weak)])
+      (define (strip-regular stx)
+        (let* ([it (if (eq? syntax-property stx 'stepper-hint) 'from-xml)
+                   (strip-xml-stx stx highlight-table xml-box-table)
+                   stx]
+               [it
+                (cond [(pair? it)
+                       (cons (strip-regular (car it))
+                             (strip-regular (cdr it)))]
+                      [(syntax? it)
+                       (strip-regular (syntax-e it))]
+                      [else it])]
+               [it
+                (if (syntax-property stx 'stepper-highlight)
+                    (if (pair? it) 
+                        (begin 
+                          (hash-table-put! highlight-table recur-result non-confusable)
+                          recur-result)
+                        (let ([new-sym (gensym "-placeholder")])
+                          (hash-table-put! highlight-table new-sym recur-result)
+                          new-sym)))])
+          it))
+      
+      ; strip-xml attempts to undo the expansion of quasiquote.  
+      (define (strip-xml stx)
+        (if ()))))
                                                                      
                                                      ;               
                                                      ;               
@@ -374,28 +426,28 @@
                            (recur-on-pieces stx)]))])
                  (if (syntax-property stx 'user-stepper-hint)
                      (case (syntax-property stx 'user-stepper-hint)
-                     
-                     
-                     [(comes-from-cond) (unwind-cond stx 
-                                                     (syntax-property stx 'user-source)
-                                                     (syntax-property stx 'user-position))]
-                     
-                     [(comes-from-and) (unwind-and/or stx
-                                                      (syntax-property stx 'user-source)
-                                                      (syntax-property stx 'user-position)
-                                                      'and)]
-                     
-                     [(comes-from-or) (unwind-and/or stx
-                                                     (syntax-property stx 'user-source)
-                                                     (syntax-property stx 'user-position)
-                                                     'or)]
-                     
-                     [(comes-from-local)
-                      (unwind-local stx)]
-                     
-                     ((quasiquote-the-cons-application) (unwind-quasiquote-the-cons-application stx))
-                     
-                     (else (fall-through)))
+                       
+                       
+                       [(comes-from-cond) (unwind-cond stx 
+                                                       (syntax-property stx 'user-source)
+                                                       (syntax-property stx 'user-position))]
+                       
+                       [(comes-from-and) (unwind-and/or stx
+                                                        (syntax-property stx 'user-source)
+                                                        (syntax-property stx 'user-position)
+                                                        'and)]
+                       
+                       [(comes-from-or) (unwind-and/or stx
+                                                       (syntax-property stx 'user-source)
+                                                       (syntax-property stx 'user-position)
+                                                       'or)]
+                       
+                       [(comes-from-local)
+                        (unwind-local stx)]
+                       
+                        ;[(from-xml-box)]
+                       
+                       (else (fall-through)))
                    (fall-through)))))
          
          (define (unwind-define stx)

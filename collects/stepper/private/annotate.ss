@@ -6,6 +6,7 @@
            "marks.ss"
            "shared.ss"
            "my-macros.ss"
+           "xml-box.ss"
            (prefix beginner-defined: "beginner-defined.ss"))
 
   ; CONTRACTS
@@ -251,16 +252,12 @@
               ; xml boxes
               [(#%app . rest)
                (eq? (syntax-property stx 'stepper-hint 'from-xml-box))
-               (let loop ([stx stx])
-                 (case (syntax-property stx 'stepper-hint)
-                   [(stepper-scheme-box stepper-splice-box) (recur-regular stx)]))]
-              [stx
+               (rewrite-xml-box stx recur-regular)]
+              
+              [else
                (let ([content (syntax-e (syntax stx))])
                  (if (pair? content)
-                     (datum->syntax-object (syntax stx)
-                                           (syntax-pair-map content recur-regular)
-                                           (syntax stx)
-                                           (syntax stx))
+                     (rebuild-stx (syntax-pair-map content recur-regular) stx)
                      content))])))))
   
                                                  
