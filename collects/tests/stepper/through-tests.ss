@@ -4,7 +4,8 @@
            (lib "model-settings.ss" "stepper" "private")
            (lib "match.ss")
            (lib "sexp-diff.ss" "tests" "utils")
-           "module-elaborator.ss")
+           "module-elaborator.ss"
+           (lib "xml-snip"))
   
   (call-with-output-file "/Users/clements/test1.txt"
     (lambda (port)
@@ -19,7 +20,7 @@
           (iter eof void)
           (iter (expand (car expr-list)) (stream-ify (cdr expr-list) iter)))))
   
-  (define (test-sequence-core namespace-spec render-settings track-inferred-names? reader expected-steps)
+  (define (test-sequence-core namespace-spec render-settings track-inferred-names? make-reader expected-steps)
     (let* ([current-error-display-handler (error-display-handler)]) 
         (let* ([all-steps
                 (append expected-steps 
@@ -39,16 +40,8 @@
                         (set! all-steps (cdr all-steps)))))]
                [program-expander
                 (lambda (init iter)
-                  (call-with-input-file filename
-                    (lambda (input-port)
-                      (init)
-                      (let* ([exps (let read-loop ()
-                                     (let ([expr (read-syntax filename input-port)])
-                                       (if (eof-object? expr)
-                                           null
-                                           (cons expr (read-loop)))))]
-                             [exprs (wrap-in-module exps namespace-spec)])
-                        ((stream-ify exprs iter))))))])
+                  (init)
+                  ((make-reader iter)))])
           (let/ec escape
             (parameterize ([error-escape-handler (lambda () (escape (void)))])
               (go program-expander receive-result render-settings track-inferred-names?)))
@@ -62,15 +55,23 @@
         'truncate)
       (printf "testing string: ~v\n" exp-str)
       (letrec ([port (open-input-file filename)]
-               [reader (lambda (iter)
-                         (lambda ()
-                         (let ([r (read-syntax filename port)])
-                           (if (eof-object? r)
-                               (begin
-                                 (close-input-port port)
-                                 (iter eof void))
-                               (iter (expand r) (reader iter))))))])
-        (test-sequence-core namespace-spec render-settings track-inferred-names reader expected-steps))))
+               [make-reader (lambda (iter)
+                              (lambda ()
+                                (let ([r (read-syntax filename port)])
+                                  (if (eof-object? r)
+                                      (begin
+                                        (close-input-port port)
+                                        (iter eof void))
+                                      (iter (expand r) (make-reader iter))))))])
+        (test-sequence-core namespace-spec render-settings track-inferred-names? make-reader expected-steps))))
+  
+  (define (test-xml-sequence namespace-spec render-settings track-inferred-names? xml-sexps expected-steps)
+    (letrec ([make-make-reader (lambda (xml-sexps)
+                                 (lambda (iter)
+                                   (if (null? xml-sexps)
+                                       (iter eof void)
+                                       (iter (expand (car xml-sexps)) ((make-make-reader (cdr xml-sexps)) iter)))))])
+      (test-sequence-core namespace-spec render-settings track-inferred-names? (make-make-reader xml-sexps) expected-steps)))
   
   (define (lang-level-test-sequence namespace-spec rs track-inferred-names?)
     (lambda args

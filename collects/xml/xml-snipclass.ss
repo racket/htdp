@@ -1,9 +1,9 @@
 (module xml-snipclass mzscheme
-  (require "private/xml-snip-helpers.ss"
+  (require (lib "xml-snip-helpers.ss" "stepper" "private")
            (lib "class.ss")
            (lib "mred.ss" "mred"))
   
-  (provide snip-class)
+  (provide snip-class xml-snip%)
 
   (define xml-snip%
     (class* editor-snip% (xml-snip<%> readable-snip<%>)
