@@ -40,6 +40,7 @@
    queue-pop ; queue -> val
    queue-length ; queue -> num
    rebuild-stx ; datum syntax-object -> syntax-object
+   break-kind?
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -197,13 +198,11 @@
    (let ([assoc-table (box null)])
       (lambda (stx)
         (let ([maybe-fetch (weak-assoc-search assoc-table stx module-identifier=?)])
-          (when maybe-fetch (fprintf (current-error-port) "found an id: ~a\n" (syntax-e maybe-fetch)))
           (or maybe-fetch
               (begin
                 (let* ([new-binding (next-lifted-symbol
                                      (string-append "lifter-" (format "~a" (syntax-object->datum stx)) "-"))])
                   (weak-assoc-add assoc-table stx new-binding)
-                  (fprintf (current-error-port) "generated a new id: ~a\n" (syntax-e new-binding))
                   new-binding)))))))
 
   ; gensyms needed by many modules:
@@ -399,6 +398,12 @@
   
   (define (rebuild-stx new old)
     (datum->syntax-object old new old old))
+  
+  (define (break-kind? symbol)
+    (case symbol
+      ((normal-break result-break double-break late-let-break) #t)
+      (else #f)))
+             
   )
 
 ; test cases
