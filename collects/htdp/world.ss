@@ -2,7 +2,7 @@
    I need
     color? ;; Symbol -> Boolean 
 |#
-(module image208 mzscheme
+(module world mzscheme
   (require ; (lib "unitsig.ss")
    (lib "etc.ss")
    (lib "class.ss")
