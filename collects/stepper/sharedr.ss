@@ -103,11 +103,8 @@
   ; to perform source correlation, we use the 'register-client' ability of zodiac to
   ; add fields to parsed structures at runtime.
   
-  (define-values (expr-read set-expr-read!)
-    (values
-     (lambda (parsed) (read-getter (z:parsed-back parsed)))
-     (lambda (parsed read) (read-setter (z:parsed-back parsed) read))))
-
+  (define expr-read read-getter)
+  (define set-expr-read! read-setter)
   
   (define (list-take n a-list)
     (if (= n 0)
