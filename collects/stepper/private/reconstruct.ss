@@ -233,8 +233,8 @@
   
   (define (find-special-value name valid-args)
     (let ([expanded (car (syntax-e (cdr (syntax-e (expand (cons name valid-args))))))])
-      '(fprintf (current-error-port) "identifier-binding: ~e\n" 
-		(identifier-binding expanded))
+      ;(fprintf (current-error-port) "identifier-binding: ~e\n" 
+      ;	(identifier-binding expanded))
       (eval expanded)))
   
   (define (second-arg-is-list? mark-list)
@@ -348,8 +348,26 @@
                            (unwind-mz-let stx)]
                           [else
                            (recur-on-pieces stx)]))])
-               (if (syntax-property stx 'user-stepper-hint)
-                   (case (syntax-property stx 'user-stepper-hint)
+                 (if (begin
+                       (call-with-output-file "/Users/clements/test1.txt"
+                         (lambda (port)
+                           (fprintf port "reconstruct.ss(1): calling-syntax-property with stx: ~a\n" (syntax-object->datum stx))) 'append)
+                       (let ([result (syntax-property stx 'user-stepper-hint)])
+                         (call-with-output-file "/Users/clements/test1.txt"
+                           (lambda (port)
+                             (fprintf port "call completed successfully.\n"))
+                           'append)
+                         result))
+                     (case (begin
+                             (call-with-output-file "/Users/clements/test1.txt"
+                               (lambda (port)
+                                 (fprintf port "reconstruct.ss(2): calling-syntax-property with stx: ~a\n" (syntax-object->datum stx))) 'append)
+                             (let ([result (syntax-property stx 'user-stepper-hint)])
+                               (call-with-output-file "/Users/clements/test1.txt"
+                                 (lambda (port)
+                                   (fprintf port "call completed successfully.\n"))
+                                 'append)
+                               result))
                      
                      
                      [(comes-from-cond) (unwind-cond stx 
@@ -957,9 +975,10 @@
                         (cdr mark-list)
                         #f))])]))
 
-         (define _ (printf "break-kind: ~a\ninnermost source: ~a" break-kind
-                   (and (pair? mark-list)
-                        (syntax-object->datum (mark-source (car mark-list))))))
+         ; uncomment to see all breaks coming in:
+         ; (define _ (printf "break-kind: ~a\ninnermost source: ~a\n" break-kind
+         ;           (and (pair? mark-list)
+         ;                (syntax-object->datum (mark-source (car mark-list))))))
          
          (define answer
            (map (lambda (x) (map syntax-object->datum x))

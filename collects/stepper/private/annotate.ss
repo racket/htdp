@@ -485,15 +485,15 @@
                                                                                                (list let-counter))) ; NB using bindings as varrefs
                                                                        'let-body
                                                                        foot-wrap?))]
-                               [wcm-wrap (if pre-break?
-                                             wcm-pre-break-wrap
-                                             wcm-wrap)]
+                               [outer-wcm-wrap (if pre-break?
+                                                   wcm-pre-break-wrap
+                                                   wcm-wrap)]
                                [wcm-break-wrap (lambda (debug-info expr)
-                                                 (wcm-wrap debug-info (break-wrap expr)))]
+                                                 (outer-wcm-wrap debug-info (break-wrap expr)))]
                                
                                [normal-bundle
                                 (lambda (free-vars annotated)
-                                  (2vals (wcm-wrap (make-debug-info-normal free-vars)
+                                  (2vals (outer-wcm-wrap (make-debug-info-normal free-vars)
                                                    annotated)
                                          free-vars))]
                                
@@ -617,7 +617,7 @@
                                                    annotated-vals)] 
                                              ; time to work from the inside out again
                                              ; without renaming, this would all be much much simpler.
-                                             [wrapped-begin (wcm-wrap (make-debug-info-let free-varrefs
+                                             [wrapped-begin (outer-wcm-wrap (make-debug-info-let free-varrefs
                                                                                            binding-list
                                                                                            let-counter) 
                                                                       (double-break-wrap
@@ -651,7 +651,7 @@
                                               #,(if else
                                                     (quasisyntax/loc expr (if #,if-temp #,annotated-then #,annotated-else))
                                                     (quasisyntax/loc expr (if #,if-temp #,annotated-then))))]
-                                    [wrapped (wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
+                                    [wrapped (outer-wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
                                                                             (varref-set-union (list free-varrefs (list if-temp)))
                                                                             'none)
                                                        annotated-if)])
@@ -816,7 +816,7 @@
                                       [debug-info (make-debug-info-app new-tail-bound
                                                                        (varref-set-union (list free-varrefs tagged-arg-temps)) ; NB using bindings as vars
                                                                        'not-yet-called)]
-                                      [let-body (wcm-wrap debug-info #`(begin #,@set!-list
+                                      [let-body (outer-wcm-wrap debug-info #`(begin #,@set!-list
                                                                               #,(break-wrap
                                                                                  (wcm-wrap
                                                                                   app-debug-info
@@ -835,7 +835,7 @@
                                           [free-varrefs null])
                                          (2vals 
                                           (if (not (memq (syntax-e var) beginner-defined:must-reduce))
-                                              (wcm-wrap (make-debug-info-normal free-varrefs) expr)
+                                              (outer-wcm-wrap (make-debug-info-normal free-varrefs) expr)
                                               (wcm-break-wrap (make-debug-info-normal free-varrefs)
                                                               (return-value-wrap expr)))
                                           free-varrefs))]
@@ -847,7 +847,7 @@
                                          (2vals 
                                           (case (syntax-property var 'stepper-binding-type)
                                             ((lambda-bound macro-bound) 
-                                             (wcm-wrap (make-debug-info-normal free-varrefs) var))
+                                             (outer-wcm-wrap (make-debug-info-normal free-varrefs) var))
                                             ((let-bound) 
                                              (wcm-break-wrap (make-debug-info-normal free-varrefs)
                                                              (return-value-wrap var)))
@@ -857,7 +857,7 @@
                                                (else (if (memq (syntax-e var) beginner-defined:must-reduce)
                                                          (wcm-break-wrap (make-debug-info-normal free-varrefs)
                                                                          (return-value-wrap var))
-                                                         (wcm-wrap (make-debug-info-normal free-varrefs) var))))))
+                                                         (outer-wcm-wrap (make-debug-info-normal free-varrefs) var))))))
                                           free-varrefs))]
                             
                             [else ; require, require-for-syntax, define-syntaxes, module, provide
@@ -916,5 +916,5 @@
          ; body of local
          ;(printf "input: ~a\n" (syntax-object->datum expr))
          (let* ([annotated-expr (annotate/top-level expr)])
-           (printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
+           ;(printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
            annotated-expr))))
