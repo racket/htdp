@@ -479,11 +479,7 @@
       (send (viewport-dc viewport) set-logical-function logical-function)
       (send (viewport-buffer-dc viewport) set-logical-function
 	    logical-function)))
-  
-  (define set-viewport-scale
-    (lambda (viewport scale)
-      (send (viewport-canvas viewport) set-scale scale)))
-  
+
   (define white (make-rgb 1 1 1))
   (define black (make-rgb 0 0 0))
   (define red (make-rgb 1 0 0))
