@@ -9,12 +9,16 @@
            "highlight-placeholder.ss")
  
   
-  (provide go)
+  
+  (provide go) ; go : (program-expander-type[program-expander] (step-result semaphore -> void)[receive-result] -> void) 
+
   
   (define (send-to-eventspace eventspace thunk)
     (parameterize ([current-eventspace eventspace])
       (queue-callback thunk)))
 
+  ; go starts a stepper instance
+  ; see provide stmt for contract
   (define (go program-expander receive-result)
     (local
   

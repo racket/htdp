@@ -19,21 +19,6 @@
       (define (phase1) (void))
       (define (phase2) (void))
       
-      ;; formerly view-controller.ss:
-      
-      ;(require (lib "mred.ss" "mred")
-      ;     (prefix frame: (lib "framework.ss" "framework"))
-      ;     (lib "class100.ss")
-      ;     (prefix x: "mred-extensions.ss"))
-
-      ;(unit/sig (stepper-go)
-      ;  (import [c : mzlib:core^]
-      ;          [e : zodiac:interface^]
-      ;          [z : zodiac:system^]
-      ;          mred^
-      ;          [d : drscheme:export^]
-      ;          stepper:shared^
-
       (define stepper-initial-width 500)
       (define stepper-initial-height 500)
       
@@ -115,6 +100,8 @@
                 (define (print-current-view item evt)
                   (send (send canvas get-editor) print))
                 
+                ; receive-result takes a result from the model and renders it on-screen
+                ; : (step-result semaphore -> void)
                 (define (receive-result result continue-user-computation-semaphore)
                   (fprintf (current-error-port) "in receive-result with result: ~a" result)
                   (set! continue-semaphore continue-user-computation-semaphore)
