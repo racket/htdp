@@ -29,7 +29,7 @@
           (check-suspender3 title content body-attributes)
           (build-suspender title content body-attributes)]
          [(title content body-attributes head-attributes)
-          (check-suspender3 title content body-attributes head-attributes)
+          (check-suspender4 title content body-attributes head-attributes)
           (build-suspender title content body-attributes head-attributes)]))
      
      ; : tst tst -> void
