@@ -27,6 +27,9 @@
 		(error proc "procedure of ~a expected as ~s argument; given procedure of ~a "
 		       arg-err arg# 
 		       (cond
-			[(number? arity-of-f) (format "~s arguments" arity-of-f)]
+			[(number? arity-of-f)
+			 (if (= arity-of-f 1)
+			     (format "1 argument")
+			     (format "~s arguments" arity-of-f))]
 			[(arity-at-least? arity-of-f) (format "at least ~s arguments"  (arity-at-least-value arity-of-f))]
 			[else (format "multiple arities (~s)" arity-of-f)])))))))
