@@ -351,13 +351,8 @@
                                                 (loop (syntax part-3)))
                                                (else
                                                 (error 'unwind-and/or "unknown label ~a" label))))]
-                                      [else
-                                       (and (identifier? (syntax t/f))
-                                            (or (eq? (syntax-e (syntax t/f)) 'true)
-                                                (eq? (syntax-e (syntax t/f)) 'false)))
-                                       null]
                                       [else (error 'unwind-and/or "syntax: ~a does not match and/or patterns" (syntax-object->datum stx))])
-                                    (inner stx)))])
+                                    (list (inner stx))))])
                  (syntax (label . clauses))))))
       
       (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
