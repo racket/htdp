@@ -82,6 +82,7 @@
    ("Misc"
     (force (delay -> any) "to find the delayed value; see also delay")
     (promise? (any -> boolean) "to determine if a value is delayed")
+    (void (-> void) "produces a void value")
     (void? (any -> boolean) "to determine if a value is void"))
 
    ("Posns"
