@@ -145,10 +145,10 @@
     (inherit get-editor)
 
 ;; cannot do this because the styles information in the saved texts screws up.
-;   (override
-;     [make-editor
-;      (lambda ()
-;	(make-object (scheme:text-mixin text:basic%)))])
+   (override
+     [make-editor
+      (lambda ()
+	(make-object (scheme:text-mixin text:basic%)))])
 
     (public
       [expand
@@ -161,14 +161,13 @@
 		    loc
 		    #t 1)])
 	     (zodiac:structurize-syntax
-	      `(,snipize
-		,(read))
+	      `(,snipize ,(read))
 	      (zodiac:make-zodiac #f loc loc)))))])
 
-    (override
-      [make-editor
-       (lambda ()
-	 (make-object (drscheme:unit:text-with-error-mixin plain-text%) (make-delta 'modern)))])
+;    (override
+;      [make-editor
+;       (lambda ()
+;	 (make-object (drscheme:unit:text-with-error-mixin plain-text%) (make-delta 'modern)))])
 
     (override
       [make-snip (lambda () (make-object evaluated-snip%))])
