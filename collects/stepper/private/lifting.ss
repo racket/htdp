@@ -5,9 +5,8 @@
            (lib "match.ss")
            "testing-shared.ss"
            "shared.ss"
-           "my-macros.ss"
-           (lib "mz-testing.ss" "tests" "utils")) 
-  
+           "my-macros.ss")
+
   (define-struct context-record (stx index kind))
   
   ; context-records are used to represent syntax context frames. That is,
@@ -154,6 +153,8 @@
      (list (syntax-object->datum (context-record-stx cr))
                           (context-record-index cr)
                           (context-record-kind cr)))
+  
+  (test-begin (require (lib "mz-testing.ss" "tests" "utils")))
   
   (test-begin (section 'stepper-lifting))
 
