@@ -56,3 +56,15 @@
       (if exn?
 	  (err/rt-test (eval #`(require #,name)) exn?)
 	  (eval #`(require #,name))))))
+
+(define (htdp-eval stx)
+  (let ([name (gensym 'm)])
+    (eval
+     #`(module #,name helper
+	 test
+	 (all-except #,current-htdp-lang #%module-begin)
+	 #,@body-accum
+	 (define the-answer #,stx)))
+    (dynamic-require name #f)
+    (parameterize ([current-namespace (module->namespace name)])
+      (namespace-variable-value 'the-answer))))
