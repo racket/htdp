@@ -171,4 +171,13 @@
 
 (load "shared-tests.ss")
 
+(htdp-test #t 'equal? (equal? (vector (list 10) 'apple) (vector (list 10) 'apple)))
+(htdp-test #t 'equal~? (equal~? (vector (list 10) 'apple) (vector (list 10) 'apple) 0.1))
+(htdp-test #t 'equal~? (equal~? (vector (list 10) 'apple) (vector (list 10.02) 'apple) 0.1))
+(htdp-test #f 'equal~? (equal~? (vector (list 10) 'apple) (vector (list 10.2) 'apple) 0.1))
+(htdp-test #t 'equal? (equal? (box (list 10)) (box (list 10))))
+(htdp-test #t 'equal~? (equal~? (box (list 10)) (box (list 10)) 0.1))
+(htdp-test #t 'equal~? (equal~? (box (list 10)) (box (list 10.02)) 0.1))
+(htdp-test #f 'equal~? (equal~? (box (list 10)) (box (list 10.2)) 0.1))
+
 (report-errs)

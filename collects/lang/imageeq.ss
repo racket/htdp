@@ -3,17 +3,23 @@
   
   (provide image? image=?)
 
+  (define im=? 'unknown)
+
   (define (image=? a b)
-    (let ([image=? (with-handlers ([not-break-exn? (lambda (x) #f)])
-		     (dynamic-require '(lib "imageeq.ss" "lang" "private") 'image=?))])
-      (if image=?
-	  (image=? a b)
-	  (raise-type-error 'image=? "image" 0 a b))))
+    (unless (not im=?)
+      (set! im=? (with-handlers ([not-break-exn? (lambda (x) #f)])
+		   (dynamic-require '(lib "imageeq.ss" "lang" "private") 'image=?))))
+    (if im=?
+	(im=? a b)
+	(raise-type-error 'image=? "image" 0 a b)))
+
+  (define im? 'unknown)
 
   (define (image? a)
-    (let ([image? (with-handlers ([not-break-exn? (lambda (x) #f)])
-		    (dynamic-require '(lib "imageeq.ss" "lang" "private") 'image?))])
-      (if image?
-	  (image? a)
-	  #f))))
+    (unless (not im?)
+      (set! im? (with-handlers ([not-break-exn? (lambda (x) #f)])
+		  (dynamic-require '(lib "imageeq.ss" "lang" "private") 'image?))))
+    (if im?
+	(im? a)
+	#f)))
 
