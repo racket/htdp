@@ -855,6 +855,9 @@
                   #`(begin #,@(map annotate/module-top-level (syntax->list #`bodies)))]
                  [(#%app call-with-values (lambda () body) print-values)
                   #`(#%app call-with-values (lambda () #,(top-level-annotate/inner (top-level-rewrite #`body) expr #f)) print-values)]
+                 [any
+                  (syntax-property expr 'stepper-test-suite-hint)
+                  (top-level-annotate/inner (top-level-rewrite expr) expr #f)]
                  [else
                   (error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax-object->datum expr))])])))
     
