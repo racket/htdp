@@ -1900,8 +1900,8 @@
 	 (let ([clauses (syntax->list (syntax (clause ...)))])
 	   (for-each
 	    (lambda (clause)
-	      (syntax-case clause (else)
-		[(else answer ...)
+	      (syntax-case clause (beginner-else)
+		[(beginner-else answer ...)
 		 (let ([lpos (memq clause clauses)])
 		   (when (not (null? (cdr lpos)))
 		     (teach-syntax-error
@@ -1971,8 +1971,8 @@
 			      (list
 			       (syntax/loc stx
 				 [else (error 'cases "the expression matched none of the choices")]))]
-			     [(syntax-case (car clauses) (else)
-				[(else . _) #t]
+			     [(syntax-case (car clauses) (beginner-else)
+				[(beginner-else . _) #t]
 				[_else #f])
 			      clauses]
 			     [else (cons (car clauses) (loop (cdr clauses)))]))])
