@@ -32,61 +32,12 @@
   (define (mapmap fn lolst)
     (map (lambda (x) (map fn x)) lolst))
   
-  ;; syntax->ilist : turns an (possibly improper) syntax list into a (possibly) improper list of syntax objects
 
-  (define (syntax->ilist stx-ilist)
-    (let loop ([ilist (syntax-e stx-ilist)])
-      (cond [(cons? ilist) 
-             (unless (syntax? (car ilist))
-               (error 'syntax->ilist "argument is not a syntax-ilist: ~a~n" stx-ilist))
-             (cons (car ilist)
-                   (loop (cdr ilist)))]
-            [(null? ilist) null]
-            [else
-             (unless (syntax? ilist)
-               (error 'syntax->ilist "argument is not a syntax-ilist: ~a~n" stx-ilist))
-             (if (cons? (syntax-e ilist))
-                 (loop (syntax-e ilist))
-                 ilist)])))
-
-  ;  test cases:
-  ;  
-  ;  (equal? (map syntax-e (syntax->ilist #'(a b c)))
-  ;          '(a b c))
-  ;  (equal? (map syntax-e (syntax->ilist #'(a . (b c))))
-  ;          '(a b c))
-  ;  (equal? (let ([result (syntax->ilist #' (a b . c))])
-  ;            (list (syntax-e (car result))
-  ;                  (syntax-e (cadr result))
-  ;                  (syntax-e (cddr result))))
-  ;          '(a b c))    
-  
-  (define (ilist-map fn ilist)
-    (let loop ([ilist ilist])
-      (cond [(null? ilist)
-             null]
-            [(syntax? (cdr ilist))
-             (cons (fn (car ilist)) (fn (cdr ilist)))]
-            [else
-             (cons (fn (car ilist)) (loop (cdr ilist)))])))
-  
-  (define (ilist-flatten ilist)
-    (let loop ([ilist ilist])
-      (cond [(null? ilist)
-             null]
-            [(syntax? (cdr ilist))
-             (cons (car ilist) (cons (cadr ilist) null))]
-            [else
-             (cons (car ilist) (loop (cdr ilist)))])))
   
   ;; this looks wrong...
   (define (internal-error . x)
     (error 'annotater-internal-error "~s" x))
 
-  ;; d->so uses a local syntax reference for the lexical context argument
-  (define (d->so datum)
-    (datum->syntax-object #'() datum))
-  
   ; gensyms for annotation:
   
   ; the mutator-gensym is used in building the mutators that go into certain marks.
@@ -552,10 +503,14 @@
                                             (make-debug-info expr tail-bound free-bindings 'none foot-wrap?))]
                   [make-debug-info-app (lambda (tail-bound free-bindings label)
                                          (make-debug-info expr tail-bound free-bindings label foot-wrap?))]
-                  [make-debug-info-let-body (lambda (free-bindings binding-list)
+                  [make-debug-info-let (lambda (free-bindings binding-list let-counter)
                                               (make-debug-info expr 
-                                                               (binding-set-union (list tail-bound binding-list))
-                                                               (varref-set-union (list free-bindings binding-list)) ; NB using bindings as varrefs
+                                                               (binding-set-union (list tail-bound 
+                                                                                        binding-list
+                                                                                        (list let-counter)))
+                                                               (varref-set-union (list free-bindings 
+                                                                                       binding-list
+                                                                                       (list let-counter))) ; NB using bindings as varrefs
                                                                'let-body
                                                                foot-wrap?))]
                   [wcm-wrap (if pre-break?
@@ -643,13 +598,17 @@
                   ;
                   ;turns into
                   ;
-                  ;(let-values ([(a b c d e)
-                  ;              (values *unevaluated* *unevaluated* *unevaluated* *unevaluated* *unevaluated*)])
+                  ;(let-values ([(a b c d e lifter-a-1 lifter-b-2 lifter-c-3 lifter-d-4 lifter-e-5 let-counter)
+                  ;              (values *unevaluated* *unevaluated* *unevaluated* *unevaluated* *unevaluated*
+                  ;                      (<dynamic-counter-call>) (<dynamic-counter-call>) (<dynamic-counter-call>) 
+                  ;                      (<dynamic-counter-call>) (<dynamic-counter-call>) 0)])
                   ;  (with-continuation-mark 
                   ;   key huge-value
                   ;   (begin
                   ;     (set!-values (a b c) e1)
+                  ;     (set! let-counter 1)
                   ;     (set!-values (d e) e2)
+                  ;     (set! let-counter 2)
                   ;     e3)))
                   ;
                   ; note that this elaboration looks exactly like the one for letrec, and that's
@@ -706,20 +665,28 @@
                                       [outer-initialization
                                        (if ankle-wrap?
                                            (d->so `((,binding-list (values ,@unevaluated-list))))
-                                           (d->so `([,(append lifted-vars binding-list)
+                                           (d->so `([,(append lifted-vars binding-list (list let-counter))
                                                         (values ,@(append (map (lambda (binding)
                                                                                    (d->so `(,binding-indexer))) 
                                                                                  binding-list)
-                                                                          unevaluated-list))])))]
+                                                                          unevaluated-list
+                                                                          (list 0)))])))]
+                                      [counter-clauses (build-list 
+                                                        (length binding-sets)
+                                                        (lambda (num)
+                                                          (d->so `(set! ,let-counter ,num))))]
                                       [set!-clauses
                                        (map (lambda (binding-set val)
                                               (d->so `(set!-values ,binding-set ,val)))
                                             binding-sets
                                             annotated-vals)]
+                                      [interlaced-clauses
+                                       (cdr (foldl (lambda (a b) (append b a)) null 
+                                                   (zip counter-clauses set!-clauses)))] 
                                       ; time to work from the inside out again
                                       ; without renaming, this would all be much much simpler.
                                       [middle-begin
-                                       (double-break-wrap (datum->syntax-object expr `(begin ,@set!-clauses 
+                                       (double-break-wrap (datum->syntax-object expr `(begin ,@interlaced-clauses 
                                                                                              ,(late-let-break-wrap binding-list
                                                                                                                    lifted-vars
                                                                                                                    tagged-body))))]
@@ -727,7 +694,10 @@
                                       [tagged-binding-list (map (lambda (binding)
                                                                   (syntax-property binding 'stepper-binding-type 'let-bound))
                                                                 binding-list)]
-                                      [wrapped-begin (wcm-wrap (make-debug-info-let-body free-varrefs tagged-binding-list) middle-begin)]
+                                      [wrapped-begin (wcm-wrap (make-debug-info-let free-varrefs
+                                                                                    tagged-binding-list
+                                                                                    let-counter) 
+                                                               middle-begin)]
                                       [whole-thing (datum->syntax-object expr `(,output-identifier ,outer-initialization ,wrapped-begin))])
                                  (2vals whole-thing free-varrefs))]))))]
 
@@ -856,12 +826,21 @@
                       (set!-rhs-recur (syntax val) (syntax-case (syntax var) (#%top)
                                                      [(#%top . real-var) (syntax-e (syntax real-var))]
                                                      [else (syntax var)]))]
-                     [free-varrefs (varref-set-union (list (syntax-case (syntax var) (#%top)
-                                                             [(#%top . real-var) null]
-                                                             [else (list (syntax var))])
+                     [tagged-var (syntax-case (syntax var) (#%top)
+                                   [(#%top . real-var) 
+                                    (syntax-property (syntax real-var) 'stepper-binding-type 'top-level)]
+                                   [else 
+                                    (syntax-property (syntax var)
+                                                     'stepper-binding-type
+                                                     (if (ormap (lambda (binding)
+                                                                  (bound-identifier=? binding (syntax var)))
+                                                                let-bound-vars)
+                                                         'let-bound
+                                                         'lambda-bound))])]
+                     [free-varrefs (varref-set-union (list (list tagged-var)
                                                            val-free-varrefs))]
                      [debug-info (make-debug-info-normal free-varrefs)]
-                     [annotated (datum->syntax-object expr `(set! ,(syntax var) ,annotated-val))])
+                     [annotated (datum->syntax-object expr `(set! ,tagged-var ,annotated-val))])
                   (2vals (ccond [(or cheap-wrap? ankle-wrap?) (appropriate-wrap annotated free-varrefs)]
                                 [foot-wrap?
                                  (wcm-wrap (make-debug-info-normal free-varrefs) annotated)])

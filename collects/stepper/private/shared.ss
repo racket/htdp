@@ -23,6 +23,12 @@
    binding-index-reset
    get-lifted-var
    get-arg-var
+   d->so
+   syntax->ilist
+   ilist-map
+   ilist-flatten
+   zip
+   let-counter
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -122,15 +128,66 @@
   ; unfortunately, it can't use "make-binding-source" because you need to compare the items 
   ; with free-variable=?, which means that hash tables won't work.
   
+  ; my weak-assoc lists are lists of two-element lists, where the first one is in a weak box.
+  ; furthermore, the whole thing is in a box, to allow it to be banged when needed.
+  
+  (define (weak-assoc-add boxed-lst key value)
+       (set-box! boxed-lst (cons (list (make-weak-box key) value) (unbox boxed-lst))))
+  
+  (define (weak-assoc-search boxed-lst key eq-fun)
+    (let* ([lst (unbox boxed-lst)]
+           [found-val #f]
+           [stripped (let loop ([remaining lst])
+                       (if (null? remaining)
+                           null
+                           (let* ([first (car remaining)]
+                                  [first-key (weak-box-value (car first))])
+                             (if first-key
+                                 (if (eq-fun key first-key)
+                                     (begin 
+                                       (set! found-val (cadr first))
+                                       remaining)
+                                     (cons first
+                                           (loop (cdr remaining))))
+                                 (loop (cdr remaining))))))])
+      (set-box! boxed-lst stripped)
+      found-val))
+  
+  ; test cases:
+  ;  (define wa (box null))
+  ;  (define-struct test ())
+  ;  (weak-assoc-add wa 3 4)
+  ;  (weak-assoc-add wa 9 10)
+  ;  (= (weak-assoc-search wa 3 =) 4)
+  ;  (= (weak-assoc-search wa 9 =) 10)
+  ;  (= (weak-assoc-search wa 3 =) 4)
+  ;  (= (length (unbox wa)) 2)
+  ;  (define my-struct (make-test))
+  ;  (weak-assoc-add wa my-struct 14)
+  ;  (= (length (unbox wa)) 3)
+  ;  (= (weak-assoc-search wa my-struct eq?) 14)
+  ;  (set! my-struct #f)
+  ;  (collect-garbage)
+  ;  (= (length (unbox wa)) 3)
+  ;  (= (weak-assoc-search wa 3 =) 4)
+  ;  (= (length (unbox wa)) 2)
+  
   (define lifted-index 0)
   (define (next-lifted-symbol str)
     (let ([index lifted-index]) 
       (set! lifted-index (+ lifted-index 1))
-      (fprintf (current-error-port) "lifting: ~a~n" str)
-      (datum->syntax-object #f (string->symbol (string-append str (number->string index))))))
-
+      (datum->syntax-object #'here (string->symbol (string-append str (number->string index))))))
+ 
   (define get-lifted-var
-    (make-binding-source "lifter-" next-lifted-symbol (lambda (stx) (format "~a" (syntax-object->datum stx)))))
+   (let ([assoc-table (box null)])
+      (lambda (stx)
+        (let ([maybe-fetch (weak-assoc-search assoc-table stx free-identifier=?)])
+          (or maybe-fetch
+              (begin
+                (let* ([new-binding (next-lifted-symbol
+                                     (string-append "lifter-" (format "~a" (syntax-object->datum stx)) "-"))])
+                  (weak-assoc-add assoc-table stx new-binding)
+                  new-binding)))))))
 
   (define (get-arg-var n)
     (datum->syntax-object #f (string->symbol (format "arg-temp-~a" n))))
@@ -220,17 +277,90 @@
          (set! counter 0)))))
   
   
+  ;; d->so uses a local syntax reference for the lexical context argument
+  (define (d->so datum)
+    (datum->syntax-object #'here datum))
 
+  ;; ilist : for our puposes, an ilist is defined like this:
+  ;; ILIST : (union null (cons ILIST-VAL ILIST) (cons ILIST-VAL ILIST-VAL))
+  ;; ... where an ilist val can be anything _except_ a pair or null
+
+  ;; syntax->ilist : turns an (possibly improper) syntax list into a (possibly) improper list of syntax objects
+
+  (define (syntax->ilist stx-ilist)
+    (let loop ([ilist (syntax-e stx-ilist)])
+      (cond [(pair? ilist) 
+             (unless (syntax? (car ilist))
+               (error 'syntax->ilist "argument is not a syntax-ilist: ~a~n" stx-ilist))
+             (cons (car ilist)
+                   (loop (cdr ilist)))]
+            [(null? ilist) null]
+            [else
+             (unless (syntax? ilist)
+               (error 'syntax->ilist "argument is not a syntax-ilist: ~a~n" stx-ilist))
+             (if (pair? (syntax-e ilist))
+                 (loop (syntax-e ilist))
+                 ilist)])))
+
+  ; ilist-val? returns true if the value is neither a pair nor null
+  (define (ilist-val? val)
+    (not (or (null? val)
+             (pair? val))))
+  
+  ; ilist-map applies the fn to every element of the ilist
+  
+  (define (ilist-map fn ilist)
+    (let loop ([ilist ilist])
+      (cond [(null? ilist)
+             null]
+            [(ilist-val? (cdr ilist))
+             (cons (fn (car ilist)) (fn (cdr ilist)))]
+            [else
+             (cons (fn (car ilist)) (loop (cdr ilist)))])))
+  
+  ; ilist-flatten : produces a list containing the elements of the ilist
+  (define (ilist-flatten ilist)
+    (let loop ([ilist ilist])
+      (cond [(null? ilist)
+             null]
+            [(ilist-val? (cdr ilist))
+             (cons (car ilist) (cons (cdr ilist) null))]
+            [else
+             (cons (car ilist) (loop (cdr ilist)))])))
+  
+  ; zip : (listof 'a) (listof 'b) (listof 'c) ... -> (listof (list 'a 'b 'c ...))
+  ; zip reshuffles lists of items into a list of item-lists.  Look at the contract, okay?
+  
+  (define zip
+    (lambda args
+      (apply map list args)))
+  
+  (define let-counter (syntax-property (d->so 'let-counter) 'stepper-binding-type 'stepper-temp))
   )
 
 ; test cases
 ;(require shared)
+;(load "/Users/clements/plt/tests/mzscheme/testing.ss")
 ;
 ;(define (a sym) 
 ;  (syntax-object->datum (get-lifted-var sym)))
 ;(define cd-stx 
 ;  (datum->syntax-object #f 'cd))
-;(eq? (a (datum->syntax-object #f 'ab)) 'lifter-ab-0)
-;(eq? (a cd-stx) 'lifter-cd-1)
-;(eq? (a (datum->syntax-object #f 'ef)) 'lifter-ef-2)
-;(eq? (a cd-stx) 'lifter-cd-1)
+;(test 'lifter-ab-0  a (datum->syntax-object #f 'ab))
+;(test 'lifter-cd-1 a cd-stx)
+;(test 'lifter-ef-2 a (datum->syntax-object #f 'ef))
+;(test 'lifter-cd-1 a cd-stx)
+;
+;(test '(a b c) map syntax-e (syntax->ilist #'(a b c)))
+;(test '(a b c) map syntax-e (syntax->ilist #'(a . (b c))))
+;(let ([result (syntax->ilist #' (a b . c))])
+;  (test 'a syntax-e (car result))
+;  (test 'b syntax-e (cadr result))
+;  (test 'c syntax-e (cddr result)))
+;
+;(define (add1 x) (+ x 1))
+;(test '(3 4 5) ilist-map add1 '(2 3 4))
+;(test '(3 4 . 5) ilist-map add1 '(2 3 . 4))
+;
+;(test '(2 3 4) ilist-flatten '(2 3 4))
+;(test '(2 3 4) ilist-flatten '(2 3 . 4))

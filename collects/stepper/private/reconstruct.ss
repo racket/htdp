@@ -63,7 +63,208 @@
 ;       (and (pair? raw)
 ;            (eq? (car raw) symbol)))))
 
-  (define comes-from-define?
+  ; split-list : ('a -> boolean) (listof 'a) -> (2vals (listof 'a) (listof 'a))
+  ; split-list splits a list into two lists at the first element s.t. (fn element) => true).
+  ; that is, split-list yields the lists A and B such that (append A B) gives the original
+  ; list, and (fn element) => false for all elements in A, and B is either empty or
+  ; (fn (car B)) => true
+  
+ (define (split-list fn lst)
+    (let loop ([remaining lst] [so-far null]) 
+      (cond [(null? remaining)
+             (2vals (reverse so-far) null)]
+            [else
+             (if (fn (car remaining))
+                 (2vals (reverse so-far) remaining)
+                 (loop (cdr remaining) (cons (car remaining) so-far)))])))
+  
+  ; test cases
+  ; (test (2vals '(93 4 2) '(0 2 1)) split-list (lambda (x) (= x 0)) '(93 4 2 0 2 1))
+  ; (test (2vals '(3 4 5) '()) split-list (lambda (x) (= x 0)) '(3 4 5))
+        
+  ; n-split-list : num ('a list) -> ('a list) ('a list)
+  ; n-split-list splits a given list A into two lists B and C, such that B contains the
+  ; first n elements of A, and C contains the rest.
+
+  (define (n-split-list num lst)
+    (let loop ([count num] [remaining lst] [so-far null])
+      (if (= count 0)
+          (2vals (reverse so-far) remaining)
+          (loop (- count 1) (cdr remaining) (cons (car remaining) so-far)))))
+  
+  ; test cases
+  (test (2vals '(a b c) '(d e f)) n-split-list 3 '(a b c d e f))
+
+  ; multi-append : (('a list) list) -> ('a list)
+  ; applies append to a bunch of lists.  Would be trivial, except I'm trying to avoid
+  ; using 'apply'.
+  
+  (define (multi-append lol)
+    (foldl (lambda (a b) (append b a)) null))
+  
+  ; reshape-list : ('a list) ('b sexp) -> ('a tree)
+  ; reshape-list produces a new sexp with the shape of <template> whose in-order leaf traversal
+  ; is <source>.
+  
+  (define (reshape-list source template)
+    (let loop ([template template])
+      (cond [(or (pair? template)
+                 (null? template))
+             (map loop template)]
+            (else
+             (let ([first (car source)])
+               (set! source (cdr source))
+               first)))))
+  
+  ; test cases
+  ; (test '((1 2 3) (4 5 6)) reshape-list '(1 2 3 4 5 6) '((a b c) (d e f)))
+  ; (test '(() () 1 (2 3) ()) reshape-list '(1 2 3) '(() () a (b c) ()))
+  
+  ; recon-value : value -> syntax-object
+  ; recon-value print-converts a value.  If the value is a closure, rectify-value
+  ; prints the name attached to the procedure, unless we're on the right-hand-side
+  ; of a let, or unless there _is_ no name.
+  
+  (define (recon-value val . hint-list)
+    (let ([hint (if (pair? hint-list) (car hint-list))]
+          [closure-record (closure-table-lookup val (lambda () #f))])
+      (cond
+        [closure-record
+         (cond [(and (not (eq? hint 'let-rhs))
+                     (closure-record-name closure-record)) =>
+                (lambda (name)
+                  (cond [(closure-record-lifted-name closure-record) =>
+                         (lambda (lifted-name)
+                           (d->so (construct-lifted-name name lifted-name)))]
+                        [else (d->so name)]))]
+               [else
+                (let ([mark (closure-record-mark closure-record)])
+                  (recon-source-expr (mark-source mark) (list mark)))])]
+        [else
+         (d->so (s:print-convert val))])))
+  
+  (define (let-rhs-recon-value val)
+    (recon-value val 'let-rhs))
+  
+  (define (final-mark-list? mark-list)
+    (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
+ 
+  (define continuation? 
+    (let ([r (regexp "#<continuation>")])
+      (lambda (k)
+        (let ([p (open-output-string)])
+          (display k p)
+          (not (not (regexp-match r (get-output-string p))))))))
+  
+  (define (skip-result-step? mark-list)
+    (in-inserted-else-clause mark-list))
+  
+  (define (skip-redex-step? mark-list)
+    (and (pair? mark-list)
+         (let ([expr (mark-source (car mark-list))])
+           (or (in-inserted-else-clause mark-list) 
+               (kernel:kernel-syntax-case expr #f
+                  [id
+                   (identifier? expr)
+                   (or (eq? (syntax-property expr 'stepper-binding-type) 'lambda-bound)
+                       (let ([val (mark-binding-value (lookup-binding mark-list expr))])
+                         (and (procedure? val)
+                              (not (continuation? val)))))]
+                  [(#%top . id-stx)
+                   (let ([id (syntax-e (syntax id-stx))])
+                     (with-handlers
+                         ([exn:variable? (lambda args #f)])
+                       (or (and (s:check-pre-defined-var id)
+                                (or (procedure? (s:global-lookup id))
+                                    (and (s:true-false-printed?)
+                                         (or (eq? id 'true)
+                                             (eq? id 'false)))))
+                           (let ([val (s:global-lookup id)])
+                             (and (procedure? val)
+                                  (not (continuation? val))
+                                  (cond [(closure-table-lookup val (lambda () #f)) =>
+                                         (lambda (x)
+                                           (eq? var (closure-record-name x)))]
+                                        [else #f]))))))]
+                  [(#%app . terms)
+                   (let ([fun-val (mark-binding-value (lookup-binding mark-list (get-arg-binding 0)))])
+                     (and (procedure? fun-val)
+                          (procedure-arity-includes? 
+                           fun-val
+                           (length (cdr (syntax->list (syntax terms)))))
+                          (or (and (s:constructor-style-printing?)
+                                   (if (s:abbreviate-cons-as-list?)
+                                       (or (s:special-function? 'list fun-val)
+                                           (and (s:special-function? 'cons fun-val)
+                                                (second-arg-is-list? mark-list)))    
+                                       (and (s:special-function? 'cons fun-val)
+                                            (second-arg-is-list? mark-list))))
+                              ;(s:special-function? 'vector fun-val)
+                              (and (eq? fun-val void)
+                                   (eq? (cdr (syntax->list (syntax terms))) null))
+                              (struct-constructor-procedure? fun-val))))])))))
+  
+  (define (second-arg-is-list? mark-list)
+    (let ([arg-val (mark-binding-value (lookup-binding mark-list (get-arg-binding 2)))])
+      (list? arg-val)))
+    
+  (define (in-inserted-else-clause mark-list)
+    (and (not (null? mark-list))
+         (let ([expr (mark-source (car mark-list))])
+           (or (and (z:zodiac? expr)
+                    (not (z:if-form? expr))
+                    (comes-from-cond? expr))
+               (in-inserted-else-clause (cdr mark-list))))))
+  
+;   ; static-binding-indexer (z:parsed -> integer)
+;  
+;  (define static-binding-indexer
+;    (let* ([name-number-table (make-hash-table)]
+;           [binding-number-table (make-hash-table-weak)])
+;      (lambda (binding)
+;        (cond [(hash-table-get binding-number-table binding (lambda () #f)) =>
+;               (lambda (x) x)]
+;              [else (let* ([orig-name (z:binding-orig-name binding)]
+;                           [old-index (hash-table-get name-number-table orig-name (lambda () -1))]
+;                           [new-index (+ old-index 1)])
+;                      (hash-table-put! name-number-table orig-name new-index)
+;                      (hash-table-put! binding-number-table binding new-index)
+;                      new-index)]))))
+  
+  ; construct-lifted-name (SYNTAX-OBJECT num -> string)
+  
+  (define (construct-lifted-name binding dynamic-index)
+    (string->symbol
+     (string-append (symbol->string (syntax-e binding)) "_" 
+                    (number->string dynamic-index))))
+
+  ; binding-lifted-name ((listof mark) SYNTAX-OBJECT -> num)
+  
+  (define (binding-lifted-name mark-list binding)
+      (construct-lifted-name binding (mark-binding-value (lookup-binding mark-list (get-lifted-var binding)))))
+
+  ; attach-info : SYNTAX-OBJECT SYNTAX-OBJECT -> SYNTAX-OBJECT
+  ; attach-info attaches to a generated piece of syntax the origin & source information of another.
+  ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
+  (define (attach-info stx expr)
+    (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
+           [it (syntax-property it 'user-source (syntax-source expr))]
+           [it (syntax-property it 'user-position (syntax-position expr))])
+      it))                                                                                                  
+                                                                                                  
+                                                                                                  
+                                                                ;              ;  ;               
+                                                                               ;                  
+ ; ;;; ;;    ;;;    ;;;  ; ;;  ;;;       ;   ;  ; ;;  ;   ;   ; ;  ; ;;    ;;; ;  ;  ; ;;    ;; ; 
+ ;;  ;;  ;  ;   ;  ;     ;;   ;   ;      ;   ;  ;;  ; ;   ;   ; ;  ;;  ;  ;   ;;  ;  ;;  ;  ;  ;; 
+ ;   ;   ;      ;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ; 
+ ;   ;   ;   ;;;;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ; 
+ ;   ;   ;  ;   ;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ; 
+ ;   ;   ;  ;   ;  ;     ;    ;   ;      ;  ;;  ;   ;  ; ; ; ;  ;  ;   ;  ;   ;;  ;  ;   ;  ;  ;; 
+ ;   ;   ;   ;;;;;  ;;;  ;     ;;;        ;; ;  ;   ;   ;   ;   ;  ;   ;   ;;; ;  ;  ;   ;   ;; ; 
+                                                                                                ; 
+                                                                                            ;;;;  
+ (define comes-from-define?
     (make-check-raw-first-symbol 'define))
 
   (define comes-from-define-procedure?
@@ -98,35 +299,7 @@
     (make-check-raw-first-symbol 'or))
   
   (define comes-from-local?
-    (make-check-raw-first-symbol 'local))
-
-  ; rectify-value print-converts a value.  If the value is a closure, rectify-value
-  ; prints the name attached to the procedure, unless we're on the right-hand-side
-  ; of a let, or unless there _is_ no name.
-  
-  (define (rectify-value val . hint-list)
-    (let ([hint (if (pair? hint-list) (car hint-list))]
-          [closure-record (closure-table-lookup val (lambda () #f))])
-      (cond
-        [closure-record
-         (cond [(and (not (eq? hint 'let-rhs))
-                     (closure-record-name closure-record)) =>
-                (lambda (name)
-                  (cond [(closure-record-lifted-name closure-record) =>
-                         (lambda (lifted-name)
-                           (construct-lifted-name name lifted-name))]
-                        [else name]))]
-               [else
-                (let ([mark (closure-record-mark closure-record)])
-                  (o-form-case-lambda->lambda 
-                   (rectify-source-expr (mark-source mark) (list mark) null)))])]
-        [else
-         (s:print-convert val)])))
-  
-  (define (let-rhs-rectify-value val)
-    (rectify-value val 'let-rhs))
-  
-  (define (o-form-case-lambda->lambda o-form)
+    (make-check-raw-first-symbol 'local))  (define (o-form-case-lambda->lambda o-form)
     (cond [(eq? (car o-form) 'lambda)
            o-form]
           [else ; o-form = case-lambda
@@ -139,256 +312,6 @@
           [body-exps (cddr o-form)])
       `(define (,name ,@args) ,@body-exps)))
   
-  (define (final-mark-list? mark-list)
-    (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
- 
-  (define continuation? 
-    (let ([r (regexp "#<continuation>")])
-      (lambda (k)
-        (let ([p (open-output-string)])
-          (display k p)
-          (not (not (regexp-match r (get-output-string p))))))))
-  
-  (define (skip-result-step? mark-list)
-    (in-inserted-else-clause mark-list))
-  
-  (define (skip-redex-step? mark-list)
-    (and (pair? mark-list)
-         (let ([expr (mark-source (car mark-list))])
-           (or (and (z:varref? expr)
-                    (or (z:lambda-varref? expr)
-                        (let ([var (z:varref-var expr)])
-                          (with-handlers 
-                              ([exn:variable? (lambda args #f)])
-                            (or (and (s:check-pre-defined-var var)
-                                     (or (procedure? (s:global-lookup var))
-                                         (and (s:true-false-printed?)
-                                              (or (eq? var 'true)
-                                                  (eq? var 'false)))
-                                         (eq? var 'empty)))
-                                (let ([val (if (z:top-level-varref? expr)
-                                               (s:global-lookup var)
-                                               (mark-binding-value (lookup-binding mark-list (z:bound-varref-binding expr))))])
-                                  (and (procedure? val)
-                                       (not (continuation? val))
-                                       (or (z:lexical-varref? expr)
-                                           (cond [(closure-table-lookup val (lambda () #f)) =>
-                                                  (lambda (x)
-                                                    (eq? var (closure-record-name x)))]
-                                                 [else #f])))))))))
-               (and (z:app? expr)
-                    (let ([fun-val (mark-binding-value
-                                    (lookup-binding mark-list (get-arg-binding 0)))])
-                      (and (procedure? fun-val)
-                           (procedure-arity-includes? 
-                            fun-val
-                            (length (z:app-args expr)))
-                           (or (and (s:constructor-style-printing?)
-                                    (if (s:abbreviate-cons-as-list?)
-                                        (or (s:special-function? 'list fun-val)
-                                            (and (s:special-function? 'cons fun-val)
-                                                 (second-arg-is-list? mark-list)))    
-                                        (and (s:special-function? 'cons fun-val)
-                                             (second-arg-is-list? mark-list))))
-                               ;(s:special-function? 'vector fun-val)
-                               (and (eq? fun-val void)
-                                    (eq? (z:app-args expr) null))
-                               (struct-constructor-procedure? fun-val)
-                               ; this next clause may be obviated by the previous one.
-                               (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
-                                 (and closure-record
-                                      (closure-record-constructor? closure-record)))))))
-               (in-inserted-else-clause mark-list)))))
-  
-  (define (second-arg-is-list? mark-list)
-    (let ([arg-val (mark-binding-value (lookup-binding mark-list (get-arg-binding 2)))])
-      (list? arg-val)))
-    
-  (define (in-inserted-else-clause mark-list)
-    (and (not (null? mark-list))
-         (let ([expr (mark-source (car mark-list))])
-           (or (and (z:zodiac? expr)
-                    (not (z:if-form? expr))
-                    (comes-from-cond? expr))
-               (in-inserted-else-clause (cdr mark-list))))))
-  
-;   ; static-binding-indexer (z:parsed -> integer)
-;  
-;  (define static-binding-indexer
-;    (let* ([name-number-table (make-hash-table)]
-;           [binding-number-table (make-hash-table-weak)])
-;      (lambda (binding)
-;        (cond [(hash-table-get binding-number-table binding (lambda () #f)) =>
-;               (lambda (x) x)]
-;              [else (let* ([orig-name (z:binding-orig-name binding)]
-;                           [old-index (hash-table-get name-number-table orig-name (lambda () -1))]
-;                           [new-index (+ old-index 1)])
-;                      (hash-table-put! name-number-table orig-name new-index)
-;                      (hash-table-put! binding-number-table binding new-index)
-;                      new-index)]))))
-  
-  ; construct-lifted-name (z:parsed num -> string)
-  
-  (define (construct-lifted-name binding dynamic-index)
-    (string->symbol
-     (string-append (symbol->string (z:binding-orig-name binding)) "_" 
-                    (number->string dynamic-index))))
-
-  ; binding-lifted-name ((listof mark) z:binding -> num)
-  
-  (define (binding-lifted-name mark-list binding)
-      (construct-lifted-name binding (mark-binding-value (lookup-binding mark-list (get-lifted-gensym binding)))))
-  
-  
-
-                                                                                                                  
-                                                                                                                  
-                                                                                                                  
-                       ;   ;;                                                                                     
-                   ;      ;                                                                                       
- ; ;;  ;;;    ;;; ;;;; ; ;;; ;   ;          ;;;   ;;;   ;   ;  ; ;;  ;;;   ;;;           ;;;  ;    ;  ; ;;;   ; ;;
- ;;   ;   ;  ;     ;   ;  ;  ;   ;         ;     ;   ;  ;   ;  ;;   ;     ;   ;         ;   ;  ;  ;   ;;   ;  ;;  
- ;    ;   ;  ;     ;   ;  ;   ; ;          ;     ;   ;  ;   ;  ;    ;     ;   ;         ;   ;   ;;    ;    ;  ;   
- ;    ;;;;;  ;     ;   ;  ;   ; ;   ;;;;;   ;;   ;   ;  ;   ;  ;    ;     ;;;;;  ;;;;;  ;;;;;   ;;    ;    ;  ;   
- ;    ;      ;     ;   ;  ;   ; ;             ;  ;   ;  ;   ;  ;    ;     ;             ;       ;;    ;    ;  ;   
- ;    ;      ;     ;   ;  ;    ;              ;  ;   ;  ;  ;;  ;    ;     ;             ;      ;  ;   ;;   ;  ;   
- ;     ;;;;   ;;;   ;; ;  ;    ;           ;;;    ;;;    ;; ;  ;     ;;;   ;;;;          ;;;; ;    ;  ; ;;;   ;   
-                               ;                                                                      ;           
-                              ;                                                                       ;           
-                                                                                                                  
-
-  ; rectify-source-expr (SYNTAX-OBJECT (list-of Mark) BINDING-SET -> sexp)
-  
-  ; rectify-source-expr produces the reconstructed version of a given source epxression, using the binding
-  ; information contained in the binding-list.  This happens during reconstruction whenever we come upon
-  ; expressions that we haven't yet evaluated.
-  
-  ; NB: the variable 'lexically-bound-bindings' contains a list of bindings which occur INSIDE the expression
-  ; being evaluated, and hence do NOT yet have values.
-  
-  (define rectify-source-expr
-    (checked-lambda ((expr SYNTAX-OBJECT) (mark-list MARK-LIST) (lexically-bound-bindings BINDING-SET))
-                    (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-bindings))]
-                          [let-recur (lambda (expr bindings) (rectify-source-expr expr mark-list (append bindings lexically-bound-bindings)))])
-                      (kernel:kernel-syntax-case expr #f
-                                                 
-                         ; varref                        
-                         [var-stx
-                          (identifier? expr)
-                          (let* ([var (syntax var)])
-                            (cond [(eq? (identifier-binding var) 'lexical)
-                                   ; has this varref's binding not been evaluated yet?
-                                   (if (ormap (lambda (binding)
-                                                (bound-identifier=? binding var))
-                                              lexically-bound-bindings)
-                                       (syntax-e var)
-                                       (
-                                       
-                           [(z:varref? expr)
-                             (cond [(z:bound-varref? expr)
-                                    (let ([binding (z:bound-varref-binding expr)])
-                                      (if (memq binding lexically-bound-bindings)
-                                          (z:binding-orig-name binding)
-                                          (if (z:lambda-binding? binding)
-                                              (rectify-value (mark-binding-value (lookup-binding mark-list binding)))
-                                              (binding-lifted-name mark-list binding))))]
-                                   [(z:top-level-varref? expr)
-                                    (z:varref-var expr)])]
-                            
-                            [(z:app? expr)
-                             (map recur (cons (z:app-fun expr) (z:app-args expr)))]
-                            
-                            [(z:struct-form? expr)
-                             (if (comes-from-define-struct? expr)
-                                 (internal-error expr "this expression should have been skipped during reconstruction")
-                                 (let ([super-expr (z:struct-form-super expr)]
-                                       [raw-type (utils:read->raw (z:struct-form-type expr))]
-                                       [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
-                                   (if super-expr
-                                       `(struct (,raw-type ,(recur super-expr))
-                                                ,raw-fields)
-                                       `(struct ,raw-type ,raw-fields))))]
-                            
-                            [(z:if-form? expr)
-                             (cond
-                               [(comes-from-cond? expr)
-                                `(cond ,@(rectify-cond-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
-                               [(comes-from-and? expr)
-                                `(and ,@(rectify-and-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
-                               [(comes-from-or? expr)
-                                `(or ,@(rectify-or-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
-                               [else
-                                `(if ,(recur (z:if-form-test expr))
-                                     ,(recur (z:if-form-then expr))
-                                     ,(recur (z:if-form-else expr)))])]
-                            
-                            [(z:quote-form? expr)
-                             (let ([raw (utils:read->raw (z:quote-form-expr expr))])
-                               (rectify-value raw)
-                               ;               (cond [(or (string? raw)
-                               ;                          (number? raw)
-                               ;                          (boolean? raw)
-                               ;                          (s:image? raw))
-                               ;                      raw]
-                               ;                     [else
-                               ;                      `(quote ,raw)])
-                               )]
-                            
-                            [(z:let-values-form? expr)
-                             (let* ([bindings (z:let-values-form-vars expr)]
-                                    [binding-list (apply append bindings)]
-                                    [binding-names (map (lambda (b-list) (map z:binding-orig-name b-list)) bindings)]
-                                    [right-sides (map recur (z:let-values-form-vals expr))]
-                                    [must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-names)]
-                                    [rectified-body (let-recur (z:let-values-form-body expr) binding-list)])
-                               (if must-be-values?
-                                   `(let-values ,(map list binding-names right-sides) ,rectified-body)
-                                   `(let ,(map list (map car binding-names) right-sides) ,rectified-body)))]
-                            
-                            [(z:letrec-values-form? expr)
-                             (let* ([bindings (z:letrec-values-form-vars expr)]
-                                    [binding-list (apply append bindings)]
-                                    [binding-names (map (lambda (b-list) (map z:binding-orig-name b-list)) bindings)]
-                                    [right-sides (map (lambda (expr) (let-recur expr binding-list))
-                                                      (z:letrec-values-form-vals expr))]
-                                    [must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-names)]
-                                    [rectified-body (let-recur (z:letrec-values-form-body expr) binding-list)])
-                               (cond [(comes-from-local? expr)
-                                      (rectify-local (z:sexp->raw (expr-read expr)) binding-names right-sides rectified-body)]
-                                     [must-be-values?
-                                      `(letrec-values ,(map list binding-names right-sides) ,rectified-body)]
-                                     [else
-                                      `(letrec ,(map list (map car binding-names) right-sides) ,rectified-body)]))]
-                            
-                            [(z:case-lambda-form? expr)
-                             (let* ([arglists (z:case-lambda-form-args expr)]
-                                    [bodies (z:case-lambda-form-bodies expr)]
-                                    [o-form-arglists
-                                     (map (lambda (arglist) 
-                                            (utils:improper-map z:binding-orig-name
-                                                                (utils:arglist->ilist arglist)))
-                                          arglists)]
-                                    [binding-form-arglists (map z:arglist-vars arglists)]
-                                    [o-form-bodies 
-                                     (map (lambda (body binding-form-arglist) (let-recur body binding-form-arglist))
-                                          bodies
-                                          binding-form-arglists)])
-                               (cond [(or (comes-from-lambda? expr) (comes-from-define? expr) (comes-from-local? expr))
-                                      ; this will _FAIL_ when case-lambda becomes legal
-                                      `(lambda ,(car o-form-arglists) ,(car o-form-bodies))]
-                                     [(comes-from-case-lambda? expr)
-                                      `(case-lambda ,@(map list o-form-arglists o-form-bodies))]
-                                     [else
-                                      (internal-error expr "unknown source for case-lambda")]))]
-                            
-                            ; we won't call rectify-source-expr on define-values expressions
-                            
-                            [else
-                             (print-struct #t)
-                             (internal-error
-                              expr
-                              (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))]))))
- 
   ; these macro unwinders (and, or) are specific to beginner & intermediate level
   
   (define (rectify-and-clauses and-source expr mark-list lexically-bound-bindings)
@@ -454,6 +377,119 @@
 ;                                  (define-struct p (x y)))
 ;                            (ident a)))
 
+                                                                                                               
+ ; ;;  ;;;    ;;;   ;;;   ; ;;           ;;;   ;;;   ;   ;  ; ;;  ;;;   ;;;           ;;;  ;    ;  ; ;;;   ; ;;
+ ;;   ;   ;  ;     ;   ;  ;;  ;         ;     ;   ;  ;   ;  ;;   ;     ;   ;         ;   ;  ;  ;   ;;   ;  ;;  
+ ;    ;   ;  ;     ;   ;  ;   ;         ;     ;   ;  ;   ;  ;    ;     ;   ;         ;   ;   ;;    ;    ;  ;   
+ ;    ;;;;;  ;     ;   ;  ;   ;  ;;;;;   ;;   ;   ;  ;   ;  ;    ;     ;;;;;  ;;;;;  ;;;;;   ;;    ;    ;  ;   
+ ;    ;      ;     ;   ;  ;   ;            ;  ;   ;  ;   ;  ;    ;     ;             ;       ;;    ;    ;  ;   
+ ;    ;      ;     ;   ;  ;   ;            ;  ;   ;  ;  ;;  ;    ;     ;             ;      ;  ;   ;;   ;  ;   
+ ;     ;;;;   ;;;   ;;;   ;   ;         ;;;    ;;;    ;; ;  ;     ;;;   ;;;;          ;;;; ;    ;  ; ;;;   ;   
+                                                                                                   ;           
+                                                                                                   ;           
+                                                                                                               
+
+  ; recon-source-expr (SYNTAX-OBJECT (list-of Mark) BINDING-SET -> SYNTAX-OBJECT)
+  
+  ; recon-source-expr produces the reconstructed version of a given source epxression, using the binding
+  ; information contained in the binding-list.  This happens during reconstruction whenever we come upon
+  ; expressions that we haven't yet evaluated. 
+  
+  ; NB: the variable 'lexically-bound-bindings' contains a list of bindings which occur INSIDE the expression
+  ; being evaluated, and hence do NOT yet have values.
+  
+  (define (recon-source-expr expr mark-list)
+      (letrec
+        ([inner
+          (checked-lambda ((expr SYNTAX-OBJECT) (mark-list MARK-LIST) (lexically-bound-bindings BINDING-SET))
+            (let ([recur (lambda (expr) (inner expr mark-list lexically-bound-bindings))]
+                  [let-recur (lambda (expr bindings)
+                               (inner expr mark-list (append bindings lexically-bound-bindings)))]
+                  
+                  [recon-basic
+                   (lambda ()
+                     (with-syntax ([(label . bodies) expr])
+                       (d->so `((syntax label) ,@(map recur (syntax->list (syntax bodies)))))))]
+                  [recon-let/rec
+                   (lambda ()
+                     (with-syntax ([(label  ((vars val) ...) body) expr])
+                       (let* ([bindings (map syntax->list (syntax->list (syntax (vars ...))))]
+                              [binding-list (multi-append bindings)]
+                              [right-sides (map recur (syntax->list (syntax (val ...))))]
+                              [recon-body (let-recur (syntax body) binding-list)])
+                         (with-syntax ([(recon-val ...) right-sides]
+                                       [recon-body recon-body])
+                           (syntax (label ((vars recon-val) ...) recon-body))))))]
+                  [recon-lambda-clause
+                   (lambda (clause)
+                     (with-syntax ([(args . bodies-stx) clause])
+                       (let* ([arglist (ilist-flatten (syntax->ilist args))]
+                              [bodies (map (lambda (body) (let-recur body arglist))
+                                           (syntax->list (syntax bodies-stx)))])
+                         (cons (syntax args) bodies))))]
+                  [recon (kernel:kernel-syntax-case expr #f
+                                                    
+                     ; lambda
+                     [(lambda . clause-stx)
+                      (let* ([clause (recon-lambda-clause (syntax clause-stx))])
+                        (d->so `(lambda ,@clause)))]
+                     
+                     ; case-lambda
+                     [(case-lambda . clauses-stx)
+                      (let* ([clauses (map recon-lambda-clause (syntax->list (syntax clauses-stx)))])
+                        (d->so `(case-lambda ,@clauses)))]
+                     
+                     ; if, begin, begin0
+                     [(if test then else) (recon-basic)]
+                     [(if test then) (recon-basic)]
+                     [(begin . bodies) (recon-basic)]
+                     [(begin0 . bodies) (recon-basic)]
+                     
+                     ; let-values, letrec-values
+                     [(let-values . rest) (recon-let/rec)]
+                     [(letrec-values . rest) (recon-let/rec)]
+                     
+                     ; set! : set! doesn't fit into this scheme. It would be a mistake to allow it to proceed.
+                     
+                     ; quote 
+                     [(quote body) (recon-value (syntax-e body))]
+                     
+                     ; quote-syntax : like set!, the current stepper cannot handle quote-syntax
+                     
+                     ; with-continuation-mark
+                     [(with-continuation-mark . rest) (recon-basic)]
+                     
+                     ; application
+                     [(#%app . terms) (d->so (map recur (syntax->list (syntax terms))))]
+                     
+                     ; #%datum
+                     [(#%datum . datum) (recon-value (syntax-e body))]
+                     
+                     ; varref                        
+                     [var-stx
+                      (identifier? expr)
+                      (let* ([var (syntax var)])
+                        (cond [(eq? (identifier-binding var) 'lexical)
+                               ; has this varref's binding not been evaluated yet?
+                               (if (ormap (lambda (binding)
+                                            (bound-identifier=? binding var))
+                                          lexically-bound-bindings)
+                                   var
+                                   (case (syntax-property var 'stepper-binding-type)
+                                     ((lambda-bound) 
+                                      (rectify-value (mark-binding-value (lookup-binding mark-list binding))))
+                                     ((let-bound)
+                                      (d->so (binding-lifted-name mark-list binding)))
+                                     (else
+                                      (error 'recon-source-expr "no 'stepper-binding-type property found"))))]
+                              [else ; top-level-varref
+                               var]))]
+                     
+                     [else
+                      (error 'recon-source "no matching clause for syntax: ~a" expr)])])
+              (attach-info recon expr)))])
+        (inner expr mark-list null)))
+ 
   
                                                                                                                                     
                                                                                                                                     
@@ -485,12 +521,12 @@
                         [rectified-vars (map rectify-value values)])
                    (cond [(comes-from-define-procedure? expr)
                           (let* ([mark (closure-record-mark  (closure-table-lookup (car values)))]
-                                 [rectified (rectify-source-expr (mark-source mark) (list mark) null)])
+                                 [rectified (recon-source-expr (mark-source mark) (list mark))])
                             (o-form-lambda->define (o-form-case-lambda->lambda rectified)
                                                    (car vars)))]
                          [(comes-from-lambda-defined-procedure? expr)
                           (let* ([mark (closure-record-mark (closure-table-lookup (car values)))]
-                                 [rectified (rectify-source-expr (mark-source mark) (list mark) null)])
+                                 [rectified (recon-source-expr (mark-source mark) (list mark))])
                             `(define ,(car vars) ,(o-form-case-lambda->lambda rectified)))]
                          [(comes-from-define? expr)
                           `(define ,(car vars) ,(car rectified-vars))]
@@ -553,16 +589,12 @@
   ; highlight-placeholder, which is replaced by the highlighted redex in the construction of the 
   ; text%
   
-  ; z:parsed (list-of mark) symbol (list-of value) -> 
-  ; (list sexp sexp)
+  reconstruct-current : SYNTAX-OBJECT (list-of mark) symbol (list-of value) -> (list SYNTAX-OBJECT SYNTAX-OBJECT)
 
   (define (reconstruct-current expr mark-list break-kind returned-value-list)
     
     (local
-        ((define (rectify-source-top-marks expr)
-           (rectify-source-expr expr mark-list null))
-         
-         (define (rectify-top-level expr so-far)
+        ((define (rectify-top-level expr so-far)
            (if (z:define-values-form? expr)
                (let ([vars (z:define-values-form-vars expr)]
                      [val (z:define-values-form-val expr)])
@@ -593,199 +625,146 @@
                        [else
                         `(define-values 
                            ,(map utils:read->raw vars)
-                           ,(rectify-source-top-marks val))]))
+                           ,(recon-source-top-marks val mark-list))]))
                so-far))
-                                                              
-                               ;   ;;              ;                           
-                           ;      ;                                            
-         ; ;;  ;;;    ;;; ;;;; ; ;;; ;   ;         ;  ; ;;   ; ;;    ;;;   ; ;;
-         ;;   ;   ;  ;     ;   ;  ;  ;   ;         ;  ;;  ;  ;;  ;  ;   ;  ;;  
-         ;    ;   ;  ;     ;   ;  ;   ; ;          ;  ;   ;  ;   ;  ;   ;  ;   
-         ;    ;;;;;  ;     ;   ;  ;   ; ;   ;;;;;  ;  ;   ;  ;   ;  ;;;;;  ;   
-         ;    ;      ;     ;   ;  ;   ; ;          ;  ;   ;  ;   ;  ;      ;   
-         ;    ;      ;     ;   ;  ;    ;           ;  ;   ;  ;   ;  ;      ;   
-         ;     ;;;;   ;;;   ;; ;  ;    ;           ;  ;   ;  ;   ;   ;;;;  ;   
-                                       ;                                       
-                                      ;                                        
+
+                                                ;                           
+                                                                    
+         ; ;;  ;;;    ;;;   ;;;   ; ;;          ;  ; ;;   ; ;;    ;;;   ; ;;
+         ;;   ;   ;  ;     ;   ;  ;;  ;         ;  ;;  ;  ;;  ;  ;   ;  ;;  
+         ;    ;   ;  ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;   ;  ;   
+         ;    ;;;;;  ;     ;   ;  ;   ;  ;;;;;  ;  ;   ;  ;   ;  ;;;;;  ;   
+         ;    ;      ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;      ;   
+         ;    ;      ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;      ;   
+         ;     ;;;;   ;;;   ;;;   ;   ;         ;  ;   ;  ;   ;   ;;;;  ;   
                                                                        
 
-         ; rectify-inner ((listof mark) sexp -> (listof sexp) (listof sexp) sexp)
+         ; recon-inner ((listof mark) SYNTAX-OBJECT -> (listof SYNTAX-OBJECT) (listof SYNTAX-OBJECT) SYNTAX-OBJECT)
          
-         (define (rectify-inner mark-list so-far)
-           (let* ([rectify-source-current-marks 
+         (define (recon-inner mark-list so-far)
+           (let* ([recon-source-current-marks 
                    (lambda (expr)
-                     (rectify-source-expr expr mark-list null))]
+                     (recon-source-expr expr mark-list))]
                   [top-mark (car mark-list)]
                   [expr (mark-source top-mark)]
-                  [rectify-let 
-                   (lambda (letrec? binding-sets vals body)
-                     (let+ ([val binding-list (apply append binding-sets)]
-                            [val binding-names (map (lambda (set) (map z:binding-orig-name set)) binding-sets)]
-                            [val dummy-var-list (if letrec?
-                                                    binding-list
-                                                    (build-list (length binding-list) get-arg-binding))]
-                            [val rhs-vals (map (lambda (arg-binding) 
-                                                 (mark-binding-value (lookup-binding mark-list arg-binding)))
-                                               dummy-var-list)]
-                            [val rhs-lifted-name-sets
-                                 (map (lambda (binding-set)
-                                        (map (lambda (binding)
-                                               (binding-lifted-name mark-list binding))
-                                             binding-set))
-                                      binding-sets)]
-                            [val raw-sources (if (comes-from-local? expr)
-                                                 (cadr (memoized-read->raw (expr-read expr)))
-                                                 (build-list (length vals) (lambda (x) #f)))]
-                            [val (values before-defs after-defs)
-                                 (let loop ([rhs-vals rhs-vals]
-                                            [rhs-sources vals]
-                                            [rhs-lifted-name-sets rhs-lifted-name-sets]
-                                            [raw-local-sources raw-sources])
-                                   (cond [(null? rhs-lifted-name-sets) (values null null)]
-                                         [(eq? (car rhs-vals) (if letrec?
-                                                                  the-undefined-value
-                                                                  *unevaluated*))
-                                          (let ([reconstruct-rest
-                                                 (lambda (rhs-lifted-name-set rhs-source raw-local-source)
-                                                   (if (and raw-local-source (eq? (car raw-local-source) 'define-struct))
-                                                       raw-local-source
-                                                       (reconstruct-lifted rhs-lifted-name-set 
-                                                                           (rectify-source-expr rhs-source
-                                                                                                mark-list
-                                                                                                null))))])
-                                            (values null
-                                                    (if (eq? so-far nothing-so-far)
-                                                        (map reconstruct-rest 
-                                                             rhs-lifted-name-sets
-                                                             rhs-sources
-                                                             raw-local-sources)
-                                                        (cons (reconstruct-lifted (car rhs-lifted-name-sets) so-far)
-                                                              (map reconstruct-rest 
-                                                                   (cdr rhs-lifted-name-sets)
-                                                                   (cdr rhs-sources)
-                                                                   (cdr raw-local-sources))))))]
-                                         [else
-                                          (let*-values ([(first-set) (car rhs-lifted-name-sets)]
-                                                        [(set-vals remaining) (list-partition rhs-vals (length first-set))]
-                                                        [(reconstructed) 
-                                                         (if (and (car raw-local-sources)
-                                                                  (eq? (caar raw-local-sources) 'define-struct))
-                                                             (list (car raw-local-sources))
-                                                             (map reconstruct-lifted-val first-set set-vals))]
-                                                        [(before after) (loop remaining
-                                                                              (cdr rhs-sources)
-                                                                              (cdr rhs-lifted-name-sets)
-                                                                              (cdr raw-local-sources))])
-                                            (values (append reconstructed before)
-                                                    after))]))]
-                            [val rectified-body (rectify-source-expr body mark-list null)])
-                       (values before-defs after-defs rectified-body)))])
-             (cond 
+                  [recon-let
+                   (lambda ()
+                     (with-syntax ([(label ((vars val) ...) . bodies)])
+                       (let*-2vals ([binding-sets (map syntax->list (syntax->list (syntax (vars ...))))]
+                                    [binding-list (multi-append binding-sets)]
+                                    [dummy-var-list (if letrec?
+                                                        binding-list
+                                                        (build-list (length binding-list) get-arg-binding))]
+                                    [rhs-vals (map (lambda (arg-binding) 
+                                                     (mark-binding-value (lookup-binding mark-list arg-binding)))
+                                                   dummy-var-list)]
+                                    [rhs-val-sets (reshape-list rhs-vals binding-sets)]
+                                    [rhs-lifted-name-sets
+                                     (map (lambda (binding-set)
+                                            (map (lambda (binding)
+                                                   (binding-lifted-name mark-list binding))
+                                                 binding-set))
+                                          binding-sets)]
+                                    [zipped (zip rhs-val-sets rhs-sources rhs-lifted-name-sets)]
+                                    [num-defns-done (mark-binding-value (lookup-binding mark-list let-counter))]
+                                    [(done-defs not-done-defs)
+                                     (n-split-list num-defns-done zipped)]
+                                    [before-defs
+                                     (multi-append
+                                      (map
+                                       (lambda (info)
+                                         (let* ([rhs-val-set (car info)]
+                                                [rhs-lifted-name-set (caddr info)])
+                                           (map reconstruct-lifted-val rhs-lifted-name-set rhs-val-set)))
+                                       done-defs))]
+                                    [reconstruct-remaining-def
+                                     (lambda (rhs-lifted-name-set rhs-source raw-local-source)
+                                       (let ([rhs-source (cadr info)]
+                                             [rhs-lifted-name-set (caddr info)])
+                                         (reconstruct-lifted rhs-lifted-name-set
+                                                             (recon-source-expr-current-marks rhs-source))))]
+                                    [after-defs
+                                     (if (pair? not-done-defs)
+                                         (if (eq? so-far nothing-so-far)
+                                             (map reconstruct-remaining-def not-done-defs)
+                                             (cons (reconstruct-lifted (car rhs-lifted-name-sets) so-far)
+                                                   (map reconstruct-remaining-def (cdr not-done-defs))))
+                                         null)]
+                                    [rectified-body (recon-source-expr body mark-list)])
+                         (values before-defs after-defs rectified-body))))])
+             (kernel:kernel-syntax-case expr #f 
                ; variable references
-               [(z:varref? expr)
-               (so-far-only
-                (if (eq? so-far nothing-so-far)
-                    (rectify-source-current-marks expr)
-                    (internal-error expr 
-                                      "variable reference given as context")))]
+               [id
+                (identifier? id)
+                (so-far-only
+                 (if (eq? so-far nothing-so-far)
+                     (recon-source-current-marks expr)
+                     (error 'recon-inner "variable reference given as context: ~a" expr)))]
                
                ; applications
-               
-               [(z:app? expr)
+               [(#%app . terms)
                 (so-far-only
-                 (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
+                 (let* ([sub-exprs (syntax->list (syntax terms))]
                         [arg-temps (build-list (length sub-exprs) get-arg-binding)]
                         [arg-vals (map (lambda (arg-temp) 
                                          (mark-binding-value (lookup-binding mark-list arg-temp)))
                                        arg-temps)])
                    (case (mark-label (car mark-list))
                      ((not-yet-called)
-                      (letrec
-                          ([split-lists
-                            (lambda (exprs vals)
-                              (if (or (null? vals)
-                                      (eq? (car vals) *unevaluated*))
-                                  (values null exprs)
-                                  (let-values ([(small-vals small-exprs)
-                                                (split-lists (cdr exprs) (cdr vals))])
-                                    (values (cons (car vals) small-vals) small-exprs))))])
-                        (let-values ([(evaluated unevaluated) (split-lists sub-exprs arg-vals)])
-                          (let* ([rectified-evaluated (map rectify-value evaluated)])
-                            (if (null? unevaluated)
-                                rectified-evaluated
-                                (append rectified-evaluated
-                                        (cons so-far
-                                              (map rectify-source-current-marks (cdr unevaluated)))))))))
+                      (let*-2vals ([(evaluated unevaluated) (split-list (lambda (x) (eq? x *unevaluated*))
+                                                                        (zip sub-exprs arg-vals))]
+                                   [rectified-evaluated (map rectify-value evaluated)])
+                        (d->so
+                         (if (null? unevaluated)
+                             rectified-evaluated
+                             `(,@rectified-evaluated
+                               so-far 
+                               ,@(map recon-source-current-marks (cdr unevaluated)))))))
                      ((called)
-                      (if (eq? so-far nothing-so-far)
-                          `(...) ; in unannotated code
-                          `(... ,so-far ...)))
+                      (d->so
+                       (if (eq? so-far nothing-so-far)
+                           `(...) ; in unannotated code
+                           `(... ,so-far ...))))
                      (else
                       (internal-error expr "bad label in application mark")))))]
                
                ; define-struct 
-               
-               [(z:struct-form? expr)
-                (so-far-only
-                 (if (comes-from-define-struct? expr)
-                     so-far
-                     (let ([super-expr (z:struct-form-super expr)]
-                           [raw-type (utils:read->raw (z:struct-form-type expr))]
-                           [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
-                       (if super-expr
-                           `(struct (,raw-type ,so-far)
-                                    ,raw-fields)
-                           `(struct ,raw-type ,raw-fields)))))]
+;               
+;               [(z:struct-form? expr)
+;                (so-far-only
+;                 (if (comes-from-define-struct? expr)
+;                     so-far
+;                     (let ([super-expr (z:struct-form-super expr)]
+;                           [raw-type (utils:read->raw (z:struct-form-type expr))]
+;                           [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
+;                       (if super-expr
+;                           `(struct (,raw-type ,so-far)
+;                                    ,raw-fields)
+;                           `(struct ,raw-type ,raw-fields)))))]
                
                ; if
-               
-               [(z:if-form? expr)
+               [(if test then else)
                 (so-far-only
                  (let ([test-exp (if (eq? so-far nothing-so-far)
-                                     (rectify-value (mark-binding-value (lookup-binding mark-list if-temp)))
+                                     (recon-source-current-marks (syntax test))
                                      so-far)])
-                   (cond [(comes-from-cond? expr)
-                          (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
-                                 [cond-source (z:zodiac-start expr)]
-                                 [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list null)])
-                            `(cond ,clause ,@rest-clauses))]
-                         [(comes-from-and? expr)
-                          `(and ,test-exp ,@(rectify-and-clauses (z:zodiac-start expr)
-                                                                 (z:if-form-then expr)
-                                                                 mark-list
-                                                                 null))]
-                         [(comes-from-or? expr)
-                          `(or ,test-exp ,@(rectify-or-clauses (z:zodiac-start expr)
-                                                               (z:if-form-else expr)
-                                                               mark-list
-                                                               null))]
-                         [else
-                          `(if ,test-exp 
-                               ,(rectify-source-current-marks (z:if-form-then expr))
-                               ,(rectify-source-current-marks (z:if-form-else expr)))])))]
+                   (d->so `(if ,test-exp 
+                               ,(recon-source-current-marks (z:if-form-then expr))
+                               ,(recon-source-current-marks (z:if-form-else expr))))))]
                
-               ; quote : there is no mark or break on a quote.
+               ; quote : there is no break on a quote.
                
                ; begin, begin0 : may not occur directly (or indirectly?) except in advanced
                
                ; let-values
                
-               [(z:let-values-form? expr)
-                
-                (rectify-let #f
-                             (z:let-values-form-vars expr)
-                             (z:let-values-form-vals expr)
-                             (z:let-values-form-body expr))]
+               [(let-values . rest) (recon-let)]
                
-               [(z:letrec-values-form? expr)
-                (rectify-let #t
-                             (z:letrec-values-form-vars expr)
-                             (z:letrec-values-form-vals expr)
-                             (z:letrec-values-form-body expr))]
+               [(letrec-values . rest) (recon-let)]
                
                ; define-values : define's don't get marks, so they can't occur here
                
-               ; lambda : there is no mark or break on a quote
+               ; lambda : there is no break on a lambda
                
                [else
                 (internal-error
@@ -795,12 +774,13 @@
          
          (define redex #f)
          
-         (define (current-def-rectifier defs so-far mark-list first)
+         ; the main recursive reconstruction loop is in recon:
+         (define (recon defs so-far mark-list first)
            (if (null? mark-list)
                (append defs
-                       (list (rectify-top-level expr so-far)))
-               (let-values ([(before after reconstructed) (rectify-inner mark-list so-far)])
-                 (current-def-rectifier
+                       (list (recon-top-level expr so-far)))
+               (let-values ([(before after reconstructed) (recon-inner mark-list so-far)])
+                 (recon
                   (append before defs after)
                   (if first
                       (begin
@@ -811,38 +791,39 @@
                   #f))))
          
          (define (rectify-let-values-step)
-           (let*-values ([(redex) (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
-                         [(before-step) (current-def-rectifier null highlight-placeholder (cdr mark-list) #f)]
-                         [(r-before r-after reduct) (rectify-inner mark-list nothing-so-far)]
+           (let*-values ([(redex) (recon-source-expr (mark-source (car mark-list)) mark-list)]
+                         [(before-step) (recon null highlight-placeholder (cdr mark-list) #f)]
+                         [(r-before r-after reduct) (recon-inner mark-list nothing-so-far)]
                          [(new-defs) (append r-before r-after)]
-                         [(after-step) (current-def-rectifier (build-list (length new-defs) 
-                                                                          (lambda (x) highlight-placeholder))
-                                                              highlight-placeholder
-                                                              (cdr mark-list) 
-                                                              #f)])
+                         [(after-step) (recon (build-list (length new-defs) 
+                                                          (lambda (x) highlight-placeholder))
+                                              highlight-placeholder
+                                              (cdr mark-list) 
+                                              #f)])
              (list before-step (list redex)
                    after-step (append new-defs (list reduct)))))
            
          (define answer
-           (case break-kind
-             ((result-break)
-              (let* ([innermost (if (null? returned-value-list)
-                                    (rectify-source-expr (mark-source (car mark-list)) mark-list null)
-                                    (rectify-value (car returned-value-list)))]
-                     [current-defs (current-def-rectifier null highlight-placeholder (cdr mark-list) #f)])
-                (list current-defs (list innermost))))
-             ((normal-break)
-              (let ([current-defs (current-def-rectifier null nothing-so-far mark-list #t)])
-                  (list current-defs (list redex))))
-             ((double-break)
-              (rectify-let-values-step))
-             ((late-let-break)
-              (let-values ([(before after junk) (rectify-inner mark-list nothing-so-far)])
-                (unless (null? after)
-                  (error 'answer "non-empty 'after' defs in late-let-break"))
-                before))
-             (else
-              (error 'reconstruct-current-def "unknown break kind: " break-kind))))
+           (map syntax-object->datum
+                (case break-kind
+                  ((result-break)
+                   (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
+                                         (recon-source-expr (mark-source (car mark-list)) mark-list)
+                                         (recon-value (car returned-value-list)))]
+                          [current-defs (recon null highlight-placeholder (cdr mark-list) #f)])
+                     (list current-defs (list innermost))))
+                  ((normal-break)
+                   (let ([current-defs (recon null nothing-so-far mark-list #t)])
+                     (list current-defs (list redex))))
+                  ((double-break)
+                   (rectify-let-values-step))
+                  ((late-let-break)
+                   (let-values ([(before after junk) (recon-inner mark-list nothing-so-far)])
+                     (unless (null? after)
+                       (error 'answer "non-empty 'after' defs in late-let-break"))
+                     before))
+                  (else
+                   (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
 
          )
       
