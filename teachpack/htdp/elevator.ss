@@ -1,3 +1,4 @@
+(require-library "graphicss.ss" "graphics")
 (require-library "error.ss" "htdp")
 
 ;; Implementation:
@@ -9,7 +10,7 @@
 
 (define elevatorU 
   (unit/sig elevatorS
-    (import errorS plt:userspace^ graphics^)
+    (import errorS plt:userspace^ graphics:posn-less^)
 
     ;;  There are really  three distinct levels: graphics, hardware,
     ;;  and software. Don't mix them!
@@ -816,9 +817,10 @@
 (compound-unit/sig
   (import (PLT : plt:userspace^))
   (link
-    (GRAPHICS : graphics^ ((require-library "graphicr.ss" "graphics")
-			   (PLT : mzlib:file^)
-			   (PLT : mred^)))
+    (GRAPHICS : graphics:posn-less^ ((require-library "graphicspr.ss" "graphics")
+				     (PLT : mzlib:file^)
+				     (PLT : mred^)
+				     (PLT : graphics:posn^)))
     (ERR  : errorS (errorU))
     (DRAW : elevatorS (elevatorU ERR PLT GRAPHICS)))
   (export (open DRAW))) 

@@ -11,6 +11,4 @@
    WHITE YELLOW RED BLUE GREEN BLACK
    @VP))
 
-(define-signature drawS
-  ((open coreDrawS)
-   make-posn posn? posn-x posn-y))
+(define-signature drawS coreDrawS)

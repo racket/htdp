@@ -4,7 +4,7 @@
 
 (define drawU
   (unit/sig coreDrawS
-    (import errorS plt:userspace^ graphics^)
+    (import errorS plt:userspace^ graphics:posn-less^)
   
     (define the-error
       (lambda x
@@ -133,15 +133,16 @@
 
 (define-signature bigDrawS
   ((open coreDrawS)
-   (open graphics^)))
+   (open graphics:posn-less^)))
 
 (define bigDrawU
   (compound-unit/sig
    (import (ERR : errorS) (PLT : plt:userspace^))
    (link
-    (GRAPHICS : graphics^ ((require-library "graphicr.ss" "graphics")
-			   (PLT : mzlib:file^)
-			   (PLT : mred^)))
+    (GRAPHICS : graphics:posn-less^ ((require-library "graphicspr.ss" "graphics")
+				     (PLT : mzlib:file^)
+				     (PLT : mred^)
+				     (PLT : graphics:posn^)))
     (DRAW : coreDrawS (drawU ERR PLT GRAPHICS)))
    (export (open DRAW)
 	   (open GRAPHICS))))
