@@ -1,7 +1,12 @@
-VERSION 207  			          [Tue May  4 14:36:42 EDT 2004]
+VERSION 207  			          [Fri May 14 12:52:43 EDT 2004]
 
 * draw.ss now comes with functional callbacks for maintaining a visual
   world: big-bang, on-key-event, on-tick, end-of-time 
+
+* draw also comes now as a ProfessorJ implementation in the htdch 
+  collects directory. This is an experimental teachpack. Docs are available
+  via doc.txt. Experiences with students may change this teachpack
+  significantly. 
  
 ------------------------------------------------------------------------
 VERSION 203  			          [Thu Dec  5 09:10:40 EST 2002]
