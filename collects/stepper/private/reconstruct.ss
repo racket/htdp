@@ -184,10 +184,8 @@
                   [(#%top . id-stx)
                    (let ([id (syntax id-stx)])
                      (with-handlers
-                         ([exn:variable? (lambda args #f)]) ; DO halt for unbound top-level varrefs
+                         ([exn:variable? (lambda dc #f)]) ; DO halt for unbound top-level varrefs
                        (let ([val (global-lookup (syntax-e id))])
-                         (when (eq? (syntax-e id) `a2)
-                           (printf "object-name: ~a\n" (object-name val)))
                          (or (and (procedure? val)                     ; don't halt for top-level procedure refs ...
                                   (eq? (syntax-e id) (object-name val)) ; with the right inferred name
                                   
@@ -216,8 +214,7 @@
                               (and (eq? fun-val void)
                                    (eq? (cdr (syntax->list (syntax terms))) null))
                               (struct-constructor-procedure? fun-val))))]
-                 [else
-                   #f])))))
+                 [else #f])))))
   
   (define (find-special-value name valid-args)
     (let ([expanded (car (syntax-e (cdr (syntax-e (expand (cons name valid-args))))))])
@@ -292,7 +289,7 @@
   
   ; unwind-only-highlight : syntax? -> (listof syntax?)
   (define (unwind-only-highlight stx)
-    (let-values ([(highlights unwounds) (unwind highlight-placeholder-stx stx #t)])
+    (let-values ([(dc_highlights unwounds) (unwind highlight-placeholder-stx stx #t)])
       unwounds))
   
   (define (first-of-one x) 
@@ -780,10 +777,6 @@
                                     [num-defns-done (lookup-binding mark-list let-counter)]
                                     [(done-glumps not-done-glumps)
                                      (n-split-list num-defns-done glumps)]
-                                    [recon-lifted-val
-                                     (lambda (name val)
-                                       (let ([rectified-val (recon-value val render-settings name)])
-                                         #`(#,name #,rectified-val)))]
                                     [recon-lifted 
                                      (lambda (names expr)
                                        #`(#,names #,expr))]

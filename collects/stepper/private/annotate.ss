@@ -167,26 +167,18 @@
   (define (top-level-rewrite stx)
     (let loop ([stx stx]
                [let-bound-bindings null]
-               [macro-bound-bindings null]
-               [cond-test (lx #f)]
-               [and/or-test (lx #f)])
+               [cond-test (lx #f)])
       (if (syntax-property stx 'stepper-skip-completely)
           stx
           (let* ([recur-regular 
                   (lambda (stx)
-                    (loop stx let-bound-bindings macro-bound-bindings (lx #f) (lx #f)))]
+                    (loop stx let-bound-bindings (lx #f)))]
                  [recur-with-bindings
                   (lambda (exp vars)
-                    (loop exp (append vars let-bound-bindings) macro-bound-bindings (lx #f) (lx #f)))]
-                 [recur-with-macro-bindings
-                  (lambda (exp vars)
-                    (loop exp let-bound-bindings (append vars macro-bound-bindings) (lx #f) (lx #f)))]
+                    (loop exp (append vars let-bound-bindings) (lx #f)))]
                  [recur-in-cond
                   (lambda (stx new-cond-test)
-                    (loop stx let-bound-bindings macro-bound-bindings new-cond-test (lx #f)))]
-                 [recur-in-and/or
-                  (lambda (stx new-and/or-test new-bindings)
-                    (loop stx let-bound-bindings (append new-bindings macro-bound-bindings) (lx #f) new-and/or-test))]
+                    (loop stx let-bound-bindings new-cond-test))]
                  [do-let/rec
                   (lambda (stx rec?)
                     (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
@@ -254,8 +246,6 @@
                 (if (eq? (identifier-binding (syntax var)) 'lexical)
                     (cond [(ormap (lx (bound-identifier=? _ (syntax var))) let-bound-bindings)
                            'let-bound]
-                          [(ormap (lx (bound-identifier=? _ (syntax var))) macro-bound-bindings)
-                           'macro-bound]
                           [else
                            'lambda-bound])
                     'non-lexical))]
@@ -405,21 +395,6 @@
             ;              (#%apply #%values result-values))))
             
             
-            (define (non-annotated-proc? varref)
-              (kernel:kernel-syntax-case varref #f
-                [(#%top . id)
-                 (or
-                  (memq (syntax-e (syntax id)) pre-defined-names)
-                  (ormap (lx (module-identifier=? (syntax id) _)) struct-proc-names))]
-                [id
-                 (identifier? (syntax id))
-                 (case (identifier-binding (syntax id))
-                   [(lexical) #f] ; this only works in beginner
-                   [(#f) (memq (syntax-e (syntax id)) pre-defined-names)]
-                   [else #t])] ; module-bound vars
-                [else
-                 #f]))
-            
             (define (top-level-annotate/inner expr)
               (annotate/inner expr 'all #f #t #f))
             
@@ -433,8 +408,6 @@
             ;    not be wrapped, if a begin).
             ; g) information about the binding name of the given expression.  This is used 
             ;    to associate a name with a closure mark (though this may now be redundant)
-            ;    and to set up a (let ([x y]) x) so that mzscheme gets the right inferred-name
-            ;    for closures
             
             ; it returns (as a 2vals)
             ; a) an annotated s-expression
@@ -497,7 +470,7 @@
                                [non-tail-recur (lambda (expr) (annotate/inner expr null #f #f #f))]
                                [result-recur (lambda (expr) (annotate/inner expr null #f #f procedure-name-info))]
                                [set!-rhs-recur (lambda (expr name) (annotate/inner expr null #f #f name))]
-                               [let-rhs-recur (lambda (expr binding-names dyn-index-syms bindings)
+                               [let-rhs-recur (lambda (expr binding-names dyn-index-syms)
                                                 (let* ([proc-name-info 
                                                         (if (not (null? binding-names))
                                                             (list (car binding-names) (car dyn-index-syms))
@@ -510,8 +483,6 @@
                                                  (lambda (expr) 
                                                    (annotate/inner expr (binding-set-union (list tail-bound bindings)) #f 
                                                                    #f procedure-name-info)))]
-                               [cheap-wrap-recur (lambda (expr) (let-values ([(ann _) (tail-recur expr)]) ann))]
-                               [no-enclosing-recur (lambda (expr) (annotate/inner expr 'all #f #f #f))]
                                [make-debug-info-normal (lambda (free-bindings)
                                                          (make-debug-info expr tail-bound free-bindings 'none foot-wrap?))]
                                [make-debug-info-app (lambda (tail-bound free-bindings label)
@@ -531,15 +502,6 @@
                                              simple-wcm-wrap)]
                                [wcm-break-wrap (lambda (debug-info expr)
                                                  (wcm-wrap debug-info (break-wrap expr)))]
-                               [inferred-name-patch (lambda (annotated)
-                                                      (printf "procedure-name-info: ~a\n bool-test: ~a\n" procedure-name-info (if procedure-name-info #t #f))
-                                                      (if (and procedure-name-info (not (memq 'no-closure-capturing wrap-opts)))
-                                                          (let ([name (ccond [(syntax? procedure-name-info) procedure-name-info]
-                                                                             [(and (list? procedure-name-info)
-                                                                                   (= (length procedure-name-info) 2))
-                                                                              (car procedure-name-info)])])
-                                                            #`(let* ([#,name #,annotated]) #,name))
-                                                          annotated))]
                                
                                [normal-bundle
                                 (lambda (free-vars annotated)
@@ -580,7 +542,7 @@
                                            closure)]
                                        [inferred-name-lambda
                                         (if closure-name
-                                            (syntax-property annotated-lambda 'inferred-name closure-name)
+                                            (syntax-property annotated-lambda 'inferred-name (syntax-e closure-name))
                                             annotated-lambda)]
                                        [captured
                                         (if (memq 'no-closure-capturing wrap-opts)
@@ -637,7 +599,7 @@
                                       [lifted-var-sets (map (lx (map get-lifted-var _)) binding-sets)]
                                       [lifted-vars (apply append lifted-var-sets)]
                                       [(annotated-vals free-varref-sets-vals)
-                                       (2vals-map let-rhs-recur vals binding-sets lifted-var-sets binding-sets)]
+                                       (2vals-map let-rhs-recur vals binding-sets lifted-var-sets)]
                                       [(annotated-body free-varrefs-body)
                                        ((let-body-recur binding-list) 
                                         (if (= (length (syntax->list (syntax bodies))) 1)
@@ -651,7 +613,7 @@
                                       (let* ([unevaluated-list (make-init-list binding-list)]
                                              [outer-initialization
                                               #`([(#,@lifted-vars #,@binding-list #,let-counter)
-                                                   (values #,@(append (map (lambda (binding)
+                                                   (values #,@(append (map (lambda (dc_binding)
                                                                              #`(#,binding-indexer)) 
                                                                            binding-list)
                                                                       unevaluated-list
@@ -803,17 +765,18 @@
                              (normal-bundle null expr)]
                             
                             [(with-continuation-mark key mark body)
-                             (let*-2vals ([(annotated-key free-varrefs-key)
-                                           (non-tail-recur (syntax key))]
-                                          [(annotated-mark free-varrefs-mark)
-                                           (non-tail-recur (syntax mark))]
-                                          [(annotated-body free-varrefs-body)
-                                           (result-recur (syntax body))])
+                             ;(let*-2vals ([(annotated-key free-varrefs-key)
+                             ;              (non-tail-recur (syntax key))]
+                             ;             [(annotated-mark free-varrefs-mark)
+                             ;              (non-tail-recur (syntax mark))]
+                             ;             [(annotated-body dc_free-varrefs-body)
+                             ;              (result-recur (syntax body))])
                                (error 'annotate/inner "this region of code is still under construction")
                                
                                ;                                       [annotated #`(let-values ([key-temp #,*unevaluated*]
                                ;                                             [mark-temp #,*unevaluated*]
-                               )]
+                               ;)
+                               ]
                             
                             ;                                  [foot-wrap? 
                             ;                                   (wcm-wrap debug-info annotated)])
@@ -857,8 +820,7 @@
                              (let*-2vals
                               ([(annotated-terms free-varrefs-terms)
                                 (2vals-map non-tail-recur (syntax->list (syntax terms)))]
-                               [free-varrefs (varref-set-union free-varrefs-terms)]
-                               [annotated (quasisyntax/loc expr (#,@annotated-terms))])
+                               [free-varrefs (varref-set-union free-varrefs-terms)])
                               (2vals
                                ;(if (and ankle-wrap?
                                ;         (memq 'no-temps-for-varrefs wrap-opts)
@@ -902,16 +864,14 @@
                             
                             [(define-values vars-stx body)
                              (let*-2vals
-                              ([vars (syntax->list (syntax vars-stx))]
-                               [(annotated-val free-varrefs-val)
-                                (begin
-                                  (printf "vars: ~a\n" (map syntax-e vars))
-                                  (define-values-recur (syntax body) (if (not (null? vars))
-                                                                         (car vars)
-                                                                       #f)))])
-                              (2vals
-                               (quasisyntax/loc expr (define-values vars-stx #,annotated-val))
-                               free-varrefs-val))]
+                                 ([vars (syntax->list (syntax vars-stx))]
+                                  [(annotated-val free-varrefs-val)
+                                   (define-values-recur (syntax body) (if (not (null? vars))
+                                                                          (car vars)
+                                                                          #f))])
+                               (2vals
+                                (quasisyntax/loc expr (define-values vars-stx #,annotated-val))
+                                free-varrefs-val))]
                             
                             
                             [(#%top . var-stx)
@@ -955,5 +915,5 @@
          
          ; body of local
          (let* ([annotated-expr (annotate/top-level expr)])
-           (fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
+           ;(fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
            (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index))))))
