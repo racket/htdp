@@ -46,7 +46,7 @@
    (struct finished-stepping ())
    list-take
    list-partition
-   (struct closure-record (name mark constructor? lifted-name))
+   (struct closure-record (name mark constructor? lifted-index))
    *unevaluated* 
    no-sexp
    skipped-step
@@ -100,7 +100,7 @@
   
   ; the closure record is placed in the closure table
 
-  (define-struct closure-record (name mark constructor? lifted-name))
+  (define-struct closure-record (name mark constructor? lifted-index))
 
   ; bogus-binding is used so that we can create legal bindings for temporary variables
   

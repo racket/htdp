@@ -193,9 +193,7 @@
                                                                        (list-ref reconstruct-quadruple 3)
                                                                        after))))]
                      [(late-let-break)
-                      (printf "entering late-let break\n")
                       (let ([new-finished (car (r:reconstruct-current current-expr mark-list break-kind returned-value-list render-settings))])
-                        (printf "adding finished exprs: ~e\n" new-finished)
                         (set! finished-exprs (append finished-exprs new-finished)))]
                      [else (error 'break "unknown label on break")])))))
          
@@ -225,8 +223,8 @@
       (program-expander
        (lambda () 
          ; swap these to allow errors to escape (e.g., when debugging)
-         ;(error-display-handler err-display-handler)
-         (void)
+         (error-display-handler err-display-handler)
+         ;(void)
          )
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)

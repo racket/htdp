@@ -619,61 +619,61 @@
   ;                                (before-after (,h-p) ((if true 13 (loop_0 (- 1 1)))) same (13))
   ;                                (finished (13))))
   ;
-  ;  ;;;;;;;;;;;;;
-  ;  ;;
-  ;  ;;  LOCAL
-  ;  ;;
-  ;  ;;;;;;;;;;;;;
-  ;  
-  ;
-  ;  (test-intermediate-sequence "(local () (+ 3 4))"
-  ;                              `((before-after (,h-p) ((local () (+ 3 4)))
-  ;                                              (,h-p) ((+ 3 4)))
-  ;                                (before-after (,h-p) ((+ 3 4))
-  ;                                              (,h-p) (7))
-  ;                                (finished (7))))
-  ;  
+    ;;;;;;;;;;;;;
+    ;;
+    ;;  LOCAL
+    ;;
+    ;;;;;;;;;;;;;
+    
+  
+    (test-intermediate-sequence "(local () (+ 3 4))"
+                                `((before-after (,h-p) ((local () (+ 3 4)))
+                                                (,h-p) ((+ 3 4)))
+                                  (before-after (,h-p) ((+ 3 4))
+                                                (,h-p) (7))
+                                  (finished (7))))
+    
     (test-intermediate-sequence "(local ((define (a x) (+ x 9))) (a 6))"
-                                `((before-after (,h-p) ((local ((define (a_0 x) (+ x 9))) (a_0 6)))
+                                `((before-after (,h-p) ((local ((define (a x) (+ x 9))) (a 6)))
                                                 (,h-p ,h-p) ((define (a_0 x) (+ x 9)) (a_0 6)))
                                   (before-after-finished ((define (a_0 x) (+ x 9)))
                                                          (,h-p) ((a_0 6)) same ((+ 6 9)))
                                   (before-after (,h-p) ((+ 6 9)) same (15))
                                   (finished (15))))
     
-  ;  (test-intermediate-sequence "(local ((define (a x) (+ x 13))) a)"
-  ;                              `((before-after (,h-p) ((local ((define (a x) (+ x 13))) a))
-  ;                                              (,h-p ,h-p) ((define (a_0 x) (+ x 13)) a_0))
-  ;                                (finished ((define (a_0 x) (+ x 13)) a_0))))
-  ;
-  ;  (test-intermediate-sequence "(local ((define (a x) (+ x 9)) (define b a)) (b 1))"
-  ;                              `((before-after (,h-p) ((local ((define (a x) (+ x 9)) (define b a)) (b 1)))
-  ;                                              (,h-p ,h-p ,h-p) ((define (a_0 x) (+ x 9)) (define b_1 a_0) (b_1 1)))
-  ;                                (before-after-finished ((define (a_0 x) (+ x 9)) (define b_1 a_0))
-  ;                                                       (,h-p) ((b_1 1)) same ((a_0 1)))
-  ;                                (before-after (,h-p) ((a_0 1)) same ((+ 1 9)))
-  ;                                (before-after (,h-p) ((+ 1 9)) same (10))
-  ;                                (finished (10))))
-  ;  
-  ;    (test-intermediate-sequence "(define (f g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) eps)]) gp)) (define gprime (f cos))"
-  ;                              `((before-after-finished ((define (f g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) eps)]) gp)))
-  ;                                                       ((define gprime ,h-p)) ((f cos))
-  ;                                                       same ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) eps)]) gp)))
-  ;                                (before-after ((define gprime ,h-p)) ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) eps)]) gp))
-  ;                                              (,h-p (define gprime ,h-p)) ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) eps)) gp_0))
-  ;                                (finished ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) eps)) (define gprime gp_0)))))
+    (test-intermediate-sequence "(local ((define (a x) (+ x 13))) a)"
+                                `((before-after (,h-p) ((local ((define (a x) (+ x 13))) a))
+                                                (,h-p ,h-p) ((define (a_0 x) (+ x 13)) a_0))
+                                  (finished ((define (a_0 x) (+ x 13)) a_0))))
+  
+    (test-intermediate-sequence "(local ((define (a x) (+ x 9)) (define b a)) (b 1))"
+                                `((before-after (,h-p) ((local ((define (a x) (+ x 9)) (define b a)) (b 1)))
+                                                (,h-p ,h-p ,h-p) ((define (a_0 x) (+ x 9)) (define b_1 a_0) (b_1 1)))
+                                  (before-after-finished ((define (a_0 x) (+ x 9)) (define b_1 a_0))
+                                                         (,h-p) ((b_1 1)) same ((a_0 1)))
+                                  (before-after (,h-p) ((a_0 1)) same ((+ 1 9)))
+                                  (before-after (,h-p) ((+ 1 9)) same (10))
+                                  (finished (10))))
+    
+      (test-intermediate-sequence "(define (f g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) eps)]) gp)) (define gprime (f cos))"
+                                `((before-after-finished ((define (f g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) eps)]) gp)))
+                                                         ((define gprime ,h-p)) ((f cos))
+                                                         same ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) eps)]) gp)))
+                                  (before-after ((define gprime ,h-p)) ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) eps)]) gp))
+                                                (,h-p (define gprime ,h-p)) ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) eps)) gp_0))
+                                  (finished ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) eps)) (define gprime gp_0)))))
   
   ; test generativity... that is, multiple evaluations of a local get different lifted names:
   
   (test-intermediate-sequence "(define (a b c) (b c)) (define (f x) (local ((define (maker dc) x)) maker)) (define m1 (f 3)) (a (f 4) 1)"
                               `((before-after-finished ((define (a b c) (b c))
                                                         (define (f x) (local ((define (maker dc) x)) maker)))
-                                                      ((define m1 ,h-p)) ((f 3)) same ((local ((define (maker_0 dc) 3)) maker_0)))
-                                (before-after ((define m1 ,h-p)) ((local ((define (maker_0 dc) 3)) maker_0))
+                                                      ((define m1 ,h-p)) ((f 3)) same ((local ((define (maker dc) 3)) maker)))
+                                (before-after ((define m1 ,h-p)) ((local ((define (maker dc) 3)) maker))
                                               (,h-p (define m1 ,h-p)) ((define (maker_0 dc) 3) maker_0))
                                 (before-after-finished ((define (maker_0 dc) 3) (define m1 maker_0))
-                                                       ((a ,h-p 1)) ((f 4)) same ((local ((define (maker_1 dc) 4)) maker_1)))
-                                (before-after ((a ,h-p 1)) ((local ((define (maker_1 dc) 4)) maker_1))
+                                                       ((a ,h-p 1)) ((f 4)) same ((local ((define (maker dc) 4)) maker)))
+                                (before-after ((a ,h-p 1)) ((local ((define (maker dc) 4)) maker))
                                               (,h-p (a ,h-p 1)) ((define (maker_1 dc) 4) maker_1))
                                 (before-after-finished ((define (maker_1 dc) 4))
                                                        (,h-p) ((a maker_1 1)) same ((maker_1 1)))

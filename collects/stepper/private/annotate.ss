@@ -235,12 +235,13 @@
               ;  internal defines, and therefore the letrec-values on which I want to hang the 'stepper-hint doesn't yet
               ;  exist.  So we patch it up after expansion.  And we discard the outer 'let' at the same time.
               [(let-values () expansion-of-local)
-               (and (syntax-case #`expansion-of-local (letrec-values)
-                      [(letrec-values x ...) #t]
-                      [else #f])
-                    (eq? (syntax-property stx 'stepper-hint) 'comes-from-local))
-               (recur-regular
-                (syntax-property #`expansion-of-local 'stepper-hint 'comes-from-local))]
+               (eq? (syntax-property stx 'stepper-hint) 'comes-from-local)
+               (syntax-case #`expansion-of-local (letrec-values)
+                 [(letrec-values (bogus-clause clause ...) . bodies)
+                  (recur-regular
+                   (syntax-property #`(letrec-values (clause ...) . bodies) 'stepper-hint 'comes-from-local))]
+                 [else (error 'top-level-rewrite "expected a letrec-values inside a local, given: ~e" 
+                              (syntax-object->datum #`expansion-of-local))])]
               
               ; let/letrec :
               [(let-values x ...) (do-let/rec stx #f)]
@@ -267,35 +268,6 @@
                                            (syntax stx))
                      content))])))))
   
-;  (syntax-case (label-var-types (expand #'(+ a 3))) (#%app #%top + #%datum) 
-;    [(#%app (#%top . +) (#%top . a-var) (#%datum . 3))
-;     (test 'non-lexical syntax-property (syntax a-var) 'stepper-binding-type)])
-;  
-;  (syntax-case (label-var-types (expand #'(let ([a a]) (+ a b)))) (let-values + #%app #%top)
-;    [(let-values ([(a-var-0) (#%top . a-var-1)]) (#%app (#%top . +) a-var-2 (#%top . b-var)))
-;     (begin
-;       (test 'let-bound syntax-property (syntax a-var-0) 'stepper-binding-type)
-;       (test 'non-lexical syntax-property (syntax a-var-1) 'stepper-binding-type)
-;       (test 'let-bound syntax-property (syntax a-var-2) 'stepper-binding-type))])
-;  
-;  (syntax-case (label-var-types (expand #'(letrec ([a a]) (lambda (a) a)))) (letrec-values lambda)
-;    [(letrec-values ([a-0 a-var-0])
-;       (lambda (a-1) a-var-1))
-;     (begin
-;       (test 'let-bound syntax-property (syntax a-var-0) 'stepper-binding-type)
-;       (test 'lambda-bound syntax-property (syntax a-1) 'stepper-binding-type)
-;       (test 'lambda-bound syntax-property (syntax a-var-1) 'stepper-binding-type))])
-;
-;  (syntax-case (label-var-types (expand #'(let ([a 3]) (let ([b 4]) a)))) (let-values #%datum)
-;    [(let-values ([(a-var-0) (#%datum . 3)])
-;       (let-values ([(b-var-0) (#%datum . 4)])
-;         a-var-1))
-;     (begin
-;       (test 'let-bound syntax-property (syntax a-var-1) 'stepper-binding-type))])       
-                                                      
-
-                                                 
-                                                 
                                                  
    ;                                               
   ; ;                         ;          ;         
@@ -599,15 +571,13 @@
                                                            [(pair? procedure-name-info) (car procedure-name-info)]
                                                            [else #f])]
                                        [closure-storing-proc
-                                        (lambda (closure debug-info . extra)
+                                        (opt-lambda (closure debug-info [lifted-index #f])
                                           (closure-table-put! closure (make-closure-record 
                                                                        closure-name
                                                                        debug-info
                                                                        #f
-                                                                       (if (not (null? extra))
-                                                                           (car extra)
-                                                                           #f)))
-                                          closure)]
+                                                                       lifted-index))
+                                           closure)]
                                        [inferred-name-lambda
                                         (if closure-name
                                             (syntax-property annotated-lambda 'inferred-name closure-name)

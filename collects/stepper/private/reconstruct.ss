@@ -119,15 +119,16 @@
       (cond
         [closure-record
          (cond [(and (not (eq? hint 'let-rhs))
-                     (closure-record-name closure-record)) =>
-                     (lambda (name)
-                       (cond [(closure-record-lifted-name closure-record) =>
-                              (lambda (lifted-name)
-                                #`#,(construct-lifted-name #`#,name lifted-name))]
-                             [else #`#,name]))]
+                     (closure-record-name closure-record)) 
+                =>
+                (lambda (name)
+                  (cond [(closure-record-lifted-index closure-record) =>
+                         (lambda (lifted-index)
+                           #`#,(construct-lifted-name #`#,name lifted-index))]
+                        [else #`#,name]))]
                [else
                 (let ([mark (closure-record-mark closure-record)])
-                  (recon-source-expr (mark-source mark) (list mark) null render-settings))])]
+                  (recon-source-expr (mark-source mark) (list mark) null null render-settings))])]
         [else
          (let ([rendered ((render-settings-render-to-sexp render-settings) val)])
            (if (symbol? rendered)
@@ -252,18 +253,18 @@
   ; (-> syntax? (union num? false?) symbol?)
   
   (define/contract construct-lifted-name
-    (-> syntax? (union number? false?) syntax?)
+    (-> syntax? number? syntax?)
     (lambda (binding dynamic-index)
-      (if dynamic-index
-          #`#,(string->symbol
-               (string-append (symbol->string (syntax-e binding)) "_" 
-                              (number->string dynamic-index)))
-          binding)))
-
-  ; binding-lifted-name ((listof mark) SYNTAX-OBJECT -> (union symbol? false?))
+      #`#,(string->symbol
+           (string-append (symbol->string (syntax-e binding)) "_" 
+                          (number->string dynamic-index)))))
   
-  (define (binding-lifted-name mark-list binding)
-    (construct-lifted-name binding (lookup-binding mark-list (get-lifted-var binding) module-identifier=? (lambda () #f))))
+  ; binding-lifted-name
+  
+  (define/contract binding-lifted-name
+    (-> mark-list? syntax? syntax?)
+    (lambda (mark-list binding)
+      (construct-lifted-name binding (lookup-binding mark-list (get-lifted-var binding)))))
 
                                                                 ;              ;  ;               
                                                                                ;                  
@@ -409,11 +410,8 @@
          (define (unwind-local stx)
            (kernel:kernel-syntax-case stx #f
              [(letrec-values ([vars exp] ...) body) ; at least through intermediate, define-values may not occur in local.
-              (printf "lifted-names on vars in unwind-local: ~e\n" (map (lx (map (lx (cond [(syntax-property _ 'stepper-lifted-name) => syntax-e]
-                                                                                           [else #f])) (syntax->list _)))
-                                                                        (syntax->list #`(vars ...))))
               (with-syntax ([defns (map inner (syntax->list #`((define-values vars exp) ...)))])
-                #`(local defns #,(inner #'body)))]
+                  #`(local defns #,(inner #'body)))]
              [else (error 'unwind-local "expected a letrec-values, given: ~e" (syntax-object->datum stx))]))
          
          (define (unwind-quasiquote-the-cons-application stx)
@@ -496,29 +494,32 @@
                                                                                                    ;           
                                                                                                                
 
-  ; recon-source-expr (SYNTAX-OBJECT (list-of Mark) BINDING-SET -> SYNTAX-OBJECT)
+  ; recon-source-expr 
   
   ; recon-source-expr produces the reconstructed version of a given source epxression, using the binding
   ; information contained in the binding-list.  This happens during reconstruction whenever we come upon
   ; expressions that we haven't yet evaluated. 
   
-  ; NB: the variable 'lexically-bound-bindings' contains a list of bindings which occur INSIDE the expression
+  ; NB: the variable 'dont-lookup' contains a list of variables whose bindings occur INSIDE the expression
   ; being evaluated, and hence do NOT yet have values.
+  
+  ; the 'check-for-lifted' vars are those bound by a let which does have lifted names.  it is used in
+  ; rendering the lifting of a let or local to show the 'after' step, which should show the lifted names.
 
   (define/contract recon-source-expr 
-     (-> syntax? mark-list? binding-set? render-settings? syntax?)
-     (lambda (expr mark-list lexically-bound-bindings render-settings)
+     (-> syntax? mark-list? binding-set? binding-set? render-settings? syntax?)
+     (lambda (expr mark-list dont-lookup use-lifted-names render-settings)
       (if (syntax-property expr 'stepper-skipto)
           (skipto-reconstruct
            (syntax-property expr 'stepper-skipto)
            expr
            (lambda (stx)
-             (recon-source-expr stx mark-list lexically-bound-bindings render-settings)))
+             (recon-source-expr stx mark-list dont-lookup use-lifted-names render-settings)))
           (if (syntax-property expr 'stepper-prim-name)
               (syntax-property expr 'stepper-prim-name)
-              (let* ([recur (lambda (expr) (recon-source-expr expr mark-list lexically-bound-bindings render-settings))]
+              (let* ([recur (lambda (expr) (recon-source-expr expr mark-list dont-lookup use-lifted-names render-settings))]
                      [let-recur (lambda (expr bindings)
-                                  (recon-source-expr expr mark-list (append bindings lexically-bound-bindings) render-settings))]
+                                  (recon-source-expr expr mark-list (append bindings dont-lookup) use-lifted-names render-settings))]
                      
                      [recon-basic
                       (lambda ()
@@ -533,9 +534,13 @@
                                  [recon-body (let-recur (syntax body) binding-list)])
                             (with-syntax ([(recon-val ...) right-sides]
                                           [recon-body recon-body]
-                                          [(new-vars ...) (map (lx (map (lx (syntax-property _
+                                          [(new-vars ...) (map (lx (map (lx (if (ormap (lambda (binding)
+                                                                                         (bound-identifier=? binding _))
+                                                                                       use-lifted-names)
+                                                                                (syntax-property _
                                                                                              'stepper-lifted-name
-                                                                                             (binding-lifted-name mark-list _)))
+                                                                                             (binding-lifted-name mark-list _))
+                                                                                (re-intern-identifier _)))
                                                                         _))
                                                                bindings)])
                               (syntax (label ((new-vars recon-val) ...) recon-body))))))]
@@ -593,10 +598,16 @@
                                         ; has this varref's binding not been evaluated yet?
                                         (if (ormap (lambda (binding)
                                                      (bound-identifier=? binding var))
-                                                   lexically-bound-bindings)
-                                            (syntax-property var
-                                                             'stepper-lifted-name
-                                                             (binding-lifted-name mark-list var))
+                                                   dont-lookup)
+                                            ; is this a var we should look up a lifted name for?
+                                            (if (ormap (lambda (binding)
+                                                         (bound-identifier=? binding var))
+                                                       use-lifted-names)
+                                                (syntax-property var
+                                                                 'stepper-lifted-name
+                                                                 (binding-lifted-name mark-list var))
+                                                (re-intern-identifier var))
+                                            
                                             (case (syntax-property var 'stepper-binding-type)
                                               ((lambda-bound) 
                                                (recon-value (lookup-binding mark-list var) render-settings))
@@ -622,6 +633,14 @@
                               [else
                                (error 'recon-source "no matching clause for syntax: ~a" expr)])])
                 (attach-info recon expr))))))
+  
+  ;; re-intern-identifire : (identifier? -> identifier?)
+  ;; re-intern-identifier : some identifiers are uninterned, which breaks
+  ;; test cases.  re-intern-identifier takes an identifier to a string
+  ;; and back again to make in into an interned identifier.
+  (define (re-intern-identifier identifier)
+    #`#,(string->symbol (symbol->string (syntax-e identifier))))
+  
   
   ;; filter-skipped : (listof syntax?) -> (listof syntax?)
   ;; filter out any elements of the list with 'stepper-skip-completely set.
@@ -676,7 +695,7 @@
                                                     (if (procedure? val)
                                                         (reconstruct-completed-procedure 
                                                          val
-                                                         (construct-lifted-name var (syntax-property var 'stepper-lifted-name))
+                                                         (or (syntax-property var 'stepper-lifted-name) var)
                                                          render-settings)
                                                         (recon-value val render-settings))) 
                                                   values
@@ -714,11 +733,12 @@
           (let* ([mark (closure-record-mark closure-record)]
                  [base-name (closure-record-name closure-record)]
                  [name (if base-name
-                           (construct-lifted-name #`#,base-name (closure-record-lifted-name closure-record))
-                           #f)])
-            (printf "name: ~e\nassigned-name: ~e\n" (syntax-e name) (syntax-e assigned-name))
+                           (if (closure-record-lifted-index closure-record)
+                               (construct-lifted-name #`#,base-name (closure-record-lifted-index closure-record))
+                               #`#,base-name)
+                           #`<unknown-procedure>)])
             (if (eq? (syntax-e name) (syntax-e assigned-name))
-                (first-of-one (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null render-settings)))
+                (first-of-one (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
                 #`#,name))
           #`#,((render-settings-render-to-sexp render-settings) val))))
 
@@ -758,7 +778,7 @@
          (define (recon-inner mark-list so-far)
            (let* ([recon-source-current-marks 
                    (lambda (expr)
-                     (recon-source-expr expr mark-list null render-settings))]
+                     (recon-source-expr expr mark-list null null render-settings))]
                   [top-mark (car mark-list)]
                   [expr (mark-source top-mark)]
                   
@@ -816,7 +836,7 @@
                                                    (map reconstruct-remaining-def (cdr not-done-glumps))))
                                          null)]
                                     [recon-bindings (append before-bindings after-bindings)]
-                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list render-settings))
+                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list null render-settings))
                                                            (syntax->list (syntax bodies)))])
                          (attach-info #`(label #,recon-bindings #,@rectified-bodies) expr))))])
              (kernel:kernel-syntax-case expr #f 
@@ -949,7 +969,7 @@
                 (case break-kind
                   ((result-value-break result-exp-break)
                    (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
-                                         (recon-source-expr (mark-source (car mark-list)) mark-list null render-settings)
+                                         (recon-source-expr (mark-source (car mark-list)) mark-list null null render-settings)
                                          (recon-value (car returned-value-list) render-settings))]
                           [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
                      (let-values ([(a b) (unwind recon-expr innermost #f)])
@@ -959,13 +979,20 @@
                      (let-values ([(a b) (unwind recon-expr redex #f)])
                        (list a b))))
                   ((double-break)
-                   (let ([recon-expr (recon nothing-so-far mark-list #t)])
-                     (let-values ([(before-stxs before-highlights) (unwind recon-expr redex #f)]
-                                  [(after-stxs after-highlights) (unwind recon-expr redex #t)])
+                   (let* ([source-expr (mark-source (car mark-list))]
+                          [innermost-before (recon-source-expr source-expr mark-list null null render-settings)]
+                          [newly-lifted-bindings (syntax-case source-expr (letrec-values)
+                                                   [(letrec-values ([vars . rest] ...) . bodies)
+                                                    (apply append (map syntax->list (syntax->list #`(vars ...))))]
+                                                   [else (error 'reconstruct "expected a let-values as source for a double-break, got: ~e"
+                                                                (syntax-object->datum source-expr))])]
+                          [innermost-after (recon-source-expr (mark-source (car mark-list)) mark-list null newly-lifted-bindings render-settings)]
+                          [recon-rest (recon highlight-placeholder-stx (cdr mark-list) #f)])
+                     (let-values ([(before-stxs before-highlights) (unwind recon-rest innermost-before #f)]
+                                  [(after-stxs after-highlights) (unwind recon-rest innermost-after #t)])
                        (list before-stxs before-highlights after-stxs after-highlights))))
                   ((late-let-break)
                    (let* ([one-level-recon (unwind-only-highlight (recon-inner mark-list nothing-so-far))])
-                     (printf "one-level-recon: ~e\n" (map syntax-object->datum one-level-recon))
                      (list (sublist 0 (- (length one-level-recon) 1) one-level-recon))))
                   (else
                    (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
