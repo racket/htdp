@@ -329,10 +329,10 @@
                 'define
                 stx
                 (syntax name)
-                (quasisyntax/loc stx (define name #,(syntax-property
-                                                      #`(lambda arg-seq make-lambda-generative lexpr ...)
-                                                      'stepper-define-type
-                                                      'lambda-define))))
+		(syntax-property
+		 (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...))
+		 'stepper-hint
+		 'lambda-define))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]
 	     ;; Constant def
@@ -342,7 +342,10 @@
                 'define
                 stx
                 (syntax name)
-                (quasisyntax/loc stx (define name expr)))
+		(syntax-property
+                 (syntax/loc stx (define name expr))
+                 'stepper-hint
+                 'non-lambda-define))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]))]
 	;; Function definition:
