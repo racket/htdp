@@ -12,7 +12,8 @@
    image?
    separator-snip% ;; these last two aren't required, but are useful 
    vertical-separator-snip% ;; for debugging purposes
-   stepper-warning%)
+   stepper-warning%
+   blank-step)
    
   (define test-dc (make-object bitmap-dc% (make-object bitmap% 1 1)))
   (define reduct-highlight-color (make-object color% 255 255 255))
@@ -511,6 +512,16 @@
             (make-object stepper-sub-text% after-exprs null #f))
       ;(lock #t)
       ))
+  
+  (define blank-step
+    (instantiate (class text% ()
+                   (define/public (reset-width arg)
+                     (void))
+                   
+                   (super-instantiate ())
+                   
+                   (inherit insert)
+                   (insert "no steps taken yet...")) ()))
   
   
   (define (image? val)

@@ -53,9 +53,9 @@
         void?))
     
 
-  (provide/contract [go (-> program-expander-contract          ; program-expander
-                            (-> step-result? semaphore? void?) ; receive-result
-                            (union render-settings? false?)
+  (provide/contract [go (-> program-expander-contract       ; program-expander
+                            (-> step-result? void?)         ; receive-result
+                            (union render-settings? false?) ; render-settings
                             void?)])
   
   (define (send-to-eventspace eventspace thunk)
@@ -72,13 +72,6 @@
          (define current-expr #f)
          
          (define packaged-envs (a:make-initial-env-package))
-         
-         (define drscheme-eventspace (current-eventspace))
-         
-         (define (send-to-drscheme-eventspace thunk)
-           (send-to-eventspace drscheme-eventspace thunk))
-         
-         (define user-computation-semaphore (make-semaphore))
          
          (define held-expr-list no-sexp)
          (define held-redex-list no-sexp)
@@ -184,10 +177,7 @@
                                                                    current reduct-list after)))])
                               (set! held-expr-list no-sexp)
                               (set! held-redex-list no-sexp)
-                              (send-to-drscheme-eventspace
-                               (lambda ()
-                                 (receive-result result user-computation-semaphore)))
-                              (semaphore-wait user-computation-semaphore))))]
+                              (receive-result result))))]
                      [(double-break)
                       ; a double-break occurs at the beginning of a let's evaluation.
                       (let* ([reconstruct-quadruple
@@ -200,16 +190,12 @@
                               (double-redivide finished-exprs 
                                                (list-ref reconstruct-quadruple 0) 
                                                (list-ref reconstruct-quadruple 2))])
-                          (send-to-drscheme-eventspace
-                           (lambda () 
-                             (receive-result (make-before-after-result new-finished
+                          (receive-result (make-before-after-result new-finished
                                                                        current-pre
                                                                        (list-ref reconstruct-quadruple 1)
                                                                        current-post
                                                                        (list-ref reconstruct-quadruple 3)
-                                                                       after)
-                                             user-computation-semaphore)))
-                          (semaphore-wait user-computation-semaphore)))]
+                                                                       after))))]
                      [(late-let-break)
                       (let ([new-finished (car (r:reconstruct-current current-expr mark-list break-kind returned-value-list render-settings))])
                         (set! finished-exprs (append finished-exprs new-finished)))]
@@ -232,23 +218,18 @@
              (set! finished-exprs (append finished-exprs (list reconstructed)))))
          
          (define (err-display-handler message exn)
-           (send-to-drscheme-eventspace
-            (lambda ()
-              (if (not (eq? held-expr-list no-sexp))
+           (if (not (eq? held-expr-list no-sexp))
                   (let*-values
                       ([(before current after) (redivide held-expr-list)])
                     (receive-result (make-before-error-result (append finished-exprs before) 
-                                                              current held-redex-list message after)
-                                    user-computation-semaphore))
-                  (receive-result (make-error-result finished-exprs message) user-computation-semaphore))))))
+                                                              current held-redex-list message after)))
+                  (receive-result (make-error-result finished-exprs message)))))
       
       (program-expander
        (lambda ()
          (error-display-handler err-display-handler)) ; init
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)
-             (send-to-drscheme-eventspace 
-              (lambda ()
-                (receive-result (make-finished-result finished-exprs) user-computation-semaphore)))
+             (receive-result (make-finished-result finished-exprs))
              (step-through-expression expanded continue-thunk)))))))
 

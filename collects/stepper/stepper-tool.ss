@@ -120,7 +120,8 @@
             (super-on-close))
           
           (super-instantiate ("Stepper" #f stepper-initial-width stepper-initial-height))))
-  
+
+
       (define (view-controller-go drscheme-frame program-expander)
         
         (local ((define settings 
@@ -176,9 +177,7 @@
                             (lambda () 
                               (simple-module-based-language-convert-value val simple-settings)))))
 
-		(define view-history null)
-                (define view-currently-updating #f)
-                (define final-view #f)
+		(define view-history (list x:blank-step))
                 (define view 0)
                 
                 ; build gui object:
@@ -187,19 +186,13 @@
                   (update-view 0))
                 
                 (define (next)
-                  (send next-button enable #f)
-                  (send previous-button enable #f)
-                  (send home-button enable #f)
-                  (if (= view (- (length view-history) 1))
-                      (if (send s-frame get-can-step)
-                          (update-view/next-step (+ view 1))
-                          (begin
-                            (message-box "Stepper"
-                                         (string-append
-                                          "The source text for this program has changed or is no longer "
-                                          "available.  No further steps can be computed."))
-                            (en/dis-able-buttons)))
-                      (update-view (+ view 1))))
+                  (update-view (+ view 1)))
+                
+                ; make this into a special last step
+                ;(message-box "Stepper"
+                ;             (string-append
+                ;              "The source text for this program has changed or is no longer "
+                ;              "available.  No further steps can be computed."))
                 
                 (define (previous)
                   (update-view (- view 1)))
@@ -216,12 +209,6 @@
                 
                 (define canvas (make-object x:stepper-canvas% (send s-frame get-area-container)))
                 
-                (define continue-semaphore #f)
-                
-                (define (update-view/next-step new-view)
-                  (set! view-currently-updating new-view)
-                  (semaphore-post continue-semaphore))
-                
                 (define (update-view new-view)
                   (set! view new-view)
                   (let ([e (list-ref view-history view)])
@@ -233,15 +220,14 @@
                 (define (en/dis-able-buttons)
                   (send previous-button enable (not (zero? view)))
                   (send home-button enable (not (zero? view)))
-                  (send next-button enable (not (eq? final-view view))))
+                  (send next-button enable (not (= view (- (length view-history) 1)))))
                 
                 (define (print-current-view item evt)
                   (send (send canvas get-editor) print))
                 
                 ; receive-result takes a result from the model and renders it on-screen
                 ; : (step-result semaphore -> void)
-                (define (receive-result result continue-user-computation-semaphore)
-                  (set! continue-semaphore continue-user-computation-semaphore)
+                (define (receive-result result)
                   (let ([step-text
                          (cond [(before-after-result? result) 
                                 (make-object x:stepper-text% 
@@ -253,7 +239,6 @@
                                   #f
                                   (before-after-result-after-exprs result))]
                                [(before-error-result? result)
-                                (set! final-view view-currently-updating)
                                 (make-object x:stepper-text%
                                   (before-error-result-finished-exprs result)
                                   (before-error-result-exp result)
@@ -262,8 +247,7 @@
                                   null
                                   (before-error-result-err-msg result)
                                   (before-error-result-after-exprs result))]
-                               [(error-result? result)  
-                                (set! final-view view-currently-updating)
+                               [(error-result? result)
                                 (make-object x:stepper-text%
                                   (error-result-finished-exprs result)
                                   null
@@ -273,7 +257,6 @@
                                   (error-result-err-msg result)
                                   null)]
                                [(finished-result? result)
-                                (set! final-view view-currently-updating)
                                 (make-object x:stepper-text%
                                   (finished-result-finished-exprs result)
                                   null
@@ -282,8 +265,8 @@
                                   null
                                   #f
                                   null)])])
-                    (set! view-history (append view-history (list step-text))) 
-                    (update-view view-currently-updating)))
+                    (set! view-history (append view-history (list step-text)))
+                    (en/dis-able-buttons)))
                 
                 ; need to capture the custodian as the thread starts up:
                 (define (program-expander-prime init iter)
@@ -293,13 +276,11 @@
                                     iter)))
           
           (send s-frame set-printing-proc print-current-view)
-          (set! view-currently-updating 0)
           (send button-panel stretchable-width #f)
           (send button-panel stretchable-height #f)
           (send canvas stretchable-height #t)
-          (send previous-button enable #f)
-          (send home-button enable #f)
-          (send next-button enable #f)
+          (en/dis-able-buttons)
+          (update-view 0)
           (send (send s-frame edit-menu:get-undo-item) enable #f)
           (send (send s-frame edit-menu:get-redo-item) enable #f)
           (model:go program-expander-prime receive-result (get-render-settings render-to-string render-to-sexp))
