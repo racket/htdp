@@ -9,11 +9,17 @@
 ;; straightforward, but error-checking is complex.
 
 ;; Error-message conventions:
-;;  - report errors, somewhat anthropomorphicly, in terms of "expected"
-;;    versus "found" syntax
-;;  - report errors according to a left-to-right reading; e.g., the
+;;  - Report errors, somewhat anthropomorphicly, in terms of "expected"
+;;    versus "found" syntax.
+;;  - Report errors according to a left-to-right reading; e.g., the
 ;;    error in `(define 1 2 3)' is "expected an identifier, found 1",
-;;    not "expected two parts after `define', but found three"
+;;    not "expected two parts after `define', but found three".
+;;  - Left-to-right reporting sometimes requires an explicit expression
+;;    check (via `local-expand') before reporting some other error. For
+;;    example, in the expression (define (f x) + 1 2), the reported
+;;    error should be for a misuse of "+", not that there are two extra
+;;    parts in the definition. Avoid using `local-expand' if there's
+;;    no error, however.
 
 (module teach mzscheme
   (require (lib "etc.ss")
@@ -258,11 +264,14 @@
 	 "expected an expression ~a, but nothing's there"
 	 where))
       (unless (null? (cdr exprs))
+	;; In case it's erroneous, to ensure left-to-right reading:
+	(local-expand (car exprs) 'expression null)
+	;; First expression was ok, report an error for 2nd and later:
 	(teach-syntax-error
 	 who
 	 stx
 	 (cadr exprs)
-	 "expected only one expression ~a, but found an extra expression~a"
+	 "expected only one expression ~a, but found an extra part~a"
 	 where
 	 (if (null? (cddr exprs))
 	     ""
@@ -538,7 +547,7 @@
 		stx
 		(car rest)
 		"expected nothing after the field name sequence in `define-struct', ~
-               but found an extra expression~a"
+               but found an extra part~a"
 		(if (null? (cdr rest))
 		    ""
 		    (format " (plus ~a more)" (length (cdr rest)))))))
@@ -698,7 +707,19 @@
 	  #f
 	  "expected a question--answer clause after `cond', but nothing's there")]
 	[(_ clause ...)
-	 (let ([clauses (syntax->list (syntax (clause ...)))])
+	 (let* ([clauses (syntax->list (syntax (clause ...)))]
+		[check-preceding-exprs
+		 (lambda (stop-before)
+		   (let/ec k
+		     (for-each (lambda (clause)
+				 (if (eq? clause stop-before)
+				     (k #t)
+				     (syntax-case clause ()
+				       [(question answer)
+					(begin
+					  (local-expand (syntax question) 'expression null)
+					  (local-expand (syntax answer) 'expression null))])))
+			       clauses)))])
 	   (let ([checked-clauses
 		  (map
 		   (lambda (clause)
@@ -717,12 +738,14 @@
                         (with-syntax ([verified (syntax-property (syntax (verify-boolean question 'cond)) 'stepper-skipto (list syntax-e cdr syntax-e cdr car))])
                           (syntax/loc clause (verified answer)))]
 		       [()
+			(check-preceding-exprs clause)
 			(teach-syntax-error
 			 'cond
 			 stx
 			 clause
 			 "expected a question--answer clause, but found an empty clause")]
 		       [(question?)
+			(check-preceding-exprs clause)
 			(teach-syntax-error
 			 'cond
 			 stx
@@ -730,13 +753,21 @@
 			 "expected a clause with a question and answer, but found a clause ~
                                 with only one part")]
 		       [(question? answer? ...)
-			(teach-syntax-error
-			 'cond
-			 stx
-			 clause
-			 "expected a clause with one question and one answer, but found a clause ~
+			(check-preceding-exprs clause)
+			(let ([parts (syntax->list clause)])
+			  ;; to ensure he illusion of left-ot-right checking, make sure 
+			  ;; the question and first answer (if any) are ok:
+			  (local-expand (car parts) 'expression null)
+			  (unless (null? (cdr parts))
+			    (local-expand (cadr parts) 'expression null))
+			  ;; question and answer 9if any) are ok, raise a count-based exception:
+			  (teach-syntax-error
+			   'cond
+			   stx
+			   clause
+			   "expected a clause with one question and one answer, but found a clause ~
                                 with ~a parts"
-			 (length (syntax->list clause)))]
+			   (length parts)))]
 		       [_else
 			(teach-syntax-error
 			 'cond

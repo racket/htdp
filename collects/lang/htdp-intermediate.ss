@@ -36,11 +36,11 @@
 
    ("Higher-Order Functions"
     (map ((X ... -> Z) (listof X) ... -> (listof Z))
-	 "to construct a new list by applying a function to each item on an existing existing") 
+	 "to construct a new list by applying a function to each item on an existing list") 
     (for-each ((any ... -> any) (listof any) ... -> void)
 	      "to apply a function to each item on a list for effect only")
     (filter ((X -> boolean) (listof X) -> (listof X))
-	    "to construct a list from all those items on  a list for which the predicate holds")
+	    "to construct a list from all those items on a list for which the predicate holds")
     (foldr ((X Y -> Z) Y (listof X) -> Z)
 	   "(foldr f base (list x-1 ... x-n)) = (f x-1 ... (f x-n base))")
     (foldl ((X Y -> Z) Y (listof X) -> Z)

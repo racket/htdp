@@ -37,9 +37,9 @@
     ((beginner-/ /) (num num num ... -> num)
        "to compute the rational quotient of its input."
        "None but the first number can be zero.")
-    (max (num num ... -> num)
+    (max (real real ... -> real)
 	 "to determine the largest number")
-    (min (num num ... -> num)
+    (min (real real ... -> real)
 	 "to determine the smallest number")       
     (quotient (int int -> int)
 	      "to compute the quotient of two integers")
