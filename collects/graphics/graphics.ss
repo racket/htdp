@@ -60,4 +60,4 @@
 
    viewport->snip
 
-   viewport-DC viewport-buffer-DC))
+   viewport-dc viewport-buffer-dc))
