@@ -252,7 +252,7 @@
     (define-struct expanding-for-intermediate-local ())
     (define (ok-definition-context)
       (let ([ctx (syntax-local-context)])
-	(or (memq ctx '(top-level module))
+	(or (memq ctx '(top-level module module-begin))
 	    (and (pair? ctx)
 		 (expanding-for-intermediate-local? (car ctx))))))
 
@@ -695,10 +695,10 @@
 	[_else (bad-use-error 'define-struct stx)]))
 
     (define (beginner-define-struct/proc stx)
-      (do-define-struct stx #t #f #f))
+      (do-define-struct stx #t #f #t))
 
     (define (intermediate-define-struct/proc stx)
-      (do-define-struct stx #f #f #f))
+      (do-define-struct stx #f #f #t))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; application (beginner and intermediate)

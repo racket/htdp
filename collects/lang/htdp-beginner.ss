@@ -9,7 +9,8 @@
 	   (lib "docprovide.ss" "syntax"))
   
   ;; Implements the forms:
-  (require "private/teach.ss")
+  (require "private/teach.ss"
+	   "private/contract-forms.ss")
   
   ;; syntax:
   (provide (rename beginner-define define)
@@ -23,7 +24,9 @@
 	   (rename beginner-and and)
 	   (rename beginner-or or)
 	   (rename beginner-quote quote)
-	   (rename #%plain-module-begin #%module-begin)
+	   (rename beginner-module-begin #%module-begin)
+	   (rename beginner-contract contract)
+	   (rename beginner-define-data define-data)
 	   #%datum
 	   empty true false)
   

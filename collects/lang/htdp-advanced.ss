@@ -2,6 +2,7 @@
 (module htdp-advanced mzscheme
   (require "private/teach.ss"
 	   "private/teachprims.ss"
+	   "private/contract-forms.ss"
 	   (lib "etc.ss")
 	   (lib "list.ss")
 	   (lib "pretty.ss")
@@ -37,7 +38,9 @@
 	   (rename advanced-unless unless)
 	   (rename advanced-case case)
 	   (rename advanced-delay delay)
-	   (rename #%plain-module-begin #%module-begin)
+	   (rename advanced-module-begin #%module-begin)
+	   (rename advanced-contract contract)
+	   (rename advanced-define-data define-data)
 	   #%datum
 	   empty true false)
 
