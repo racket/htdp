@@ -13,7 +13,7 @@
 	   [(set! id expr)
 	    (module-identifier=? (syntax set!) set!-stx)
 	    (with-syntax ([tmp-id tmp-id])
-	      (syntax (set! tmp-id expr)))]
+	      (syntax/loc stx (set! tmp-id expr)))]
 	   [(id . args)
 	    (datum->syntax-object
 	     check-proc
@@ -25,14 +25,16 @@
 			   tmp-id))
 		    'stepper-skipto
 		    (list syntax-e cdr syntax-e cdr cdr car))
-		   (syntax args)))]
+		   (syntax args))
+	     stx)]
 	   [id
 	    (syntax-property
 	     (datum->syntax-object
 	      check-proc
 	      (list check-proc 
 		    (list 'quote (syntax id))
-		    tmp-id))
+		    tmp-id)
+	      stx)
              'stepper-skipto
              (list syntax-e cdr syntax-e cdr cdr car))]))))) ; this may make other stepper-skipto annotations obsolete.
 
