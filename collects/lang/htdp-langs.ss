@@ -38,6 +38,8 @@ tracing todo:
   (define o (current-output-port))
   (define (oprintf . args) (apply fprintf o args))
   
+  (define init-eventspace (current-eventspace))
+  
   (define tool@
     (unit/sig drscheme:tool-exports^
       (import drscheme:tool^)
@@ -532,93 +534,47 @@ tracing todo:
       ;;    (string (union TST exn) -> void) -> string exn -> void
       ;; adds in the bug icon, if there are contexts to display
       (define (teaching-languages-error-display-handler msg exn)
-        #;
-        (let ([src 
-               (cond
-                 [(exn:fail:syntax? exn) 
-                  (let loop ([exprs (exn:fail:syntax-exprs exn)])
-                    (cond
-                      [(null? exprs) #f]
-                      [else
-                       (let ([src (syntax-source (car exprs))])
-                         (if (string? src)
-                             src
-                             (loop (cdr exprs))))]))]
-                 [(exn:fail:read? exn) #f]
-                 [(exn? exn) 
-                  (let ([cms (continuation-mark-set->list (exn-continuation-marks exn) cm-key)])
-                    (when (and cms (not (null? cms)))
-                      (let* ([first-cms (et:st-mark-source (car cms))]
-                             [src (car first-cms)])
-                        src)))]
-                 [else #f])])
+          
+          (if (exn? exn)
+              (display (exn-message exn) (current-error-port))
+              (fprintf (current-error-port) "uncaught exception: ~e" exn))
+          (fprintf (current-error-port) "\n")
+          
+          ;; need to flush here so that error annotations inserted in next line
+          ;; don't get erased if this output were to happen after the insertion
+          (flush-output (current-error-port))
           
           (let ([rep (drscheme:rep:current-rep)])
-            (when (and rep
-                       mf-note
-                       (eq? (current-error-port) (send rep get-err-port))
-                       (mf-bday?))
-              (send rep queue-output
-                    (lambda ()
-                      (let ([locked? (send rep is-locked?)])
-                        (send rep begin-edit-sequence)
-                        (send rep lock #f)
-                        (let ([before (send rep last-position)])
-                          (send rep insert (send mf-note copy) before before)
-                          (let ([after (send rep last-position)])
-                            (send rep insert #\space after after)
-                            (send rep set-clickback before after
-                                  (lambda (txt start end)
-                                    (message-box 
-                                     (string-constant happy-birthday-matthias)
-                                     (string-constant happy-birthday-matthias))))))
-                        (send rep lock locked?)
-                        (send rep end-edit-sequence))))))
-          
-          (when (string? src)
-            (display src (current-error-port))
-            (display ": " (current-error-port))))
-        
-        (if (exn? exn)
-            (display (exn-message exn) (current-error-port))
-            (fprintf (current-error-port) "uncaught exception: ~e" exn))
-        (fprintf (current-error-port) "\n")
-        
-        #;
-        (let ([rep (drscheme:rep:current-rep)])
-          (when rep
-            (send rep wait-for-io-to-complete/user)
-            (cond
-              [(exn:fail:syntax? exn) 
-               (let ([obj (exn:syntax-expr exn)])
-                 (when (syntax? obj)
-                   (let ([src (syntax-source obj)]
-                         [pos (syntax-position obj)]
-                         [span (syntax-span obj)])
-                     (when (and (is-a? src text:basic<%>)
-                                (number? pos)
-                                (number? span))
-                       (send rep highlight-error src (- pos 1) (+ pos -1 span))))))]
-              [(exn:read? exn) 
-               (let ([src (exn:read-source exn)]
-                     [pos (exn:read-position exn)]
-                     [span (exn:read-span exn)])
-                 (when (and (is-a? src text:basic<%>)
-                            (number? pos)
-                            (number? span))
-                   (send rep highlight-error src (- pos 1) (+ pos -1 span))))]
-              [(drscheme:rep:exn:locs? exn)
-               (let ([locs (drscheme:rep:exn:locs-locs exn)])
-                 (send rep highlight-errors locs))]
-              [(exn? exn) 
-               (let ([cms (continuation-mark-set->list (exn-continuation-marks exn) cm-key)])
-                 (when (and cms (not (null? cms)))
-                   (let* ([first-cms (et:st-mark-source (car cms))]
-                          [src (car first-cms)]
-                          [start-position (cadr first-cms)]
-                          [end-position (+ start-position (cddr first-cms))])
-                     (send rep highlight-error src start-position end-position))))]
-              [else (void)]))))
+            (when (and (is-a? rep drscheme:rep:text<%>)
+                       (eq? (send rep get-err-port) (current-error-port)))
+              (let ([to-highlight 
+                     (cond
+                       [(exn:srclocs? exn) 
+                        ((exn:srclocs-accessor exn) exn)]
+                       [(exn? exn) 
+                        (let ([cms (continuation-mark-set->list (exn-continuation-marks exn) cm-key)])
+                          (oprintf "cms ~s\n" cms)
+                          (if cms
+                              (let loop ([cms cms])
+                                (cond
+                                  [(null? cms) '()]
+                                  [else (let* ([cms (car cms)]
+                                               [source (car cms)]
+                                               [pos (cadr cms)]
+                                               [span (cddr cms)])
+                                          (oprintf "source ~s\n" source)
+                                          (if (is-a? source text%)
+                                              (list (make-srcloc source #f #f pos span))
+                                              (loop (cdr cms))))]))
+                              '()))]
+                       [else '()])])
+                
+                (parameterize ([current-eventspace init-eventspace])
+                  (queue-callback
+                   (lambda ()
+                     ;; need to make sure that the user's eventspace is still the same
+                     ;; and still running here?
+                     (send rep highlight-errors to-highlight #f))))))))
       
       ;; with-mark : syntax syntax -> syntax
       ;; a member of stacktrace-imports^
@@ -632,11 +588,10 @@ tracing todo:
                    (number? start-position)
                    (number? span))
               (with-syntax ([expr expr]
-                            [mark (et:make-st-mark source-stx)]
+                            [mark (list* source start-position span)]
                             [cm-key cm-key])
-                #`(with-continuation-mark
-                      'cm-key
-                    mark
+                #`(with-continuation-mark 'cm-key
+                    'mark
                     expr))
               expr)))
       
