@@ -1,6 +1,3 @@
-
-(require-library "unitsig.ss")
-
 (define-signature graphics^
   (viewport?
 
