@@ -10,10 +10,6 @@
   
   (define varref-set? (listof identifier?))
   (define binding-set? (or/f varref-set? (symbols 'all)))
-  ; varref-set-remove-bindings : VARREF-SET (BINDING-SET - 'all) -> VARREF-SET
-  ; binding-set-varref-set-intersect : BINDING-SET VARREF-SET -> BINDING-SET
-  ; binding-set-union: (listof BINDING-SET) -> BINDING-SET
-  ; varref-set-union: (listof VARREF-SET) -> VARREF-SET
   
   (provide/contract
    [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]

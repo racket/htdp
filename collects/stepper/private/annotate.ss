@@ -14,11 +14,9 @@
     (and/f (listof (listof symbol?)) (lx (<= (length _) 1))))
   (define-struct annotate-environment (struct-proc-names pre-defined-names binding-index))
   
-  (define annotate-contract
-
   ; PROVIDE
   (provide/contract
-   [make-initial-env-package (-> annotate-environment)]
+   [make-initial-env-package (-> annotate-environment?)]
    [annotate
     (->* (syntax? annotate-environment? break-contract (symbols 'foot-wrap)) ; required args
          annotate-opts-list?                                                 ; optional args
@@ -419,10 +417,7 @@
   ;    only of varrefs.  This one might go away later, or be toggled into a "no-opt" flag.
   ;
   
-  (define annotate 
-    (contract 
-     annotate-contract
-     (lambda (expr annotate-environment break wrap-style . wrap-opts-list)
+  (define (annotate expr annotate-environment break wrap-style . wrap-opts-list)
        (local
            ((define cheap-wrap? (eq? wrap-style 'cheap-wrap))
             (define ankle-wrap? (eq? wrap-style 'ankle-wrap))
@@ -1147,6 +1142,4 @@
          ; body of local
          (let* ([annotated-expr (annotate/top-level expr)])
            ;(fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
-           (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index)))))
-     'annotate
-     'caller)))
+           (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index))))))
