@@ -5,6 +5,7 @@
   (require (lib "specs.ss" "framework"))
 
   (provide
+   step-result?
    (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs))
    (struct before-error-result (finished-exprs exp redex err-msg after-exprs))
    (struct error-result (finished-exprs err-msg))
@@ -64,6 +65,8 @@
   (define-struct before-error-result (finished-exprs exp redex err-msg after-exprs))
   (define-struct error-result (finished-exprs err-msg))
   (define-struct finished-result (finished-exprs))
+  
+  (define step-result? (or/f before-after-result? before-error-result? error-result? finished-result?))
   
   ; the closure record is placed in the closure table
 

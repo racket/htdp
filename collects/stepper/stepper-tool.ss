@@ -1,5 +1,6 @@
 (module stepper-tool mzscheme
-  (require (lib "tool.ss" "drscheme")
+  (require (lib "specs.ss" "framework")
+           (lib "tool.ss" "drscheme")
            (lib "mred.ss" "mred")  
            (prefix frame: (lib "framework.ss" "framework"))
            (lib "unitsig.ss")
@@ -183,15 +184,25 @@
            
            (super-instantiate ())
            
-           (define (program-expander iter)
-             (send (get-interactions-text)
-                   expand-program
-                   (drscheme:language:make-text/pos (get-definitions-text) 
-                                                    0
-                                                    (send (get-definitions-text)
-                                                          last-position)) 
-                   (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))
-                   iter))
+           (define program-expander
+             (contract
+              (-> (-> void?) ; init
+                  (-> string? any? void?)
+                  (-> (union eof-object? syntax? (cons/p string? any?)) (-> void?) void?) ; iter
+                  void?)
+              (lambda (init error iter)
+                (drscheme:eval:expand-program
+                 (drscheme:language:make-text/pos (get-definitions-text) 
+                                                  0
+                                                  (send (get-definitions-text)
+                                                        last-position)) 
+                 (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))
+                 init
+                 error
+                 void ; kill
+                 iter))
+              'program-expander
+              'caller))
            
            (define stepper-button 
              (make-object button%
