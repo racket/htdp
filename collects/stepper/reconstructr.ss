@@ -400,7 +400,7 @@
                            `(...) ; in unannotated code
                            `(... ,so-far ...)))
                       (else
-                       (e:static-error expr "bad label in application mark"))))]
+                       (e:static-error "bad label in application mark: ~s" expr))))]
                  
                  ; define-struct 
                  
