@@ -1,3 +1,19 @@
+VERSION 208				  [Fri Jul 30 10:07:21 EDT 2004]
+
+* image.ss introduces images as algebraic values. Students can create basic
+  images such as rectangles, circles, and they can compose them via an
+  overlay function. There are also primitives for finding one picture in
+  another one and so on. Testing with drawing is now feasible. 
+
+* world.ss enriches image.ss with animation functions. Like draw.ss, it
+  comes with big-bang, on-key-event, on-tick, end-of-time for creating a
+  world, starting a clock, reacting to clock ticks and keystrokes, and
+  ending time. It also comes with a mechanism for display movies. It does
+  *not* yet provide primitives for dealing with mouse clicks.
+
+  The performance problems from the TS! workshops have been eliminated. 
+
+------------------------------------------------------------------------
 VERSION 207  			          [Fri May 14 12:52:43 EDT 2004]
 
 * draw.ss now comes with functional callbacks for maintaining a visual
