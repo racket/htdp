@@ -55,8 +55,8 @@
            (eq? first-symbol 'cond))))
   
   
- 
-  (define (reconstruct-inner top-defs current-def mark-list so-far)
+  
+  (define (reconstruct top-defs current-def mark-list so-far)
     
     (local
         ((define (rectify-value val)
@@ -100,36 +100,64 @@
                  [(z:quote-form? expr)
                   `(quote ,(read->raw (z:quote-form-expr expr)))]
 
+                 ; we won't call rectify-source-expr on define-values expressions
                  
-                 [(z:define-values? expr)
-                  (let ([vars (z:define-values-form-vars expr)]
-                        [val (z:define-values-form-val expr)])
-                    (cond [(comes-from-define-struct? expr)
-                           (let* ([struct-expr val]
-                                  [super-expr (z:struct-form-super struct-expr)]
-                                  [raw-type (read->raw (z:struct-form-type struct-expr))]
-                                  [raw-fields (map read-raw (z:struct-form-fields struct-expr))])
-                             `(define-struct
-                               ,(if super-expr
-                                    (list raw-type (rectify-source-expr super-expr))
-                                    raw-type)
-                               ,raw-fields))]
-                          [(comes-from-define-procedure? expr)
-                           (let ([name (read->raw (car vars))]
-                                 [args (map read->raw (car (z:case-lambda-form-args val)))]
-                                 [body (rectify-source-expr (car (z:case-lambda-form-bodies)))]
-                                 
-                        [(comes-from define expr)
-                         `(define 
-                            ,(read->raw (car vars))
-                            ,(rectify-source-expr val))]
-                        [else
-                         `(define-values 
-                            ,(map read->raw vars)
-                            ,(rectify-source-expr val)))]
+
+                 
+                 [else
+                  (print-struct #t)
+                  (e:dynamic-error
+                   expr
+                   (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))]))
+         
+         
+         (define (rectify-define expr current-expr? so-far)
+           (let ([vars (z:define-values-form-vars expr)]
+                 [val (z:define-values-form-val expr)])
+             (cond [(comes-from-define-struct? expr)
+                    (let* ([struct-expr val]
+                           [super-expr (z:struct-form-super struct-expr)]
+                           [raw-type (read->raw (z:struct-form-type struct-expr))]
+                           [raw-fields (map read-raw (z:struct-form-fields struct-expr))])
+                      `(define-struct
+                        ,(if super-expr
+                             (list raw-type (if current-expr?
+                                                so-far
+                                                (rectify-source-expr super-expr)))
+                             raw-type)
+                        ,raw-fields))]
+                   [(comes-from-define-procedure? expr)
+                    (let ([name (read->raw (car vars))]
+                          [args (map read->raw (car (z:case-lambda-form-args val)))]
+                          [body (rectify-source-expr (car (z:case-lambda-form-bodies)))])
+                      `(define ,(cons name args) ,body))]
+                   
+                   [(comes-from define? expr)
+                    `(define 
+                       ,(read->raw (car vars))
+                       ,(if current-expr?
+                            so-far
+                            (rectify-source-expr val)))]
+                   
+                   [else
+                    `(define-values 
+                       ,(map read->raw vars)
+                       ,(rectify-source-expr val))])))
+         
+         (define (rectify-old-definition var)
+           (let ([val (find-var-binding mark-list var)])
+             (if (procedure? val)
+                 (let *([info (closure-table-lookup val)]
+                        [expr (car info)]
+                        [args-list-list (z:case-lambda-form-args expr)]
+                        [bodies-list (z:case-lambda-form-args expr)])
+                   (if (> (length bodies-list) 1)
+                       (e:dynamic-error expr "too many bodies!")
+                       
+                   
+
                  
                  
-                         
                       
                  
                  
@@ -144,7 +172,7 @@
 
                   
                   
-                  (define (reconstruct-inner mark-list so-far)
+         (define (reconstruct-inner mark-list so-far)
            (if (null? mark-list)
                so-far
                (let* ([top-mark (car mark-list)]
@@ -184,14 +212,14 @@
                    
                    [(z:struct-form? expr)
                     (if (comes-from-define-struct expr)
-                      so-far
-                      (let ([super-expr (z:struct-form-super expr)]
-                            [raw-type (read->raw (z:struct-form-type expr))]
-                            [raw-fields (map read->raw (z:struct-form-fields expr))])
-                        (if super-expr
-                            `(struct (,raw-type ,so-far)
-                              ,raw-fields)
-                            `(struct ,raw-type ,raw-fields))))]
+                        so-far
+                        (let ([super-expr (z:struct-form-super expr)]
+                              [raw-type (read->raw (z:struct-form-type expr))]
+                              [raw-fields (map read->raw (z:struct-form-fields expr))])
+                          (if super-expr
+                              `(struct (,raw-type ,so-far)
+                                       ,raw-fields)
+                              `(struct ,raw-type ,raw-fields))))]
                    
                    ; if
                    
@@ -210,19 +238,24 @@
                         (e:dynamic-error expr 
                                          "quoted expression given as context")
                         (else (rectify-source-expr expr)))]
-                    
-                    
+                   
+                   
                    ; define-values : define's don't get marks, so they can't occur here
                    
                    ; lambda
                    
                    [(z:case-lambda-form? expr)
                     (if (not (null? so-far))
-                        (e:dynamic-error expr
-                                         "lambda expression given as context")
-                        
+                        (e:dynamic-error expr "lambda expression given as context")
+                        null)]
                    
-                        
+                   [else
+                    (print-struct #t)
+                    (e:dynamic-error
+                     expr
+                     (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))]))))
+         
+         
                    
                         
                         
