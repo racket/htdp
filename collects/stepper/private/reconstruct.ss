@@ -139,7 +139,7 @@
                              [else (d->so name)]))]
                [else
                 (let ([mark (closure-record-mark closure-record)])
-                  (recon-source-expr (mark-source mark) (list mark)))])]
+                  (recon-source-expr (mark-source mark) (list mark) null))])]
         [else
          (d->so (model-settings:print-convert val))])))
   
@@ -275,30 +275,30 @@
         ((define highlight-queue-src (make-queue))
          (define highlight-queue-dest (make-queue))
          
+         (define (recur-on-pieces stx)
+           (if (pair? (syntax-e stx))
+               (datum->syntax-object stx (syntax-pair-map (syntax-e stx) inner) stx stx)
+               stx))
+         
          (define (inner stx)
            (if (eq? stx highlight-placeholder-stx)
                (begin (queue-push highlight-queue-dest (inner (queue-pop highlight-queue-src)))
                       highlight-placeholder-stx)
-               (let* ([recur-on-pieces
-                       (lambda ()
-                         (if (pair? (syntax-e stx))
-                             (datum->syntax-object stx (syntax-pair-map (syntax-e stx) inner) stx stx)
-                             stx))])
-                 (if (syntax-property stx 'user-stepper-hint)
-                     (case (syntax-property stx 'user-stepper-hint)
-                       ((comes-from-cond) (unwind-cond stx 
-                                                       (syntax-property stx 'user-source)
-                                                       (syntax-property stx 'user-position)))
-                       ((comes-from-and) (unwind-and/or stx
-                                                        (syntax-property stx 'user-source)
-                                                        (syntax-property stx 'user-position)
-                                                        'and))
-                       ((comes-from-or) (unwind-and/or stx
-                                                        (syntax-property stx 'user-source)
-                                                        (syntax-property stx 'user-position)
-                                                        'or))
-                       (else (recur-on-pieces)))
-                     (recur-on-pieces)))))
+               (if (syntax-property stx 'user-stepper-hint)
+                   (case (syntax-property stx 'user-stepper-hint)
+                     ((comes-from-cond) (unwind-cond stx 
+                                                     (syntax-property stx 'user-source)
+                                                     (syntax-property stx 'user-position)))
+                     ((comes-from-and) (unwind-and/or stx
+                                                      (syntax-property stx 'user-source)
+                                                      (syntax-property stx 'user-position)
+                                                      'and))
+                     ((comes-from-or) (unwind-and/or stx
+                                                     (syntax-property stx 'user-source)
+                                                     (syntax-property stx 'user-position)
+                                                     'or))
+                     (else (recur-on-pieces stx)))
+                   (recur-on-pieces stx))))
          
          (define (unwind-cond stx user-source user-position)
            (if (eq? stx highlight-placeholder-stx)
@@ -323,22 +323,40 @@
                  (syntax (cond . clauses)))))
          
          (define (unwind-and/or stx user-source user-position label)
+           (fprintf (current-error-port) "source: ~a\n" (syntax-object->datum stx))
            (if (eq? stx highlight-placeholder-stx)
                (begin (queue-push highlight-queue-dest (unwind-and/or (queue-pop highlight-queue-src) user-source user-position))
                       highlight-placeholder-stx)
-               (with-syntax ([label (datum->syntax-object label)]
+               (with-syntax ([label (datum->syntax-object #f label)]
                              [clauses
                               (let loop ([stx stx])
                                 (if (and (eq? user-source (syntax-property stx 'user-source))
                                          (eq? user-position (syntax-property stx 'user-position)))
                                     (syntax-case stx (if let-values)
-                                      [(let-values ((part-0) test-stx) (if part-1 part-2 rest))
+                                      [(let-values (((part-0) test-stx)) (if part-1 part-2 part-3))
                                        (cons (inner (syntax test-stx))
-                                             (loop (syntax rest)))]
-                                      [(if part-1 part-2 rest)
+                                             (case label
+                                               ((and)
+                                                (loop (syntax part-2)))
+                                               ((or)
+                                                (loop (syntax part-3)))
+                                               (else
+                                                (error 'unwind-and/or "unknown label ~a" label))))]
+                                      [(if part-1 part-2 part-3)
                                        (cons (inner (syntax part-1))
-                                             (loop (syntax rest)))]
-                                      [else (inner stx)])
+                                             (case label
+                                               ((and)
+                                                (loop (syntax part-2)))
+                                               ((or)
+                                                (loop (syntax part-3)))
+                                               (else
+                                                (error 'unwind-and/or "unknown label ~a" label))))]
+                                      [else
+                                       (and (identifier? (syntax t/f))
+                                            (or (eq? (syntax-e (syntax t/f)) 'true)
+                                                (eq? (syntax-e (syntax t/f)) 'false)))
+                                       null]
+                                      [else (error 'unwind-and/or "syntax: ~a does not match and/or patterns" (syntax-object->datum stx))])
                                     (inner stx)))])
                  (syntax (label . clauses))))))
       
@@ -492,20 +510,18 @@
   
   ; NB: the variable 'lexically-bound-bindings' contains a list of bindings which occur INSIDE the expression
   ; being evaluated, and hence do NOT yet have values.
-  
-  (define (recon-source-expr expr mark-list)
-      (letrec
-        ([inner
-          (checked-lambda ((expr SYNTAX-OBJECT) (mark-list MARK-LIST) (lexically-bound-bindings BINDING-SET))
-           (if (syntax-property expr 'stepper-skipto)
+
+  (define recon-source-expr 
+    (checked-lambda ((expr SYNTAX-OBJECT) (mark-list MARK-LIST) (lexically-bound-bindings BINDING-SET))
+      (if (syntax-property expr 'stepper-skipto)
                (skipto-reconstruct
                 (syntax-property expr 'stepper-skipto)
                 expr
                 (lambda (stx)
-                  (inner stx mark-list lexically-bound-bindings)))
-               (let* ([recur (lambda (expr) (inner expr mark-list lexically-bound-bindings))]
+                  (recon-source-expr stx mark-list lexically-bound-bindings)))
+               (let* ([recur (lambda (expr) (recon-source-expr expr mark-list lexically-bound-bindings))]
                       [let-recur (lambda (expr bindings)
-                                   (inner expr mark-list (append bindings lexically-bound-bindings)))]
+                                   (recon-source-expr expr mark-list (append bindings lexically-bound-bindings)))]
                       
                       [recon-basic
                        (lambda ()
@@ -597,8 +613,7 @@
                                
                                [else
                                 (error 'recon-source "no matching clause for syntax: ~a" expr)])])
-                 (attach-info recon expr))))])
-        (inner expr mark-list null)))
+                 (attach-info recon expr)))))
  
   
                                                                                                                                     
@@ -633,7 +648,7 @@
           (recon-value value)])))
   
   
-  (define-struct let-glump (name-set lifted-name-set exp val-set))
+  (define-struct let-glump (name-set exp val-set))
                                                                                                                 
                                                                                                                 
                                                                                                                 
@@ -687,7 +702,7 @@
          (define (recon-inner mark-list so-far)
            (let* ([recon-source-current-marks 
                    (lambda (expr)
-                     (recon-source-expr expr mark-list))]
+                     (recon-source-expr expr mark-list null))]
                   [top-mark (car mark-list)]
                   [expr (mark-source top-mark)]
 
@@ -702,51 +717,46 @@
                                     [rhs-val-sets (reshape-list rhs-vals binding-sets)]
                                     [rhs-name-sets
                                      (map (lambda (binding-set)
-                                            (map syntax-e binding-set))
-                                          binding-sets)]
-                                    [rhs-lifted-name-sets
-                                     (map (lambda (binding-set)
                                             (map (lambda (binding)
-                                                   (binding-lifted-name mark-list binding))
+                                                   (syntax-property binding
+                                                                    'stepper-lifted-name
+                                                                    (binding-lifted-name mark-list binding)))
                                                  binding-set))
                                           binding-sets)]
-                                    [glumps (map make-let-glump rhs-name-sets rhs-lifted-name-sets 
-                                                 (syntax->list (syntax (rhs ...))) rhs-val-sets)]
+                                    [glumps (map make-let-glump rhs-name-sets (syntax->list (syntax (rhs ...))) rhs-val-sets)]
                                     [num-defns-done (mark-binding-value (lookup-binding mark-list let-counter))]
                                     [(done-glumps not-done-glumps)
                                      (n-split-list num-defns-done glumps)]
                                     [recon-lifted-val
-                                     (lambda (name lifted-name val)
+                                     (lambda (name val)
                                       (let ([rectified-val (let-rhs-recon-value val)])
-                                        (syntax-property (d->so `(,name ,rectified-val)) 
-                                                         'stepper-lifted-name
-                                                         lifted-name)))]
+                                        (d->so `(,name ,rectified-val))))]
                                     [recon-lifted 
                                      (lambda (names expr)
-                                       (d->so `(,names ,expr)))]                                    
+                                       (d->so `(,names ,expr)))]
                                     [before-bindings
                                      (multi-append
                                       (map
                                        (lambda (glump)
                                          (let* ([rhs-val-set (let-glump-val-set glump)]
-                                                [rhs-lifted-name-set (let-glump-lifted-name-set glump)])
-                                           (map recon-lifted-val rhs-lifted-name-set rhs-val-set)))
+                                                [rhs-name-set (let-glump-name-set glump)])
+                                           (map recon-lifted-val rhs-name-set rhs-val-set)))
                                        done-glumps))]
                                     [reconstruct-remaining-def
                                      (lambda (glump)
                                        (let ([rhs-source (let-glump-exp glump)]
-                                             [rhs-lifted-name-set (let-glump-lifted-name-set glump)])
-                                         (recon-lifted rhs-lifted-name-set
+                                             [rhs-name-set (let-glump-name-set glump)])
+                                         (recon-lifted rhs-name-set
                                                        (recon-source-current-marks rhs-source))))]
                                     [after-bindings
                                      (if (pair? not-done-glumps)
                                          (if (eq? so-far nothing-so-far)
                                              (map reconstruct-remaining-def not-done-glumps)
-                                             (cons (recon-lifted (caddr (car not-done-glumps)) so-far)
+                                             (cons (recon-lifted (let-glump-name-set (car not-done-glumps)) so-far)
                                                    (map reconstruct-remaining-def (cdr not-done-glumps))))
                                          null)]
                                     [recon-bindings (append before-bindings after-bindings)]
-                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list))
+                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list))
                                                            (syntax->list (syntax bodies)))])
                          (attach-info (d->so `(,(syntax label) ,recon-bindings ,@rectified-bodies)) expr))))])
               (kernel:kernel-syntax-case expr #f 
@@ -872,7 +882,7 @@
                 (case break-kind
                   ((result-break)
                    (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
-                                         (recon-source-expr (mark-source (car mark-list)) mark-list)
+                                         (recon-source-expr (mark-source (car mark-list)) mark-list null)
                                          (recon-value (car returned-value-list)))]
                           [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
                      (unwind (list recon-expr) (list innermost))))

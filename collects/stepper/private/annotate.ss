@@ -290,7 +290,7 @@
               ; the and/or macro. Therefore, this code is fragile.
               (lambda (new-and/or-test stx tag)
                 (kernel:kernel-syntax-case stx #f
-                  [(let-values [(test-var test-exp)] (if if-test then else))
+                  [(let-values [((test-var) test-exp)] (if if-test then else))
                    (let* ([new-test (recur-with-bindings (syntax if-test) (list (syntax test-var)))]
                           [new-then-else (case tag
                                            ((comes-from-and) (list (recur-in-and/or (syntax then) new-and/or-test (list (syntax test-var)))
@@ -302,9 +302,9 @@
                                                                 stx)
                                                   'stepper-hint
                                                   tag)])
-                     (syntax-property (rebuild-stx `(let-values ([,(syntax-property (recur-regular (syntax part-0))
+                     (syntax-property (rebuild-stx `(let-values ([(,(syntax-property (recur-regular (syntax test-var))
                                                                                     'stepper-binding-type
-                                                                                    'let-bound)
+                                                                                    'let-bound))
                                                                   ,(recur-regular (syntax test-exp))])
                                                       ,new-if)
                                                    stx)
