@@ -41,7 +41,7 @@
      (define-higher-order-primitive on-key-event on-key-event/proc (handle-event))
      (define-higher-order-primitive on-tick-event on-tick-event/proc (_ handle-tick))
      (define-primitive big-bang big-bang/proc)
-     (define-primitive stop-time stop-time/proc)
+     (define-primitive end-of-time stop-time/proc)
           
      (define the-error (lambda x (error "evaluate (start <num> <num>) first")))
      (define-syntax (define-hook stx)
