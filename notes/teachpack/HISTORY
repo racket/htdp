@@ -61,3 +61,34 @@ Version 101:
   All these tasks are beyond students in the third week and/or impose
   nothing memorization of currently useless knowledge on students. 
 
+Version 100:
+
+The plt:userspace^ signature does not contain the
+graphics library. In order to use the graphics library in your
+teachpacks, use a compound unit and link in graphics directly. For example:
+
+  (require-library "graphics.ss" "graphics")
+  
+  (define-signature my-teachpack^ (four))
+  
+  (define my-teachpack
+    (unit/sig my-teachpack^
+      
+      (import plt:userspace^ 
+              graphics^)
+      
+      '...
+      
+      (define four 4)))
+  
+  (compound-unit/sig 
+   (import [P : plt:userspace^])
+   (link [G : graphics^ ((require-library "graphicr.ss" "graphics")
+                         (P : mzlib:file^)
+                         (P : mred^))]
+         [TP : my-teachpack^ (my-teachpack P G)])
+   (export (open TP)))
+
+The graphics^ signature contains all of the primitives in the
+graphic.ss library. Search for "graphics" in Help Desk for more
+information on those primitives.
