@@ -207,17 +207,24 @@
   ;;
   ;; make-debug-info builds the thunk which will be the mark at runtime.  It contains 
   ;; a source expression and a set of binding/value pairs.
-  ;; (syntax-object BINDING-SET VARREF-SET VARREF-SET symbol boolean) -> debug-info)
+  ;; (syntax-object BINDING-SET VARREF-SET symbol boolean) -> debug-info)
   ;;
   ;;;;;;;;;;
      
   (define make-debug-info
-    (checked-lambda (source (tail-bound BINDING-SET) (free-vars VARREF-SET) (let-bound-vars VARREF-SET) label lifting?)
+    (checked-lambda (source (tail-bound BINDING-SET) (free-vars VARREF-SET) label lifting?)
                     (let* ([kept-vars (binding-set-varref-set-intersect tail-bound free-vars)]
                            [var-clauses (map (lambda (x) 
                                                (list x (d->so `(quote-syntax ,x))))
                                              kept-vars)]
-                           [let-bindings (binding-set-varref-set-intersect let-bound-vars kept-vars)]
+                           [let-bindings (filter (lambda (var) 
+                                                   (case (syntax-property var 'stepper-binding-type)
+                                                     ((let-bound) #t)
+                                                     ((lambda-bound) #f)
+                                                     (else (error 'make-debug-info 
+                                                                  "varref's binding-type info was not recognized: ~a"
+                                                                  (syntax-property var 'stepper-binding-type)))))
+                                                 kept-vars)
                            [lifter-syms (map get-lifted-var let-bindings)]
                            [quoted-lifter-syms (map (lambda (b) 
                                                       (d->so `(quote-syntax ,b))) 
@@ -541,14 +548,13 @@
                   [cheap-wrap-recur (lambda (expr) (let-values ([(ann _) (tail-recur expr)]) ann))]
                   [no-enclosing-recur (lambda (expr) (annotate/inner expr 'all #f #f #f let-bound-vars))]
                   [make-debug-info-normal (lambda (free-bindings)
-                                            (make-debug-info expr tail-bound free-bindings let-bound-vars 'none foot-wrap?))]
+                                            (make-debug-info expr tail-bound free-bindings 'none foot-wrap?))]
                   [make-debug-info-app (lambda (tail-bound free-bindings label)
-                                         (make-debug-info expr tail-bound free-bindings let-bound-vars label foot-wrap?))]
+                                         (make-debug-info expr tail-bound free-bindings label foot-wrap?))]
                   [make-debug-info-let-body (lambda (free-bindings binding-list)
                                               (make-debug-info expr 
                                                                (binding-set-union (list tail-bound binding-list))
                                                                (varref-set-union (list free-bindings binding-list)) ; NB using bindings as varrefs
-                                                               (varref-set-union (list let-bound-vars binding-list))
                                                                'let-body
                                                                foot-wrap?))]
                   [wcm-wrap (if pre-break?
@@ -995,8 +1001,8 @@
                
                
                [(#%top . var)
-                (let*-2vals ([annotated (syntax var)]
-                             [free-varrefs (list (syntax var))])
+                (let*-2vals ([annotated (syntax-property (syntax var) 'stepper-binding-type 'top-level)]
+                             [free-varrefs (list annotated)])
                   (2vals 
                    (ccond [(or cheap-wrap? ankle-wrap?)
                            (appropriate-wrap annotated free-varrefs)]
@@ -1005,13 +1011,18 @@
                                            (return-value-wrap annotated))])
                    free-varrefs))]
                
-               [var
-                (identifier? (syntax var))
-                (let*-2vals ([annotated (syntax var)]
-                             [free-varrefs (list (syntax var))])
+               [var-stx
+                (identifier? (syntax var-stx))
+                (let*-2vals ([var (syntax (var-stx))]
+                             [tagged (if (andmap (lambda (binding)
+                                                   (bound-identifier=? binding var))
+                                                 let-bound-vars)
+                                         (syntax-property var 'stepper-binding-type 'let-bound)
+                                         (syntax-property var 'stepper-binding-type 'lambda-bound))]
+                             [free-varrefs (list tagged)])
                   (2vals 
                    (ccond [(or cheap-wrap? ankle-wrap?)
-                           (appropriate-wrap annotated free-varrefs)]
+                           (appropriate-wrap tagged free-varrefs)]
                           ; as far as I can tell, we can skip the result-break on lexical vars (unless we need it for module-vars)...
                           [foot-wrap? 
                            (wcm-break-wrap (make-debug-info-normal free-varrefs) annotated)])

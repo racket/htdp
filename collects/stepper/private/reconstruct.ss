@@ -1,8 +1,10 @@
 (module reconstructor mzscheme
-  (require (prefix utils: "utils.ss")
+  (require (prefix kernel: (lib "kerncase.ss" "syntax"))
+           (prefix utils: "utils.ss")
            "marks.ss"
            (prefix model: "model.ss")
-           "shared.ss")
+           "shared.ss"
+           "my-macros.ss")
 
   (provide
    reconstruct-completed
@@ -10,6 +12,27 @@
    final-mark-list?
    skip-result-step?
    skip-redex-step?)
+  
+  
+  ; copied from annotater.ss:
+  
+  ; a BINDING is a syntax-object
+  ; a VARREF is a syntax-object
+  
+  ; a BINDING-SET is (union 'all (listof BINDING))
+  ; a VARREF-SET is (listof VARREF)
+  
+  (make-contract-checker BINDING-SET
+                         (lambda (arg)
+                           (or (eq? arg 'all)
+                               (andmap identifier? arg))))
+  (make-contract-checker VARREF-SET
+                         (lambda (arg)
+                           (and (list? arg)
+                                (andmap identifier? arg))))
+  
+  (make-contract-checker BOOLEAN boolean?)
+  (make-contract-checker SYNTAX-OBJECT syntax?)
   
 ;(unit/sig stepper:reconstruct^
 ;  (import [z : zodiac^]
@@ -22,23 +45,23 @@
   
   (define nothing-so-far (gensym "nothing-so-far-"))
   
-  (define memoized-read->raw
-    (let ([table (make-hash-table-weak)])
-      (lambda (read)
-        (or (hash-table-get table read (lambda () #f))
-            (let ([raw (z:sexp->raw read)])
-              (hash-table-put! table read raw)
-              raw)))))
-  
-  (define (make-apply-pred-to-raw pred)
-    (lambda (expr)
-      (pred (memoized-read->raw (expr-read expr)))))
-             
-  (define (make-check-raw-first-symbol symbol)
-    (make-apply-pred-to-raw
-     (lambda (raw)
-       (and (pair? raw)
-            (eq? (car raw) symbol)))))
+;  (define memoized-read->raw
+;    (let ([table (make-hash-table-weak)])
+;      (lambda (read)
+;        (or (hash-table-get table read (lambda () #f))
+;            (let ([raw (z:sexp->raw read)])
+;              (hash-table-put! table read raw)
+;              raw)))))
+;  
+;  (define (make-apply-pred-to-raw pred)
+;    (lambda (expr)
+;      (pred (memoized-read->raw (expr-read expr)))))
+;             
+;  (define (make-check-raw-first-symbol symbol)
+;    (make-apply-pred-to-raw
+;     (lambda (raw)
+;       (and (pair? raw)
+;            (eq? (car raw) symbol)))))
 
   (define comes-from-define?
     (make-check-raw-first-symbol 'define))
@@ -217,115 +240,138 @@
       (construct-lifted-name binding (mark-binding-value (lookup-binding mark-list (get-lifted-gensym binding)))))
   
   
-  ; rectify-source-expr (z:parsed (ListOf Mark) (ListOf z:binding) -> sexp)
-  
-  (define (rectify-source-expr expr mark-list lexically-bound-bindings)
-    (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-bindings))]
-          [let-recur (lambda (expr bindings) (rectify-source-expr expr mark-list (append bindings lexically-bound-bindings)))])
-      (cond [(z:varref? expr)
-             (cond [(z:bound-varref? expr)
-                    (let ([binding (z:bound-varref-binding expr)])
-                      (if (memq binding lexically-bound-bindings)
-                          (z:binding-orig-name binding)
-                          (if (z:lambda-binding? binding)
-                              (rectify-value (mark-binding-value (lookup-binding mark-list binding)))
-                              (binding-lifted-name mark-list binding))))]
-                   [(z:top-level-varref? expr)
-                    (z:varref-var expr)])]
-            
-            [(z:app? expr)
-             (map recur (cons (z:app-fun expr) (z:app-args expr)))]
-            
-            [(z:struct-form? expr)
-             (if (comes-from-define-struct? expr)
-                 (internal-error expr "this expression should have been skipped during reconstruction")
-                 (let ([super-expr (z:struct-form-super expr)]
-                       [raw-type (utils:read->raw (z:struct-form-type expr))]
-                       [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
-                   (if super-expr
-                       `(struct (,raw-type ,(recur super-expr))
-                                ,raw-fields)
-                       `(struct ,raw-type ,raw-fields))))]
-            
-            [(z:if-form? expr)
-             (cond
-               [(comes-from-cond? expr)
-                `(cond ,@(rectify-cond-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
-               [(comes-from-and? expr)
-                `(and ,@(rectify-and-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
-               [(comes-from-or? expr)
-                `(or ,@(rectify-or-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
-               [else
-                `(if ,(recur (z:if-form-test expr))
-                     ,(recur (z:if-form-then expr))
-                     ,(recur (z:if-form-else expr)))])]
-            
-            [(z:quote-form? expr)
-             (let ([raw (utils:read->raw (z:quote-form-expr expr))])
-               (rectify-value raw)
-;               (cond [(or (string? raw)
-;                          (number? raw)
-;                          (boolean? raw)
-;                          (s:image? raw))
-;                      raw]
-;                     [else
-;                      `(quote ,raw)])
-               )]
 
-            [(z:let-values-form? expr)
-             (let* ([bindings (z:let-values-form-vars expr)]
-                    [binding-list (apply append bindings)]
-                    [binding-names (map (lambda (b-list) (map z:binding-orig-name b-list)) bindings)]
-                    [right-sides (map recur (z:let-values-form-vals expr))]
-                    [must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-names)]
-                    [rectified-body (let-recur (z:let-values-form-body expr) binding-list)])
-               (if must-be-values?
-                   `(let-values ,(map list binding-names right-sides) ,rectified-body)
-                   `(let ,(map list (map car binding-names) right-sides) ,rectified-body)))]
-            
-            [(z:letrec-values-form? expr)
-             (let* ([bindings (z:letrec-values-form-vars expr)]
-                    [binding-list (apply append bindings)]
-                    [binding-names (map (lambda (b-list) (map z:binding-orig-name b-list)) bindings)]
-                    [right-sides (map (lambda (expr) (let-recur expr binding-list))
-                                      (z:letrec-values-form-vals expr))]
-                    [must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-names)]
-                    [rectified-body (let-recur (z:letrec-values-form-body expr) binding-list)])
-               (cond [(comes-from-local? expr)
-                      (rectify-local (z:sexp->raw (expr-read expr)) binding-names right-sides rectified-body)]
-                     [must-be-values?
-                      `(letrec-values ,(map list binding-names right-sides) ,rectified-body)]
-                     [else
-                      `(letrec ,(map list (map car binding-names) right-sides) ,rectified-body)]))]
-                    
-            [(z:case-lambda-form? expr)
-             (let* ([arglists (z:case-lambda-form-args expr)]
-                    [bodies (z:case-lambda-form-bodies expr)]
-                    [o-form-arglists
-                     (map (lambda (arglist) 
-                            (utils:improper-map z:binding-orig-name
-                                              (utils:arglist->ilist arglist)))
-                          arglists)]
-                    [binding-form-arglists (map z:arglist-vars arglists)]
-                    [o-form-bodies 
-                     (map (lambda (body binding-form-arglist) (let-recur body binding-form-arglist))
-                          bodies
-                          binding-form-arglists)])
-               (cond [(or (comes-from-lambda? expr) (comes-from-define? expr) (comes-from-local? expr))
-                      ; this will _FAIL_ when case-lambda becomes legal
-                      `(lambda ,(car o-form-arglists) ,(car o-form-bodies))]
-                     [(comes-from-case-lambda? expr)
-                      `(case-lambda ,@(map list o-form-arglists o-form-bodies))]
-                     [else
-                      (internal-error expr "unknown source for case-lambda")]))]
-            
-            ; we won't call rectify-source-expr on define-values expressions
-            
-            [else
-             (print-struct #t)
-             (internal-error
-              expr
-              (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))])))
+                                                                                                                  
+                                                                                                                  
+                                                                                                                  
+                       ;   ;;                                                                                     
+                   ;      ;                                                                                       
+ ; ;;  ;;;    ;;; ;;;; ; ;;; ;   ;          ;;;   ;;;   ;   ;  ; ;;  ;;;   ;;;           ;;;  ;    ;  ; ;;;   ; ;;
+ ;;   ;   ;  ;     ;   ;  ;  ;   ;         ;     ;   ;  ;   ;  ;;   ;     ;   ;         ;   ;  ;  ;   ;;   ;  ;;  
+ ;    ;   ;  ;     ;   ;  ;   ; ;          ;     ;   ;  ;   ;  ;    ;     ;   ;         ;   ;   ;;    ;    ;  ;   
+ ;    ;;;;;  ;     ;   ;  ;   ; ;   ;;;;;   ;;   ;   ;  ;   ;  ;    ;     ;;;;;  ;;;;;  ;;;;;   ;;    ;    ;  ;   
+ ;    ;      ;     ;   ;  ;   ; ;             ;  ;   ;  ;   ;  ;    ;     ;             ;       ;;    ;    ;  ;   
+ ;    ;      ;     ;   ;  ;    ;              ;  ;   ;  ;  ;;  ;    ;     ;             ;      ;  ;   ;;   ;  ;   
+ ;     ;;;;   ;;;   ;; ;  ;    ;           ;;;    ;;;    ;; ;  ;     ;;;   ;;;;          ;;;; ;    ;  ; ;;;   ;   
+                               ;                                                                      ;           
+                              ;                                                                       ;           
+                                                                                                                  
+
+  ; rectify-source-expr (SYNTAX-OBJECT (list-of Mark) BINDING-SET -> sexp)
+  
+  (define rectify-source-expr
+    (checked-lambda ((expr SYNTAX-OBJECT) (mark-list MARK-LIST) (lexically-bound-bindings BINDING-SET))
+                    (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-bindings))]
+                          [let-recur (lambda (expr bindings) (rectify-source-expr expr mark-list (append bindings lexically-bound-bindings)))])
+                      (kernel:kernel-syntax-case expr #f
+                                                 
+                         ; varref                        
+                         [id
+                          (identifier? expr)
+                           [(z:varref? expr)
+                             (cond [(z:bound-varref? expr)
+                                    (let ([binding (z:bound-varref-binding expr)])
+                                      (if (memq binding lexically-bound-bindings)
+                                          (z:binding-orig-name binding)
+                                          (if (z:lambda-binding? binding)
+                                              (rectify-value (mark-binding-value (lookup-binding mark-list binding)))
+                                              (binding-lifted-name mark-list binding))))]
+                                   [(z:top-level-varref? expr)
+                                    (z:varref-var expr)])]
+                            
+                            [(z:app? expr)
+                             (map recur (cons (z:app-fun expr) (z:app-args expr)))]
+                            
+                            [(z:struct-form? expr)
+                             (if (comes-from-define-struct? expr)
+                                 (internal-error expr "this expression should have been skipped during reconstruction")
+                                 (let ([super-expr (z:struct-form-super expr)]
+                                       [raw-type (utils:read->raw (z:struct-form-type expr))]
+                                       [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
+                                   (if super-expr
+                                       `(struct (,raw-type ,(recur super-expr))
+                                                ,raw-fields)
+                                       `(struct ,raw-type ,raw-fields))))]
+                            
+                            [(z:if-form? expr)
+                             (cond
+                               [(comes-from-cond? expr)
+                                `(cond ,@(rectify-cond-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
+                               [(comes-from-and? expr)
+                                `(and ,@(rectify-and-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
+                               [(comes-from-or? expr)
+                                `(or ,@(rectify-or-clauses (z:zodiac-start expr) expr mark-list lexically-bound-bindings))]
+                               [else
+                                `(if ,(recur (z:if-form-test expr))
+                                     ,(recur (z:if-form-then expr))
+                                     ,(recur (z:if-form-else expr)))])]
+                            
+                            [(z:quote-form? expr)
+                             (let ([raw (utils:read->raw (z:quote-form-expr expr))])
+                               (rectify-value raw)
+                               ;               (cond [(or (string? raw)
+                               ;                          (number? raw)
+                               ;                          (boolean? raw)
+                               ;                          (s:image? raw))
+                               ;                      raw]
+                               ;                     [else
+                               ;                      `(quote ,raw)])
+                               )]
+                            
+                            [(z:let-values-form? expr)
+                             (let* ([bindings (z:let-values-form-vars expr)]
+                                    [binding-list (apply append bindings)]
+                                    [binding-names (map (lambda (b-list) (map z:binding-orig-name b-list)) bindings)]
+                                    [right-sides (map recur (z:let-values-form-vals expr))]
+                                    [must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-names)]
+                                    [rectified-body (let-recur (z:let-values-form-body expr) binding-list)])
+                               (if must-be-values?
+                                   `(let-values ,(map list binding-names right-sides) ,rectified-body)
+                                   `(let ,(map list (map car binding-names) right-sides) ,rectified-body)))]
+                            
+                            [(z:letrec-values-form? expr)
+                             (let* ([bindings (z:letrec-values-form-vars expr)]
+                                    [binding-list (apply append bindings)]
+                                    [binding-names (map (lambda (b-list) (map z:binding-orig-name b-list)) bindings)]
+                                    [right-sides (map (lambda (expr) (let-recur expr binding-list))
+                                                      (z:letrec-values-form-vals expr))]
+                                    [must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-names)]
+                                    [rectified-body (let-recur (z:letrec-values-form-body expr) binding-list)])
+                               (cond [(comes-from-local? expr)
+                                      (rectify-local (z:sexp->raw (expr-read expr)) binding-names right-sides rectified-body)]
+                                     [must-be-values?
+                                      `(letrec-values ,(map list binding-names right-sides) ,rectified-body)]
+                                     [else
+                                      `(letrec ,(map list (map car binding-names) right-sides) ,rectified-body)]))]
+                            
+                            [(z:case-lambda-form? expr)
+                             (let* ([arglists (z:case-lambda-form-args expr)]
+                                    [bodies (z:case-lambda-form-bodies expr)]
+                                    [o-form-arglists
+                                     (map (lambda (arglist) 
+                                            (utils:improper-map z:binding-orig-name
+                                                                (utils:arglist->ilist arglist)))
+                                          arglists)]
+                                    [binding-form-arglists (map z:arglist-vars arglists)]
+                                    [o-form-bodies 
+                                     (map (lambda (body binding-form-arglist) (let-recur body binding-form-arglist))
+                                          bodies
+                                          binding-form-arglists)])
+                               (cond [(or (comes-from-lambda? expr) (comes-from-define? expr) (comes-from-local? expr))
+                                      ; this will _FAIL_ when case-lambda becomes legal
+                                      `(lambda ,(car o-form-arglists) ,(car o-form-bodies))]
+                                     [(comes-from-case-lambda? expr)
+                                      `(case-lambda ,@(map list o-form-arglists o-form-bodies))]
+                                     [else
+                                      (internal-error expr "unknown source for case-lambda")]))]
+                            
+                            ; we won't call rectify-source-expr on define-values expressions
+                            
+                            [else
+                             (print-struct #t)
+                             (internal-error
+                              expr
+                              (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))]))))
  
   ; these macro unwinders (and, or) are specific to beginner & intermediate level
   
@@ -392,6 +438,23 @@
 ;                                  (define-struct p (x y)))
 ;                            (ident a)))
 
+  
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                                                    
+                                                                                                        ;                         ; 
+                                       ;                     ;                                          ;         ;               ; 
+ ; ;;  ;;;    ;;;   ;;;   ; ;;    ;;; ;;;; ; ;; ;   ;   ;;; ;;;;         ;;;   ;;;   ; ;;; ;;   ; ;;;   ;   ;;;  ;;;;  ;;;    ;;; ; 
+ ;;   ;   ;  ;     ;   ;  ;;  ;  ;     ;   ;;   ;   ;  ;     ;          ;     ;   ;  ;;  ;;  ;  ;;   ;  ;  ;   ;  ;   ;   ;  ;   ;; 
+ ;    ;   ;  ;     ;   ;  ;   ;  ;     ;   ;    ;   ;  ;     ;          ;     ;   ;  ;   ;   ;  ;    ;  ;  ;   ;  ;   ;   ;  ;    ; 
+ ;    ;;;;;  ;     ;   ;  ;   ;   ;;   ;   ;    ;   ;  ;     ;   ;;;;;  ;     ;   ;  ;   ;   ;  ;    ;  ;  ;;;;;  ;   ;;;;;  ;    ; 
+ ;    ;      ;     ;   ;  ;   ;     ;  ;   ;    ;   ;  ;     ;          ;     ;   ;  ;   ;   ;  ;    ;  ;  ;      ;   ;      ;    ; 
+ ;    ;      ;     ;   ;  ;   ;     ;  ;   ;    ;  ;;  ;     ;          ;     ;   ;  ;   ;   ;  ;;   ;  ;  ;      ;   ;      ;   ;; 
+ ;     ;;;;   ;;;   ;;;   ;   ;  ;;;    ;; ;     ;; ;   ;;;   ;;         ;;;   ;;;   ;   ;   ;  ; ;;;   ;   ;;;;   ;;  ;;;;   ;;; ; 
+                                                                                                ;                                   
+                                                                                                ;                                   
+                                                                                                                                    
+
   ; reconstruct-completed : reconstructs a completed expression or definition.  This now
   ; relies upon the s:global-lookup procedure to find values in the user-namespace.
   ; I'm not yet sure whether or not 'vars' must be supplied or whether they can be derived
@@ -448,7 +511,24 @@
           `(define ,name ,rectified-val))))
   
   (define (so-far-only so-far) (values null null so-far))
-    
+ 
+
+                                                                                                                
+                                                                                                                
+                                                                                                                
+                                                                                                                
+                                       ;                     ;                                               ;  
+ ; ;;  ;;;    ;;;   ;;;   ; ;;    ;;; ;;;; ; ;; ;   ;   ;;; ;;;;         ;;;  ;   ;  ; ;; ; ;;  ;;;   ; ;;  ;;;;
+ ;;   ;   ;  ;     ;   ;  ;;  ;  ;     ;   ;;   ;   ;  ;     ;          ;     ;   ;  ;;   ;;   ;   ;  ;;  ;  ;  
+ ;    ;   ;  ;     ;   ;  ;   ;  ;     ;   ;    ;   ;  ;     ;          ;     ;   ;  ;    ;    ;   ;  ;   ;  ;  
+ ;    ;;;;;  ;     ;   ;  ;   ;   ;;   ;   ;    ;   ;  ;     ;   ;;;;;  ;     ;   ;  ;    ;    ;;;;;  ;   ;  ;  
+ ;    ;      ;     ;   ;  ;   ;     ;  ;   ;    ;   ;  ;     ;          ;     ;   ;  ;    ;    ;      ;   ;  ;  
+ ;    ;      ;     ;   ;  ;   ;     ;  ;   ;    ;  ;;  ;     ;          ;     ;  ;;  ;    ;    ;      ;   ;  ;  
+ ;     ;;;;   ;;;   ;;;   ;   ;  ;;;    ;; ;     ;; ;   ;;;   ;;         ;;;   ;; ;  ;    ;     ;;;;  ;   ;   ;;
+                                                                                                                
+                                                                                                                
+                                                                                                                
+  
   ; reconstruct-current : takes a parsed expression, a list of marks, the kind of break, and
   ; any values that may have been returned at the break point. It produces a list containing the
   ; reconstructed sexp, and the (contained) sexp which is the redex.  If the redex is a heap value
@@ -499,7 +579,20 @@
                            ,(map utils:read->raw vars)
                            ,(rectify-source-top-marks val))]))
                so-far))
-         
+                                                              
+                               ;   ;;              ;                           
+                           ;      ;                                            
+         ; ;;  ;;;    ;;; ;;;; ; ;;; ;   ;         ;  ; ;;   ; ;;    ;;;   ; ;;
+         ;;   ;   ;  ;     ;   ;  ;  ;   ;         ;  ;;  ;  ;;  ;  ;   ;  ;;  
+         ;    ;   ;  ;     ;   ;  ;   ; ;          ;  ;   ;  ;   ;  ;   ;  ;   
+         ;    ;;;;;  ;     ;   ;  ;   ; ;   ;;;;;  ;  ;   ;  ;   ;  ;;;;;  ;   
+         ;    ;      ;     ;   ;  ;   ; ;          ;  ;   ;  ;   ;  ;      ;   
+         ;    ;      ;     ;   ;  ;    ;           ;  ;   ;  ;   ;  ;      ;   
+         ;     ;;;;   ;;;   ;; ;  ;    ;           ;  ;   ;  ;   ;   ;;;;  ;   
+                                       ;                                       
+                                      ;                                        
+                                                                       
+
          ; rectify-inner ((listof mark) sexp -> (listof sexp) (listof sexp) sexp)
          
          (define (rectify-inner mark-list so-far)
