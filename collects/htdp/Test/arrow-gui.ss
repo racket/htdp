@@ -5,8 +5,8 @@
 (define (make-model dir)
   (lambda (b e)
     (begin
-      (printf "~a ~n" (control))
-      (view dir))))
+      (view dir)
+      (printf "~a ~n" (control)))))
 
 (connect 
  (make-model "left")
