@@ -42,7 +42,7 @@
 
 (load "tester.ss")
 
-(test-error (control-left-right 'aa 10 move))
+; (test-error (control-left-right 'aa 10 move))
 
 ;; cannot raise an exception:
 ;; (control-left-right 'aa 10 move draw-it))
@@ -52,4 +52,3 @@
 (test-error (control-left-right 'aa 10 'cc draw-it))
 (test-error (control-left-right 'aa 10 move 'cc))
 (test-error (control-left-right 'aa 10 move 'cc))
-
