@@ -34,6 +34,7 @@
    contract-check-varref-set?
    contract-check-boolean?
    contract-check-procedure-list?
+   syntax-pair-map
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -327,6 +328,17 @@
   (define let-counter (syntax-property (d->so 'let-counter) 'stepper-binding-type 'stepper-temp))
   
  
+  ; syntax-pair-map (using the def'ns of the MzScheme docs):
+  
+  (define (syntax-pair-map pair fn)
+    (cons (fn (car pair))
+          (cond [(syntax? (cdr pair))
+                 (fn (cdr pair))]
+                [(pair? (cdr pair))
+                 (syntax-pair-map (cdr pair) fn)]
+                [(null? (cdr pair))
+                 null])))
+  
   ; functional update package
   
   (define second (lambda (x y) y))

@@ -254,7 +254,6 @@
   ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
   (define (attach-info stx expr)
     (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
-           [it (syntax-property stx 'user-stepper-hint (syntax-property expr 'stepper-hint))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))                                                                                                  
@@ -296,28 +295,36 @@
 ;            origins))
 ;    
 ;    
-;  (define (unwind stx)
-;    (let* ([origins (syntax-property stx 'user-origin)]
-;           ;[stepper-hints (syntax-property expr 'user-stepper-hint)]
-;           ;[_ (unless (= (length origins) (length stepper-hints))
-;           ;     (error 'unwind "length of origin-list (~a) <> length of stepper-hints (~a)" (length origins) (length stepper-hints)))]
-;           [unwound (foldl unwind-once stx origins)])
-;      ; now recur on pieces somehow
-;      (syntax-object->datum unwound)))
-;  
-;  (define (unwind-once origin stepper-hint stx)
-;    (case origin
-;      ((define) 
-;       (case (syntax-property stx 'stepper-hint)
-;         ((define-lambda)
-;          (syntax-case stx ()
-;            [(_ (name args ...) body ...)
-;             (syntax (define name (lambda (args ...) body ...)))]))
-;         ((define-constant)
-;
-;          (else (error 'unwind-once "unknown element in origin field: ~a\n" origin))))
-      
-;;;;  
+  
+  (define (unwind stx)
+    (let* ([recur-on-pieces
+            (lambda ()
+              (if (pair? (syntax-e stx))
+                  (datum->syntax-object stx (syntax-pair-map (syntax-e stx) unwind) stx stx)
+                  stx))]
+           [origins (syntax-property stx 'user-origin)])
+      (if (null? origins)
+          (recur-on-pieces)
+          (case (car origins)
+            ((cond) (unwind-cond stx 
+                                 (syntax-property stx 'user-source)
+                                 (syntax-property stx 'user-position)))
+            (else (recur-on-pieces))))))
+  
+  (define (unwind-cond stx user-source user-posn)
+    (let loop ([stx stx])
+      (if (and (eq? user-source (syntax-property stx 'user-source))
+              (eq? user-position (syntax-property stx 'user-position)))
+          (syntax-case stx (if begin)
+            [(if test (begin result) else)
+             (cons (unwind (syntax (test result)))
+                   (loop (syntax else)))]
+            [else
+             (error 'unwind-cond "unexpected structure for result of cond expansion: ~a"
+                    (syntax-object->datum stx))])
+          
+             
+;;;  
 ; (define comes-from-define?
 ;    (make-check-raw-first-symbol 'define))
 ;
@@ -469,7 +476,7 @@
                       [recon-basic
                        (lambda ()
                          (with-syntax ([(label . bodies) expr])
-                           (d->so `((syntax label) ,@(map recur (syntax->list (syntax bodies)))))))]
+                           (d->so `(,(syntax label) ,@(map recur (syntax->list (syntax bodies)))))))]
                       [recon-let/rec
                        (lambda ()
                          (with-syntax ([(label  ((vars val) ...) body) expr])

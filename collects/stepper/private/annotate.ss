@@ -260,9 +260,7 @@
                        [new-bodies (recur-with-bindings vars-list (syntax->list (syntax bodies)))]
                        [new-bindings (map list labelled-vars-list rhs-list)])
                   (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))])
-      (if (pair? stx)
-          (cons (recur-regular (car stx)) (recur-regular (cdr stx)))
-          (kernel:kernel-syntax-case stx #f
+      (kernel:kernel-syntax-case stx #f
                                      [(let-values x ...) (do-let/rec stx #f)]
                                      [(letrec-values x ...) (do-let/rec stx #t)]
                                      [var
@@ -277,12 +275,11 @@
                                      [stx
                                       (let ([content (syntax-e (syntax stx))])
                                         (if (pair? content)
-                                            (datum->syntax-object (syntax stx) 
-                                                                  (cons (recur-regular (car content)) 
-                                                                        (recur-regular (cdr content)))
+                                            (datum->syntax-object (syntax stx)
+                                                                  (syntax-pair-map content recur-regular)
                                                                   (syntax stx)
                                                                   (syntax stx))
-                                            content))])))))
+                                            content))]))))
   
 ;  (syntax-case (label-var-types (expand #'(+ a 3))) (#%app #%top + #%datum) 
 ;    [(#%app (#%top . +) (#%top . a-var) (#%datum . 3))
