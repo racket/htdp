@@ -440,6 +440,8 @@
     ((beginner-error error) (symbol string -> void) "to signal an error")
     (struct? (any -> boolean) "to determine whether some value is a structure")
     (eq? (any any -> boolean) "to compare two values based on when they were created")
+    (eof (eof) "the end-of-file value")
+    (eof-object? (any ->boolean) "to determine whether some value is the end-of-file value")
     (exit ( -> void) "to exit the running program"))))
 
 

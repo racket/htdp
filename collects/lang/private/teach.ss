@@ -39,6 +39,7 @@
 	   intermediate-letrec
 	   intermediate-let
 	   intermediate-let*
+	   intermediate-recur
 	   intermediate-lambda
 	   intermediate-app
 	   intermediate-quasiquote
@@ -600,7 +601,7 @@
        (syntax/loc stx
 	 (intermediate-local [(define-values (name) rhs-expr) ...] expr))]
       [_else (with-syntax ([stx stx])
-	       (syntax (bad-let-form letrec stx)))]))
+	       (syntax (bad-let-form letrec stx stx)))]))
 
   (define-syntax (intermediate-let stx)
     (syntax-case stx ()
@@ -617,7 +618,7 @@
 	     (intermediate-local [(define-values (name ...) (values tmp ...))] 
                 expr))))]
       [_else (with-syntax ([stx stx])
-	       (syntax (bad-let-form let stx)))]))
+	       (syntax (bad-let-form let stx stx)))]))
 
   (define-syntax (intermediate-let* stx)
     (syntax-case stx ()
@@ -632,13 +633,14 @@
 				 ...)
 				expr)))]
       [_else (with-syntax ([stx stx])
-	       (syntax (bad-let-form let* stx)))]))
+	       (syntax (bad-let-form let* stx stx)))]))
 
   (define-syntax (bad-let-form stx)
     (syntax-case stx ()
-      [(_ who stx)
+      [(_ who stx orig-stx)
        (let ([who (syntax-e (syntax who))]
-	     [stx (syntax stx)])
+	     [stx (syntax stx)]
+	     [orig-stx (syntax orig-stx)])
 	 (syntax-case stx ()
 	   [(_ (binding ...) . exprs)
 	    (let ([bindings (syntax->list (syntax (binding ...)))])
@@ -690,7 +692,7 @@
 	      (let ([exprs (syntax->list (syntax exprs))])
 		(check-single-expression who 
 					 "after the name-defining sequence"
-					 stx
+					 orig-stx
 					 exprs)))]
 	   [(_ binding-non-seq . __)
 	    (teach-syntax-error
@@ -702,11 +704,60 @@
 	   [(_)
 	    (teach-syntax-error
 	     who
-	     stx
+	     orig-stx
 	     "expected a sequence of local name definitions after `~a', but nothing's there"
 	     who)]
 	   [_else
 	    (bad-use-error who stx)]))]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; recur (intermediate and advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntaxes (intermediate-recur advanced-recur)
+    (let ([mk
+	   (lambda (empty-ok?)
+	     (lambda (stx)
+	       (syntax-case stx ()
+		 [(_ fname ([name rhs-expr] ...) expr)
+		  (and (identifier? (syntax fname))
+		       (let ([names (syntax->list (syntax (name ...)))])
+			 (and (andmap identifier? names)
+			      (or empty-ok? (pair? names))
+			      (not (check-duplicate-identifier names)))))
+		  (syntax/loc stx
+		      ((intermediate-letrec ([fname
+					      (lambda (name ...)
+						expr)])
+					    fname)
+		       rhs-expr ...))]
+		 [(_form fname empty-seq . rest)
+		  (and (not empty-ok?)
+		       (identifier? (syntax fname))
+		       (null? (syntax-e (syntax empty-seq))))
+		  (teach-syntax-error
+		   'recur
+		   (syntax empty-seq)
+		   "expected a non-empty sequence of bindings after the function name, ~
+                    but found an empty sequence")]
+		 [(_form fname . rest)
+		  (identifier? (syntax fname))
+		  (with-syntax ([stx stx])
+		    (syntax (bad-let-form recur (_form . rest) stx)))]
+		 [(_form fname . rest)
+		  (teach-syntax-error
+		   'recur
+		   stx
+		   "expected a function name after `recur', but found ~a"
+		   (something-else (syntax fname)))]
+		 [(_form)
+		  (teach-syntax-error
+		   'recur
+		   stx
+		   "expected a function name after `recur', but nothing's there")]
+		 [_else
+		  (bad-use-error 'recur stx)])))])
+      (values (mk #f) (mk #t))))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; lambda (intermediate)
@@ -951,17 +1002,6 @@
        (syntax/loc stx (intermediate-let . rest))]
       [_else
        (bad-use-error 'let stx)]))
-
-  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; recur (advanced)               >> let errors!! <<
-  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-  (define-syntax (advanced-recur stx)
-    (syntax-case stx ()
-      [(_ . rest)
-       (syntax/loc stx (advanced-let . rest))]
-      [_else
-       (bad-use-error 'recur stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; begin (advanced)
