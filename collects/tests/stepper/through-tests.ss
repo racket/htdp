@@ -5,13 +5,17 @@
            (lib "private/highlight-placeholder.ss" "stepper")
            (lib "match.ss")
            (lib "sexp-diff.scm" "tests" "utils")
-           "tests-common.ss")
+           "module-elaborator.ss")
   
-  (reset-namespaces)
-
   (define test-directory (build-path (collection-path "mzlib")  'up 'up))
   
-  (define (test-sequence namespace render-settings exp-str expected-steps)
+  (define (stream-ify expr-list iter)
+    (lambda ()
+      (if (null? expr-list)
+          (iter eof void)
+          (iter (car expr-list) (stream-ify (cdr expr-list) iter)))))
+  
+  (define (test-sequence namespace-spec render-settings exp-str expected-steps)
      (let ([filename (build-path test-directory "stepper-test")])
        (call-with-output-file filename
          (lambda (port)
@@ -20,8 +24,7 @@
        (printf "testing string: ~v\n" exp-str)
        (let* ([current-error-display-handler (error-display-handler)]) 
          (let/ec escape
-           (parameterize ([current-namespace namespace]
-                          [error-escape-handler (lambda () (escape (void)))])
+           (parameterize ([error-escape-handler (lambda () (escape (void)))])
              (let* ([all-steps
                      (append expected-steps 
                              '((finished-stepping)))]
@@ -33,37 +36,34 @@
                              (unless (compare-steps result (car all-steps))
                                (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car all-steps)))
                              (set! all-steps (cdr all-steps)))))]
-                    [expand-in-namespace
-                     (lambda (sexp)
-                       (expand sexp))]
                     [program-expander
                      (lambda (init iter)
                        (call-with-input-file filename
                          (lambda (input-port)
-                           (letrec ([read-and-deliver
-                                     (lambda ()
-                                       (let ([new-exp (read-syntax filename input-port)])
-                                         (if (eof-object? new-exp)
-                                             (iter new-exp void)
-                                             (iter (expand-in-namespace new-exp) read-and-deliver))))])
-                           (init)
-                           (read-and-deliver)))))])
+                           (let* ([exps (let read-loop ()
+                                          (let ([expr (read-syntax filename input-port)])
+                                            (if (eof-object? expr)
+                                                null
+                                                (cons expr (read-loop)))))]
+                                  [exprs (wrap-in-module exps namespace-spec)])
+                             (init)
+                             ((stream-ify exprs iter))))))])
                (go program-expander receive-result render-settings)
                (error-display-handler current-error-display-handler)))))))
   
-  (define (lang-level-test-sequence ns rs)
+  (define (lang-level-test-sequence namespace-spec rs)
     (lambda args
-      (apply test-sequence ns rs args)))
+      (apply test-sequence namespace-spec rs args)))
   
   (define (make-multi-level-test-sequence level-fns)
     (lambda args
       (for-each (lambda (fn) (apply fn args)) level-fns)))
   
-  (define test-mz-sequence (lang-level-test-sequence mz-namespace fake-mz-render-settings))
-  (define test-beginner-sequence (lang-level-test-sequence beginner-namespace fake-beginner-render-settings))
-  (define test-beginner-wla-sequence (lang-level-test-sequence beginner-wla-namespace fake-beginner-wla-render-settings))
-  (define test-intermediate-sequence (lang-level-test-sequence intermediate-namespace fake-intermediate-render-settings))
-  (define test-intermediate/lambda-sequence (lang-level-test-sequence intermediate/lambda-namespace fake-intermediate/lambda-render-settings))
+  (define test-mz-sequence (lang-level-test-sequence 'mzscheme fake-mz-render-settings))
+  (define test-beginner-sequence (lang-level-test-sequence `(lib "htdp-beginner.ss" "lang") fake-beginner-render-settings))
+  (define test-beginner-wla-sequence (lang-level-test-sequence `(lib "htdp-beginner-abbr.ss" "lang") fake-beginner-wla-render-settings))
+  (define test-intermediate-sequence (lang-level-test-sequence `(lib "htdp-intermediate.ss" "lang") fake-intermediate-render-settings))
+  (define test-intermediate/lambda-sequence (lang-level-test-sequence `(lib "htdp-intermediate-lambda.ss" "lang") fake-intermediate/lambda-render-settings))
   
   (define test-upto-int/lam (make-multi-level-test-sequence (list test-beginner-sequence
                                                                   test-beginner-wla-sequence
@@ -111,7 +111,7 @@
             (andmap (lambda (fn expected) (noisy-equal? (fn actual) expected))
                     (list before-error-result-exp before-error-result-redex before-error-result-err-msg)
                     (list before-contexts before-in-hole err-msg)))]
-      [(finished-stepping) (finished-stepping? actual)]
+      [`(finished-stepping) (finished-stepping? actual)]
       [else 
        (begin (printf "compare-steps: unexpected expected step type: ~v\n" expected)
               #f)]))
