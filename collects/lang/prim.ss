@@ -14,8 +14,8 @@
     (syntax-case stx ()
       [(_ name implementation)
        (with-syntax ([impl #'(let ([name (lambda argv
-					   (apply implementation argv))])
-			       name)])
+                                           (apply implementation argv))])
+                               name)])
 	 #'(define-syntax (name stx)
 	     (syntax-case stx ()
 	       [(__ . ___)
@@ -29,7 +29,10 @@
 		(module-identifier=? #'#%top (datum->syntax-object stx '#%top))
 		(syntax/loc stx impl)]
 	       [(id . args)
-                (with-syntax ([tagged-impl (syntax-property (quote-syntax impl) 'stepper-skip-completely #t)])
+                (with-syntax ([tagged-impl (syntax-property
+                                            (syntax-property (quote-syntax impl) 'stepper-skip-completely #t)
+                                            'stepper-prim-name
+                                            (quote-syntax name))])
                   (syntax/loc stx (#%app tagged-impl . args)))]
 	       [_else
 		(raise-syntax-error
