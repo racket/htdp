@@ -12,6 +12,35 @@
 	   "graphics-sig.ss")
   (provide graphics-posn-less@)
 
+  (define-syntax define-do-pixel
+    (syntax-rules ()
+      [(_ name do-it v-name make-do-pixel)
+       (define (name viewport)
+	 (let ([f ((make-do-pixel do-it) viewport)])
+	   ;; Give a nicer name to f:
+	   (let ([v-name
+		  (case-lambda
+		   [(posn) (f posn)]
+		   [(posn color) (f posn color)])])
+	     v-name)))]))
+
+  (define-syntax define-string
+    (syntax-rules ()
+      [(_ name what v-name string-functions)
+       (define name
+	 (let ([finish (lambda (f)
+			 ;; Give a nicer name to f:
+			 (let ([v-name
+				(case-lambda
+				 [(posn text) (f posn text)]
+				 [(posn text color) (f posn text color)])])
+			   v-name))])
+	   (case-lambda
+	    [(viewport font)
+	     (finish ((string-functions 'what) viewport font))]
+	    [(viewport) 
+	     (finish ((string-functions 'what) viewport))])))]))
+
 (define graphics-posn-less@
 
 (unit/sig graphics:posn-less^
@@ -35,7 +64,7 @@
   (define global-color-vector (make-vector 300 #f))
   (define global-pen-vector (make-vector 300 #f))
   (define global-brush-vector (make-vector 300 #f))
-  (define default-font (make-object mred:font% 12 'roman 'normal 'normal))
+  (define default-font (make-object mred:font% 12 'roman 'normal 'normal #f 'unsmoothed))
   (define black-color (make-object mred:color% "BLACK"))
 
   (define sixlib-canvas%
@@ -990,18 +1019,10 @@
 				   (lambda () (flip draw)) 
 				   (lambda () (clear draw))))))])])
 	      the-function))))))
-  
-  (define draw-pixel (make-do-pixel draw-it))
-  (define (clear-pixel viewport)
-    (let ([f ((make-do-pixel clear-it) viewport)])
-      (rec clear-pixel-viewport
-	   (lambda (posns offset)
-	     (f posns offset)))))
-  (define (flip-pixel viewport)
-    (let ([f ((make-do-pixel flip-it) viewport)])
-      (rec flip-pixel-viewport
-	   (lambda (posns offset)
-	     (f posns offset)))))
+
+  (define-do-pixel draw-pixel draw-it draw-pixel-viewport make-do-pixel)
+  (define-do-pixel clear-pixel clear-it clear-pixel-viewport make-do-pixel)
+  (define-do-pixel flip-pixel flip-it flip-pixel-viewport make-do-pixel)
   
   (define string-functions
     (lambda (string-op)
@@ -1041,18 +1062,10 @@
 				   (set-text-foreground viewport black)]))])])
 		    the-function)])])
 	outer-function)))
-  
-  (define draw-string (string-functions 'draw))
-  (define (clear-string viewport)
-    (let ([f ((string-functions 'clear) viewport)])
-      (rec clear-string-viewport
-	   (lambda (posns offset)
-	     (f posns offset)))))
-  (define (flip-string viewport)
-    (let ([f ((string-functions 'flip) viewport)])
-      (rec flip-string-viewport
-	   (lambda (posns offset)
-	     (f posns offset)))))
+
+  (define-string draw-string draw draw-string-viewport string-functions)
+  (define-string clear-string clear clear-string-viewport string-functions)
+  (define-string flip-string flip flip-string-viewport string-functions)
   
   (define get-string-size
     (case-lambda
