@@ -27,9 +27,6 @@
 (load-relative "bega-adv.ss")
 (load-relative "intm-adv.ss")
 
-(err/rt-test (1 2 3))
-(err/rt-test (+) exn:application:arity?)
-
 (define (f6 a) (a))
 (test (void) f6 void)
 

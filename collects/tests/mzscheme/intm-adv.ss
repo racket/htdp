@@ -1,12 +1,4 @@
 
-(syntax-test #'(lambda (z z) 10))
-
-(define f7 (lambda (y) (lambda (z) z)))
-(test #t procedure? f7)
-(test 778 (lambda (x) 778) 'ignored)
-
-(test values (lambda (f) (f f)) values)
-
 (syntax-test #'local)
 (syntax-test #'(local))
 (syntax-test #'(local ()))

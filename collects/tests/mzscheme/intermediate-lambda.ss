@@ -9,22 +9,21 @@
 
 ;; Check export names:
 (require (lib "docprovide.ss" "syntax"))
-(let ([docs (lookup-documentation '(lib "intermediate.ss" "lang") 'procedures)])
+(let ([docs (lookup-documentation '(lib "intermediate-lambda.ss" "lang") 'procedures)])
   (for-each
    (lambda (row)
      (for-each
       (lambda (doc)
-	(let ([v (dynamic-require '(lib "intermediate.ss" "lang") (car doc))])
+	(let ([v (dynamic-require '(lib "intermediate-lambda.ss" "lang") (car doc))])
 	  (when (procedure? v)
 	    (test (car doc) object-name v))))
       (cdr row)))
    docs))
 
-(require (lib "intermediate.ss" "lang"))
+(require (lib "intermediate-lambda.ss" "lang"))
 
 (load-relative "beg-adv.ss")
 (load-relative "beg-intml.ss")
-(load-relative "beg-intm.ss")
 (load-relative "bega-adv.ss")
 (load-relative "intm-intml.ss")
 (load-relative "intm-adv.ss")

@@ -112,7 +112,7 @@
 			      intermediate-let*
 			      intermediate-recur
 			      intermediate-lambda
-			      intermediate-app
+			      intermediate-app ;; not currently used!
 			      intermediate-quasiquote
 			      intermediate-unquote
 			      intermediate-unquote-splicing
@@ -234,18 +234,18 @@
 	 (if (null? (cddr exprs))
 	     ""
 	     (format " (plus ~a more)" (length (cddr exprs)))))))
+
+    (define (check-single-result-expr exprs where enclosing-expr)
+      (check-single-expression where
+			       "for the function body"
+			       enclosing-expr
+			       exprs))
     
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; define (beginner)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     (define (beginner-define/proc stx)
-
-      (define (check-single-result-expr exprs where enclosing-expr)
-	(check-single-expression where
-				 "for the function body"
-				 enclosing-expr
-				 exprs))
 
       (unless (or (ok-definition-context)
 		  (identifier? stx))
@@ -259,64 +259,23 @@
 	;; Constant or lambda def:
 	[(_ name expr)
 	 (identifier? (syntax name))
-	 (syntax-case (syntax expr) (beginner-lambda)
-	   ;; Possibly well-formed lambda def:
-	   [(beginner-lambda arg-seq lexpr ...)
-	    (syntax-case (syntax arg-seq) () [(arg ...) #t][_else #f])
-	    (let ([args (syntax->list (syntax arg-seq))])
-	      (for-each (lambda (arg)
-			  (unless (identifier? arg)
-			    (teach-syntax-error
-			     'lambda
-			     stx
-			     arg
-			     "expected a name for a function argument, but found ~a"
-			     (something-else arg))))
-			args)
-	      (when (null? args)
-		(teach-syntax-error
-		 'lambda
-		 stx
-		 (syntax arg-seq)
-		 "expected at least one argument name in the sequence after `lambda', but found none"))
-	      (let ([dup (check-duplicate-identifier args)])
-		(when dup
-		  (teach-syntax-error
-		   'lambda
-		   stx
-		   dup
-		   "found an argument name that was used more than once: ~a"
-		   (syntax-e dup))))
-	      (check-single-result-expr (syntax->list (syntax (lexpr ...)))
-					'lambda
-					(syntax expr))
+	 (let ([lam (syntax expr)])
+	   (check-defined-lambda lam)
+	   (syntax-case (syntax expr) (beginner-lambda)
+	     ;; Well-formed lambda def:
+	     [(beginner-lambda arg-seq lexpr ...)
 	      (check-definition-new
 	       'define
 	       stx
 	       (syntax name)
-	       (syntax/loc stx (define (name . arg-seq) lexpr ...))))]
-	   ;; Bad lambda because bad args:
-	   [(beginner-lambda args . _)
-	    (teach-syntax-error
-	     'lambda
-	     stx
-	     (syntax args)
-	     "expected a sequence of function arguments after `lambda', but found ~a"
-	     (something-else (syntax args)))]
-	   ;; Bad lambda, no args:
-	   [(beginner-lambda)
-	    (teach-syntax-error
-	     'lambda
-	     stx
-	     (syntax args)
-	     "expected a sequence of function arguments after `lambda', but nothing's there")]
-	   ;; Constant def
-	   [_else
-	    (check-definition-new
-	     'define
-	     stx
-	     (syntax name)
-	     (syntax/loc stx (define name expr)))])]
+	       (syntax/loc stx (define (name . arg-seq) lexpr ...)))]
+	     ;; Constant def
+	     [_else
+	      (check-definition-new
+	       'define
+	       stx
+	       (syntax name)
+	       (syntax/loc stx (define name expr)))]))]
 	;; Function definition:
 	[(_ name-seq expr ...)
 	 (syntax-case (syntax name-seq) () [(name ...) #t][_else #f])
@@ -356,7 +315,7 @@
 		"found an argument name that was used more than once: ~a"
 		(syntax-e dup))))
 	   (check-single-result-expr (syntax->list (syntax (expr ...)))
-				     'define
+				     #f
 				     stx)
 	   (check-definition-new 
 	    'define
@@ -406,6 +365,56 @@
 	  "found a `lambda' expression that is not a function definition")]
 	[_else
 	 (bad-use-error 'lambda stx)]))
+
+
+    (define (check-defined-lambda lam)
+      (syntax-case lam (beginner-lambda)
+	[(beginner-lambda arg-seq lexpr ...)
+	 (syntax-case (syntax arg-seq) () [(arg ...) #t][_else #f])
+	 (let ([args (syntax->list (syntax arg-seq))])
+	   (for-each (lambda (arg)
+		       (unless (identifier? arg)
+			 (teach-syntax-error
+			  #f
+			  lam
+			  arg
+			  "expected a name for a function argument, but found ~a"
+			  (something-else arg))))
+		     args)
+	   (when (null? args)
+	     (teach-syntax-error
+	      #f
+	      lam
+	      (syntax arg-seq)
+	      "expected at least one argument name in the sequence after `lambda', but found none"))
+	   (let ([dup (check-duplicate-identifier args)])
+	     (when dup
+	       (teach-syntax-error
+		#f
+		lam
+		dup
+		"found an argument name that was used more than once: ~a"
+		(syntax-e dup))))
+	   (check-single-result-expr (syntax->list (syntax (lexpr ...)))
+				     #f
+				     lam)
+	   'ok)]
+	;; Bad lambda because bad args:
+	[(beginner-lambda args . _)
+	 (teach-syntax-error
+	  #f
+	  lam
+	  (syntax args)
+	  "expected a sequence of function arguments after `lambda', but found ~a"
+	  (something-else (syntax args)))]
+	;; Bad lambda, no args:
+	[(beginner-lambda)
+	 (teach-syntax-error
+	  #f
+	  lam
+	  (syntax args)
+	  "expected a sequence of function arguments after `lambda', but nothing's there")]
+	[_else 'ok]))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; define-struct (beginner)
@@ -868,8 +877,10 @@
 	 (let ([names (syntax->list (syntax (name ...)))])
 	   (and (andmap identifier? names)
 		(not (check-duplicate-identifier names))))
-	 (syntax/loc stx
-	   (intermediate-local [(define-values (name) rhs-expr) ...] expr))]
+	 (with-syntax ([(rhs-expr ...) (map allow-local-lambda 
+					    (syntax->list (syntax (rhs-expr ...))))])
+	   (syntax/loc stx
+	     (intermediate-local [(define-values (name) rhs-expr) ...] expr)))]
 	[_else (bad-let-form 'letrec stx stx)]))
 
     (define (intermediate-let/proc stx)
@@ -879,13 +890,15 @@
 	   (and (andmap identifier? names)
 		(not (check-duplicate-identifier names))))
 	 (with-syntax ([(tmp ...)
-			(generate-temporaries (syntax (name ...)))])
+			(generate-temporaries (syntax (name ...)))]
+		       [(rhs-expr ...) (map allow-local-lambda 
+					    (syntax->list (syntax (rhs-expr ...))))])
 	   (syntax/loc stx
 	     (let ([tmp rhs-expr]
 		   ...)
 	       ;; Use `local' to tell `#%app' about the bindings:
-	       (intermediate-local [(define-values (name ...) (values tmp ...))] 
-				   expr))))]
+	       (intermediate-local [(define-values (name ...) (values tmp ...))]
+		    expr))))]
 	[_else (bad-let-form 'let stx stx)]))
 
     (define (intermediate-let*/proc stx)
@@ -895,12 +908,23 @@
 	[(_ ([name0 rhs-expr0] [name rhs-expr] ...) expr)
 	 (let ([names (syntax->list (syntax (name0 name ...)))])
 	   (andmap identifier? names))
-	 (syntax/loc stx
-	   (intermediate-let ([name0 rhs-expr0])
-			     (intermediate-let* ([name rhs-expr]
-						 ...)
-						expr)))]
+	 (with-syntax ([rhs-expr0 (allow-local-lambda (syntax rhs-expr0))])
+	   (syntax/loc stx
+	     (intermediate-let ([name0 rhs-expr0])
+	       (intermediate-let* ([name rhs-expr]
+				   ...)
+		   expr))))]
 	[_else (bad-let-form 'let* stx stx)]))
+
+    ;; Helper function: allows `beginner-lambda' instead
+    ;; of rejecting it:
+    (define (allow-local-lambda stx)
+      (syntax-case stx (beginner-lambda)
+	[(beginner-lambda . rest)
+	 (begin
+	   (check-defined-lambda stx)
+	   (syntax/loc stx (lambda . rest)))]
+	[_else stx]))
 
     ;; Helper function:
     (define (bad-let-form who stx orig-stx)

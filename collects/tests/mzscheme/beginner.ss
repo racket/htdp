@@ -31,6 +31,7 @@
 (require (lib "beginner.ss" "lang"))
 
 (load-relative "beg-adv.ss")
+(load-relative "beg-intml.ss")
 (load-relative "beg-intm.ss")
 (load-relative "beg-bega.ss")
 
