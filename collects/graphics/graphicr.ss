@@ -535,28 +535,32 @@
 	       [real-set-pen-1 (ivar/proc (viewport-dc viewport) 'set-pen)]
 	       [real-set-pen-2 (ivar/proc (viewport-buffer-dc viewport) 'set-pen)])
 	  (lambda (color go)
-	    (when color
-	      (set-viewport-pen viewport (get-color color)))
-	    (go draw-1 draw-2
-		(lambda (draw)
-		  (let ([pen (real-get-pen)]
-			[brush (real-get-brush)])
-		    (real-set-brush-1 xor-brush)
-		    (real-set-brush-2 xor-brush)
-		    (real-set-pen-1 xor-pen)
-		    (real-set-pen-2 xor-pen)
-		    (draw)
-		    (real-set-brush-1 brush)
-		    (real-set-brush-2 brush)
-		    (real-set-pen-1 pen)
-		    (real-set-pen-2 pen)))
-		(lambda (draw)
-		  (let ([pen (get-pen)])
-		    (set-pen-1 white-pen)
-		    (set-pen-2 white-pen)
-		    (draw)
-		    (set-pen-1 pen)
-		    (set-pen-2 pen)))))))))
+	    (let ([orig (and color
+			     (begin0
+			      (current-pen)
+			      (set-viewport-pen viewport (get-color color))))])
+	      (go draw-1 draw-2
+		  (lambda (draw)
+		    (let ([pen (real-get-pen)]
+			  [brush (real-get-brush)])
+		      (real-set-brush-1 xor-brush)
+		      (real-set-brush-2 xor-brush)
+		      (real-set-pen-1 xor-pen)
+		      (real-set-pen-2 xor-pen)
+		      (draw)
+		      (real-set-brush-1 brush)
+		      (real-set-brush-2 brush)
+		      (real-set-pen-1 pen)
+		      (real-set-pen-2 pen)))
+		  (lambda (draw)
+		    (let ([pen (get-pen)])
+		      (set-pen-1 white-pen)
+		      (set-pen-2 white-pen)
+		      (draw)
+		      (set-pen-1 pen)
+		      (set-pen-2 pen))))
+	      (when orig
+		(set-viewport-pen viewport orig))))))))
   
   (define make-do-line
     (lambda (go)
