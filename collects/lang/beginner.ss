@@ -442,7 +442,7 @@
     (eq? (any any -> boolean) "to compare two values based on when they were created")
     (eof (eof) "the end-of-file value")
     (eof-object? (any ->boolean) "to determine whether some value is the end-of-file value")
-    (exit ( -> void) "to exit the running program"))))
+    ((beginner-exit exit) ( -> void) "to exit the running program"))))
 
 
 

@@ -122,6 +122,9 @@
 	  (if (symbol? sym) 'string 'symbol))))
       (error sym "~a" str)))
 
+  (define-teach beginner exit
+    (lambda () (exit)))
+
   (define-teach advanced cons 
     (lambda (a b)
       (check-second/cycle 'cons a b)
@@ -159,6 +162,7 @@
 	   beginner-list*
 	   beginner-append
 	   beginner-error
+	   beginner-exit
 	   advanced-cons
 	   advanced-set-cdr!
 	   advanced-set-rest!
