@@ -57,8 +57,26 @@
 		   (list 'quote (syntax id))
 		   tmp-id))])))))
 
+  (define (check-single-expression who where stx exprs)
+    (when (null? exprs)
+      (teach-syntax-error
+       who
+       stx
+       "expected an expression ~a, but nothing's there"
+       where))
+    (unless (null? (cdr exprs))
+      (teach-syntax-error
+       who
+       (cadr exprs)
+       "expected only one expression ~a, but found an extra expression~a"
+       where
+       (if (null? (cddr exprs))
+	   ""
+	   (format " (plus ~a more)" (length (cddr exprs)))))))
+
   (provide teach-syntax-error
 	   bad-use-error
 	   something-else
 	   ordinal
-	   make-undefined-check))
+	   make-undefined-check
+	   check-single-expression))

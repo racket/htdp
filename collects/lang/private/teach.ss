@@ -32,8 +32,10 @@
 	   beginner-or
 	   beginner-quote
 	   
-	   intermediate-local)
-
+	   intermediate-local
+	   intermediate-letrec
+	   intermediate-let)
+  
   ;; verify-boolean is inserted to check for boolean results:
   (define (verify-boolean b where)
     (if (or (eq? b #t) (eq? b #f))
@@ -63,21 +65,10 @@
   (define-syntax (beginner-define stx)
 
     (define (check-single-result-expr exprs where enclosing-expr)
-      (when (null? exprs)
-	(teach-syntax-error
-	 where
-	 enclosing-expr
-	 "expected a result expression within `~a', but nothing's there"
-	 where))
-	(unless (null? (cdr exprs))
-	  (teach-syntax-error
-	   where
-	   (cadr exprs)
-	   "expected just one expression inside `~a', but found an extra expression~a"
-	   where
-	   (if (null? (cddr exprs))
-	       ""
-	       (format " (plus ~a more)" (length (cddr exprs)))))))
+      (check-single-expression where
+			       (format "within ~a" where)
+			       enclosing-expr
+			       exprs))
 
     (unless (or (memq (syntax-local-context) '(top-level module))
 		(identifier? stx))
@@ -164,19 +155,11 @@
       [(_ name expr ...)
        (identifier? (syntax name))
        (let ([exprs (syntax->list (syntax (expr ...)))])
-	 (if (null? exprs)
-	     (teach-syntax-error
-	      'define
-	      stx
-	      "expected an expression after the defined name ~a, but nothing's there"
-	      (syntax-e (syntax name)))
-	     (teach-syntax-error
-	      'define
-	      (cadr exprs)
-	      "expected just one expression inside `define', but found an extra expression~a"
-	      (if (null? (cddr exprs))
-		  ""
-		  (format " (plus ~a more)" (length (cddr exprs)))))))]
+	 (check-single-expression 'define
+				  (format "after the defined name ~a"
+					  (syntax-e (syntax name)))
+				  stx
+				  exprs))]
       ;; Bad name/header:
       [(_ non-name expr ...)
        (teach-syntax-error
@@ -448,7 +431,7 @@
 
   (define-syntax (intermediate-local stx)
     (syntax-case stx ()
-      [(_ (definition ...) expr)
+      [(_ (definition ...) . exprs)
        (let ([defns (syntax->list (syntax (definition ...)))])
 	 (let ([partly-expanded-defns 
 		(map (lambda (d)
@@ -469,7 +452,7 @@
 			     (teach-syntax-error
 			      'local
 			      orig
-			      "expected a definition within the definition sequence, but found ~a"
+			      "expected only definitions within the definition sequence, but found ~a"
 			      (something-else orig))]))
 			partly-expanded-defns defns))])
 	     (let ([dup (check-duplicate-identifier local-ids)])
@@ -479,6 +462,11 @@
 		  dup
 		  "found a name that was defined locally more than once: ~a"
 		  (syntax-e dup))))
+	     (let ([exprs (syntax->list (syntax exprs))])
+	       (check-single-expression 'local
+					"after the local definition sequence"
+					stx
+					exprs))
 	     (with-syntax ([((d-v (def-id ...) def-expr) ...) partly-expanded-defns])
 	       (with-syntax ([((tmp-id ...) ...)
 			      (map generate-temporaries
@@ -500,5 +488,115 @@
 				      (let-syntax mappings def-expr)]
 				     ...)
 		       (let-syntax mappings
-			 expr)))))))))])))
+			 . exprs)))))))))]
+      [(_ def-non-seq . __)
+       (teach-syntax-error
+	'local
+	(syntax def-non-seq)
+	"expected a parenthesized definition sequence after `local', but found ~a"
+	(something-else (syntax def-non-seq)))]
+      [(_)
+       (teach-syntax-error
+	'local
+	stx
+	"expected a parenthesized definition sequence after `local', but nothing's there")]
+      [_else (bad-use-error 'local stx)]))
 
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; letrec and let
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (intermediate-letrec stx)
+    (syntax-case stx ()
+      [(_ ([name rhs-expr] ...) expr)
+       (let ([names (syntax->list (syntax (name ...)))])
+	 (and (andmap identifier? names)
+	      (not (check-duplicate-identifier names))))
+       (syntax/loc stx
+	 (intermediate-local [(define-values (name) rhs-expr) ...] expr))]
+      [_else (with-syntax ([stx stx])
+	       (syntax (bad-let-form letrec stx)))]))
+
+  (define-syntax (intermediate-let stx)
+    (syntax-case stx ()
+      [(_ ([name rhs-expr] ...) expr)
+       (let ([names (syntax->list (syntax (name ...)))])
+	 (and (andmap identifier? names)
+	      (not (check-duplicate-identifier names))))
+       (syntax/loc stx
+	 (intermediate-local [(define-values (name ...) (values rhs-expr ...))] expr))]
+      [_else (with-syntax ([stx stx])
+	       (syntax (bad-let-form let stx)))]))
+
+  (define-syntax (bad-let-form stx)
+    (syntax-case stx ()
+      [(_ who stx)
+       (let ([who (syntax-e (syntax who))]
+	     [stx (syntax stx)])
+	 (syntax-case stx ()
+	   [(_ (binding ...) . exprs)
+	    (let ([bindings (syntax->list (syntax (binding ...)))])
+	      (for-each (lambda (binding)
+			  (syntax-case binding ()
+			    [(name expr)
+			     (let ([name (syntax name)])
+			       (unless (identifier? name)
+				 (teach-syntax-error
+				  who
+				  name
+				  "expected a name for a local binding, but found ~a"
+				  (something-else name))))]
+			    [(name . exprs)
+			     (identifier? (syntax name))
+			     (check-single-expression who
+						      (format "after the name ~a"
+							      (syntax-e (syntax name)))
+						      binding
+						      (syntax->list (syntax exprs)))]
+			    [(something . exprs)
+			     (teach-syntax-error
+			      who
+			      (syntax something)
+			      "expected a name after the parenthesis for a ~a local definition, ~
+                               but found ~a"
+			      who
+			      (something-else (syntax something)))]
+			    [_else
+			     (teach-syntax-error
+			      who
+			      binding
+			      "expected a parenthesized name and expression for a ~a local definition, ~
+                               but found ~a"
+			      who
+			      (something-else binding))]))
+			bindings)
+	      (let ([dup (check-duplicate-identifier (map (lambda (binding)
+							    (syntax-case binding ()
+							      [(name . _) (syntax name)]))
+							  bindings))])
+		(when dup
+		  (teach-syntax-error
+		   who
+		   dup
+		   "found a name that was defined locally more than once: ~a"
+		   (syntax-e dup))))
+	      (let ([exprs (syntax->list (syntax exprs))])
+		(check-single-expression who 
+					 "after the name-defining sequence"
+					 stx
+					 exprs)))]
+	   [(_ binding-non-seq . __)
+	    (teach-syntax-error
+	     who
+	     (syntax binding-non-seq)
+	     "expected a parenthesized sequence of local name definitions following ~a, but found ~a"
+	     who
+	     (something-else (syntax binding-non-seq)))]
+	   [(_)
+	    (teach-syntax-error
+	     who
+	     (syntax binding-non-seq)
+	     "expected a sequence of local name definitions following ~a, but nothing's there"
+	     who)]
+	   [_else
+	    (bad-use-error who stx)]))])))
