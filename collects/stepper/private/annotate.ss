@@ -55,18 +55,7 @@
   ; closure-temp: uninterned-symbol
   
   (define closure-temp (gensym "closure-temp-"))
-  
-  ; 2vals-map : (('a -> (2vals 'b 'c)) ('a list)) -> (2vals ('b list) ('c list))
-  ;  dual-map is like map, only for a procedure that returns (values a b), and its
-  ;  result is (values a-list b-list)... the contract specifies this more clearly.
-  
-  (define (2vals-map f . lsts)
-    (if (null? (car lsts))
-        (2vals null null)
-        (let*-2vals ([(a b) (apply f (map car lsts))]
-                     [(a-rest b-rest) (apply 2vals-map f (map cdr lsts))])
-          (2vals (cons a a-rest) (cons b b-rest)))))
-  
+    
   ; triple-map (('a -> (values 'b 'c 'd)) ('a list)) -> (values ('b list) ('c list) ('d list))
   
   (define (triple-map f . lsts)

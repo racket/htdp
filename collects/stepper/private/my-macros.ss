@@ -34,52 +34,6 @@
           (question answer) ...
           (else (error 'ccond "fell off end of cond expression"))))]))
   
-  ;;;;;;;;;;
-  ;;
-  ;;  make-contract-checker
-  ;;
-  ;;;;;;;;;;
-  
-  (provide make-contract-checker checked-lambda)
-  
-  (define-syntaxes (make-contract-checker checked-lambda)
-    (let* ([make-checker-id 
-            (lambda (name stx)
-              (datum->syntax-object stx (string->symbol (string-append "contract-check-" 
-                                                                       (symbol->string (syntax-e name))
-                                                                       "?"))))]
-           [make-contract-checker
-            (lambda (stx)
-              (syntax-case stx (make-contract-checker)
-                [(make-contract-checker name pred)
-                 (identifier? (syntax name))
-                 (let* ([new-binding-name (make-checker-id (syntax name) stx)])
-                   (with-syntax ([checker-name new-binding-name])
-                     (syntax/loc stx (define (checker-name arg var-name)
-                                       (unless (pred arg)
-                                         (error 'checker-name "contract violation: arg ~s with value ~a does not satisfy the ~s predicate"
-                                                var-name arg 'name))))))]
-                [else (error 'make-contract-checker "bad syntax in ~a" stx)]))]
-           [checked-lambda
-            (lambda (stx)
-              (syntax-case stx (checked-lambda)
-                [(checked-lambda bindings . bodies)
-                 (let* ([bindings-list (syntax->list (syntax bindings))]
-                        [stripped-bindings (datum->syntax-object (syntax bindings)
-                                                                 (map (lambda (binding) 
-                                                                        (if (pair? (syntax-e binding))
-                                                                            (car (syntax-e binding))
-                                                                            binding))
-                                                                      bindings-list))]
-                        [checked-bindings (filter (lambda (binding) (pair? (syntax-e binding))) bindings-list)]
-                        [contract-checks (map (lambda (pair-stx)
-                                                (with-syntax ([(var-name contract-name) pair-stx])
-                                                  (with-syntax ([checker-name (make-checker-id  (syntax contract-name) stx)])
-                                                  (syntax/loc (car (syntax-e (syntax bodies))) (checker-name var-name 'var-name)))))
-                                              checked-bindings)])
-                   (datum->syntax-object stx `(lambda ,stripped-bindings ,@contract-checks ,@(syntax->list (syntax bodies)))))]
-                [else (error 'checked-lambda "bad syntax in ~a" stx)]))])
-      (values make-contract-checker checked-lambda)))
               
   
   ;;;;;;;;;;
@@ -88,7 +42,7 @@
   ;; 
   ;;;;;;;;;;
   
-  (provide 2vals let*-2vals 2vals-first 2vals-second)
+  (provide 2vals let*-2vals 2vals-first 2vals-second 2vals-map)
   
   (define 2vals vector)
   
@@ -111,7 +65,18 @@
   (define-syntax (2vals-second stx)
     (syntax-case stx (2vals-second)
       [(2vals-second a)
-       (syntax (vector-ref a 1))])))
+       (syntax (vector-ref a 1))]))
+
+ ; 2vals-map : (('a -> (2vals 'b 'c)) ('a list)) -> (2vals ('b list) ('c list))
+  ;  dual-map is like map, only for a procedure that returns (values a b), and its
+  ;  result is (values a-list b-list)... the contract specifies this more clearly.
+  
+  (define (2vals-map f . lsts)
+    (if (null? (car lsts))
+        (2vals null null)
+        (let*-2vals ([(a b) (apply f (map car lsts))]
+                     [(a-rest b-rest) (apply 2vals-map f (map cdr lsts))])
+          (2vals (cons a a-rest) (cons b b-rest))))))
 
 ; test cases
 ; (require my-macros)
