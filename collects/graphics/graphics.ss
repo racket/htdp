@@ -42,8 +42,10 @@
 
    draw-rectangle clear-rectangle flip-rectangle 
    draw-ellipse clear-ellipse flip-ellipse 
+   draw-polygon clear-polygon flip-polygon 
    draw-solid-rectangle clear-solid-rectangle flip-solid-rectangle 
    draw-solid-ellipse clear-solid-ellipse flip-solid-ellipse 
+   draw-solid-polygon clear-solid-polygon flip-solid-polygon 
 
    get-string-size
 
@@ -53,5 +55,7 @@
    copy-viewport 
 
    default-display-is-color?
+
+   viewport->snip
 
    viewport-DC viewport-buffer-DC))
