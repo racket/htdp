@@ -1,6 +1,7 @@
 (module model mzscheme
   (require (lib "etc.ss")
-           (lib "mred.ss" "mred")
+           (lib "mred.ss" "mred")  
+           (prefix frame: (lib "framework.ss" "framework"))
            "my-macros.ss"
            (prefix i: "model-input.ss")
            (prefix a: "annotate.ss")
@@ -33,7 +34,7 @@
     (parameterize ([current-eventspace eventspace])
       (queue-callback thunk)))
 
-  (define (go)
+  (define (go interactions-text defns-text)
     (local
   
         ((define finished-exprs null)
@@ -41,28 +42,45 @@
          (define current-expr #f)
 
          (define packaged-envs a:initial-env-package)
-  
+         
          (define drscheme-eventspace (current-eventspace))
          
          (define (send-to-drscheme-eventspace thunk)
            (send-to-eventspace drscheme-eventspace thunk))
          
          (define user-computation-semaphore (make-semaphore))
+         (define expand-program-semaphore (make-semaphore))
+
          
-         (interface:expand-program
-          (lambda (expanded)
-            ; is there an eof test?
-            ; if so, here's the old thing to to do:
-            ; (i:receive-result (make-finished-result finished-exprs))
-            (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
-                                                                    'foot-wrap)])
-              (set! packaged-envs envs)
-              (set! current-expr expanded)
-              (check-for-repeated-names expanded exception-handler)
-              (let ([expression-result
-                     (parameterize ([current-exception-handler exception-handler])
-                       (user-primitive-eval annotated))])
-                (add-finished-expr expression-result)))))
+         (define (step-through-expression)
+           ; is there an eof test?
+           ; if so, here's the old thing to to do:
+           ; (i:receive-result (make-finished-result finished-exprs))
+           (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
+                                                       'foot-wrap)])
+             (set! packaged-envs envs)
+             (set! current-expr expanded)
+             (check-for-repeated-names expanded exception-handler)
+             (let ([expression-result
+                    (parameterize ([current-exception-handler exception-handler])
+                      (user-primitive-eval annotated))])
+               (add-finished-expr expression-result)
+               (semaphore-post expand-program-semaphore))))
+         
+         (send interactions-text
+               expand-program
+               (drscheme:language:make-text/pos defns-text 
+                                                0
+                                                (send defns-text last-position)) 
+               (preferences:get drscheme:language-configuration:get-settings-preferences-symbol)
+               (lambda (error? expanded send-to-user-eventspace continue-thunk)
+                 (if (error?)
+                     (handle-exception (cadr expanded))
+                     (
+                     
+          (lambda (expression)
+            
+)
   
          (define (check-for-repeated-names expr exn-handler)
            (with-handlers
