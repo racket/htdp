@@ -14,7 +14,8 @@
 	      (syntax-property
 	       (syntax (set! tmp-id expr))
 	       'bound-in-source
-	       (syntax id)))]
+	       (syntax-local-introduce
+		(syntax id))))]
 	   [(id . args)
 	    (syntax-property
 	     (datum->syntax-object
@@ -24,7 +25,8 @@
 			  tmp-id)
 		    (syntax args)))
 	     'bound-in-source
-	     (syntax id))]
+	     (syntax-local-introduce
+	      (syntax id)))]
 	   [id
 	    (syntax-property
 	     (datum->syntax-object
@@ -33,6 +35,7 @@
 		    (list 'quote (syntax id))
 		    tmp-id))
 	     'bound-in-source
-	     (syntax id))]))))))
+	     (syntax-local-introduce
+	      (syntax id)))]))))))
 
 

@@ -855,10 +855,13 @@
 			    ...
 			    . exprs))
 		      'binding-in-source
-		      (apply list* (apply append 
-					  (map
-					   syntax->list
-					   (syntax->list (syntax ((def-id ...) ...)))))))))))))]
+		      (apply list* 
+			     (map
+			      syntax-local-introduce
+			      (apply append 
+				     (map
+				      syntax->list
+				      (syntax->list (syntax ((def-id ...) ...))))))))))))))]
 	[(_ def-non-seq . __)
 	 (teach-syntax-error
 	  'local
