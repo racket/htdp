@@ -75,12 +75,11 @@
           (define custodian #f)
           (define/public (set-custodian! cust)
             (set! custodian cust))
-                    (override on-close)
-          (define (on-close)
+          (define/augment (on-close)
             (when custodian
               (custodian-shutdown-all custodian))
             (send drscheme-frame on-stepper-close)
-            (super on-close))
+            (inner (void) on-close))
           
           ;; WARNING BOXES:
           
@@ -513,10 +512,10 @@
             (send stepper-button enable #f)
             (super disable-evaluation))
           
-          (define/override (on-close)
+          (define/augment (on-close)
             (when stepper-frame
               (send stepper-frame original-program-gone))
-            (super on-close))
+            (inner (void) on-close))
           
           ; add the stepper button to the button panel:
           (send (get-button-panel) change-children
