@@ -30,4 +30,4 @@
   ;; procedures:
   (provide-and-document
    procedures
-   (all-from beginner: (lib "beginner.ss" "lang") procedures)))
+   (all-from beginner: (lib "htdp-beginner.ss" "lang") procedures)))

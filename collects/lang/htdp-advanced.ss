@@ -44,7 +44,7 @@
   (provide-and-document
    procedures
 
-   (all-from-except intermediate: (lib "intermediate.ss" "lang") procedures
+   (all-from-except intermediate: (lib "htdp-intermediate-lambda.ss" "lang") procedures
 		    cons list* append)
 
    ("Reading and Printing"

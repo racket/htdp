@@ -32,7 +32,7 @@
   ;; procedures:
   (provide-and-document
    procedures
-   (all-from beginner: (lib "beginner-abbr.ss" "lang") procedures)
+   (all-from beginner: (lib "htdp-beginner-abbr.ss" "lang") procedures)
 
    ("Higher-Order Functions"
     (map ((X ... -> Z) (listof X) ... -> (listof Z))
