@@ -1,5 +1,5 @@
 (require-library "error.ss" "htdp")
-(reference-file "big-draw.ss")
+(require-library "big-draw.ss" "htdp")
 
 (define-signature graphS (graph-fun graph-line))
 

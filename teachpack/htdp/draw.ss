@@ -1,9 +1,2 @@
-(require-library "error.ss" "htdp")
-(reference-file "big-draw.ss")
+(require-library "draw.ss" "htdp")
 
-(compound-unit/sig
-  (import (PLT : plt:userspace^))
-  (link
-    (DRAW : drawS (bigDrawU ERR PLT))
-    (ERR  : errorS (errorU)))
-  (export (open DRAW)))
