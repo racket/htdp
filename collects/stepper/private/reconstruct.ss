@@ -284,21 +284,19 @@
                (begin (queue-push highlight-queue-dest (inner (queue-pop highlight-queue-src)))
                       highlight-placeholder-stx)
                (if (syntax-property stx 'user-stepper-hint)
-                   (begin ; TEMP
-                     (printf "user-stepper-hint: ~e\n" (syntax-property stx 'user-stepper-hint))
-                     (case (syntax-property stx 'user-stepper-hint)
-                       ((comes-from-cond) (unwind-cond stx 
-                                                       (syntax-property stx 'user-source)
-                                                       (syntax-property stx 'user-position)))
-                       ((comes-from-and) (unwind-and/or stx
-                                                        (syntax-property stx 'user-source)
-                                                        (syntax-property stx 'user-position)
-                                                        'and))
-                       ((comes-from-or) (unwind-and/or stx
-                                                       (syntax-property stx 'user-source)
-                                                       (syntax-property stx 'user-position)
-                                                       'or))
-                       (else (recur-on-pieces stx))))
+                   (case (syntax-property stx 'user-stepper-hint)
+                     ((comes-from-cond) (unwind-cond stx 
+                                                     (syntax-property stx 'user-source)
+                                                     (syntax-property stx 'user-position)))
+                     ((comes-from-and) (unwind-and/or stx
+                                                      (syntax-property stx 'user-source)
+                                                      (syntax-property stx 'user-position)
+                                                      'and))
+                     ((comes-from-or) (unwind-and/or stx
+                                                     (syntax-property stx 'user-source)
+                                                     (syntax-property stx 'user-position)
+                                                     'or))
+                     (else (recur-on-pieces stx)))
                    (recur-on-pieces stx))))
          
          (define (unwind-cond stx user-source user-position)
