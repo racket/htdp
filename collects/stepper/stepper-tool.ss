@@ -14,7 +14,8 @@
            "private/model-settings.ss"
            (lib "pconvert.ss")
            (lib "string-constant.ss" "string-constants")
-           (lib "async-channel.ss"))
+           (lib "async-channel.ss")
+           (lib "bitmap-label.ss" "mrlib"))
 
   ;; mflatt: MINOR HACK - work around temporary
   ;;         print-convert problems
@@ -432,7 +433,7 @@
   
       ;; stepper-bitmap : the image used for the stepper button
       (define stepper-bitmap
-        (drscheme:unit:make-bitmap
+        (bitmap-label-maker
          "Step"
          (build-path (collection-path "icons") "foot.png")))
 
