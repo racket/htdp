@@ -373,7 +373,7 @@
        (cond
 	[(is-a? index wx:pen%) index]
 	[(or (string? index) (is-a? index wx:colour%))
-	 (send wx:the-pen-list find-or-create-pen index 1 wx:const-solid)]
+	 (send wx:the-pen-list find-or-create-pen index 0 wx:const-solid)]
 	[else (vector-ref GLOBAL-PEN-VECTOR index)])))
 
    (define get-brush
@@ -488,7 +488,7 @@
    (define green-brush (get-brush green))
    (define blue-brush (get-brush blue))
 
-   (define invisi-pen (make-object wx:pen% "WHITE" 1 wx:const-transparent))
+   (define invisi-pen (make-object wx:pen% "WHITE" 0 wx:const-transparent))
    (define invisi-brush (make-object wx:brush% "WHITE" wx:const-transparent))
 
    (define draw-it (lambda (draw flip clear) (draw)))
