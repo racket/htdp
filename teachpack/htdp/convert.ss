@@ -6,7 +6,8 @@
   (unit/sig convertS 
     (import errorS plt:userspace^)
     
-    (define OUT-ERROR "The conversion function must produce a number; result: ~e")
+    (define OUT-ERROR
+      "The conversion function must produce a number; result: ~e")
     
     ;; ============================================================================
     ;; MODEL
@@ -100,18 +101,25 @@
               [else (printf "The input must be a number. Given: ~e~n" ans) (repl)])))))
     
     ;; ============================================================================
-    ;; make-reader : (num -> num) -> (-> void)
-    ;; to create a thunk that reads a single number from a file, converts it according to f, 
-    ;; and prints the result on a line by itself
+
+    ;; make-reader-for-f : (number -> number) -> ( -> void)
+    ;; make-reader-for-f creates a function that reads numbers from a file
+    ;; converts them accoring to f, and prints the results
+    ;; effect: if any of the S-expressions in the file aren't numbers or
+    ;;         if any of f's results aren't numbers,
+    ;;         the function signals an error
     (define (make-reader-for f)
-      (lambda ()
-        (let ([in (read)])
-          (if (number? in)
-              (let ([out (f in)])
-                (if (number? out)
-                    (printf "~s~n" out)
-                    (error 'convert OUT-ERROR out)))
-              (error 'convert "The input must be a number. Given: ~e~n" in)))))
+      (local ((define (read-until-eof)
+		(let ([in (read)])
+		  (cond
+		    [(eof-object? in) (void)]
+		    [(number? in) (begin (check-and-print (f in)) (read-until-eof))]
+		    [else (error 'convert "The input must be a number. Given: ~e~n" in)])))
+	      (define (check-and-print out)
+		(cond
+		  [(number? out) (printf "~s~n" out)]
+		  [else (error 'convert OUT-ERROR out)])))
+	read-until-eof))
 
     ;; convert-file : str (num -> num) str -> void
     ;; to read a number from file in, to convert it with f, and to write it to out
