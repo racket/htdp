@@ -1,11 +1,11 @@
 (module annotate mzscheme
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
-           "marks.ss"
-           (prefix model: "model.ss")
-           "shared.ss"
 	   (lib "list.ss")
            (lib "etc.ss")
-           "my-macros.ss")
+           "marks.ss"
+           "shared.ss"
+           "my-macros.ss"
+           (prefix model: "model.ss"))
 
   (provide
    initial-env-package
@@ -313,7 +313,7 @@
   ;    only of varrefs.  This one might go away later, or be toggled into a "no-opt" flag.
   ;
   
-  (define (annotate read-expr expr input-struct-proc-names break wrap-style . wrap-opts-list)
+  (define (annotate expr input-struct-proc-names break wrap-style . wrap-opts-list)
     (local
 	((define cheap-wrap? (eq? wrap-style 'cheap-wrap))
          (define ankle-wrap? (eq? wrap-style 'ankle-wrap))

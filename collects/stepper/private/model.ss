@@ -1,6 +1,6 @@
 (module model mzscheme
-  (require (lib "mred.ss" "mred")
-           (prefix p: (lib "print-convert.ss"))
+  (require (lib "etc.ss")
+           (lib "mred.ss" "mred")
            (prefix i: "model-input.ss")
            (prefix a: "annotate.ss")
            (prefix r: "reconstruct.ss")
@@ -8,15 +8,7 @@
  
   
   (provide
-   check-pre-defined-var
-   check-global-defined
-   global-lookup
-   true-false-printed?
-   constructor-style-printing?
-   abbreviate-cons-as-list?
-   special-function?
-   image?
-   print-convert
+   ; model interface
    go)
   
 ;  (import [i : stepper:model-input^]
@@ -29,8 +21,6 @@
 ;          [r : stepper:reconstruct^]
 ;          stepper:shared^)
   
-  (define image? i:image?)
-  
   ; my-assq is like assq but it only returns the second element of the list. This
   ; is the way it should be, I think.
   (define (my-assq assoc-list value)
@@ -38,76 +28,39 @@
           [(eq? (caar assoc-list) value) (cadar assoc-list)]
           [else (my-assq (cdr assoc-list) value)]))
   
-  (define user-pre-defined-vars #f)
+  (define continue-user-computation #f)
   
-  (define (check-pre-defined-var identifier)
-    (memq identifier user-pre-defined-vars))
+  (define (go)
+    (local
   
-  (define user-namespace #f)
+        ((define finished-exprs null)
   
-  (define (check-global-defined identifier)
-    (with-handlers
-        ([exn:variable? (lambda args #f)])
-      (global-lookup identifier)
-      #t))
-  
-  (define (global-lookup identifier)
-    (parameterize ([current-namespace user-namespace])
-      (global-defined-value identifier)))
-  
-  (define finished-exprs null)
-  
-  (define current-expr #f)
-  (define packaged-envs a:initial-env-package)
-  
-  (define user-eventspace (make-eventspace))
-  
-  ;; user eventspace management
-  
+         (define current-expr #f)
 
+         (define packaged-envs a:initial-env-package)
   
-  ;; start user thread going
-  (send-to-other-eventspace
-   user-eventspace
-   suspend-user-computation)
-  
-  (define user-primitive-eval #f)
-  (define user-vocabulary #f)
-
-  (define reader 
-    (z:read i:text-stream
-            (z:make-location 1 1 0 "stepper-text")))
-  
-  (send-to-user-eventspace
-   (lambda ()
-     (set! user-primitive-eval (current-eval))
-     (d:basis:initialize-parameters (make-custodian) i:settings)
-     (set! user-namespace (current-namespace))
-     (set! user-pre-defined-vars (map car (make-global-value-list)))
-     (set! user-vocabulary (d:basis:current-vocabulary))
-     (set! par-true-false-printed (p:booleans-as-true/false))
-     (set! par-constructor-style-printing (p:constructor-style-printing))
-     (set! par-abbreviate-cons-as-list (p:abbreviate-cons-as-list))
-     (set! par-special-functions (map (lambda (name) (list name (global-defined-value name)))
-                                      special-function-names))
-     (semaphore-post stepper-return-val-semaphore)))
-  (semaphore-wait stepper-return-val-semaphore)
-  
-  (define print-convert
-    (let ([print-convert-result 'not-a-real-value])    
-      (lambda (val)
-        (send-to-user-eventspace
-         (lambda ()
-           (set! print-convert-result
-                 (parameterize ([p:current-print-convert-hook
-                                 (lambda (v basic-convert sub-convert)
-                                   (if (image? v)
-                                       v
-                                       (basic-convert v)))])
-                   (p:print-convert val)))
-           (semaphore-post stepper-return-val-semaphore)))
-        (semaphore-wait stepper-return-val-semaphore)
-        print-convert-result)))
+         (define first-time #t)
+         
+         (interface:expand-program
+          (lambda (expanded)
+            (when first-time?
+              (set! first-time #f)
+              (model-settings:gather-eventspace-info))
+            ; is there an eof test?
+            ; if so, here's the old thing to to do:
+            ; (i:receive-result (make-finished-result finished-exprs))
+            (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
+                                                                    'foot-wrap)]
+                     (set! packaged-envs envs)
+                     (set! current-expr expanded)
+                     (check-for-repeated-names expanded exception-handler)
+                     (let ([expression-result
+                            (parameterize ([current-exception-handler exception-handler])
+                              (user-primitive-eval annotated))])
+                       (send-to-drscheme-eventspace
+                        (lambda ()
+                          (add-finished-expr expression-result)
+                          (read-next-expr)))))
   
   (define (read-next-expr)
     (send-to-user-eventspace
@@ -122,7 +75,7 @@
                  (begin
                    (send-to-drscheme-eventspace
                     (lambda ()
-                      (i:receive-result (make-finished-result finished-exprs))))
+                      ))
                    'finished)
                  (let* ([new-parsed (if (z:eof? new-expr)
                                         #f
@@ -131,19 +84,7 @@
                                           (with-handlers
                                               ((exn:syntax? exception-handler))
                                             (z:scheme-expand new-expr 'previous user-vocabulary))))])
-                   (let*-values ([(annotated-list envs) (a:annotate (list new-expr) (list new-parsed) packaged-envs break 
-                                                                    'foot-wrap)]
-                                 [(annotated) (car annotated-list)])
-                     (set! packaged-envs envs)
-                     (set! current-expr new-parsed)
-                     (check-for-repeated-names new-parsed exception-handler)
-                     (let ([expression-result
-                            (parameterize ([current-exception-handler exception-handler])
-                              (user-primitive-eval annotated))])
-                       (send-to-drscheme-eventspace
-                        (lambda ()
-                          (add-finished-expr expression-result)
-                          (read-next-expr)))))))))))))
+                   ))))))))
   
   (define (check-for-repeated-names expr exn-handler)
     (with-handlers
@@ -220,22 +161,18 @@
                  (values (append finished-exprs before) current current-2 after)))]
             [reconstruct-helper
              (lambda (finish-thunk)
-               (send-to-drscheme-eventspace
-                (lambda ()
-                  (let* ([reconstruct-pair
-                          (r:reconstruct-current current-expr mark-list break-kind returned-value-list)]
-                         [reconstructed (car reconstruct-pair)]
-                         [redex-list (cadr reconstruct-pair)])
-                    (finish-thunk reconstructed redex-list)))))])
+               (let* ([reconstruct-pair
+                       (r:reconstruct-current current-expr mark-list break-kind returned-value-list)]
+                      [reconstructed (car reconstruct-pair)]
+                      [redex-list (cadr reconstruct-pair)])
+                 (finish-thunk reconstructed redex-list)))])
         (case break-kind
           [(normal-break)
            (when (not (r:skip-redex-step? mark-list))
              (reconstruct-helper 
               (lambda (reconstructed redex-list)
                 (set! held-expr-list reconstructed)
-                (set! held-redex-list redex-list)
-                (continue-user-computation)))
-             (suspend-user-computation))]
+                (set! held-redex-list redex-list))))]
           [(result-break)
            (when (if (not (null? returned-value-list))
                      (not (r:skip-redex-step? mark-list))
@@ -265,8 +202,9 @@
                                                        current reduct-list after)))])
                   (set! held-expr-list no-sexp)
                   (set! held-redex-list no-sexp)
-                  (i:receive-result result))))
-             (suspend-user-computation))]
+                  (let/ec k
+                    (set! continue-user-computation k)
+                    (i:receive-result result))))))]
           [(double-break)
            ; a double-break occurs at the beginning of a let's evaluation.
            (send-to-drscheme-eventspace
@@ -312,17 +250,9 @@
          (handle-exception exn)))
       (k)))
 
-  (define (go)
-    
     (binding-index-reset)
     
     
-    ; start the ball rolling with a "fake" user computation
-    (send-to-user-eventspace
-     (lambda ()
-       (suspend-user-computation)
-       (send-to-drscheme-eventspace
-        read-next-expr)))
     
     ; result of invoking stepper-instance : (->)
     continue-user-computation))
