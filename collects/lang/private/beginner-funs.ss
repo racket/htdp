@@ -90,7 +90,11 @@
 	"to determine whether some value is an integer (exact or inexact)")
     
       (zero? (number -> bool)
-	"to determine if some value is zero or not")
+	"to determine if some value is zero or not") 
+      (positive? (number -> bool)
+	"to determine if some value is strictly larger than zero")
+      (negative? (number -> bool)
+	"to determine if some value is strictly smaller than zero")      
       (odd? (integer -> bool)
 	"to determine if some value is odd or not")
       (even? (integer -> bool)
