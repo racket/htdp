@@ -329,10 +329,10 @@
                 'define
                 stx
                 (syntax name)
-		(syntax-property
-		 (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...))
-		 'stepper-hint
-		 'lambda-define))
+                (quasisyntax/loc stx (define name #,(syntax-property
+                                                     #`(lambda arg-seq #,(syntax-property #`make-lambda-generative 'stepper-skip-completely #t) lexpr ...)
+                                                     'stepper-define-type
+                                                     'lambda-define))))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]
 	     ;; Constant def
@@ -827,6 +827,9 @@
     (define-values (beginner-or/proc beginner-and/proc)
       (let ([mk
 	     (lambda (where)
+               (let ([stepper-tag (case where
+                                    [(or) 'comes-from-or]
+                                    [(and) 'comes-from-and])])
 	       (with-syntax ([swhere where])
 		 (lambda (stx)
 		   (syntax-case stx ()
@@ -839,16 +842,30 @@
 			   #f
 			   "expected at least two expressions after `~a', but found ~a"
 			   where
-			   (if (zero? n) "no expressions" "only one expression")))
-                        (let ([verified-clauses 
-                               (map (lambda (term)
-                                      (with-syntax ([term term])
-                                        (syntax-property (syntax/loc stx (verify-boolean term 'swhere))
-                                                         'stepper-skipto
-                                                         (list syntax-e cdr syntax-e cdr car))))
-                                    (syntax->list (syntax clauses)))])
-                          (datum->syntax-object #'here (cons where verified-clauses) stx)))]
-		     [_else (bad-use-error where stx)]))))])
+                           (if (zero? n) "no expressions" "only one expression")))
+                        (let loop ([clauses-consumed 0]
+                                   [remaining (syntax->list #`clauses)])
+                          (if (null? remaining)
+                              (case where
+                                [(or) #`#f]
+                                [(and) #`#t])
+                              (syntax-property
+                               (syntax-property
+                                (quasisyntax/loc 
+                                 stx
+                                 (if #,(syntax-property (quasisyntax/loc stx (verify-boolean #,(car remaining) 'swhere))
+                                                        `stepper-skipto
+                                                        (list syntax-e cdr syntax-e cdr car))
+                                     #,@(case where
+                                          [(or) #`(#t
+                                                   #,(loop (+ clauses-consumed 1) (cdr remaining)))]
+                                          [(and) #`(#,(loop (+ clauses-consumed 1) (cdr remaining))
+                                                     #f)])))
+                                'stepper-hint
+                                stepper-tag)
+                               'stepper-and/or-clauses-consumed
+                               clauses-consumed))))]
+		     [_else (bad-use-error where stx)])))))])
 	(values (mk 'or) (mk 'and))))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -985,8 +1002,10 @@
 					...)
 				       ...)))))])
                      (syntax-property
-                      (syntax/loc stx
+                      (quasisyntax/loc stx
                         (let ()
+                          (define #,(gensym) 1) ; this ensures that the expansion of 'local' looks
+                                                ; roughly the same, even if the local has no defs.
                           mapping ...
                           stx-def ...
                           (define-values (tmp-id ...) def-expr)
