@@ -90,6 +90,7 @@
 		
 		(public
 		 viewport
+		 (set-viewport (lambda (x) (set! viewport x)))
 		 (scale 1.0)
 		 (height 0)
 		 (width 0)
@@ -171,6 +172,17 @@
 		    (send click-queue flush)
 		    (send release-queue flush)
 		    (send press-queue flush))))))
+
+   (define sixlib-frame%
+     (class-asi wx:frame%
+		(rename [super-on-close on-close])
+		(public
+		 canvas
+		 [set-canvas (lambda (x) (set! canvas x))]
+		 [on-close
+		  (lambda ()
+		    (close-viewport (ivar canvas viewport))
+		    (super-on-close))])))
 
    (define repaint
      (lambda (viewport)
@@ -846,7 +858,7 @@
 		    [graphics-flag
 		     (let*
 			 ([frame
-			   (make-object wx:frame% '() label 1 1 
+			   (make-object sixlib-frame% '() label 1 1 
 					(* scale width) (* scale height))]
 			  [canvas
 			   (make-object wx:sixlib-canvas%
@@ -856,6 +868,8 @@
 			  [DC (send canvas get-dc)]
 			  [buffer-DC (make-object wx:memory-dc% DC)]
 			  [viewport (make-viewport label canvas)])
+		       (send frame set-canvas canvas)
+		       (send canvas set-viewport viewport)
 		       (send canvas set-DC DC)
 		       (send canvas set-buffer-DC buffer-DC)
 		       (send DC set-optimization #f)
