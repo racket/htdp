@@ -68,3 +68,5 @@ application positions.
 > (provide-primitive id) - like above, but the function `id' is
   exported as the primitive operator named `id'.
 
+> (provide-primitives id ...) - multi-provide version of
+  `provide-primitive'.

@@ -12,7 +12,8 @@
   (provide define-primitive
 	   define-higher-order-primitive
 	   provide-primitive
-	   provide-higher-order-primitive)
+	   provide-higher-order-primitive
+	   provide-primitives)
 
   (define-syntax (define-primitive stx)
     (syntax-case stx ()
@@ -125,6 +126,13 @@
 	 #'(begin
 	     (define-primitive ex-name name)
 	     (provide ex-name)))]))
+
+  (define-syntax (provide-primitives stx)
+    (syntax-case stx ()
+      [(_ name ...)
+       #'(begin
+	   (provide-primitive name)
+	   ...)]))
 
   (define-syntax (provide-higher-order-primitive stx)
     (syntax-case stx ()

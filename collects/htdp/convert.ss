@@ -6,11 +6,9 @@
            (lib "error.ss" "htdp")
            (lib "prim.ss" "lang"))
   
-  (provide convert-gui convert-repl convert-file)
-  
-  (define-higher-order-primitive convert-gui convert-gui/proc (f2c))
-  (define-higher-order-primitive convert-repl convert-repl/proc (f2c))
-  (define-higher-order-primitive convert-file convert-file/proc (_ f2c _))
+  (provide-higher-order-primitive convert-gui (f2c))
+  (provide-higher-order-primitive convert-repl (f2c))
+  (provide-higher-order-primitive convert-file (_ f2c _))
   
   (define black-pen  (send the-pen-list find-or-create-pen "BLACK" 2 'solid))
   (define red-brush  (send the-brush-list find-or-create-brush "RED" 'solid))
@@ -186,10 +184,10 @@
   (define close (make-object button% "Close" button-panel
                   (lambda (x e) (send frame show #f))))
   
-  ;; convert-gui/proc : (num -> num) -> void
+  ;; convert-gui : (num -> num) -> void
   ;; to install f as the temperature converter 
   ;; effect: to create a window with two rulers for converting F to C
-  (define (convert-gui/proc f)
+  (define (convert-gui f)
     (check-proc 'convert-gui f 1 "convert-gui" "one argument")
     (set! fahr->cel f)
     ;; only initialize the slider based on the user's program 
@@ -201,11 +199,11 @@
     (send frame show #t))
   
   ;; ============================================================================
-  ;; convert-repl/proc : (num -> num) -> void
+  ;; convert-repl : (num -> num) -> void
   ;; to start a read-eval-print loop that reads numbers [temp in F], applies f, and prints 
   ;; the result; effects: read and write; 
   ;; exit on x as input
-  (define (convert-repl/proc f)
+  (define (convert-repl f)
     (check-proc 'convert-repl f 1 "convert-repl" "one argument")
     (let repl ()
       (begin
@@ -245,9 +243,9 @@
                 [else (error 'convert OUT-ERROR out)])))
       read-until-eof))
   
-  ;; convert-file/proc : str (num -> num) str -> void
+  ;; convert-file : str (num -> num) str -> void
   ;; to read a number from file in, to convert it with f, and to write it to out
-  (define (convert-file/proc in f out)
+  (define (convert-file in f out)
     (check-arg 'convert-file (string? in) "string" "first" in)
     (check-arg 'convert-file (file-exists? in) "name of existing file" "first" in)
     (check-proc 'convert-file f 1 "convert-file" "one argument")
