@@ -166,10 +166,10 @@
 
 ;; MATTHEW
 ;; cannot do this because the styles information in the saved texts screws up.
-;   (override
-;     [make-editor
-;      (lambda ()
-;	(make-object (drscheme:unit:program-editor-mixin (scheme:text-mixin text:basic%))))])
+   (override
+     [make-editor
+      (lambda ()
+	(make-object (drscheme:unit:program-editor-mixin (scheme:text-mixin text:basic%))))])
 
     (override
       [make-snip (lambda () (make-object evaluated-snip%))])
