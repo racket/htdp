@@ -75,6 +75,7 @@
 	delta)
       (check-proc tag left-right-action 2 "move-left-right argument" "two arguments")
       (check-proc tag up-down-action 2 "move-up-down argument" "two arguments")
+      (check-proc tag draw-shape 1 " draw argument" "one argument")
       ;; --- 
       (local ((define frame (make-object frame% TITLE #f 10 10))
 	      (define panel (make-object vertical-panel% frame))
@@ -114,7 +115,6 @@
     ;; effect: create a window from which a user can control moves
     (define (control shape delta lr ud draw)
       (make-controller 'control FOUR shape delta lr ud draw))
-
     ))
 
 

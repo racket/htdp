@@ -43,16 +43,18 @@
     ;; create-gui-item : ((union panel% #f) -> C[< control%])
     ;; to create a memoizing gui-item
     ;; create-window is the only caller that can pass in a panel
-    ;; if the gui-item is already "panel'ed", we can call an error
+    ;; if the gui-item is already "panel'ed", raise an error signal
     ;; all other callers must pass in #f
     (define (create-gui-item builder)
       (let ([C false])
 	(make-gui-item
 	  (lambda (p)
-	    (or (and p C (error 'create-window "item added to window twice"))
-		(begin
-		  (set! C (builder p))
-		  C))))))
+	    (cond
+	      [(and p C)
+	       (error 'create-window "item added to window twice")]
+	      [(and p (not C)) (set! C (builder p)) C]
+	      [(and (not p) C) C]
+	      [else (error 'internal "can't happen")])))))
 
     ;; create-window : (listof gui-item) -> true
     ;; to add gui-items to the window and to show window

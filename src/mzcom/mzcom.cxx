@@ -81,7 +81,6 @@ BEGIN_OBJECT_MAP(ObjectMap)
 OBJECT_ENTRY(CLSID_MzObj, CMzObj)
 END_OBJECT_MAP()
 
-
 LPCTSTR FindOneOf(LPCTSTR p1, LPCTSTR p2)
 {
     while (p1 != NULL && *p1 != NULL)

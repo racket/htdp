@@ -19,8 +19,6 @@ typedef struct {
   BOOL *pResetFlag;
 } THREAD_GLOBALS;
 
-extern const DWORD dwTimeOut;
-extern const DWORD dwPause;
 extern HINSTANCE globHinst;
 extern DWORD WINAPI evalLoop(LPVOID);
 

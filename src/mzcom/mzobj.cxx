@@ -7,6 +7,7 @@
 #include <statreg.cpp>
 #endif
 #include <atlimpl.cpp>
+
 #include "mzcom.h"
 #include "mzobj.h"
 
@@ -107,6 +108,11 @@ void setupSchemeEnv(void) {
     ExitThread(0);
   } 
 
+  scheme_register_static(&env,sizeof(env)); 
+  scheme_register_static(&exn_catching_apply,sizeof(exn_catching_apply));
+  scheme_register_static(&exn_p,sizeof(exn_p));
+  scheme_register_static(&exn_message,sizeof(exn_message));
+
   // set up exception trapping
   
   wrapper = 
@@ -159,25 +165,6 @@ DWORD WINAPI evalLoop(LPVOID args) {
   GC_use_registered_statics = 1;
 
   setupSchemeEnv();
-
-  scheme_register_static((void *)&IID_IMzObj,sizeof(IID_IMzObj));
-  scheme_register_static((void *)&LIBID_MZCOMLib,sizeof(LIBID_MZCOMLib));
-  scheme_register_static((void *)&DIID__IMzObjEvents,
-			 sizeof(DIID__IMzObjEvents));
-  scheme_register_static((void *)&CLSID_MzObj,sizeof(CLSID_MzObj));
-
-  scheme_register_static(&globHinst,sizeof(globHinst)); 
-  scheme_register_static(&_Module,sizeof(_Module));
-
-  scheme_register_static(&tg,sizeof(tg)); 
-  scheme_register_static(&env,sizeof(env)); 
-  scheme_register_static(&pErrorState,sizeof(pErrorState));
-  scheme_register_static(&wideError,sizeof(wideError));
-  scheme_register_static(&evalLoopSems,sizeof(evalLoopSems)); 
-  scheme_register_static(&exitSem,sizeof(evalLoopSems)); 
-  scheme_register_static(&exn_catching_apply,sizeof(exn_catching_apply));
-  scheme_register_static(&exn_p,sizeof(exn_p));
-  scheme_register_static(&exn_message,sizeof(exn_message));
 
   scheme_exit = exitHandler;
 
@@ -252,7 +239,6 @@ void CMzObj::startMzThread(void) {
 
 
 CMzObj::CMzObj(void) {
-
   lastOutput = NULL;
   inputMutex = NULL;
   readSem = NULL;
