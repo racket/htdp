@@ -35,6 +35,11 @@
    contract-check-boolean?
    contract-check-procedure-list?
    syntax-pair-map
+   make-queue ; -> queue
+   queue-push ; queue val -> 
+   queue-pop ; queue -> val
+   queue-length ; queue -> num
+   
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -373,6 +378,22 @@
     (checked-lambda ((fn-list PROCEDURE-LIST) (stx SYNTAX-OBJECT) reconstructer)
                     (update fn-list stx reconstructer 'discard)))
   
+  
+  (define (make-queue)
+    (box null))
+  
+  (define (queue-push queue new)
+    (set-box! queue (append (unbox queue) (list new))))
+
+  (define (queue-pop queue)
+    (if (null? (unbox queue))
+        (error 'queue-pop "no elements in queue")
+        (let ([first (car (unbox queue))])
+          (set-box! queue (cdr (unbox queue)))
+          first)))
+  
+  (define (queue-length queue)
+    (length (unbox queue)))
   )
 
 ; test cases
@@ -401,3 +422,12 @@
 ;
 ;(test '(2 3 4) ilist-flatten '(2 3 4))
 ;(test '(2 3 4) ilist-flatten '(2 3 . 4))
+;
+;(define new-queue (make-queue))
+;(test (void) queue-push new-queue 1)
+;(test (void) queue-push new-queue 2)
+;(test 1 queue-pop new-queue)
+;(test (void) queue-push new-queue 3)
+;(test 2 queue-pop new-queue)
+;(test 3 queue-pop new-queue)
+;(err/rt-test (queue-pop new-queue) exn:user?)

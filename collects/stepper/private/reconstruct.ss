@@ -30,7 +30,7 @@
   
   (define nothing-so-far (gensym "nothing-so-far-"))
   
-  (define highlight-placeholder-stx (datum->syntax-object #f highlight-placeholder))
+  (define highlight-placeholder-stx (datum->syntax-object #'here highlight-placeholder))
   
 ;  (define memoized-read->raw
 ;    (let ([table (make-hash-table-weak)])
@@ -280,50 +280,72 @@
 ;                    (comes-from-cond? expr))
 ;               (in-inserted-else-clause (cdr mark-list))))))
   
-;  ; teach-name-substring: the name of the file containing the teaching macros. Yuck!
-;  (define teach-name-substring "lang/private/teach.ss")
-;  
-;  ; teach-filter : (listof SYNTAX-OBJECT) -> (listof SYNTAX-OBJECT)
-;  (define (teach-filter origins)
-;    (filter (lambda (origin)
-;              (let* ([origin-source (syntax-source origin)])
-;                (and (string? origin-source)
-;                     (let* ([origin-len (string-length origin-source)]
-;                            [test-len (string-length teach-name-substring)])
-;                       (and (>= origin-len test-len)
-;                            (string=? teach-name-substring (substring origin-source (- origin-len test-len) origin-len)))))))
-;            origins))
-;    
-;    
+  (define (unwind stx-list highlights)
+    (local
+        ((define highlight-queue-src (make-queue))
+         (define highlight-queue-dest (make-queue))
+         
+         (define (inner stx)
+           (if (eq? stx highlight-placeholder-stx)
+               (begin (queue-push highlight-queue-dest (inner (queue-pop highlight-queue-src)))
+                      highlight-placeholder-stx)
+               (let* ([recur-on-pieces
+                       (lambda ()
+                         (if (pair? (syntax-e stx))
+                             (datum->syntax-object stx (syntax-pair-map (syntax-e stx) inner) stx stx)
+                             stx))]
+                      [origins (syntax-property stx 'user-origin)])
+                 (if (or (not origins) (null? origins))
+                     (recur-on-pieces)
+                     (case (car origins)
+                       ((cond) (unwind-cond stx 
+                                            (syntax-property stx 'user-source)
+                                            (syntax-property stx 'user-position)))
+                       (else (recur-on-pieces)))))))
+         
+         (define (unwind-cond stx user-source user-position)
+           (if (eq? stx highlight-placeholder-stx)
+               (begin (queue-push highlight-queue-dest (unwind-cond (queue-pop highlight-queue-src) user-source user-position))
+                      highlight-placeholder-stx)
+               (with-syntax ([clauses
+                              (let loop ([stx stx])
+                                (if (and (eq? user-source (syntax-property stx 'user-source))
+                                         (eq? user-position (syntax-property stx 'user-position)))
+                                    (syntax-case stx (if begin)
+                                      [(if test (begin result) else)
+                                       (cons (inner (syntax (test result)))
+                                             (loop (syntax else)))]
+                                      [(begin else-stx)
+                                       ; source or synthesized else?
+                                       (if (teach-source? (syntax-property (syntax else-stx) 'user-source))
+                                           null
+                                           (cons (inner (syntax (else else-stx)))
+                                                 null))]
+                                      [else
+                                       (error 'unwind-cond "unexpected structure for result of cond expansion: ~a"
+                                              (syntax-object->datum stx))])
+                                    (error 'unwind-cond "unexpected source for cond element ~a\n" (syntax-object->datum stx))))])
+                 (syntax (cond . clauses))))))
+      
+      (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
+      (let* ([main (map inner stx-list)]
+             [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
+        (list main new-highlights))))
+  ; something in here returns void!
   
-  (define (unwind stx)
-    (let* ([recur-on-pieces
-            (lambda ()
-              (if (pair? (syntax-e stx))
-                  (datum->syntax-object stx (syntax-pair-map (syntax-e stx) unwind) stx stx)
-                  stx))]
-           [origins (syntax-property stx 'user-origin)])
-      (if (null? origins)
-          (recur-on-pieces)
-          (case (car origins)
-            ((cond) (unwind-cond stx 
-                                 (syntax-property stx 'user-source)
-                                 (syntax-property stx 'user-position)))
-            (else (recur-on-pieces))))))
   
-  (define (unwind-cond stx user-source user-posn)
-    (let loop ([stx stx])
-      (if (and (eq? user-source (syntax-property stx 'user-source))
-              (eq? user-position (syntax-property stx 'user-position)))
-          (syntax-case stx (if begin)
-            [(if test (begin result) else)
-             (cons (unwind (syntax (test result)))
-                   (loop (syntax else)))]
-            [else
-             (error 'unwind-cond "unexpected structure for result of cond expansion: ~a"
-                    (syntax-object->datum stx))])
+  ; teach-name-substring: the name of the file containing the teaching macros. Yuck!
+  (define teach-name-substring "lang/private/teach.ss")
+  
+  
+  (define (teach-source? source)
+    (and (string? source)
+         (let* ([origin-len (string-length source)]
+                [test-len (string-length teach-name-substring)])
+           (and (>= origin-len test-len)
+                (string=? teach-name-substring (substring source (- origin-len test-len) origin-len))))))
           
-             
+          
 ;;;  
 ; (define comes-from-define?
 ;    (make-check-raw-first-symbol 'define))
@@ -799,6 +821,8 @@
          (define redex #f)
          
          ; the main recursive reconstruction loop is in recon:
+         ; recon : ((listof syntax-object) syntax-object mark-list boolean -> (listof syntax-object))
+         
          (define (recon defs so-far mark-list first)
            (if (null? mark-list)
                (append defs
@@ -824,8 +848,8 @@
                                               highlight-placeholder-stx
                                               (cdr mark-list) 
                                               #f)])
-             (list before-step (list redex)
-                   after-step (append new-defs (list reduct)))))
+             (append (unwind before-step (list redex))
+                     (unwind after-step (append new-defs (list reduct))))))
            
          (define answer
            (map (lambda (x) (map syntax-object->datum x))
@@ -835,10 +859,10 @@
                                          (recon-source-expr (mark-source (car mark-list)) mark-list)
                                          (recon-value (car returned-value-list)))]
                           [current-defs (recon null highlight-placeholder-stx (cdr mark-list) #f)])
-                     (list current-defs (list innermost))))
+                     (unwind current-defs (list innermost))))
                   ((normal-break)
                    (let ([current-defs (recon null nothing-so-far mark-list #t)])
-                     (list current-defs (list redex))))
+                     (unwind current-defs (list redex))))
                   ((double-break)
                    (rectify-let-values-step))
                   ((late-let-break)

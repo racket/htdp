@@ -644,7 +644,8 @@
                                     in its `cond' expression"))
 			  (syntax/loc clause (else answer)))]
 		       [(question answer)
-			(syntax/loc clause ((verify-boolean question 'cond) answer))]
+                        (with-syntax ([verified (syntax-property (syntax (verify-boolean question 'cond)) 'stepper-skipto (list syntax-e cdr syntax-e cdr car))])
+                          (syntax/loc clause (verified answer)))]
 		       [()
 			(teach-syntax-error
 			 'cond
@@ -697,10 +698,11 @@
     (define (beginner-if/proc stx)
       (syntax-case stx ()
 	[(_ test then else)
-	 (syntax/loc stx
-	   (if (verify-boolean test 'if)
-	       then
-	       else))]
+         (with-syntax ([new-test (syntax-property (syntax (verify-boolean test 'if)) 'stepper-skipto (list syntax-e cdr syntax-e cdr car))])
+           (syntax/loc stx
+             (if new-test
+                 then
+                 else)))]
 	[(_ . rest)
 	 (let ([n (length (syntax->list (syntax rest)))])
 	   (teach-syntax-error
