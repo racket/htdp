@@ -75,6 +75,7 @@
    ; get-lifted-gensym
    ; expr-read
    ; set-expr-read!
+   values-map
    )
   
   ; an exp-with-holes is either:
@@ -516,6 +517,11 @@
            [it (syntax-property it 'user-source (syntax-property expr 'user-source))]
            [it (syntax-property it 'user-position (syntax-property expr 'user-position))])
       it))
+  
+  (define (values-map fn . lsts)
+  (apply values (apply map list
+                       (apply map (lambda args (call-with-values (lambda () (apply fn args)) list))
+                              lsts))))
   )
   
 ; test cases
@@ -558,3 +564,13 @@
 ;(test 2 queue-pop new-queue)
 ;(test 3 queue-pop new-queue)
 ;(err/rt-test (queue-pop new-queue) exn:user?)
+
+;(equal?
+; (call-with-values (lambda ()
+;                     (values-map (lambda (a b) (values (+ a b) (- a b)))
+;                                 `(1 2 3 4 5)
+;                                 `(9 8 7 6 5)))
+;                   (lambda (sums diffs)
+;                     (list sums diffs)))
+; `((10 10 10 10 10)
+;   (-8 -6 -4 -2 0)))
