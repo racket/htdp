@@ -71,19 +71,21 @@
   ; - a symbol, or
   ; - the highlight-placeholder
   
-  (define (exp-without-holes-base-case? val) 
-    (or (symbol? val) (null? val)))
+  (define exp-without-holes-base-case? (or/f symbol? number? string? null?))
   
-  (define (exp-without-holes? val)
-    (or (exp-without-holes-base-case? val)
-        (and (pair? val) (exp-without-holes? (car val)) (exp-without-holes? (cdr val)))))
+  (define exp-without-holes?
+    (or/f  exp-without-holes-base-case?
+           (and/f pair? (cons/p (lx ((flat-named-contract-predicate exp-without-holes?) _))
+                                (lx ((flat-named-contract-predicate exp-without-holes?) _))))))
   
-  (define (exp-with-holes-base-case? val) (or (exp-without-holes-base-case? val) (eq? _ highlight-placeholder)))
+  (define exp-with-holes-base-case? 
+    (or/f exp-without-holes-base-case?
+          (lx (eq? _ highlight-placeholder))))
+  
   (define exp-with-holes?
     (or/f exp-with-holes-base-case?
-          (and/f pair? 
-                 (lambda (val)
-                   (and (exp-with-holes? (car val)) (exp-with-holes? (cdr val)))))))
+          (and/f pair? (cons/p (lx ((flat-named-contract-predicate exp-with-holes?) _)) 
+                               (lx ((flat-named-contract-predicate exp-with-holes?) _))))))
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
