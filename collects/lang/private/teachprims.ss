@@ -1,17 +1,38 @@
 
 (module teachprims mzscheme
   
-  (define cyclic-list?
-    (lambda (l)
-      (or (list? l)
-	  (and (pair? l)
-	       (let loop ([hare (cdr l)][turtle l])
-		 (cond
-		  [(eq? hare turtle) #t]
-		  [(not (pair? hare)) #f]
-		  [(eq? (cdr hare) turtle) #t]
-		  [(not (pair? (cdr hare))) #f]
-		  [else (loop (cddr hare) (cdr turtle))]))))))
+  (define-syntax (define-teach stx)
+    (syntax-case stx ()
+      [(_ level id expr)
+       (with-syntax ([level-id (datum->syntax-object
+				(syntax id)
+				(string->symbol
+				 (format "~a-~a"
+					 (syntax-object->datum (syntax level))
+					 (syntax-object->datum (syntax id))))
+				(syntax id))])
+	 (syntax (define level-id
+		   (let ([id expr])
+		     id))))]))
+
+  (define-teach beginner list?
+    (lambda (x)
+      (or (null? x) (pair? x))))
+		    
+  ;; Don't need this anymore, since we just check for pairs:
+  '(define cyclic-list?
+     (lambda (l)
+       (or (list? l)
+	   (and (pair? l)
+		(let loop ([hare (cdr l)][turtle l])
+		  (cond
+		   [(eq? hare turtle) #t]
+		   [(not (pair? hare)) #f]
+		   [(eq? (cdr hare) turtle) #t]
+		   [(not (pair? (cdr hare))) #f]
+		   [else (loop (cddr hare) (cdr turtle))]))))))
+
+  (define cyclic-list? beginner-list?)
 
   (define (build-arg-list args)
     (let loop ([args args][n 0])
@@ -34,7 +55,7 @@
 	  'list)))))
 
   (define check-second 
-    (mk-check-second list? "list"))
+    (mk-check-second beginner-list? "list"))
 
   (define check-second/cycle
     (mk-check-second cyclic-list? "list or cyclic list"))
@@ -63,25 +84,11 @@
 	 [else (loop (cdr l))]))))
 
   (define check-last 
-    (mk-check-last list? "list"))
+    (mk-check-last beginner-list? "list"))
 
   (define check-last/cycle
     (mk-check-last cyclic-list? "list or cyclic list"))
 
-  (define-syntax (define-teach stx)
-    (syntax-case stx ()
-      [(_ level id expr)
-       (with-syntax ([level-id (datum->syntax-object
-				(syntax id)
-				(string->symbol
-				 (format "~a-~a"
-					 (syntax-object->datum (syntax level))
-					 (syntax-object->datum (syntax id))))
-				(syntax id))])
-	 (syntax (define level-id
-		   (let ([id expr])
-		     id))))]))
-		    
   (define-teach beginner +
     (lambda (a b . args)
       (apply + a b args)))
@@ -172,6 +179,7 @@
   (provide beginner-+
 	   beginner-/
 	   beginner-*
+	   beginner-list?
 	   beginner-cons
 	   beginner-list*
 	   beginner-append

@@ -1525,8 +1525,8 @@
 		       'cons
 		       "list or cyclic list"
 		       1
-		       va
-		       vd)))))
+		       (car name)
+		       (cdr name))))))
 
 	;; Check the syntax before letting the main implementation go:
 	(syntax-case stx ()
