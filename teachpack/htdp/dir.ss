@@ -1,17 +1,4 @@
-"
-Assume and export: 
-  (struct dir (name dirs files))
-  (struct file (name size content))
-
-A directory is 
-  (make-dir symbol (listof directory) (listof file))
-A file is 
-  (make-file symbol)
-
-Export: 
-  create-dir : string[path-name] -> directory."
-
-(reference-file "error-lib.ss")
+(require-library "error.ss" "htdp")
 
 (define-signature dirS
   ((struct dir (name dirs files))

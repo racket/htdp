@@ -1,20 +1,4 @@
-"The library provides operations for dealing with primitive HTML documents. 
-
-An _annotation_ is a string with 
-     #\< as the first and
-     #\> as the last char.
-
-An _end annotation is a string with 
-     #\< as the first, 
-     #\/ as the second, and 
-     #\> as the last char.
-
-It provides: 
-  annotation? 
-  end-annotation
-  write-file."
-
-(reference-file "error-lib.ss")
+(require-library "error.ss" "htdp")
 
 (define-signature docS (atom? annotation? end-annotation write-file))
 

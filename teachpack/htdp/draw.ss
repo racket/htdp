@@ -1,7 +1,5 @@
-;; simple functions to get figures drawn (test)
-
-(reference-file "error-lib.ss")
-(reference-file "big-draw-lib.ss")
+(require-library "error.ss" "htdp")
+(reference-file "big-draw.ss")
 
 (compound-unit/sig
   (import (PLT : plt:userspace^))

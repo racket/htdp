@@ -1,9 +1,9 @@
+(require-library "error.ss" "htdp")
+
 ;; Implementation:
 ;;   Stephanie Weirich (1994),
 ;;   Mark Krentel (1995),
 ;;   Matthias Felleisen (1996)
-
-(reference-file "error-lib.ss")
 
 (define-signature elevatorS (run))
 

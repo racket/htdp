@@ -1,5 +1,5 @@
-(reference-file "error-lib.ss")
-(reference-file "draw-lib.ss")
+(require-library "error.ss" "htdp")
+(reference-file "draw.ss")
 
 (define-signature arrowS (control view connect))
 

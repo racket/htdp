@@ -1,4 +1,4 @@
-(reference-file "error-lib.ss")
+(require-library "error.ss" "htdp")
 
 (define-signature masterS (repl repl3 repl-for-list))
 

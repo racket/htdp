@@ -1,4 +1,5 @@
-(reference-file "error-lib.ss")
+(require-library "error.ss" "htdp")
+(reference-file "draw.ss")
 
 (define-signature arrowS (control control-up-down control-left-right))
 
@@ -115,7 +116,6 @@
 
     ))
 
-(reference-file "draw-lib.ss")
 
 (compound-unit/sig
   (import (PLT : plt:userspace^))

@@ -1,5 +1,5 @@
-(reference-file "error-sig.ss")
-(reference-file "draw-sig.ss")
+(require-library "error-sig.ss")
+(require-library "draw-sig.ss" "htdp")
 (require-library "graphics.ss" "graphics")
 
 (define drawU
