@@ -97,7 +97,9 @@
               (set-pair-union a-set b-set free-identifier=?))
             
             (define (binding-set-pair-union a-set b-set)
-              (set-pair-union a-set b-set eq?))
+              (cond [(eq? a-set 'all) b-set]
+                    [(eq? b-set 'all) a-set]
+                    [else (set-pair-union a-set b-set eq?)]))
             
             (define (pair-union->many-union fn)
               (lambda (args)
@@ -396,15 +398,17 @@
 ;                       (else (internal-error expr "unknown read type"))))))))
 ;  
          (define (struct-procs-defined expr)
-           (if (andmap (lambda (origin-entry)
-                         (eq? (syntax-e origin-entry) 'define-struct))
-                       (syntax-property expr 'origin))
-               (syntax-case expr (define-values)
-                 [(define-values vars body)
-                  (syntax->list (syntax vars))]
-                 [else
-                  null])
-               null))
+           (let ([origin (syntax-property expr 'origin)])
+             (if (and origin
+                      (andmap (lambda (origin-entry)
+                                (eq? (syntax-e origin-entry) 'define-struct))
+                              origin))
+                 (syntax-case expr (define-values)
+                   [(define-values vars body)
+                    (syntax->list (syntax vars))]
+                   [else
+                    null])
+                 null)))
          
          (define struct-proc-names (append (struct-procs-defined expr)
                                            input-struct-proc-names))
@@ -643,7 +647,7 @@
                                                  middle-begin)]
                                       [whole-thing
                                        (d->so expr `(,output-identifier ,outer-initialization ,wrapped-begin))])
-                                 (values whole-thing free-bindings))]))))]
+                                 (2vals whole-thing free-bindings))]))))]
 
                   )
 	     
@@ -733,9 +737,9 @@
                          [free-varrefs (varref-set-union (cons free-varrefs-final free-varrefs-a))]
                          [debug-info (make-debug-info-normal free-varrefs)]
                          [annotated (d->so expr `(begin ,@(append annotated-a (list annotated-final))))])
-                       (values (ccond [(or cheap-wrap? ankle-wrap?) (appropriate-wrap annotated free-varrefs)]
-                                      [foot-wrap? (wcm-wrap debug-info annotated)])
-                               free-varrefs)))]
+                      (2vals (ccond [(or cheap-wrap? ankle-wrap?) (appropriate-wrap annotated free-varrefs)]
+                                    [foot-wrap? (wcm-wrap debug-info annotated)])
+                             free-varrefs)))]
                
               [(begin0 . bodies-stx)
                (let*-2vals
@@ -747,10 +751,10 @@
                     [free-varrefs (varref-set-union (cons free-varrefs-first free-varref-sets))]
                     [debug-info (make-debug-info-normal free-varrefs)]
                     [annotated (d->so expr `(begin0 ,annotated-first ,@annotated-bodies))])
-                 (values (ccond [(or cheap-wrap? ankle-wrap?) (appropriate-wrap annotated free-varrefs)]
-                                [foot-wrap?
-                                 (wcm-wrap debug-info annotated)])
-                         free-varrefs))]
+                 (2vals (ccond [(or cheap-wrap? ankle-wrap?) (appropriate-wrap annotated free-varrefs)]
+                               [foot-wrap?
+                                (wcm-wrap debug-info annotated)])
+                        free-varrefs))]
                
                [(let-values . _)
                 (let*-2vals ([collapsed (collapse-let-values expr)])
@@ -953,13 +957,11 @@
                    free-varrefs))])))
          
          (define (annotate/top-level expr)
-           (let-values ([(annotated dont-care)
+           (let*-2vals ([(annotated dont-care)
                          (top-level-annotate/inner expr)])
              annotated)))
          
          ; body of local
       (let* ([annotated-expr (annotate/top-level expr)])
         ;(printf "annotated: ~n~a~n" (car annotated-exprs))
-        (values annotated-expr struct-proc-names))))
-  
-)
+        (values annotated-expr struct-proc-names)))))
