@@ -1,6 +1,6 @@
 (require-library "error-sig.ss" "htdp")
 (require-library "draw-sig.ss" "htdp")
-(require-library "graphics.ss" "graphics")
+(require-library "graphicss.ss" "graphics")
 
 (define drawU
   (unit/sig coreDrawS
