@@ -387,7 +387,7 @@
                    (set! ptr (+ ptr 1))
                    1])
                 (semaphore-post sema))))))
-              
+      
       ;; expand-embedded : xexpr -> xexpr
       ;; constructs a new xexpr that has the embedded snips expanded 
       ;; and wrapped with unquotes
