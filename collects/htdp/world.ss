@@ -51,7 +51,7 @@
   
   ;; Symbol Any String -> Void
   (define (check-color tag width rank)
-    (check-arg tag (symbol? width) "color symbol" rank width))
+    (check-arg tag (image-color? width) "color symbol" rank width))
   
   (define (check-mode tag s rank)
     (check-arg tag (or (eq? s 'solid) (eq? s 'outline)) "'solid or 'outline" rank s))
@@ -122,10 +122,11 @@
     (set! the-frame
           (new (class frame%
                  (super-new)
-                 (define/augment (on-close)        
+                 (rename [super-on-close on-close])
+                 (define/override (on-close)        
                    ;; shut down the timer when the window is destroyed
                    (send the-time stop)
-                   (inner (void) on-close)))
+                   (super-on-close)))
                (label "DrScheme")))
     (send 
      (new (class editor-canvas%
