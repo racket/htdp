@@ -28,11 +28,10 @@
 	   ans))])
     (sequence (super-init))))
 
-(define font-size (make-parameter 10))
 (define (make-delta family)
   (let ([d (make-object style-delta% 'change-family family)])
     (send d set-size-mult 0)
-    (send d set-size-add (font-size))
+    (send d set-size-add (preferences:get 'drscheme:font-size))
     ;(send d set-delta-foreground "BLACK")
     d))
 
@@ -233,14 +232,24 @@
   (or (is-a? snip constant-snip%)
       (is-a? snip evaluated-snip%)))
 
-(require-library "pretty.ss")
-
+(define typeset-size
+  (let ([value (preferences:get 'drscheme:font-size)])
+    (case-lambda
+     [() value]
+     [(x)
+      (unless (and (exact? x)
+		   (integer? x)
+		   (> x 0))
+	(error 'typeset-size
+	       "expected an exact integer strictly greater than zero"))
+      (set! value x)])))
 
 (define (replace-in-template family template-snip . replacements)
   (let* ([delta (make-delta family)]
+	 [_ (begin (send delta set-delta-foreground "BLACK")
+		   (send delta set-size-mult 0)
+		   (send delta set-size-add (typeset-size)))]
 	 [text (make-object plain-text% delta)])
-    (send delta set-delta-foreground "BLACK")
-
     (let loop ([replacements replacements]
 	       [snip (send (send template-snip get-editor) find-first-snip)])
       (cond
@@ -309,7 +318,9 @@
 
     (frame:reorder-menus this)))
 
-(define utils (invoke-unit/sig (require-library "utils.ss" "typeset") mred^ framework^))
+(define utils (invoke-unit/sig (require-library "utils.ss" "typeset")
+			       mred^ framework^
+			       typeset:utils-input^))
 
 (define (typeset-rep-extension super-text%)
   (class/d super-text% args
