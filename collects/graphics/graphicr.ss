@@ -587,8 +587,16 @@
 	      the-function))))))
   
   (define draw-line (make-do-line draw-it))
-  (define clear-line (make-do-line clear-it))
-  (define flip-line (make-do-line flip-it))
+  (define (clear-line viewport)
+    (let ([f ((make-do-line clear-it) viewport)])
+      (rec clear-line-viewport
+	   (lambda (p1 p2)
+	     (f p1 p2)))))
+  (define (flip-line viewport)
+    (let ([f ((make-do-line flip-it) viewport)])
+      (rec flip-line-viewport
+	   (lambda (p1 p2)
+	     (f p1 p2)))))
   
   (define (draw/clear/flip ivar)
     (lambda (init-dc viewport p width height)
@@ -774,12 +782,28 @@
 			 'get-pen 'set-pen invisi-pen)))
   
   (define draw-polygon (make-do-polygon draw-it))
-  (define clear-polygon (make-do-polygon clear-it))
-  (define flip-polygon (make-do-polygon flip-it))
+  (define (clear-polygon viewport)
+    (let ([f ((make-do-polygon clear-it) viewport)])
+      (rec clear-polygon-viewport
+	   (lambda (posns offset)
+	     (f posns offset)))))
+  (define (flip-polygon viewport)
+    (let ([f ((make-do-polygon flip-it) viewport)])
+      (rec flip-polygon-viewport
+	   (lambda (posns offset)
+	     (f posns offset)))))
   
   (define draw-solid-polygon (make-do-solid-polygon draw-it))
-  (define clear-solid-polygon (make-do-solid-polygon clear-it))
-  (define flip-solid-polygon (make-do-solid-polygon flip-it))
+  (define (clear-solid-polygon viewport)
+    (let ([f ((make-do-solid-polygon clear-it) viewport)])
+      (rec clear-solid-polygon-viewport
+	   (lambda (posns offset)
+	     (f posns offset)))))
+  (define (flip-solid-polygon viewport)
+    (let ([f ((make-do-solid-polygon flip-it) viewport)])
+      (rec flip-solid-polygon-viewport
+	   (lambda (posns offset)
+	     (f posns offset)))))
   
   (define make-do-pixel
     (lambda (go)
@@ -804,8 +828,16 @@
 	      the-function))))))
   
   (define draw-pixel (make-do-pixel draw-it))
-  (define clear-pixel (make-do-pixel clear-it))
-  (define flip-pixel (make-do-pixel flip-it))
+  (define (clear-pixel viewport)
+    (let ([f ((make-do-pixel clear-it) viewport)])
+      (rec clear-pixel-viewport
+	   (lambda (posns offset)
+	     (f posns offset)))))
+  (define (flip-pixel viewport)
+    (let ([f ((make-do-pixel flip-it) viewport)])
+      (rec flip-pixel-viewport
+	   (lambda (posns offset)
+	     (f posns offset)))))
   
   (define string-functions
     (lambda (string-op)
@@ -847,8 +879,16 @@
 	outer-function)))
   
   (define draw-string (string-functions 'draw))
-  (define clear-string (string-functions 'clear))
-  (define flip-string (string-functions 'flip))
+  (define (clear-string viewport)
+    (let ([f ((string-functions 'clear) viewport)])
+      (rec clear-string-viewport
+	   (lambda (posns offset)
+	     (f posns offset)))))
+  (define (flip-string viewport)
+    (let ([f ((string-functions 'flip) viewport)])
+      (rec flip-string-viewport
+	   (lambda (posns offset)
+	     (f posns offset)))))
   
   (define get-string-size
     (case-lambda
