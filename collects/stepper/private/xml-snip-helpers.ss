@@ -44,7 +44,7 @@
          (set! old-locked (send editor is-locked?))
          (send editor lock #t))
        (lambda ()
-         (let* ([port (open-input-text-editor editor)]
+         (let* ([port (open-input-text-editor editor 0 'end (xml-snip-filter editor))]
                 [xml (with-handlers ([exn:xml? (translate-xml-exn-to-rep-exn editor)])
                        (read-xml port))]
                 [xexpr (xml->xexpr (document-element xml))]
@@ -58,6 +58,15 @@
                               'stepper-xml-hint
                               'from-xml-box))))
        (lambda () (send editor lock old-locked)))))
+  
+  (define ((xml-snip-filter text) s)
+    (cond
+      [(is-a? s scheme-snip<%>)
+       (let* ([position (send text get-snip-position s)]
+              [line (send text position-paragraph position)]
+              [col (- position (send text paragraph-start-position line))])
+         (make-wrapped s text line col position))]
+      [else s]))
   
   (define scheme-snip<%>
     (interface ()
