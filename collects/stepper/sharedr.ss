@@ -102,6 +102,10 @@
   
   (define-struct label)
   
+  ; no-label : used when there is no label to apply.
+  
+  (define-struct (no-label struct:label) ())
+  
   ; cond-label: the cond-label structure holds a natural number, and indicates
   ; which branch of a cond a given if was generated from.
   

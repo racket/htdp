@@ -11,35 +11,47 @@
        (lambda (key)
 	 (hash-table-get closure-table key)))))
   
-  (define source-table (make-hash-table-weak))
+  (define (find-var-binding mark-list var)
+    (if (null? mark-list)
+	(error var "no binding found for variable.")
+	(let* ([mark-vars (cddr ((car mark-list)))]
+	       [matches (filter (lambda (mark-var)
+				  (eq? var (varref-var mark-var))))])
+	  (cond ((null? matches)
+		 (find-var-binding (cdr mark-list) var))
+		((> (length matches) 1)
+		 (error matches "more than one variable binding found"))
+		(else ; (length matches) = 1
+		 (car matches))))))
+	  
   
-  (define (register key value)
-    (hash-table-put! source-table key value))
-  
-  (define (find-source-expr key offset)
-    (let search-exprs ([exprs (hash-table-get key)])
-      (let ([expr 
-	     (car (filter 
-		   (lambda (expr) 
-		     (< offset (z:location-offset (z:zodiac-finish expr))))
-		   exprs))])
-	(if (= offset (z:location-offset (z:zodiac-start expr)))
-	    expr
-	    (cond
-	      ((z:scalar? expr) (e:static-error "starting offset inside scalar:" offset))
-	      ((z:sequence? expr) 
-	       (let ([object (z:read-object expr)])
-		 (cond
-		   ((z:list? expr) (search-exprs object))
-		   ((z:vector? expr) 
-		    (search-exprs (vector->list object))) ; can source exprs be here?
-		   ((z:improper-list? expr)
-		    (search-exprs (search-exprs object))) ; can source exprs be here?
-		   (else (e:static-error "unknown expression type in sequence" expr)))))
-	      (else (e:static-error "unknown read type" expr)))))))
-  
-  (define (reconstruct mark-list)
-    (
-  
+  (define (reconstruct key mark-list)
+    
+    (define (reconstruct/inner mark-list so-far)
+      (if (null? mark-list)
+	  so-far
+	  (let* ([top-mark (car mark-list)]
+		 [mark-source (car top-mark)]
+		 [expr (find-source-expr key mark-source)])
+	    (cond (
+		   ; variable references
+		   
+		   (z:scalar expr)
+		   (cond ((not (null? so-far))
+			  (e:dynamic-error expr 
+					   "scalar expression given as context"))
+			 ((not (z:symbol expr))
+			  (e:dynamic-error expr
+					   "non-symbol given as evaluated expression"))
+			 (else
+			  (let* ([var-record (find-var-binding mark-list (z:object expr))]
+				 [var-val (car var-record)]
+				 [var-top-level? (varref-top-level? (cadr var-record))])
+			    (if var-top-level?
+				(z:object expr)
+				var-val)))))
+		  
+		  
+					
   
     

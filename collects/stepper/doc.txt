@@ -77,3 +77,33 @@ A note about source locations: I'm using the "start" locations of sexps
 (assigned by Zodiac) to uniquely identify those expressions: I don't 
 believe there are any instances where two expressions share a start 
 location.
+
+*********
+
+Robby has a good point: Matthew's technique for detecting gaps in the 
+continuation-mark chain (look for applications whose arguments are fully 
+evaluated but are still on the list of current marks) depends on the 
+assumption that every "jump site" has the jump as its tail action.  In 
+other words, what about things like "invoke-unit/open", which jumps to some
+code, evaluates it, >then comes back and binds unit values in the 
+environment<.  In this case, the "invoke-unit/open" continuation will not 
+be handed directly to the evaluation of the unit, because work remains to 
+be done after the evaluation of the unit's definitions.  Therefore, it will 
+be impossible to tell when un-annotated code is appearing on the stack in 
+uses of "invoke-unit/open."   Problem.
+
+*********
+
+So what the heck does a mark contain for the stepper? it looks like this:
+
+(lambda () (list <source-offset> <label> <var-list>))
+
+with 
+
+var-list = (list-of var)
+
+and
+
+var = (list <val> (make-varref <name> <top-level?>))
+
+
