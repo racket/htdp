@@ -169,6 +169,22 @@
 (htdp-test #t (lambda (l) (eq? l (cadr l))) (shared ([x (list x x)]) x))
 (htdp-err/rt-test (shared ([x (cons 1 y)][y 5]) x))
 
+(htdp-syntax-test #'recur)
+(htdp-syntax-test #'(recur))
+(htdp-syntax-test #'(recur 10))
+(htdp-syntax-test #'(recur name))
+(htdp-syntax-test #'(recur name 10))
+(htdp-syntax-test #'(recur name ([x 1])))
+(htdp-syntax-test #'(recur name ([x]) 1))
+(htdp-syntax-test #'(recur name ([x 10] 2) 1))
+(htdp-syntax-test #'(recur name ([11 10]) 1))
+(htdp-syntax-test #'(recur name ([x 10]) 1 2))
+(htdp-syntax-test #'(recur name ([x 10][x 11]) 1))
+(htdp-test 18 'lookup (recur name ([x 18]) x))
+(htdp-test 1024 'loop (recur loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
+(htdp-test 13 'loop (recur f ([f 13]) f))
+(htdp-test 14 'loop (let ([f 14]) (recur f ([f f]) f)))
+
 (load (build-path (collection-path "tests" "mzscheme") "shared-tests.ss"))
 
 (htdp-test #t 'equal? (equal? (vector (list 10) 'apple) (vector (list 10) 'apple)))
