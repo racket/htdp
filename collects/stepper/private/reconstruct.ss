@@ -330,6 +330,7 @@
               (error 'reconstruct "unexpected result for unwinding the-cons application")]))
          
          (define (unwind-cond stx user-source user-position)
+           (fprintf (current-error-port) "unwinding cond: ~a\n" (syntax-object->datum stx))
            (if (eq? stx highlight-placeholder-stx)
                (begin (queue-push highlight-queue-dest (unwind-cond (queue-pop highlight-queue-src) user-source user-position))
                       highlight-placeholder-stx)
@@ -338,8 +339,8 @@
                                 (cond [(syntax-property stx 'user-stepper-else) 
                                        (if (syntax-property stx 'user-stepper-inserted-else)
                                            null
-                                           (cons (inner (with-syntax ([stx stx])
-                                                          (syntax (else stx))))
+                                           (cons (with-syntax ([stx (inner stx)])
+                                                   (syntax (else stx)))
                                                  null))]
                                       [(and (eq? user-source (syntax-property stx 'user-source))
                                              (eq? user-position (syntax-property stx 'user-position))) 
@@ -838,7 +839,19 @@
                   
                   ; quote : there is no break on a quote.
                   
-                  ; begin, begin0 : may not occur directly (or indirectly?) except in advanced
+                  ; begin : may not occur directly, but will occur in the expansion of cond, now that I'm no longer
+                  ; masking that out with stepper-skipto. Furthermore, exactly one expression can occur inside it.
+                  
+                  [(begin clause)
+                   (attach-info
+                    (if (eq? so-far nothing-so-far)
+                        (d->so `(begin ,(recon-source-current-marks (syntax clause))))
+                        (error 
+                         'recon-inner
+                         "stepper:reconstruct: one-clause begin appeared as context: ~a" (syntax-object->datum expr)))
+                    expr)]
+                   
+                  ; begin0 : may not occur directly except in advanced
                   
                   ; let-values
                   
