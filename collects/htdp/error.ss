@@ -34,10 +34,9 @@
   
   ;; check-arity : sym num (list-of TST) -> void
   (define (check-arity name arg# args)
-    (if (>= (length args) arg#)
+    (if (= (length args) arg#)
         (void)
-        (error name "expects at least ~a arguments, given ~e"
-	  arg# (length args))))
+        (error name "expects ~a arguments, given ~e" arg# (length args))))
   
   ;; check-proc :
   ;;   sym (... *->* ...) num (union sym str) (union sym str) -> void

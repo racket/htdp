@@ -77,10 +77,14 @@
   (define (make-line name f)
     (make-true
      (lambda x
-       (check-arity name 2 x)
        (apply (lambda (p1 p2 . c)
                 (check-arg name (posn? p1) "posn" "first" p1)
                 (check-arg name (posn? p2) "posn" "second" p2)
+		(if (pair? c)
+		    (begin
+		      (check-arity name 3 (cons p1 (cons p2 c)))
+		      (check-arg name (symbol? (car c)) "symbol" "third" (car c)))
+		    (check-arity name 3 x))
                 (f p1 p2 (symbol->color (if (null? c) 'black (car c)))))
               x))))
   
@@ -116,11 +120,13 @@
       (set! @vp current-window)
       (set! %clear-all (clear-viewport current-window))
       
-      (set! %draw-solid-line (make-line 'draw-solid-line (draw-line current-window)))
+      (set! %draw-solid-line
+	(make-line 'draw-solid-line
+	  (draw-line current-window)))
       (set! %clear-solid-line
-            (make-line 'clear-solid-line
-                       (lambda (p1 p2 c)
-                         ((clear-line current-window) p1 p2))))
+	(make-line 'clear-solid-line
+	  (lambda (p1 p2 c)
+	    ((clear-line current-window) p1 p2))))
       
       (set! %draw-solid-rect (make-rect 'draw-solid-rect (draw-solid-rectangle current-window)))
       (set! %clear-solid-rect
