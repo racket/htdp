@@ -168,7 +168,7 @@
           (let ([the-event (make-sixkey (send key-event get-key-code))])
             ;; --- timing stuff : MF 4/4/2004
             (if (procedure? on-char-proc)
-                (on-char-proc the-event)
+                (on-char-proc the-event)                  
                 (send press-queue add the-event))))])
       
       ;; --- timing stuff : MF 4/4/2004
@@ -221,7 +221,8 @@
         [stop-tick 
          (lambda ()
            (set! on-char-proc #f)
-           (set! on-tick-proc void))]
+           (set! on-tick-proc void)
+	   the-world)]
         [init-world (lambda (w) (set! the-world w))])
       ;; --- end timing stuff
       
