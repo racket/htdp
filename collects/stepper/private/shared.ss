@@ -81,7 +81,7 @@
    a...b ; a list of numbers from a to b
    reset-profiling-table ; profiling info
    get-set-pair-union-stats ; profiling info
-   )
+   re-intern-identifier)
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
@@ -514,7 +514,8 @@
            [it (syntax-property it 'user-stepper-proc-define-name (syntax-property expr 'user-stepper-proc-define-name))]
            [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'user-stepper-and/or-clauses-consumed))]
            [it (syntax-property it 'user-source (syntax-property expr 'user-source))]
-           [it (syntax-property it 'user-position (syntax-property expr 'user-position))])
+           [it (syntax-property it 'user-position (syntax-property expr 'user-position))]
+           [it (syntax-property it 'stepper-highlight (syntax-property expr 'stepper-highlight))])
       it))
   
   (define (values-map fn . lsts)
@@ -527,6 +528,15 @@
     (if (= a b)
         (list a)
         (cons a (a...b (+ a 1) b))))
+  
+  ;; re-intern-identifier : (identifier? -> identifier?)
+  ;; re-intern-identifier : some identifiers are uninterned, which breaks
+  ;; test cases.  re-intern-identifier takes an identifier to a string
+  ;; and back again to make in into an interned identifier.
+  (define (re-intern-identifier identifier)
+    #`#,(string->symbol (symbol->string (syntax-e identifier))))
+  
+
   )
   
 ; test cases

@@ -43,6 +43,7 @@
            "shared.ss"
            "marks.ss"
            "highlight-placeholder.ss"
+           "testing-shared.ss"
            "model-settings.ss")
  
 
@@ -73,14 +74,15 @@
          ; redivide takes a list of sexps and divides them into the 'before', 'during', and 'after' lists,
          ; where the before and after sets are maximal-length lists where none of the s-expressions contain
          ; a highlight-placeholder
-         ; (->* ((listof sexp)) (list/p sexp sexp sexp))
+         ; (->* ((listof syntax)) (list/p syntax syntax syntax))
          (define (redivide exprs)
+           (printf "redividing: ~v\n" (map syntax-object->hilite-datum exprs))
            (letrec ([contains-highlight
                      (lambda (expr)
-                       (if (pair? expr)
-                           (or (contains-highlight (car expr))
-                               (contains-highlight (cdr expr)))
-                           (syntax-property expr 'stepper-highligght)))])
+                       (or (syntax-property expr 'stepper-highlight)
+                           (syntax-case expr ()
+                             [(a . rest) (or (contains-highlight #`a) (contains-highlight #`rest))]
+                             [else #f])))])
              (let* ([list-length (length exprs)]
                     [split-point-a (- list-length (length (or (memf contains-highlight exprs) null)))]
                     [split-point-b (length (or (memf contains-highlight (reverse exprs)) null))])
@@ -188,8 +190,7 @@
          (define (step-through-expression expanded expand-next-expression)
            (printf "expanded: ~v\n" expanded)
            (let* ([annotated (a:annotate expanded break track-inferred-names?)])
-             (parameterize ([current-eval basic-eval])
-               (eval annotated))
+             (eval annotated)
              (expand-next-expression)))
          
          (define (err-display-handler message exn)

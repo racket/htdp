@@ -13,6 +13,7 @@
            "shared.ss"
            "highlight-placeholder.ss"
            "my-macros.ss"
+           "testing-shared.ss"
            "lifting.ss")
 
   (provide/contract 
@@ -295,6 +296,7 @@
   ; and returns a list of syntax objects
   
   (define (unwind stx lift-at-highlight?)
+    (printf "stx: ~v\n" (syntax-object->hilite-datum stx))
     (macro-unwind (lift stx lift-at-highlight?)))
   
   ; unwind-no-highlight is really just macro-unwind, but with the 'right' interface that
@@ -337,13 +339,12 @@
     (local
         ((define (recur-on-pieces stx)
            (if (pair? (syntax-e stx))
-               (datum->syntax-object stx (syntax-pair-map (syntax-e stx) inner) stx stx)
-               stx))
+                (datum->syntax-object stx (syntax-pair-map (syntax-e stx) inner) stx stx)
+                stx))
          
          (define (inner stx)
-           (let ([fall-through
-                  (lambda ()
-                    (kernel:kernel-syntax-case stx #f
+           (define (fall-through)
+             (kernel:kernel-syntax-case stx #f
                       [id
                        (identifier? stx)
                        (or (syntax-property stx 'stepper-lifted-name)
@@ -359,32 +360,35 @@
                       [(letrec-values . rest)
                        (unwind-mz-let stx)]
                       [else
-                       (recur-on-pieces stx)]))])
-             (if (syntax-property stx 'user-stepper-hint)
-                 (case (syntax-property stx 'user-stepper-hint)
-                   
-                   
-                   [(comes-from-cond) (unwind-cond stx 
-                                                   (syntax-property stx 'user-source)
-                                                   (syntax-property stx 'user-position))]
-                   
-                   [(comes-from-and) (unwind-and/or stx
-                                                    (syntax-property stx 'user-source)
-                                                    (syntax-property stx 'user-position)
-                                                    'and)]
-                   
-                   [(comes-from-or) (unwind-and/or stx
+                       (recur-on-pieces stx)]))
+           
+           (transfer-info 
+            (if (syntax-property stx 'user-stepper-hint)
+                (case (syntax-property stx 'user-stepper-hint)
+                  
+                  
+                  [(comes-from-cond) (unwind-cond stx 
+                                                  (syntax-property stx 'user-source)
+                                                  (syntax-property stx 'user-position))]
+                  
+                  [(comes-from-and) (unwind-and/or stx
                                                    (syntax-property stx 'user-source)
                                                    (syntax-property stx 'user-position)
-                                                   'or)]
-                   
-                   [(comes-from-local)
-                    (unwind-local stx)]
-                   
-                   ;[(from-xml-box)]
-                   
-                   (else (fall-through)))
-                 (fall-through))))
+                                                   'and)]
+                  
+                  [(comes-from-or) (unwind-and/or stx
+                                                  (syntax-property stx 'user-source)
+                                                  (syntax-property stx 'user-position)
+                                                  'or)]
+                  
+                  [(comes-from-local)
+                   (unwind-local stx)]
+                  
+                  ;[(from-xml-box)]
+                  
+                  (else (fall-through)))
+                (fall-through))
+            stx))
          
          (define (unwind-define stx)
            (kernel:kernel-syntax-case stx #f
@@ -431,9 +435,9 @@
                         (syntax-property (car (syntax->list #`new-bodies)) 'user-stepper-source))
                    (eq? (syntax-property stx 'user-stepper-position)
                         (syntax-property (car (syntax->list #`new-bodies)) 'user-stepper-position)))
-                  (transfer-info #`(let* #,(append (syntax->list #`([var rhs2] ...)) (syntax->list #`bindings)) inner-body ...) stx)]
+                  #`(let* #,(append (syntax->list #`([var rhs2] ...)) (syntax->list #`bindings)) inner-body ...)]
                  [else
-                  (transfer-info #`(new-label ([var rhs2] ...) . new-bodies) stx)]))))
+                  #`(new-label ([var rhs2] ...) . new-bodies)]))))
          
          (define (unwind-local stx)
            (kernel:kernel-syntax-case stx #f
@@ -653,13 +657,6 @@
                               [else
                                (error 'recon-source "no matching clause for syntax: ~a" expr)])])
                 (attach-info recon expr))))))
-  
-  ;; re-intern-identifier : (identifier? -> identifier?)
-  ;; re-intern-identifier : some identifiers are uninterned, which breaks
-  ;; test cases.  re-intern-identifier takes an identifier to a string
-  ;; and back again to make in into an interned identifier.
-  (define (re-intern-identifier identifier)
-    #`#,(string->symbol (symbol->string (syntax-e identifier))))
   
   
   ;; filter-skipped : (listof syntax?) -> (listof syntax?)
@@ -977,7 +974,7 @@
               (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
                                     (recon-source-expr (mark-source (car mark-list)) mark-list null null render-settings)
                                     (recon-value (car returned-value-list) render-settings))])
-                (unwind (recon innermost (cdr mark-list) #f) #f)))
+                (unwind (recon (syntax-property innermost 'stepper-highlight #t) (cdr mark-list) #f) #f)))
              ((normal-break)
               (unwind (recon nothing-so-far mark-list #t) #f))
              ((double-break)
@@ -991,8 +988,8 @@
                                               [else (error 'reconstruct "expected a let-values as source for a double-break, got: ~e"
                                                            (syntax-object->datum source-expr))])]
                      [innermost-after (recon-source-expr (mark-source (car mark-list)) mark-list null newly-lifted-bindings render-settings)])
-                (list (unwind (recon innermost-before (cdr mark-list) #f) #f)
-                      (unwind (recon innermost-after (cdr mark-list) #f) #t))))
+                (list (unwind (recon (syntax-property innermost-before 'stepper-highlight #t) (cdr mark-list) #f) #f)
+                      (unwind (recon (syntax-property innermost-after 'stepper-highlight #t) (cdr mark-list) #f) #t))))
              ((late-let-break)
               (let* ([one-level-recon (unwind-only-highlight (recon-inner mark-list nothing-so-far))])
                 (list (sublist 0 (- (length one-level-recon) 1) one-level-recon))))
