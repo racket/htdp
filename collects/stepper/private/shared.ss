@@ -14,6 +14,7 @@
         (identifier? v)
         (and (pair? v)
              ((flat-contract-predicate (cons/c identifier? arglist?)) v))        
+        (and (syntax? v) (null? (syntax-e v)))
         (and (syntax? v) 
              ((flat-contract-predicate (cons/c identifier? arglist?)) (syntax-e v)))))
   
