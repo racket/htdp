@@ -1,7 +1,7 @@
-(module turex mzscheme
+(module turtle-examples mzscheme
   (require (lib "math.ss")
 	   (lib "etc.ss")
-	   (lib "turtle.ss" "graphics"))
+	   "turtles.ss")
   (provide regular-poly regular-polys radial-turtles spaced-turtles
 	   spokes spyro-gyra neato graphics-bexam serp-size serp serp-nosplit
 	   koch-size koch-split koch-draw lorenz lorenz1 peano-size

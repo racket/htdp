@@ -1,4 +1,4 @@
-(module turtle mzscheme
+(module turtles mzscheme
   (require (lib "unitsig.ss")
 	   (lib "mred-sig.ss" "mred")
 	   (lib "mred.ss" "mred")
