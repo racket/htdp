@@ -332,9 +332,10 @@
                (with-syntax ([clauses
                               (let loop ([stx stx])
                                 (cond [(syntax-property stx 'user-stepper-else) 
-                                       (if (syntax-property (syntax else-stx) 'user-stepper-inserted-else)
+                                       (if (syntax-property stx 'user-stepper-inserted-else)
                                            null
-                                           (cons (inner (syntax (else else-stx)))
+                                           (cons (inner (with-syntax ([stx stx])
+                                                          (syntax (else stx))))
                                                  null))]
                                       [(and (eq? user-source (syntax-property stx 'user-source))
                                              (eq? user-position (syntax-property stx 'user-position))) 
