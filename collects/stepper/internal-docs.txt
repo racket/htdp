@@ -52,11 +52,17 @@ stepper-skip-completely :
  transferred.) Actually, the code is wrapped with a dummy mark,
  just to make sure that other marks get properly obliterated.
 
+ Note that skipping an expression can turn a sensible expression into
+ a nonsensical one.  This is where the 'expressions are lists of 
+ subexpressions' abstraction and the 'expressions are one of A...Z'
+ abstraction part ways. 
+
  Uses:
  - applied to the check of the test-variable in the expansion of the
    'or' macro. 
  - applied to the expansion of the primitives defined with 
    'define-primitive'.
+ - applied to the 'make-generative-lambda' inserted by teach.ss
  
 stepper-hint : 
  this is the most generally applied syntax property.  In general, it
@@ -143,6 +149,9 @@ stepper-else :
   to the 'if' wrapping that 'true'.  This is because there is no
   place to annotated the cond that is passed to mzscheme's
   expander which will result in an annotation on the 'if.'
+  Note that it cannot be applied simply to the 'true' itself,
+  because then, when you reduce to the then, the mark on the
+  test (that is, the (#%datum . true)) is gone.
   (Transferred.)
 
 stepper-define-struct-hint :

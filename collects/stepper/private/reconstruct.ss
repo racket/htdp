@@ -409,6 +409,13 @@
              [else
               (error 'reconstruct "unexpected result for unwinding the-cons application")]))
          
+         (define (unwind-cond-clause stx test-stx result-stx)
+           (with-syntax ([new-test (if (syntax-property stx 'user-stepper-else)
+                                       #`else
+                                       (inner test-stx))]
+                         [result (inner result-stx)])
+             #`(new-test result)))
+         
          (define (unwind-cond stx user-source user-position)
            (if (eq? stx highlight-placeholder-stx)
                (begin (queue-push highlight-queue-dest (unwind-cond (queue-pop highlight-queue-src) user-source user-position))
@@ -418,17 +425,15 @@
                                 (if (and (eq? user-source (syntax-property stx 'user-source))
                                          (eq? user-position (syntax-property stx 'user-position)))
                                     (syntax-case stx (if begin #%app)
+                                      [(if test result) ; the else clause disappears when it's a language-inserted else clause
+                                       (list (unwind-cond-clause stx #`test #`result))]
                                       [(if test result else-clause)
-                                       (with-syntax ([new-test (if (syntax-property stx 'user-stepper-else)
-                                                               (syntax else)
-                                                               (inner (syntax test)))]
-                                                     [result (inner (syntax result))])
-                                         (cons (syntax (new-test result))
-                                               (loop (syntax else-clause))))]
-                                      [(error . args)
+                                       (cons (unwind-cond-clause stx #`test #`result)
+                                               (loop (syntax else-clause)))]
+                                      [(begin . rest) ; else clause appears momentarily in 'before,' even though it's a 'skip-completely'
                                        null]
                                       [else-stx
-                                       (error 'unwind-cond "expected an if or a begin, got: ~e" (syntax-object->datum (syntax else-stx)))])
+                                       (error 'unwind-cond "expected an if, got: ~e" (syntax-object->datum (syntax else-stx)))])
                                     (error 'unwind-cond "expected a cond clause expansion, got: ~e" (syntax-object->datum stx))))])
                  (syntax (cond . clauses)))))
          
@@ -486,8 +491,7 @@
   ; NB: the variable 'lexically-bound-bindings' contains a list of bindings which occur INSIDE the expression
   ; being evaluated, and hence do NOT yet have values.
 
-  (define recon-source-expr 
-    (contract
+  (define/contract recon-source-expr 
      (-> syntax? mark-list? binding-set? render-settings? syntax?)
      (lambda (expr mark-list lexically-bound-bindings render-settings)
       (if (syntax-property expr 'stepper-skipto)
@@ -505,7 +509,7 @@
                      [recon-basic
                       (lambda ()
                         (with-syntax ([(label . bodies) expr])
-                          #`(label #,@(map recur (syntax->list (syntax bodies))))))]
+                          #`(label #,@(map recur (filter-skipped (syntax->list (syntax bodies)))))))]
                      [recon-let/rec
                       (lambda ()
                         (with-syntax ([(label  ((vars val) ...) body) expr])
@@ -521,7 +525,7 @@
                         (with-syntax ([(args . bodies-stx) clause])
                           (let* ([arglist (arglist-flatten #'args)]
                                  [bodies (map (lambda (body) (let-recur body arglist))
-                                              (syntax->list (syntax bodies-stx)))])
+                                              (filter-skipped (syntax->list (syntax bodies-stx))))])
                             (cons (syntax args) bodies))))]
                      [recon (kernel:kernel-syntax-case expr #f
                               
@@ -596,9 +600,14 @@
                               
                               [else
                                (error 'recon-source "no matching clause for syntax: ~a" expr)])])
-                (attach-info recon expr)))))
-     'recon-source-expr
-     'caller))
+                (attach-info recon expr))))))
+  
+  ;; filter-skipped : (listof syntax?) -> (listof syntax?)
+  ;; filter out any elements of the list with 'stepper-skip-completely set.
+  (define (filter-skipped los)
+    (filter (lambda (stx)
+              (not (syntax-property stx 'stepper-skip-completely)))
+            los))
  
   
   ;; mflatt: MAJOR HACK - work around the prefix on

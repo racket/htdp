@@ -207,25 +207,25 @@
                (let ([origin (syntax-property stx 'origin)]
                      [rebuild-if
                       (lambda (new-cond-test)
-                        (let* ([new-then (recur-regular (syntax then))]
-                               [rebuilt (syntax-property
-                                         (rebuild-stx `(if ,(recur-regular (syntax test))
-                                                           ,new-then
-                                                           ,(recur-in-cond (syntax else-stx) new-cond-test))
-                                                      stx)
-                                         'stepper-hint
+                         (let* ([new-then (recur-regular (syntax then))]
+                                [rebuilt (syntax-property
+                                          (rebuild-stx `(if ,(recur-regular (syntax test))
+                                                            ,new-then
+                                                            ,(recur-in-cond (syntax else-stx) new-cond-test))
+                                                       stx)
+                                          'stepper-hint
                                          'comes-from-cond)])
-                          ; move the stepper-else mark to the if, if it's present:
-                          (if (syntax-property (syntax test) 'stepper-else)
-                              (syntax-property rebuilt 'stepper-else #t)
-                              rebuilt)))])
-                 (cond [(cond-test stx)
+                           ; move the stepper-else mark to the if, if it's present:
+                           (if (syntax-property (syntax test) 'stepper-else)
+                               (syntax-property rebuilt 'stepper-else #t)
+                               rebuilt)))])
+                 (cond [(cond-test stx) ; continuing an existing 'cond'
                         (rebuild-if cond-test)]
-                       [(and origin (pair? origin) (eq? (syntax-e (car origin)) 'cond))
+                       [(and origin (pair? origin) (eq? (syntax-e (car origin)) 'cond)) ; starting a new 'cond'
                         (rebuild-if (lambda (test-stx) 
                                       (and (eq? (syntax-source stx) (syntax-source test-stx))
                                            (eq? (syntax-position stx) (syntax-position test-stx)))))]
-                       [else
+                       [else ; not from a 'cond' at all.
                         (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) stx)]))]
               [(begin body) ; else clauses of conds; ALWAYS AN ERROR CALL
                (cond-test stx)
@@ -579,9 +579,14 @@
                                 (lambda (clause)
                                   (with-syntax ([(args-stx . bodies) clause])
                                     (let*-2vals ([(annotated-body free-varrefs)
-                                                  (if (= (length (syntax->list (syntax bodies))) 1)
-                                                      (lambda-body-recur (car (syntax->list (syntax bodies))))
-                                                      (lambda-body-recur (syntax (begin . bodies))))]
+                                                  ; wrap bodies in explicit begin if more than 1 user-introduced (non-skipped) bodies
+                                                  (if (> (length (filter (lambda (clause)
+                                                                           (not (syntax-property clause 'stepper-skip-completely)))
+                                                                         (syntax->list (syntax bodies)))) 1)
+                                                      (lambda-body-recur (syntax (begin . bodies)))
+                                                      (let*-2vals ([(annotated-bodies free-var-sets)
+                                                                    (2vals-map lambda-body-recur (syntax->list #`bodies))])
+                                                        (2vals #`(begin . #,annotated-bodies) (varref-set-union free-var-sets))))]
                                                  [new-free-varrefs (varref-set-remove-bindings free-varrefs
                                                                                                (arglist-flatten #'args-stx))])
                                                 (2vals (datum->syntax-object #'here `(,#'args-stx ,annotated-body) #'clause) new-free-varrefs))))]
