@@ -10,6 +10,10 @@
 ;; Don't try to run other tests from the test suite after loading this
 ;; one into a particular namespace.
 
+;; See also htdp-image.ss, which must be loaded into MrEd (but is in this
+;; directory anyway)
+
+
 (load-relative "loadtest.ss")
 
 ;; Don't need these:
