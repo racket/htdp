@@ -221,19 +221,21 @@
               expr
               (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))])))
  
+  ; these macro unwinders (and, or) are specific to beginner level
+  
   (define (rectify-and-clauses and-source expr mark-list lexically-bound-vars)
     (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
-      (if (equal? and-source (z:zodiac-start expr))
+      (if (and (z:if-form? expr) (equal? and-source (z:zodiac-start expr)))
           (cons (rectify-source (z:if-form-test expr))
                 (rectify-and-clauses and-source (z:if-form-then expr) mark-list lexically-bound-vars))
-          (list (rectify-source expr)))))
+          null)))
   
   (define (rectify-or-clauses or-source expr mark-list lexically-bound-vars)
     (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
-      (if (equal? or-source (z:zodiac-start expr))
+      (if (and (z:if-form? expr) (equal? or-source (z:zodiac-start expr)))
           (cons (rectify-source (z:if-form-test expr))
                 (rectify-or-clauses or-source (z:if-form-else expr) mark-list lexically-bound-vars))
-          (list (rectify-source expr)))))
+          null)))
   
   (define (rectify-cond-clauses cond-source expr mark-list lexically-bound-vars)
     (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
