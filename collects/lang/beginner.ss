@@ -3,8 +3,7 @@
 ;; forms and procedures. The reader-level aspects of the language
 ;; (e.g., case-sensitivity) are not implemented here.
 
-;; Bugs: (cond [false 5]) should be an error
-;;       define-struct shouldn't define mutators (or struct)
+;; Bugs: define-struct shouldn't define mutators (or struct)
 
 (module beginner mzscheme
   (require (lib "etc.ss")
@@ -13,8 +12,8 @@
   (require-for-syntax "private/teachhelp.ss")
 
   ;; syntax:
-  (provide define-struct
-	   (rename beginner-define define)
+  (provide (rename beginner-define define)
+	   (rename beginner-define-struct define-struct)
 	   (rename beginner-lambda lambda)
 	   (rename beginner-app #%app)
 	   (rename beginner-cond cond)
@@ -200,6 +199,48 @@
        (bad-use-error 'lambda stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; define-struct
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  
+  (define-syntax (beginner-define-struct stx)
+    (syntax-case stx ()
+      [(_ name_ (field_ ...))
+       (let ([name (syntax name_)]
+	     [fields (syntax->list (syntax (field_ ...)))])
+	 (unless (identifier? name)
+	   (teach-syntax-error
+	    'define-struct
+	    stx
+	    "expected a structure type name, found ~a"
+	    (something-else name)))
+	 (for-each
+	  (lambda (field)
+	    (unless (identifier? field)
+	      (teach-syntax-error
+	       'define-struct
+	       stx
+	       "expected a structure field name, found ~a"
+	       (something-else field))))
+	  fields)
+	 (with-syntax ([(to-define-name ...)
+			(let ([n (symbol->string (syntax-e name))]
+			      [+ string-append])
+			  (map (lambda (s)
+				 (datum->syntax-object name (string->symbol s) name))
+			       (append
+				(list 
+				 (+ "make-" n)
+				 (+ n "?"))
+				(map
+				 (lambda (f) 
+				   (+ n "-" (symbol->string (syntax-e f))))
+				 fields))))])
+	   (syntax (define-values (to-define-name ...)
+		     (let ()
+		       (define-struct name_ (field_ ...))
+		       (values to-define-name ...))))))]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; application
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -233,47 +274,60 @@
 	"expected a question-answer clause after `cond', but nothing's there")]
       [(_ clause ...)
        (let ([clauses (syntax->list (syntax (clause ...)))])
-	 (with-syntax ([checked-clauses
-			(map
-			 (lambda (clause)
-			   (syntax-case clause (else)
-			     [(else answer)
-			      (let ([lpos (memq clause clauses)])
-				(when (not (null? (cdr lpos)))
-				  (teach-syntax-error
-				   'cond
-				   clause
-				   "found an `else' clause that isn't the last clause ~
+	 (let ([checked-clauses
+		(map
+		 (lambda (clause)
+		   (syntax-case clause (else)
+		     [(else answer)
+		      (let ([lpos (memq clause clauses)])
+			(when (not (null? (cdr lpos)))
+			  (teach-syntax-error
+			   'cond
+			   clause
+			   "found an `else' clause that isn't the last clause ~
                                     in its `cond' expression"))
-				(syntax (else answer)))]
-			     [(question answer)
-			      (syntax ((verify-boolean question 'cond) answer))]
-			     [()
-			      (teach-syntax-error
-			       'cond
-			       clause
-			       "expected a question-answer clause, but found an empty clause")]
-			     [(question?)
-			      (teach-syntax-error
-			       'cond
-			       clause
-			       "expected a clause with a question and answer, but found a clause ~
+			(syntax (else answer)))]
+		     [(question answer)
+		      (syntax ((verify-boolean question 'cond) answer))]
+		     [()
+		      (teach-syntax-error
+		       'cond
+		       clause
+		       "expected a question-answer clause, but found an empty clause")]
+		     [(question?)
+		      (teach-syntax-error
+		       'cond
+		       clause
+		       "expected a clause with a question and answer, but found a clause ~
                                 with only one part")]
-			     [(question? answer? ...)
-			      (teach-syntax-error
-			       'cond
-			       clause
-			       "expected a clause with one question and one answer, but found a clause ~
+		     [(question? answer? ...)
+		      (teach-syntax-error
+		       'cond
+		       clause
+		       "expected a clause with one question and one answer, but found a clause ~
                                 with ~a parts"
-			       (length (syntax->list clause)))]
-			     [_else
-			      (teach-syntax-error
-			       'cond
-			       clause
-			       "expected a question-answer clause, but found ~a"
-			       (something-else clause))]))
-			 clauses)])
-	   (syntax (cond . checked-clauses))))]
+		       (length (syntax->list clause)))]
+		     [_else
+		      (teach-syntax-error
+		       'cond
+		       clause
+		       "expected a question-answer clause, but found ~a"
+		       (something-else clause))]))
+		 clauses)])
+	   ;; Add `else' clause for error, if necessary:
+	   (let ([clauses (let loop ([clauses clauses])
+			    (cond
+			     [(null? clauses)
+			      (list
+			       (syntax/loc stx
+				   [else (error 'cond "all question results were false")]))]
+			     [(syntax-case (car clauses) (else)
+				[(else . _) #t]
+				[_else #f])
+			      clauses]
+			     [else (cons (car clauses) (loop (cdr clauses)))]))])
+	     (with-syntax ([clauses clauses])
+	       (syntax (cond . clauses))))))]
       [_else (bad-use-error 'cond stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
