@@ -14,6 +14,7 @@
 	   (rename beginner-define-struct define-struct)
 	   (rename beginner-lambda lambda)
 	   (rename beginner-app #%app)
+	   (rename beginner-top #%top)
 	   (rename beginner-cond cond)
 	   (rename beginner-if if)
 	   (rename beginner-and and)
@@ -24,7 +25,6 @@
 	   (rename intermediate-unquote-splicing unquote-splicing)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum
-	   #%top
 	   empty true false)
 
   ;; procedures:

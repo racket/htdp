@@ -63,6 +63,30 @@
 	       (eval id))))
        (lambda () (error who "cannot redefine name: ~a" (syntax-e id))))))
 
+  ;; Wrapped around uses of top-level variables:
+  (define (check-not-a-function name val)
+    (if (procedure? val)
+	(raise
+	 (let-values ([(what something)
+		       (cond
+			[(struct-constructor-procedure? val)
+			 (values "constructor"
+				 "called with values for the structure fields")]
+			[(struct-accessor-procedure? val)
+			 (values "selector"
+				 "applied to a structure to get the field value")]
+			[else
+			 (values "procedure"
+				 "applied to arguments")])])
+  	   (make-exn:variable
+	    (format "~a is a ~a, so it must be ~a" 
+		    name
+		    what
+		    something)
+	    (current-continuation-marks)
+	    name)))
+	val))
+
   ;; For quasiquote and shared:
   (require (rename "teachprims.ss" the-cons advanced-cons))
   (require (rename "teachprims.ss" cyclic-list? cyclic-list?))
@@ -106,6 +130,7 @@
 			      beginner-define-struct
 			      beginner-lambda
 			      beginner-app
+			      beginner-top
 			      beginner-cond
 			      beginner-if
 			      beginner-and
@@ -627,7 +652,14 @@
 			    #f
 			    "expected an argument after the function name for a function call, ~
                         but nothing's there"))
-		      (syntax/loc stx (#%app rator rand ...)))]
+		      ;; For beginner, we need to tell beginner-top that the rator is ok:
+		      (with-syntax ([rator (if (and (identifier? fun)
+						    (not (identifier-binding fun)))
+					       ;; avoid beginner #%top:
+					       (syntax/loc stx (#%top . rator))
+					       ;; keep the rator as it was:
+					       fun)])
+			(syntax/loc stx (#%app rator rand ...))))]
 		   [(_)
 		    (teach-syntax-error
 		     '|function call|
@@ -640,6 +672,18 @@
 			    "defined name or a primitive operation name")))]
 		   [_else (bad-use-error '#%app stx)])))])
 	(values (mk-app #f) (mk-app #t))))
+
+    ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;; top-level variables (beginner)
+    ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; Disallow uses of top-level variables that are not in
+    ;; application positions.
+
+    (define (beginner-top/proc stx)
+      (syntax-case stx ()
+        [(_ . id)
+	 (syntax/loc stx (check-not-a-function 'id (#%top . id)))]))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; cond
