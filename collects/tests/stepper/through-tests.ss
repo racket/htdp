@@ -682,25 +682,32 @@
     ;;;;;;;;;;;;;
     
     (t let*-scoping1
-       (test-intermediate-sequence "(define a 3) (define c 19) (let* ([a 13] [b a]) (+ b a c))"
+       (test-both-ints "(define a 3) (define c 19) (let* ([a 13] [b a]) (+ b a c))"
                                 `((before-after-finished ((define a 3) (define c 19))
                                                          (,h-p) ((let* ([a 13] [b a]) (+ b a c))) 
-                                                         (,h-p ,h-p ,h-p) ((define a_0 13) (define b_1 a_0) (+ b_1 a_0 c)))
+                                                         (,h-p ,h-p) ((define a_0 13) (let* ([b a_0]) (+ b a_0 c))))
                                   (before-after-finished ((define a_0 13))
-                                                         ((define b_1 ,h-p) (+ b_1 a_0 c)) (a_0) same (13))
+                                                         (,h-p) ((let* ([b a_0]) (+ b a_0 c)))
+                                                         (,h-p ,h-p) ((define b_1 a_0) (+ b_1 a_0 c)))
+                                  (before-after-finished-waiting () 
+                                                                 ((define b_1 ,h-p)) (a_0) same (13)
+                                                                 ((+ b_1 a_0 c)))
                                   (before-after-finished ((define b_1 13))
                                                          ((+ ,h-p a_0 c)) (b_1) same (13))
                                   (before-after ((+ 13 ,h-p c)) (a_0) same (13))
-                                  (before-after ((+ 13 13 ,h-p)) (c) same 19)
+                                  (before-after ((+ 13 13 ,h-p)) (c) same (19))
                                   (before-after (,h-p) ((+ 13 13 19)) same (45))
                                   (finished (45)))))
     
     (t let*-lifting1
        (test-intermediate-sequence "(let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
                                 `((before-after (,h-p) ((let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
-                                                (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
+                                                (,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (let* ([b (+ 3 4)]) 9)))
                                   (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
-                                                         ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
+                                                         (,h-p) ((let* ([b (+ 3 4)]) 9)) (,h-p ,h-p) ((define b_1 (+ 3 4)) 9))
+                                  (before-after-finished-waiting ()
+                                                                 ((define b_1 ,h-p)) ((+ 3 4)) same (7)
+                                                                 (9))
                                   (finished ((define b_1 7) 9)))))
     
   (t let*-deriv
@@ -711,6 +718,13 @@
                                 (before-after ((define gprime ,h-p)) ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))
                                               (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) gp_0))
                                 (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) (define gprime gp_0))))))
+  
+  (t let/let*
+     (test-both-ints "(let* ([a 9]) (let ([b 6]) a))"
+                     `((before-after (,h-p) ((let* ([a 9]) (let ([b 6]) a))) (,h-p ,h-p) ((define a_0 9) (let ([b 6]) a_0)))
+                       (before-after-finished ((define a_0 9)) (,h-p) ((let ([b 6]) a_0)) (,h-p ,h-p) ((define b_1 6) a_0))
+                       (before-after-finished ((define b_1 6)) (,h-p) (a_0) same (9))
+                       (finished (9)))))
   ;  
   ;  ;;;;;;;;;;;;;
   ;  ;;
@@ -1039,6 +1053,6 @@
 ;  (finished (true))))
   
   
-  (run-tests '(let*-scoping1 let*-lifting1 let*-deriv))
-  ;(run-all-tests)
+  ;(run-tests '(let/let*))
+  (run-all-tests)
   )
