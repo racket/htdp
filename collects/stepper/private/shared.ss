@@ -39,7 +39,6 @@
    insert-highlighted-value
    get-lifted-var
    get-arg-var
-   d->so
    syntax->ilist
    ilist-map
    ilist-flatten
@@ -288,10 +287,6 @@
              inserted]
             [else exp])))
   
-  ;; d->so uses a local syntax reference for the lexical context argument
-  (define (d->so datum)
-    (datum->syntax-object #'here datum))
-
   ;; ilist : for our puposes, an ilist is defined like this:
   ;; ILIST : (union null (cons ILIST-VAL ILIST) (cons ILIST-VAL ILIST-VAL))
   ;; ... where an ilist val can be anything _except_ a pair or null
@@ -346,7 +341,7 @@
     (lambda args
       (apply map list args)))
   
-  (define let-counter (syntax-property (d->so 'let-counter) 'stepper-binding-type 'stepper-temp))
+  (define let-counter (syntax-property #'let-counter 'stepper-binding-type 'stepper-temp))
   
  
   ; syntax-pair-map (using the def'ns of the MzScheme docs):
