@@ -27,7 +27,7 @@
       (private
 	[current-mouse-posn (make-posn 0 0)]
 	[queue%
-	 (class null ()
+	 (class object% ()
 	   (private
 	     [queue '()]
 	     [last #f])
@@ -61,8 +61,8 @@
 	[press-queue (make-object queue%)]
 	[reset-size
 	 (lambda ()
-	   (let ([width (* scale width)]
-		 [height (* scale height)])
+	   (let ([width (inexact->exact (floor (* scale width)))]
+		 [height (inexact->exact (floor (* scale height)))])
 	     (min-client-width width)
 	     (min-client-height height)
 	     (stretchable-width #f)
@@ -72,7 +72,7 @@
 	     (send buffer-DC set-brush (send DC get-brush))
 	     (send buffer-DC set-pen (send DC get-pen))
 	     (let ([f (send DC get-font)])
-	       (unless (null? f)
+	       (when f
 		 (send buffer-DC set-font f)))
 	     (send buffer-DC clear)
 	     (send DC clear)))]
@@ -100,7 +100,7 @@
       (override
 	[on-paint
 	 (lambda ()
-	   (send DC draw-bitmap 0 0 (send buffer-DC get-bitmap)))]
+	   (send DC draw-bitmap (send buffer-DC get-bitmap) 0 0))]
 	
 	[on-event 
 	 (lambda (mouse-event)
@@ -454,10 +454,9 @@
       (send (viewport-buffer-DC viewport) set-font font)))
   
   (define set-viewport-background
-    (lambda (viewport brush)
-      (let ([color (get-brush brush)])
-	(send (viewport-DC viewport) set-background brush)
-	(send (viewport-buffer-DC viewport) set-background brush))))
+    (lambda (viewport color)
+      (send (viewport-DC viewport) set-background color)
+      (send (viewport-buffer-DC viewport) set-background color)))
   
   (define set-viewport-logical-function
     (lambda (viewport logical-function)
@@ -726,19 +725,15 @@
 			    (case-lambda
 			     [(posn text) (the-function posn text #f)]
 			     [(posn text color)
-			      (let* ([DC (viewport-DC viewport)]
-				     [x (posn-x posn)]
-				     [h-box (box 0)]
-				     [d-box (box 0)]
-				     [w-box (box 0)]
-				     [junk (send DC get-text-extent "X" 
-						 w-box h-box d-box '() font)]
-				     [y (- (posn-y posn) (- (unbox h-box) (unbox d-box)))]
-				     [buffer (viewport-buffer-DC viewport)]
-				     [string-create
-				      (lambda ()
-					(send DC draw-text text x y)
-					(send buffer draw-text text x y))])
+			      (let*-values ([(DC) (viewport-DC viewport)]
+					    [(x) (posn-x posn)]
+					    [(w h d a) (send DC get-text-extent "X" font)]
+					    [(y) (- (posn-y posn) (- h d))]
+					    [(buffer) (viewport-buffer-DC viewport)]
+					    [(string-create)
+					     (lambda ()
+					       (send DC draw-text text x y)
+					       (send buffer draw-text text x y))])
 				(cond
 				  [(eq? string-op 'draw)
 				   (when color
@@ -764,17 +759,13 @@
   (define flip-string (string-functions 'flip))
 
   (define get-string-size
-    (letrec ([outer-function
-	      (case-lambda
-	       [(viewport) (outer-function viewport DEFAULT-FONT)]
-	       [(viewport font)
-		(let ([get-extent (ivar (viewport-DC viewport) get-text-extent)])
-		  (lambda (text)
-		    (let ([w (box 0)]
-			  [h (box 0)])
-		      (get-extent text w h null null font)
-		      (list (unbox w) (unbox h)))))])])
-      outer-function))
+    (case-lambda
+     [(viewport) (get-string-size viewport DEFAULT-FONT)]
+     [(viewport font)
+      (let ([get-extent (ivar (viewport-DC viewport) get-text-extent)])
+	(lambda (text)
+	  (let-values ([(w h d a) (get-extent text font)])
+	    (list w h))))]))
   
   (define get-pixel 
     (lambda (viewport)
@@ -885,18 +876,19 @@
 		     (let*
 			 ([frame
 			   (parameterize ([mred:current-eventspace sixlib-eventspace])
-			     (make-object sixlib-frame% '() label 1 1 
-					  (* scale width) (* scale height)))]
+			     (make-object sixlib-frame%
+			       label #f
+			       (inexact->exact (floor (* scale width)))
+			       (inexact->exact (floor (* scale height)))))]
 			  [panel (make-object mred:vertical-panel% frame)]
-			  [canvas
-			   (make-object sixlib-canvas%
-					panel 0 0 
-					(* scale width) (* scale height)
-					0 "canvas")]
+			  [canvas (make-object sixlib-canvas% panel)]
+			  [_ (begin
+			       (send canvas min-height (inexact->exact (floor (* scale height))))
+			       (send canvas min-width (inexact->exact (floor (* scale width)))))]
 			  [DC (send canvas get-dc)]
 			  [buffer-DC (make-object mred:bitmap-dc%)]
 			  [viewport (make-viewport label canvas)])
-		       (send panel major-align-center)
+		       (send panel set-alignment 'center 'center)
 		       (send frame set-canvas canvas)
 		       (send canvas set-viewport viewport)
 		       (send canvas set-DC DC)
@@ -907,7 +899,7 @@
 			     (send canvas focus))
 		       (set-text-foreground viewport black)
 		       (set-text-background viewport white)
-		       (set-viewport-background viewport white-brush)
+		       (set-viewport-background viewport white)
 		       (set-viewport-pen viewport black-pen)
 		       (set-viewport-brush viewport black-brush)
 		       ((clear-viewport viewport))
@@ -948,7 +940,7 @@
 	       [new-bitmap (make-object mred:bitmap% w h)]
 	       [tmp-mem-dc (make-object mred:bitmap-dc%)])
 	  (send tmp-mem-dc set-bitmap new-bitmap)
-	  (send tmp-mem-dc draw-bitmap (send orig-dc get-bitmap) 0 0 0 0)
+	  (send tmp-mem-dc draw-bitmap (send orig-dc get-bitmap) 0 0)
 	  (send tmp-mem-dc set-bitmap #f)
 	  (let ([snip (make-object mred:image-snip%)])
 	    (send snip set-bitmap new-bitmap)
