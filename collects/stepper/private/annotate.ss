@@ -641,15 +641,14 @@
                                [lambda-clause-abstraction 
                                 (lambda (clause)
                                   (with-syntax ([(args-stx . bodies) clause])
-                                    (let*-2vals ([args (syntax->ilist (syntax args-stx))]
-                                                 [(annotated-body free-varrefs)
+                                    (let*-2vals ([(annotated-body free-varrefs)
                                                   (if (= (length (syntax->list (syntax bodies))) 1)
                                                       (lambda-body-recur (car (syntax->list (syntax bodies))))
                                                       (lambda-body-recur (syntax (begin . bodies))))]
                                                  [tagged-body (syntax-property annotated-body 'stepper-info 'lambda-body-begin)]
                                                  [new-free-varrefs (varref-set-remove-bindings free-varrefs
-                                                                                               (ilist-flatten args))])
-                                                (2vals (datum->syntax-object #'here (list args tagged-body) clause) new-free-varrefs))))]
+                                                                                               (arglist-flatten #'args-stx))])
+                                                (2vals (datum->syntax-object #'here `(,#'args-stx ,tagged-body) #'clause) new-free-varrefs))))]
                                
                                [outer-lambda-abstraction
                                 (lambda (annotated-lambda free-varrefs)

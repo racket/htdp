@@ -12,6 +12,13 @@
   
   (define varref-set? (listof identifier?))
   (define binding-set? (union varref-set? (symbols 'all)))
+  (define (arglist? v)
+    (or (null? v)
+        (identifier? v)
+        (and (pair? v)
+             ((flat-named-contract-predicate (cons/p identifier? arglist?)) v))        
+        (and (syntax? v) 
+             ((flat-named-contract-predicate (cons/p identifier? arglist?)) (syntax-e v)))))
   
   (provide/contract
    [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
@@ -21,7 +28,9 @@
    [in-closure-table (-> any? boolean?)]
    [sublist (-> number? number? list? list?)]
    [attach-info (-> syntax? syntax? syntax?)]
-   [transfer-info (-> syntax? syntax? syntax?)])
+   [transfer-info (-> syntax? syntax? syntax?)]
+   [arglist->ilist (-> arglist? any)]
+   [arglist-flatten (-> arglist? (listof identifier?))])
   
   (provide
    step-result?
@@ -46,9 +55,6 @@
    insert-highlighted-value
    get-lifted-var
    get-arg-var
-   syntax->ilist
-   ilist-map
-   ilist-flatten
    zip
    let-counter
    skipto-annotate
@@ -307,52 +313,36 @@
              inserted]
             [else exp])))
   
-  ;; ilist : for our puposes, an ilist is defined like this:
-  ;; ILIST : (union null (cons ILIST-VAL ILIST) (cons ILIST-VAL ILIST-VAL))
+  ;; arglist : for our puposes, an ilist is defined like this:
+  ;; arglist : (union identifier? null? (cons identifier? arglist?) (syntax (cons identifier? arglist?))
   ;; ... where an ilist val can be anything _except_ a pair or null
 
-  ;; syntax->ilist : turns an (possibly improper) syntax list into a (possibly) improper list of syntax objects
+  ;; arglist->ilist : turns an (possibly improper) arglist into a (possibly improper) list of syntax objects
 
-  (define (syntax->ilist stx-ilist)
-    (let loop ([ilist (syntax-e stx-ilist)])
-      (cond [(pair? ilist) 
-             (unless (syntax? (car ilist))
-               (error 'syntax->ilist "argument is not a syntax-ilist: ~a~n" stx-ilist))
+  (define (arglist->ilist arglist)
+    (let loop ([ilist arglist])
+      (cond [(identifier? ilist)
+             ilist]
+            [(pair? ilist)
              (cons (car ilist)
                    (loop (cdr ilist)))]
-            [(null? ilist) null]
-            [else
-             (unless (syntax? ilist)
-               (error 'syntax->ilist "argument is not a syntax-ilist: ~a~n" stx-ilist))
-             (if (pair? (syntax-e ilist))
-                 (loop (syntax-e ilist))
-                 ilist)])))
+            [(and (syntax? ilist) (pair? (syntax-e ilist)))
+             (loop (syntax-e ilist))]
+            [(null? ilist) null])))
+  
+  ; arglist-flatten : produces a list containing the elements of the ilist
 
-  ; ilist-val? returns true if the value is neither a pair nor null
-  (define (ilist-val? val)
-    (not (or (null? val)
-             (pair? val))))
-  
-  ; ilist-map applies the fn to every element of the ilist
-  
-  (define (ilist-map fn ilist)
-    (let loop ([ilist ilist])
-      (cond [(null? ilist)
+  (define (arglist-flatten arglist)
+    (let loop ([ilist arglist])
+      (cond [(identifier? ilist)
+             (cons ilist null)]
+            [(null? ilist)
              null]
-            [(ilist-val? (cdr ilist))
-             (cons (fn (car ilist)) (fn (cdr ilist)))]
-            [else
-             (cons (fn (car ilist)) (loop (cdr ilist)))])))
-  
-  ; ilist-flatten : produces a list containing the elements of the ilist
-  (define (ilist-flatten ilist)
-    (let loop ([ilist ilist])
-      (cond [(null? ilist)
-             null]
-            [(ilist-val? (cdr ilist))
-             (cons (car ilist) (cons (cdr ilist) null))]
-            [else
-             (cons (car ilist) (loop (cdr ilist)))])))
+            [(pair? ilist)
+             (cons (car ilist) (loop (cdr ilist)))]
+            [(and (syntax? ilist)
+                  (pair? (syntax-e ilist)))
+             (loop (syntax-e ilist))])))
   
   ; zip : (listof 'a) (listof 'b) (listof 'c) ... -> (listof (list 'a 'b 'c ...))
   ; zip reshuffles lists of items into a list of item-lists.  Look at the contract, okay?
@@ -541,12 +531,17 @@
 ;(test 'lifter-ef-2 a (datum->syntax-object #f 'ef))
 ;(test 'lifter-cd-1 a cd-stx)
 ;
-;(test '(a b c) map syntax-e (syntax->ilist #'(a b c)))
-;(test '(a b c) map syntax-e (syntax->ilist #'(a . (b c))))
-;(let ([result (syntax->ilist #' (a b . c))])
+;(test '(a b c) map syntax-e (arglist->ilist #'(a b c)))
+;(test '(a b c) map syntax-e (arglist->ilist #'(a . (b c))))
+;(test 'a syntax-e (arglist->ilist #'a))
+;(let ([result (arglist->ilist #' (a b . c))])
 ;  (test 'a syntax-e (car result))
 ;  (test 'b syntax-e (cadr result))
 ;  (test 'c syntax-e (cddr result)))
+;(test '(a b c) map syntax-e (arglist-flatten #'(a b c)))
+;(test '(a b c) map syntax-e (arglist-flatten #'(a . (b c))))
+;(test '(a b c) map syntax-e (arglist-flatten #'(a b . c)))
+;(test '(a) map syntax-e (arglist-flatten #'a))
 ;
 ;(define (add1 x) (+ x 1))
 ;(test '(3 4 5) ilist-map add1 '(2 3 4))
