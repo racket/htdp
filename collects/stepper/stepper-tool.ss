@@ -172,8 +172,8 @@
                           (begin
                             (message-box "Stepper"
                                          (string-append
-                                          "The source text for this program has changed or is no longer in "
-                                          "memory.  No further steps can be computed."))
+                                          "The source text for this program has changed or is no longer "
+                                          "available.  No further steps can be computed."))
                             (en/dis-able-buttons)))
                       (update-view (+ view 1))))
                 
