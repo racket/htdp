@@ -60,26 +60,42 @@
 
   ; struct-flag : uninterned symbol
   (define struct-flag (gensym "struct-flag-"))
+
+  ; make-gensym-source creates a pool of gensyms, indexed by arbitrary keys. These gensyms
+  ; not eq? to any other symbols, but a client can always get the same symbol by
+  ; invoking the resulting procedure with the same key (numbers work well). make-gensym-source
+  ; also takes a string which will be part of the printed representation of the symbol;
+  ; this makes debugging easier.
+  ; make-gensym-source : (string -> (key -> symbol))
+  
+  (define (make-gensym-source id-string)
+    (let ([assoc-table (make-hash-table)])
+      (lambda (key)
+        (let ([maybe-fetch (hash-table-get assoc-table key (lambda () #f))])
+          (or maybe-fetch
+             (begin
+               (let ([new-sym (gensym (string-append id-string (format "~a" key) "-"))])
+                 (hash-table-put! assoc-table key new-sym)
+                 new-sym)))))))
   
   ; get-arg-symbol maintains a list of gensyms associated with the non-negative
   ; integers.  These symbols are used in the elaboration of applications; the nth
   ; in the application is evaluated and stored in a variable whose name is the nth
   ; gensym supplied by get-arg-symbol.
   
-  ; I'm just going to implement this with a simple assq list. if this isn't good
-  ; enough, it can always be improved later.
-  
   (define get-arg-symbol
-    (let ([assoc-table (make-hash-table)])
+    (let ([gensym-source (make-gensym-source "arg")])
       (lambda (arg-num)
-	(let ([arg-symbol (hash-table-get assoc-table arg-num (lambda () #f))])
-	  (if arg-symbol
-	      (create-bogus-bound-varref arg-symbol)
-	      (begin
-		(let ([new-sym (gensym (string-append "arg" (number->string arg-num) "-"))])
-		  (hash-table-put! assoc-table arg-num new-sym)
-		  (create-bogus-bound-varref new-sym))))))))
+        (create-bogus-bound-varref (gensym-source arg-num)))))
   
+  ; top-level-exp-gensym-source hands out gensyms for the expressions which are not top-level
+  ; defines. these expressions' results are bound to variables named by these gensyms. Note that 
+  ; this implementation depends on putting exprs in hash tables and thus on non-copying
+  ; garbage collection.
+  
+  (define top-level-exp-gensym-source
+    (make-gensym-source "top-level-exp"))
+
   ; test cases: (returns #t on success)
   #| (let ([arg3 (get-arg-symbol 3)]
         [arg2 (get-arg-symbol 2)]

@@ -245,23 +245,32 @@
                    so-far
                    (rectify-source-current-marks expr))))
          
-         (define (rectify-old-definition var)
-           (if (and (list? var) (eq? (car var) struct-flag))
-               (cdr var)
-               (let ([val ((car (find-var-binding mark-list var)))])
-                 (if (procedure? val)
-                     (let* ([closure-record (closure-table-lookup val)]
-                            [closure-maybe-name (closure-record-name closure-record)])
-                       ; this is a terrible hack.  There's a lot of things here I need to fix.
-                       (if closure-maybe-name
-                           `(define ,var ,closure-maybe-name)
-                           (let* ([info ((closure-record-mark closure-record))]
-                                  [expr (car info)]
-                                  [o-form-proc (rectify-source-expr expr (list (lambda () info)) null)])
-                             (o-form-lambda->define (o-form-case-lambda->lambda o-form-proc) var)))) 
-                     `(define ,var ,val)))))
-                 
- 
+         (define (rectify-old-var var)
+           (let ([val ((car (find-var-binding mark-list var)))])
+             (if (procedure? val)
+                 (let* ([closure-record (closure-table-lookup val)]
+                        [info ((closure-record-mark closure-record))]
+                        [expr (car info)])
+                   (rectify-source-expr expr (list (lambda () info)) null))
+                 val)))
+                  
+         (define (rectify-old-expression expr vars)
+           (cond [(z:define-values-form? expr)
+                  (if (comes-from-define-struct? expr)
+                      (read->raw (expr-read expr))
+                      (let ([rectified-vars (map rectify-old-var vars)])
+                        (cond [(comes-from-define-procedure? expr)
+                               (o-form-lambda->define (o-form-case-lambda->lambda (car rectified-vars))
+                                                      (car vars))]
+                              [(comes-from-define? expr)
+                               `(define ,(car vars) ,(car rectified-vars))]
+                              [else
+                               `(define-values ,vars
+                                  ,(if (= (length rectified-vars) 1)
+                                       (car rectified-vars)
+                                       `(values ,@rectified-vars)))])))]
+                 [else
+                  (rectify-old-var (top-level-exp-gensym-source expr))]))
 
          (define (reconstruct-inner mark-list so-far)
            (if (null? mark-list)
@@ -364,25 +373,33 @@
                      expr
                      (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))]))))
          
+         (define dont-care
+           (printf "current definition: ~a~n" current-def-num))
+         
          (define old-defs
-           (let ([old-defs (flatten-take current-def-num all-defs-list)])
-             (map rectify-old-definition old-defs)))
+           (let ([old-exps (list-take current-def-num expr-list)]
+                 [old-exp-vars (list-take current-def-num all-defs-list)])
+             (map rectify-old-expression old-exps old-exp-vars)))
          
          (define current-def 
-           (let loop ([so-far nothing-so-far] [mark-list mark-list] [first #t])
-             (if (null? mark-list)
-                 (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
-                 (loop 
-                  (let ([reconstructed (reconstruct-inner mark-list so-far)])
-                    (if first
-                        `(> ,reconstructed <)
-                        reconstructed))
-                  (cdr mark-list)
-                  #f))))
-                  
+           (if (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final))
+               "***FINAL***"
+               (let loop ([so-far nothing-so-far] [mark-list mark-list] [first #t])
+                 (if (null? mark-list)
+                     (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
+                     (loop 
+                      (let ([reconstructed (reconstruct-inner mark-list so-far)])
+                        (if first
+                            `(> ,reconstructed <)
+                            reconstructed))
+                      (cdr mark-list)
+                      #f)))))
+         
          (define last-defs
-           (map (lambda (expr) (rectify-top-level expr #f null)) 
-                (list-tail expr-list (+ current-def-num 1))))
+           (if (>= current-def-num (length expr-list))
+               ()
+               (map (lambda (expr) (rectify-top-level expr #f null)) 
+                    (list-tail expr-list (+ current-def-num 1)))))
          )
       
       (append old-defs (list current-def) last-defs))))
