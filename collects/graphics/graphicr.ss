@@ -916,7 +916,16 @@
   (define make-open-viewport
     (lambda (name show?)
       (unless sixlib-eventspace
-	(set! sixlib-eventspace (mred:make-eventspace)))
+	(set! sixlib-eventspace 
+	      (parameterize ([current-exception-handler
+			      (lambda (x)
+				((error-display-handler)
+				 (format "internal error in graphics library: ~a"
+					 (if (exn? x)
+					     (exn-message x)
+					     (format "~e" x))))
+				((error-escape-handler)))])
+		(mred:make-eventspace))))
       (letrec ([open-viewport
 		(case-lambda
 		 [(label point) 
