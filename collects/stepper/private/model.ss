@@ -48,10 +48,7 @@
              (let loop ([exprs-left exprs] [mode 'before])
                (cond [(null? exprs-left) 
                       (if (eq? mode 'before)
-                          (begin
-                            (fprintf (current-error-port) "no sexp contained the highlight-placeholder\n")
-                            (fprintf (current-error-port) "exprs: ~a\n" exprs)
-                            (error 'redivide "no sexp contained the highlight-placeholder."))
+                          (error 'redivide "no sexp contained the highlight-placeholder.")
                           (values null null null))]
                      [(contains-highlight-placeholder (car exprs-left))
                       (if (eq? mode 'after)
@@ -197,9 +194,6 @@
            (lambda (exn)
              (send-to-drscheme-eventspace
               (lambda ()
-                (if (exn:syntax? exn)
-                    (fprintf (current-error-port) "error source: ~a\n" (syntax-object->datum (exn:syntax-expr exn)))
-                    (fprintf (current-error-port) "not a syntax error\n"))
                 (handle-exception exn)))
              (k))))
       
