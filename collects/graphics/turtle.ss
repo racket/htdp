@@ -1,11 +1,11 @@
 
-(reference-library "turtles.ss" "graphics")
-(reference-library "functiou.ss")
+(require-library "turtles.ss" "graphics")
+(require-library "functiou.ss")
 
 (invoke-open-unit/sig 
  (compound-unit/sig
   (import)
-  (link [T : turtle^ ((reference-library "turtler.ss" "graphics") F)]
+  (link [T : turtle^ ((require-library "turtler.ss" "graphics") F)]
 	[F : mzlib:function^ (mzlib:function@)])
   (export (open T))))
 

@@ -500,12 +500,12 @@
     (lambda (draw-name get-pen-name set-pen-name 
 		       get-current-pen-name set-viewport-pen white-pen)
       (lambda (viewport) 
-	(let ([current-pen (uq-ivar (viewport-canvas viewport) get-current-pen-name)]
-	      [draw-1 (uq-ivar (viewport-DC viewport) draw-name)]
-	      [draw-2 (uq-ivar (viewport-buffer-DC viewport) draw-name)]
-	      [get-pen (uq-ivar (viewport-DC viewport) get-pen-name)]
-	      [set-pen-1 (uq-ivar (viewport-DC viewport) set-pen-name)]
-	      [set-pen-2 (uq-ivar (viewport-buffer-DC viewport) set-pen-name)]
+	(let ([current-pen (ivar/proc (viewport-canvas viewport) get-current-pen-name)]
+	      [draw-1 (ivar/proc (viewport-DC viewport) draw-name)]
+	      [draw-2 (ivar/proc (viewport-buffer-DC viewport) draw-name)]
+	      [get-pen (ivar/proc (viewport-DC viewport) get-pen-name)]
+	      [set-pen-1 (ivar/proc (viewport-DC viewport) set-pen-name)]
+	      [set-pen-2 (ivar/proc (viewport-buffer-DC viewport) set-pen-name)]
 	      [set-logical-function-1 (ivar (viewport-DC viewport) set-logical-function)]
 	      [set-logical-function-2 (ivar (viewport-buffer-DC viewport) set-logical-function)])
 	  (lambda (color go)
@@ -562,9 +562,9 @@
 			       get-current-pen-name set-viewport-pen white-pen)])
 	(lambda (viewport)
 	  (let ([f (f viewport)]
-		[get-brush (uq-ivar (viewport-DC viewport) get-brush-name)]
-		[set-brush-1 (uq-ivar (viewport-DC viewport) set-brush-name)]
-		[set-brush-2 (uq-ivar (viewport-buffer-DC viewport) set-brush-name)])
+		[get-brush (ivar/proc (viewport-DC viewport) get-brush-name)]
+		[set-brush-1 (ivar/proc (viewport-DC viewport) set-brush-name)]
+		[set-brush-2 (ivar/proc (viewport-buffer-DC viewport) set-brush-name)])
 	    (letrec ([the-function
 		      (case-lambda
 		       [(posn width height) (the-function posn width height #f)]
@@ -634,9 +634,9 @@
 			       get-current-pen-name set-viewport-pen white-pen)])
 	(lambda (viewport)
 	  (let ([f (f viewport)]
-		[get-brush (uq-ivar (viewport-DC viewport) get-brush-name)]
-		[set-brush-1 (uq-ivar (viewport-DC viewport) set-brush-name)]
-		[set-brush-2 (uq-ivar (viewport-buffer-DC viewport) set-brush-name)])
+		[get-brush (ivar/proc (viewport-DC viewport) get-brush-name)]
+		[set-brush-1 (ivar/proc (viewport-DC viewport) set-brush-name)]
+		[set-brush-2 (ivar/proc (viewport-buffer-DC viewport) set-brush-name)])
 	    (letrec ([the-function
 		      (case-lambda
 		       [(posns offset) (the-function posns offset #f)]
