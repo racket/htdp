@@ -435,6 +435,7 @@
              'program-expander
              'caller))
           
+          (define/public (get-stepper-button) stepper-button)
           (define stepper-button 
             (make-object button%
               (stepper-bitmap this)
