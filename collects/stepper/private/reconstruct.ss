@@ -8,7 +8,7 @@
            (lib "list.ss")
            (lib "etc.ss")
            "marks.ss"
-           (prefix model-settings: "model-settings.ss")
+           "model-settings.ss"
            "shared.ss"
            "highlight-placeholder.ss"
            "my-macros.ss"
@@ -18,7 +18,27 @@
    reconstruct-completed ; : reconstruct-completed-contract
    reconstruct-current ; : syntax (list-of mark) symbol (list-of value) -> (list (listof sexp) (listof sexp))
    final-mark-list?
-   skip-step?)
+   skip-step?
+   set-render-settings! ; (-> render-settings-contract any)
+   )
+  
+  (define reconstruct-current-contract
+   (-> syntax? mark-list? symbol? (listof any?)
+       (vectorof/n (listof exp-with-holes?) (listof exp-without-holes?))))
+  
+  (define-values (true-false-printed? constructor-style-printing? abbreviate-cons-as-list?)
+    (let ([not-set-yet (lx (error 'reconstruct "render-settings not yet set"))])
+      (values not-set-yet not-set-yet not-set-yet)))
+  
+  (define set-render-settings!
+    (contract
+     (-> render-settings? void?)
+     (lambda (render-settings)
+       (set! true-false-printed? (vector-ref render-settings 0))
+       (set! constructor-style-printing? (vector-ref render-settings 1))
+       (set! abbreviate-cons-as-list? (vector-ref render-settings 2)))
+     'reconstruct
+     'caller))
   
   (define reconstruct-completed-contract (-> syntax? any? any))
   
@@ -134,7 +154,7 @@
                 (let ([mark (closure-record-mark closure-record)])
                   (recon-source-expr (mark-source mark) (list mark) null))])]
         [else
-         (d->so (model-settings:print-convert val))]))
+         (d->so (make-renderable val))]))
     )
   
   (define (let-rhs-recon-value val)
@@ -191,7 +211,7 @@
                    (let ([id (syntax id-stx)])
                      (with-handlers
                          ([exn:variable? (lambda args #f)]) ; DO halt for unbound top-level varrefs
-                       (let ([val (model-settings:global-lookup (syntax-e id))])
+                       (let ([val (global-lookup (syntax-e id))])
                          (or (and (procedure? val)                     ; don't halt for top-level procedure refs ...
                                   (eq? (syntax-e id) (object-name val)) ; with the right inferred name
                                   
@@ -211,12 +231,12 @@
                           (procedure-arity-includes? 
                            fun-val
                            (length (cdr (syntax->list (syntax terms)))))
-                          (or (and (model-settings:constructor-style-printing?)
-                                   (if (model-settings:abbreviate-cons-as-list?)
-                                       (or (eq? fun-val (model-settings:global-lookup 'list))
-                                           (and (eq? fun-val (model-settings:global-lookup 'cons))
+                          (or (and (constructor-style-printing?)
+                                   (if (abbreviate-cons-as-list?)
+                                       (or (eq? fun-val (global-lookup 'list))
+                                           (and (eq? fun-val (global-lookup 'cons))
                                                 (second-arg-is-list? mark-list)))    
-                                       (and (eq? fun-val (model-settings:global-lookup 'cons))
+                                       (and (eq? fun-val (global-lookup 'cons))
                                             (second-arg-is-list? mark-list))))
                               ;(model-settings:special-function? 'vector fun-val)
                               (and (eq? fun-val void)
@@ -543,7 +563,7 @@
            (kernel:kernel-syntax-case expr #f
              [(define-values vars-stx body)
               (let* ([vars (syntax->list (syntax vars-stx))]
-                     [values (map model-settings:global-lookup (map syntax-e vars))]
+                     [values (map global-lookup (map syntax-e vars))]
                      [recon-vars (map recon-value values)])
                 (unless (= (length vars) 1)
                   (error 'reconstruct "final reconstruct fails on multiple-values define\n"))

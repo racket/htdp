@@ -4,6 +4,28 @@
                        
   ;;;;;;;;;;
   ;;
+  ;;  vectorof/n ; a predicate-builder for vectors of known length
+  ;;
+  ;;;;;;;;;;
+  
+  (provide vectorof/n) ; (predicate ... -> predicate)
+  
+  (define (vectorof/n . fs)
+    (for-each
+     (lx (unless (and (procedure? _) 
+                      (procedure-arity-includes? _ 1))
+           (error 'vectorof/n "expected procedures of arity 1, got ~e" _)))
+     fs)
+    (let ([vectorof/n
+           (lambda (v)
+             (and (vector? v)
+                  (andmap (lambda (x y) (x y))
+                          fs
+                          (vector->list v))))])
+      vectorof/n))
+  
+  ;;;;;;;;;;
+  ;;
   ;;  paul graham's [ _ ] macro
   ;;
   ;;;;;;;;;;

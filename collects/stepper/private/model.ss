@@ -43,7 +43,8 @@
            (prefix r: "reconstruct.ss")
            "shared.ss"
            "marks.ss"
-           "highlight-placeholder.ss")
+           "highlight-placeholder.ss"
+           "model-settings.ss")
  
   
   
@@ -246,7 +247,8 @@
            
               (program-expander
                (lambda ()
-                 (error-display-handler err-display-handler)) ; init
+                 (error-display-handler err-display-handler)
+                 (r:set-render-settings! (get-render-settings))) ; init
                (lambda (expanded continue-thunk) ; iter
                  (if (eof-object? expanded)
                      (send-to-drscheme-eventspace 

@@ -9,7 +9,8 @@
            (lib "list.ss")
            (prefix model: "private/model.ss")
            (prefix x: "private/mred-extensions.ss")
-           "private/shared.ss")
+           "private/shared.ss"
+           "private/model-settings.ss")
   
   (provide tool@)
   
@@ -183,6 +184,21 @@
            
            (super-instantiate ())
            
+           (define settings 
+             (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol)))
+           
+           (set-render! 
+            (lambda (val)
+              (let ([string-port (open-output-string)])
+                (send drscheme:language:language
+                      render-value
+                      val
+                      settings
+                      string-port
+                      #f)
+                (get-output-string string-port))))
+                      
+                 
            (define program-expander
              (contract
               (-> (-> void?) ; init

@@ -6,6 +6,9 @@
 
   (provide
    step-result?
+   (struct renderable (value))
+   exp-without-holes?
+   exp-with-holes?
    (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs))
    (struct before-error-result (finished-exprs exp redex err-msg after-exprs))
    (struct error-result (finished-exprs err-msg))
@@ -42,7 +45,6 @@
    break-contract ; contract
    varref-set? ; predicate
    binding-set? ; predicate
-   vectorof/n ; (predicate ... -> predicate)
    ; get-binding-name
    ; bogus-binding?
    if-temp
@@ -55,6 +57,27 @@
   
   (define varref-set? (listof identifier?))
   (define binding-set? (or/f varref-set? (symbols 'all)))
+  
+  ; an exp-with-holes is either:
+  ; - a pair,
+  ; - null,
+  ; - a symbol,
+  ; - the highlight-placeholder, or
+  ; - (make-renderable value)
+  
+  (define-struct renderable (value))
+  
+  (define exp-without-holes-base-case? (or/f symbol? null? renderable?))
+  (define exp-without-holes?
+    (lambda (val)
+      (or (and (pair? val) (exp-without-holes? (car val)) (exp-without-holes? (cdr val)))
+          (exp-without-holes-base-case? val))))
+  
+  (define exp-with-holes-base-case? (or/f exp-without-holes-base-case? (lx (eq? _ highlight-placeholder))))
+  (define exp-with-holes?
+    (lambda (val)
+      (or (and (pair? val) (exp-with-holes? (car val)) (exp-with-holes? (cdr val)))
+          (exp-with-holes-base-case? val))))
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
@@ -399,22 +422,8 @@
     (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break))
     
   (define break-contract
-    (-> continuation-mark-set? break-kind? list? any?))
+    (-> continuation-mark-set? break-kind? list? any?)))
   
-  (define (vectorof/n . fs)
-    (for-each
-     (lx (unless (and (procedure? _) 
-                      (procedure-arity-includes? _ 1))
-           (error 'vectorof/n "expected procedures of arity 1, got ~e" _)))
-     fs)
-    (let ([vectorof/n
-           (lambda (v)
-             (and (vector? v)
-                  (andmap (lambda (x y) (x y))
-                          fs
-                          (vector->list v))))])
-      vectorof/n)))
-
 ; test cases
 ;(require shared)
 ;(load "/Users/clements/plt/tests/mzscheme/testing.ss")

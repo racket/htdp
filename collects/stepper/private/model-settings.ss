@@ -1,8 +1,21 @@
 (module model-settings mzscheme
   (require "mred-extensions.ss"
-           (prefix p: (lib "pconvert.ss"))
            "my-macros.ss"
-           (lib "specs.ss" "framework"))
+           (lib "specs.ss" "framework")
+           (lib "unitsig.ss"))
+  
+  ; there are two separate reasons to use units here, but it's just too painful.
+  ; reason 1) the drscheme:language procedures are linked at runtime into the
+  ; stepper-tool unit, and we need to get them down here somehow.  Making the
+  ; render-settings a unit would solve this.
+  ; reason 2) the render-settings should be recomputed once for each stepper 
+  ; invocation.  invoke-unit is a nice way of doing this without dropping back
+  ; to linking-by-position, which is what happens with a simple closure 
+  ; implementatian.
+  
+  ; HOWEVER, like I said, it's just too painful. Once this is a unit, then 
+  ; everything else wants to be a unit too. Yecch.  I'm not explaining this
+  ; well, I know.
   
   (provide
 
@@ -10,23 +23,55 @@
    check-global-defined ; : (symbol -> boolean)
    global-lookup
    
-   ; settings queries
-   set-fake-beginner-mode ; : (boolean -> (void))
+   get-render-settings ; (-> render-settings?)
+   fake-beginner-render-settings ; render-settings?
    
-   true-false-printed? ; : ( -> boolean)
-   constructor-style-printing? ; : ( -> boolean)
-   abbreviate-cons-as-list? ; : ( -> boolean)
-   ;special-function?
+   render-settings? ; predicate
    
-   print-convert)
+   set-render! ; (-> (-> any? string?) void?)
+   )
   
-  (define (set-fake-beginner-mode x) 
-    (set! fake-beginner-mode x))
-  (define fake-beginner-mode #f)
+  ; contracts for procedures in the settings unit:
+  ; true-false-printed? ; : ( -> boolean)
+  ; constructor-style-printing? ; : ( -> boolean)
+  ; abbreviate-cons-as-list? ; : ( -> boolean)
+  (define proposition-contract (-> boolean?))
+  (define render-settings? (vectorof/n proposition-contract proposition-contract proposition-contract))
   
-  (define (true-false-printed?) (or fake-beginner-mode (p:booleans-as-true/false)))
-  (define (constructor-style-printing?) (or fake-beginner-mode (p:constructor-style-printing)))
-  (define (abbreviate-cons-as-list?) (not (or fake-beginner-mode (not (p:abbreviate-cons-as-list)))))
+  (define (render val)
+    (error 'model-settings "render not set yet"))
+    
+  (define set-render!
+    (contract
+     (-> (-> any? string?) void?)
+     (lx (set! render _))
+     'model-settings
+     'caller))
+  
+  (define fake-beginner-render-settings
+    (contract
+     render-settings?
+     (vector (lx #t) (lx #t) (lx #f))
+     'model-settings
+     'caller))
+  
+  (define-struct test-struct ())
+  
+  (define get-render-settings
+    (contract
+     (-> render-settings?)
+     (lambda ()
+       (let* ([true-false-printed/bool (string=? (render #t) "true")]
+              [constructor-style-printing/bool (string=? (render (make-test-struct)) "(make-test-struct)")]
+              [abbreviate-cons-as-list/bool (and constructor-style-printing/bool
+                                                 (string=? (substring (render '(3)) 0 5) "(cons"))])
+        (vector
+         (lx true-false-printed/bool)
+         (lx constructor-style-printing/bool)
+         (lx abbreviate-cons-as-list/bool))))
+     'model-settings
+     'caller))
+      
   
   (define check-global-defined
     (contract
@@ -46,13 +91,4 @@
        (namespace-variable-value identifier))
      'model-settings
      'caller))
-  
-   (define (print-convert val)
-     (parameterize ([p:current-print-convert-hook
-                     (lambda (v basic-convert sub-convert)
-                       (if (image? v)
-                           v
-                           (basic-convert v)))])
-       (p:print-convert val)))
-   
   )
