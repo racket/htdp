@@ -1,9 +1,8 @@
 ;; TeachPack: dir.ss
 ;; Language: Beginner 
 
-(define PLT (getenv "PLTHOME"))
 (define current (create-dir "."))
-(define teachps (create-dir (string-append PLT "/teachpack/htdp")))
+(define teachps (create-dir (string-append "/Users/matthias/plt/" "/teachpack/htdp")))
 
 (define current-files (map file-name (dir-files current)))
 (define teachps-files (map file-name (dir-files teachps)))

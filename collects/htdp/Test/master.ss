@@ -18,6 +18,6 @@
 (eq? (check-guess 'white 'blue 'blue 'red) 'the_colors_occur)
 (eq? (check-guess 'white 'blue 'red 'green) 'nothing_correct)
 
-; (master check-guess)
+(master check-guess)
 ; (master 1)
 ; (master first)
