@@ -7,6 +7,7 @@
   (require (lib "etc.ss")
 	   (lib "list.ss")
 	   (lib "math.ss")
+	   (lib "pretty.ss")
 	   (lib "docprovide.ss" "syntax"))
 
   ;; Implements the forms:
@@ -438,7 +439,13 @@
     (print (any -> void)
 	   "to print the argument as a value to stdout")
     (display (any -> void)
-	     "to print the argument to stdout (without quotes on strings, etc.)")
+	     "to print the argument to stdout (without quotes on symbols and strings, etc.)")
+    (write (any -> void)
+	   "to print the argument to stdout (in a traditional style that is somewhere between print and display)")
+    (pretty-print (any -> void)
+	   "like write, but with standard newlines and indentation")
+    (printf (string any ... -> void)
+	    "to format the rest of the arguments according to the first argument and print it to stdout")
     (read (-> sexp) "to read input from the user"))
    
    ("Misc"
@@ -448,6 +455,3 @@
     (eof (eof) "the end-of-file value")
     (eof-object? (any ->boolean) "to determine whether some value is the end-of-file value")
     ((beginner-exit exit) ( -> void) "to exit the running program"))))
-
-
-

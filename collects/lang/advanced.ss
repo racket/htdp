@@ -4,7 +4,6 @@
 	   "private/teachprims.ss"
 	   (lib "etc.ss")
 	   (lib "list.ss")
-	   (lib "pretty.ss")
 	   (lib "docprovide.ss" "syntax"))
 
   ;; syntax:
@@ -47,12 +46,7 @@
 		    cons list* append)
 
    ("Reading and Printing"
-    (printf (string any ... -> void)
-	    "to format the rest of the arguments according to the first argument and print it to stdout")
-    (write (any -> void)
-	   "to print the argument to stdout")
-    (pretty-print (any -> void)
-	   "like write, but with standard newlines and indentation"))
+)
    
    ("Lists"
     ((advanced-cons cons) (X (listof X) -> (listof X))
