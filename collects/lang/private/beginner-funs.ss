@@ -215,9 +215,7 @@
 	"to determine whether some value is the empty list")
       (null? (any -> boolean)
 	"to determine whether some value is the empty list")
-      ((beginner-list? list?) (any -> boolean)
-       "to determine whether some value is a list")
-    
+
       ((beginner-cons cons) (X (listof X) -> (listof X))
        "to construct a list")
 

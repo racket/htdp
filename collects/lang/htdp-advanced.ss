@@ -67,6 +67,9 @@
     (read (-> sexp) "to read input from the user"))
    
    ("Lists"
+     (list? (any -> boolean)
+       "to determine whether some value is a list")
+
     ((advanced-cons cons) (X (listof X) -> (listof X))
 			  "to construct a list")
 
