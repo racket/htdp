@@ -1,6 +1,9 @@
 (module elevator mzscheme
   (require (lib "big-draw.ss" "htdp")
-	   (lib "error.ss" "htdp"))
+	   (lib "error.ss" "htdp")
+           (lib "teach.ss" "lang" "private")
+           (lib "etc.ss")
+           (lib "mred.ss" "mred"))
 
   ;; Implementation:
   ;;   Stephanie Weirich (1994),
@@ -496,18 +499,18 @@
     ;;
 
     (define  INFO-ORIGIN  #f)
-    (define-struct  info  (sym  posn  label  prev))
+    (define-struct einfo  (sym  posn  label  prev))
 
     (define  INFO-LIST
-      (list  (make-info  'floor  (make-posn 0 12)   "floor = "  #f)
-	(make-info  'goal   (make-posn 0 28)  "goal = "   #f)
-	(make-info  'dir    (make-posn 0 44)  "dir = "    #f)))
+      (list  (make-einfo  'floor  (make-posn 0 12)   "floor = "  #f)
+	(make-einfo  'goal   (make-posn 0 28)  "goal = "   #f)
+	(make-einfo  'dir    (make-posn 0 44)  "dir = "    #f)))
 
     (define  init-info
       (lambda  ()
 	(let  loop  ([l  INFO-LIST])
 	  (unless  (null? l)
-	    (set-info-prev!  (car l)  "")
+	    (set-einfo-prev!  (car l)  "")
 	    (loop  (cdr l))))
 	(info  'floor  1)
 	(info  'goal  1)
@@ -518,19 +521,19 @@
 	(let  loop  ([l  INFO-LIST])
 	  (cond
 	    [(null? l)  (error 'info "Unknown info type: ~e" sym)]
-	    [(eq? sym (info-sym (car l)))  (car l)]
+	    [(eq? sym (einfo-sym (car l)))  (car l)]
 	    [else  (loop  (cdr l))]))))
 
     (define  info
       (lambda  (sym  obj)
 	(let* ([item  (my-lookup sym)]
-	       [posn  (add-posn  INFO-ORIGIN  (info-posn item))]
+	       [posn  (add-posn  INFO-ORIGIN  (einfo-posn item))]
 	       [str   (if (string? obj) obj (format "~s" obj))]
-	       [full-str  (string-append (info-label item) str)])
-	  (unless  (string=?  full-str  (info-prev item))
-	    (c-string  posn  (info-prev item))
+	       [full-str  (string-append (einfo-label item) str)])
+	  (unless  (string=?  full-str  (einfo-prev item))
+	    (c-string  posn  (einfo-prev item))
 	    (d-string  posn  full-str)
-	    (set-info-prev!  item  full-str)))))
+	    (set-einfo-prev!  item  full-str)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

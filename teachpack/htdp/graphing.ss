@@ -2,7 +2,8 @@
   (require (lib "error.ss" "htdp")
 	   (lib "unitsig.ss")
 	   (lib "draw-sig.ss" "htdp")
-	   (lib "big-draw.ss" "htdp"))
+	   (lib "big-draw.ss" "htdp")
+           (lib "teach.ss" "lang" "private"))
 
   (provide-signature-elements draw^)
 
@@ -14,9 +15,9 @@
     (define (make-graph name)
       (start EAST SOUTH)
       (draw-solid-line ORIGIN X-AXIS 'blue)
-      ((draw-string @VP) (make-posn (+ OFFSET 10) (+ OFFSET 10)) "Y-AXIS")
+      ((draw-string #cs(get-@VP)) (make-posn (+ OFFSET 10) (+ OFFSET 10)) "Y-AXIS")
       (draw-solid-line ORIGIN Y-AXIS 'blue)
-      ((draw-string @VP) (make-posn (- EAST 100) (- SOUTH 15)) "X-AXIS"))
+      ((draw-string #cs(get-@VP)) (make-posn (- EAST 100) (- SOUTH 15)) "X-AXIS"))
 
     ;; graph-line : (num -> num) symbol -> true
     ;; effect: draw function graph for x in [0,10] at delta = .1
@@ -35,7 +36,7 @@
     ;; check : tst tst tst -> void
     (define (check tag f color)
       (check-proc tag f 1 '1st "one argument")
-      (check-arg tag (rgb? color) 'color '2nd color))
+      (check-arg tag (symbol? color) 'symbol '2nd color))
 
     ;; tabulate : (num -> num) num num num -> (list-of (make-posn num num))
     (define (tabulate f left right delta)

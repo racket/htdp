@@ -1,20 +1,14 @@
 ;; TODO: docs, htdp update 
 
 (module convert mzscheme
-  (provide teachpack-unit@)
   (require (lib "unitsig.ss")
            (lib "etc.ss")
            (lib "class.s")
            (lib "mred.ss" "mred")
-           (lib "error.ss" "htdp")
-           (lib "error-sig.ss" "htdp"))
+           (lib "error.ss" "htdp"))
            
-  (define-signature convertS (convert-gui convert-repl convert-file))
+  (provide convert-gui convert-repl convert-file)
 
-  (define convertU 
-    (unit/sig convertS 
-      (import errorS)
-      
       (define black-pen  (send the-pen-list find-or-create-pen "BLACK" 2 'solid))
       (define red-brush  (send the-brush-list find-or-create-brush "RED" 'solid))
       (define white-brush  (send the-brush-list find-or-create-brush "WHITE" 'solid))
@@ -256,12 +250,4 @@
         (with-output-to-file out
           (lambda ()
             (with-input-from-file in (make-reader-for f)))))
-      ))
-
-  (define teachpack-unit@
-    (compound-unit/sig
-      (import (user : ()))
-      (link
-       (XXX : convertS (convertU ERR))
-       (ERR : errorS (errorU)))
-      (export (open XXX)))))
+      )

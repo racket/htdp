@@ -1,7 +1,8 @@
 (module gui mzscheme
   (require (lib "error.ss" "htdp")
 	   (lib "mred.ss" "mred")
-	   (lib "class.ss"))
+	   (lib "class.ss")
+           (lib "etc.ss"))
 
   (provide create-window show-window hide-window
 	   make-text make-choice make-button make-message

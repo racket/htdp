@@ -3,6 +3,8 @@
 	   "draw-sig.ss"
 	   "big-draw.ss"
 	   (lib "class.ss")
+           (lib "unitsig.ss")
+           (lib "etc.ss")
 	   (lib "mred.ss" "mred"))
 
   (provide hangman hangman-list)

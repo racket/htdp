@@ -1,7 +1,9 @@
 (module guess-gui mzscheme
   (require (lib "error.ss" "htdp")
 	   (lib "mred.ss" "mred")
-	   (lib "class.ss"))
+	   (lib "class.ss")
+           (lib "list.ss")
+           (lib "etc.ss"))
 
   (provide connect control view)
 

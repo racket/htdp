@@ -1,9 +1,8 @@
-(require-library "error.ss" "htdp")
+(module docs mzscheme
+  (require (lib "error.ss" "htdp")
+           (lib "list.ss"))
 
-(define-signature docS (atom? annotation? end-annotation write-file))
-
-(define docU 
-  (unit/sig docS (import errorS plt:userspace^)
+  (provide atom? annotation? end-annotation write-file)
 
     ;; mk-annotation : 
     ;;  (str number[str-lenght] -> bool) -> (any-value -> bool)
@@ -91,11 +90,4 @@
       (when (cons? file-name)
 	(close-output-port the-port)))
 
-    ))
-
-(compound-unit/sig
-  (import (PLT : plt:userspace^))
-  (link
-    (ERR  : errorS (errorU))
-    (DRAW : docS (docU ERR PLT)))
-  (export (open DRAW)))
+    )

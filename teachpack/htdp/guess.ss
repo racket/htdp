@@ -1,19 +1,13 @@
 (module guess mzscheme
   (require (lib "error.ss" "htdp")
-           (lib "error-sig.ss" "htdp")
            (lib "unitsig.ss")
            (lib "etc.ss")
            (lib "class.ss")
            (lib "list.ss")
            (lib "mred.ss" "mred"))
 
-  (provide teachpack-unit@)
+  (provide guess-with-gui guess-with-gui-3 guess-with-gui-list)
   
-  (define-signature masterS (guess-with-gui guess-with-gui-3 guess-with-gui-list))
-  
-  (define (masterU N)
-    (unit/sig masterS (import errorS)
-      
       #| ------------------------------------------------------------------------
       The Basic Constants |#
       
@@ -170,12 +164,4 @@
         (send frame show #t)
         #t)
       
-      (define check-guess #f)))
-  
-  (define teachpack-unit@
-    (compound-unit/sig
-      (import (user : ()))
-      (link
-       (ERR  : errorS (errorU))
-       (DRAW : masterS ((masterU 2) ERR)))
-      (export (open DRAW)))))
+      (define check-guess #f))
