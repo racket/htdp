@@ -5,7 +5,63 @@
 (define convertU 
   (unit/sig convertS 
     (import errorS plt:userspace^)
+
+   ;; scale% : (union false (num -> str)) frame% -> scale<%>
+   ;; scale<%> : set-current-x + canvas<%>
+   ;; the str produced by to-string shouldn't be more than 3 or 4 chars
+   (define scale%
+    (class* canvas% () (to-string . x)
+      (sequence (apply super-init x))
+      (inherit get-dc get-size get-client-size)    
+      (private 
+	;; managing the ratio
+	(current-x  0)
+	(check-x    
+	  (lambda (x)
+	    (if (and (number? x) (<= 0. x 1.))
+		x 
+		(error 'set-current-x "out of range [0.,1.]: ~e" x))))
+	;; drawing things
+	(dc         (send this get-dc))
+	(black-pen  (make-object pen%   "BLACK" 2 'solid))
+	(red-brush  (make-object brush% "RED"  'solid))
+	(draw-something
+	  (lambda (delta-x)
+	    (send dc clear)
+	    (let-values ([(width height) (get-size)])
+	      (send dc set-brush red-brush)
+	      (send dc draw-rectangle 0 0 delta-x height)
+	      (send dc set-pen black-pen)
+	      (let*-values ([(str)
+			     (if to-string
+				 (to-string current-x)
+				 (string-append
+				  "."
+				  (number->string
+				   (inexact->exact
+				    (truncate
+				     (exact->inexact (* 100 current-x)))))))]
+			    [(cw ch) (get-client-size)]
+			    [(sw sh _1 _2) (send dc get-text-extent str)])
+		(send dc draw-text
+		  str
+		  (floor (- (/ cw 2) (/ (inexact->exact sw) 2)))
+		  (floor (- (/ ch 2) (/ (inexact->exact sh) 2)))))))))
+      (override
+	[on-paint (lambda () 
+		    (let-values ([(width height) (get-size)])
+		      (draw-something (* current-x width))))])
+      (public 
+	[set-current-x (lambda (x) 
+			 (set! current-x (check-x x))
+			 (on-paint))])
+      (inherit min-width min-height)
+      (sequence
+	(let-values ([(w h a d) (send (get-dc) get-text-extent "100")])
+	  (min-width (inexact->exact w))
+	  (min-height (inexact->exact h))))))
     
+    ;; ------------------------------------------------------------------------
     (define OUT-ERROR
       "The conversion function must produce a number; result: ~e")
     
@@ -31,12 +87,21 @@
     ;; slider-cb : slider% event% -> void
     ;; to use fahr->cel to perform the conversion 
     (define (slider-cb c s)
-      (local ((define (in-slider-range x)
-		(cond
-		 [(<= SLI-MIN x SLI-MAX) x]
-		 [else (error 'convert-gui "result out of range for Celsius slider")])))
-      (send sliderC set-value 
-	    ((compose in-slider-range 2int fahr->cel) (send sliderF get-value)))))
+      (send sliderC set-current-x
+	    ((compose in-slider-range 2int fahr->cel)
+             (send sliderF get-value))))
+    
+    ;; in-slider-range : number -> number 
+    ;; to check and to convert the new temperature into an appropriate scale 
+    (define (in-slider-range x)
+      (cond
+        [(<= SLI-MIN x SLI-MAX) (/ (- x SLI-MIN) (- SLI-MAX SLI-MIN))]
+        [else (error 'convert-gui "result out of range for Celsius slider")]))
+    
+    ;; to-string : number[0.,1.] -> number[SLI-MIN,SLI-MAX]
+    (define (to-string x)
+      (number->string (+ (* x (- SLI-MAX SLI-MIN)) SLI-MIN)))
+    
     
     #| --------------------------------------------------------------------
     
@@ -62,15 +127,18 @@
     (define panel (make-object vertical-panel% main-panel))
     (send panel set-alignment 'center 'center)
     
-    ;; sliderF : slider% 
-    ;; to display the Fahrenheit temperature 
-    (define sliderF (make-object slider% #f -50 250 panel void 32))
-    
     (define SLI-MIN (f2c -50))
     (define SLI-MAX (f2c 250))
+    (define F-SLI-0 32)    
+    
+    ;; sliderF : slider% 
+    ;; to display the Fahrenheit temperature 
+    (define sliderF (make-object slider% #f -50 250 panel void F-SLI-0))
+    
     ;; sliderC : slider% 
     ;; to display the Celsius temperature 
-    (define sliderC (make-object slider% #f SLI-MIN SLI-MAX panel void (f2c 32)))
+    (define sliderC (make-object scale% to-string panel))
+    (define _set-sliderC (send sliderC set-current-x (in-slider-range (f2c F-SLI-0))))
     
     ;; convert : button%
     ;; to convert fahrenheit to celsius 
@@ -112,7 +180,7 @@
 	      [else (error 'convert "can't happen")])))))
     
     ;; ============================================================================
-
+    
     ;; make-reader-for-f : (number -> number) -> ( -> void)
     ;; make-reader-for-f creates a function that reads numbers from a file
     ;; converts them accoring to f, and prints the results
@@ -131,7 +199,7 @@
 		  [(number? out) (printf "~s~n" out)]
 		  [else (error 'convert OUT-ERROR out)])))
 	read-until-eof))
-
+    
     ;; convert-file : str (num -> num) str -> void
     ;; to read a number from file in, to convert it with f, and to write it to out
     (define (convert-file in f out)
