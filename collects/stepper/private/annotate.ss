@@ -3,6 +3,7 @@
            (lib "contract.ss")
 	   (lib "list.ss")
            (lib "etc.ss")
+           (lib "match.ss")
            "marks.ss"
            "shared.ss"
            "my-macros.ss"
@@ -23,7 +24,7 @@
                 (any/c))                 ; procedure for runtime break
         boolean?                        ; track-inferred-name?
         syntax?)]                       ; results
-   [top-level-rewrite (-> syntax? syntax?)])
+   #;[top-level-rewrite (-> syntax? syntax?)])
 
 ;  ;;                                              ;;;;                          ;
 ; ;  ;                                     ;       ;                         ;
@@ -65,7 +66,9 @@
   ;;
   ;;;;;;;;;;
 
-  (define (collapse-let-values stx)
+  ;; uh... apparently this isn't used.  2005-01-15, JBC
+  
+  #;(define (collapse-let-values stx)
     (syntax-case stx (let-values let*-values)
       [(_ (outer-binding ...) (let-values (inner-binding ...) . bodies))
        (collapse-let-values (syntax/loc stx (let*-values (outer-binding ... inner-binding ...) . bodies)))]
@@ -602,11 +605,48 @@
                                           [unevaluated-stx *unevaluated*])
                               (syntax/loc expr (let ([test-var unevaluated-stx]) wrapped-stx)))
                             free-varrefs)))]
+                      
+                      [varref-abstraction
+                       (lambda (var)
+                         (let*-2vals ([free-varrefs (list var)]
+                                      [varref-break-wrap
+                                       (lambda ()
+                                         (wcm-break-wrap (make-debug-info-normal free-varrefs)
+                                                         (return-value-wrap var)))]
+                                      [varref-no-break-wrap
+                                       (lambda ()
+                                         (outer-wcm-wrap (make-debug-info-normal free-varrefs) var))]
+                                      [top-level-varref-break-wrap
+                                       (lambda ()
+                                         (if (memq (syntax-e var) beginner-defined:must-reduce)
+                                             (varref-break-wrap)
+                                             (varref-no-break-wrap)))])
+                           (2vals 
+                            (case (syntax-property var 'stepper-binding-type)
+                              ((lambda-bound macro-bound)   (varref-no-break-wrap))
+                              ((let-bound)                  (varref-break-wrap))
+                              ((non-lexical) ;; is it from this module or not?
+                               (match (identifier-binding var)                                 
+                                 (#f (top-level-varref-break-wrap))
+                                 [`(,path-index-or-symbol ,dc1 ,dc2 ,dc3 ,dc4)
+                                   (if (module-path-index? path-index-or-symbol)
+                                       (let-values ([(module-path dc5) (module-path-index-split path-index-or-symbol)])
+                                         (if module-path 
+                                             ;; not a module-local variable:
+                                             (top-level-varref-break-wrap)
+                                             ;; a module-local-variable:
+                                             (varref-break-wrap)))
+                                       (top-level-varref-break-wrap))]
+                                 [else (error 'annotate "unexpected value for identifier-binding: ~v" identifier-binding)])))
+                            free-varrefs)))]
+                      
                       [recertifier
                        (lambda (vals)
                          (let*-2vals ([(new-expr bindings) vals])
                                          (2vals (syntax-recertify new-expr expr (current-code-inspector) #f)
-                                                bindings)))])
+                                                bindings)))]
+                      
+                      )
                  ; find the source expression and associate it with the parsed expression
                  ;             (when (and red-exprs foot-wrap?)
                  ;               (set-expr-read! expr (find-read-expr expr)))
@@ -774,36 +814,14 @@
                     (normal-bundle null expr)]
                    
                    [(#%top . var-stx)
-                    (2vals
-                     (wcm-break-wrap (make-debug-info-normal (list #`var-stx))
-                                     (return-value-wrap (syntax-property #`var-stx 'stepper-dont-check-for-function #t)))
-                     (list #`var-stx))]
+                    (varref-abstraction #`var-stx)]
                    
                    [var-stx
-                    (identifier? (syntax var-stx))
-                    (begin
-                      (fprintf (current-error-port) "annotating variable: ~v with binding type: ~v\n" (syntax-object->datum #'var-stx)
-                               (syntax-property #'var-stx 'stepper-binding-type)) ;; DEBUGGING
-                    (let*-2vals ([var (syntax var-stx)]
-                                 [free-varrefs (list var)])
-                      (2vals 
-                       (case (syntax-property var 'stepper-binding-type)
-                         ((lambda-bound macro-bound) 
-                          (outer-wcm-wrap (make-debug-info-normal free-varrefs) var))
-                         ((let-bound) 
-                          (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                          (return-value-wrap var)))
-                         ((non-lexical) 
-                          (case (identifier-binding var)
-                            ((#f) (error 'annotate "top-level identifier occurs without #%top"))
-                            (else (if (memq (syntax-e var) beginner-defined:must-reduce)
-                                      (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                                      (return-value-wrap var))
-                                      (outer-wcm-wrap (make-debug-info-normal free-varrefs) var))))))
-                       free-varrefs)))]
+                    (identifier? #`var-stx)
+                    (varref-abstraction #`var-stx)]
                    
-                   [else ; require, require-for-syntax, define-syntaxes, module, provide
-                    (2vals expr null)])))])))
+                   [else 
+                    (error 'annotate "unexpected syntax for expression: ~v" (syntax-object->datum expr))])))])))
     
     
     ;; annotate/top-level : syntax-> syntax

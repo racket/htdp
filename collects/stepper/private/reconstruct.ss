@@ -158,14 +158,12 @@
            (or (kernel:kernel-syntax-case expr #f
                   [id
                    (identifier? expr)
-                   (begin
-                     (fprintf (current-error-port) "should stop for variable ~v?\n" (syntax-object->datum expr))
-                     (case (syntax-property expr 'stepper-binding-type)
+                   (case (syntax-property expr 'stepper-binding-type)
                        [(lambda-bound) #t]  ; don't halt for lambda-bound vars
                        [(let-bound)
                         (varref-skip-step? expr)]
                        [(non-lexical)
-                        (varref-skip-step? expr)]))]
+                        (varref-skip-step? expr)])]
                   [(#%top . id-stx)
                    (varref-skip-step? #`id-stx)]
                   [(#%app . terms)
