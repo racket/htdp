@@ -11,7 +11,8 @@
            (prefix x: "private/mred-extensions.ss")
            "private/shared.ss"
            "private/model-settings.ss"
-           (lib "pconvert.ss"))
+           (lib "pconvert.ss")
+           (lib "string-constant.ss" "string-constants"))
   
   (provide tool@)
   
@@ -44,7 +45,7 @@
           (define (file-menu:print a b) (printing-proc a b))
           
           (define (on-close)
-            (send drscheme-frame stepper-frame #f)
+            (send drscheme-frame on-stepper-close)
             (super-on-close))
           
           (super-instantiate ("Stepper" #f stepper-initial-width stepper-initial-height))))
@@ -71,12 +72,37 @@
 			  #f)
 		    (get-output-string string-port)))
 		
+                ;; make-print-convert-hook: simple-settings -> (TST (TST -> TST) (TST -> TST) -> TST)
+                ;; this code copied from various locations in language.ss and rep.ss
+                (define (make-print-convert-hook simple-settings)
+                  (lambda (expr basic-convert sub-convert)
+                    (cond
+                      [(is-a? expr snip%) 
+                       expr]
+                      [((drscheme:rep:use-number-snip) expr)
+                       (let ([number-snip-type (drscheme:language:simple-settings-fraction-style simple-settings)])
+                         (cond
+                           [(eq? number-snip-type 'repeating-decimal)
+                            (drscheme:snip:make-repeating-decimal-snip expr #f)]
+                           [(eq? number-snip-type 'repeating-decimal-e)
+                            (drscheme:snip:make-repeating-decimal-snip expr #t)]
+                           [(eq? number-snip-type 'mixed-fraction)
+                            (drscheme:snip:make-fraction-snip expr #f)]
+                           [(eq? number-snip-type 'mixed-fraction-e)
+                            (drscheme:snip:make-fraction-snip expr #t)]
+                           [else
+                            (error 'which-number-snip
+                                   "expected either 'repeating-decimal, 'repeating-decimal-e, 'mixed-fraction, or 'mixed-fraction-e got : ~e"
+                                   number-snip-type)]))]
+                      [else (basic-convert expr)])))
+                
 		;; render-to-sexp : TST -> sexp
 		(define (render-to-sexp val)
-		  (set-print-settings
-                   language
-                   simple-settings
-		   (lambda () (simple-module-based-language-convert-value val simple-settings))))
+                  (parameterize ([current-print-convert-hook (make-print-convert-hook simple-settings)])
+                    (set-print-settings
+                            language
+                            simple-settings
+                            (lambda () (simple-module-based-language-convert-value val simple-settings)))))
 
 		(define view-history null)
                 (define view-currently-updating #f)
@@ -180,7 +206,6 @@
 	  (set-render-to-string! render-to-string)
 	  (set-render-to-sexp! render-to-sexp)           
 
-	  (send drscheme-frame stepper-frame s-frame)
           (send s-frame set-printing-proc print-current-view)
           (set! view-currently-updating 0)
           (send button-panel stretchable-width #f)
@@ -192,7 +217,9 @@
           (send (send s-frame edit-menu:get-undo-item) enable #f)
           (send (send s-frame edit-menu:get-redo-item) enable #f)
           (model:go program-expander receive-result)
-          (send s-frame show #t)))
+          (send s-frame show #t)
+          
+          s-frame))
   
       (define beginner-level-name-symbol 'beginner)
       (define intermediate-level-name-symbol 'intermediate)
@@ -208,10 +235,8 @@
            
            (inherit get-button-panel get-interactions-text get-definitions-text)
            (rename [super-disable-evaluation disable-evaluation]
-                   [super-enable-evaluation enable-evaluation])
-           (public stepper-frame)
-           
-           (override enable-evaluation disable-evaluation)
+                   [super-enable-evaluation enable-evaluation]
+                   [super-can-close? can-close?])
            
            (super-instantiate ())
            
@@ -228,7 +253,10 @@
                                                   (send (get-definitions-text)
                                                         last-position)) 
                  (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))
-                 init
+                 (lambda ()
+                   (init)
+                   (drscheme:teachpack:install-teachpacks 
+                    (frame:preferences:get 'drscheme:teachpacks))) ; this belongs in model, but I'd need a unit rewrite
                  void ; kill
                  iter))
               'program-expander
@@ -239,34 +267,47 @@
                (stepper-bitmap this)
                (get-button-panel)
                (lambda (button evt)
-                 (let ([language-level (drscheme:language-configuration:get-settings-preferences-symbol)])
-                   (if #t ; (or (eq? language-level beginner-level-name-symbol)
-                          ;  (eq? language-level intermediate-level-name-symbol))
-                       (view-controller-go this program-expander)
+                 (let* ([settings (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))]
+                        [language (drscheme:language-configuration:language-settings-language settings)]
+                        [language-level (car (last-pair (send language get-language-position)))])
+                   (if (or (string=? language-level (string-constant beginning-student))
+                           (string=? language-level (string-constant beginning-student/abbrev)))
+                       (begin
+                         (disable-evaluation)
+                         (set! stepper-frame (view-controller-go this program-expander)))
                        (message-box "Stepper" 
-                                    (format (string-append "Language level is set to \"~a\".~n"
-                                                           "The stepper only works for the \"~a\" and the~n"
-                                                           "\"~a\" language levels.~n")
-                                            language-level
-                                            beginner-level-name-symbol
-                                            intermediate-level-name-symbol)
+                                    (string-append "Language level is set to \"" 
+                                                           language-level
+                                                           "\". The stepper only works for the \""
+                                                           (string-constant beginning-student)
+                                                           "\" and the \""
+                                                           (string-constant beginning-student/abbrev)
+                                                           "\" language levels.")
                                     #f 
                                     '(ok)))))))
            
-           (define (enable-evaluation)
+           (define/override (enable-evaluation)
              (send stepper-button enable #t)
              (super-enable-evaluation))
            
-           (define (disable-evaluation)
+           (define/override (disable-evaluation)
              (send stepper-button enable #f)
              (super-disable-evaluation))
            
-           (define frame-internal #f)
+           (define stepper-frame #f)
            
-           (define stepper-frame
-               (case-lambda
-                 (() frame-internal)
-                 ((new-val) (set! frame-internal new-val))))
+           (define/public (on-stepper-close)
+             (set! stepper-frame #f)
+             (enable-evaluation))
+           
+           (define/override (can-close?)
+             (if stepper-frame
+                 (begin 
+                   (message-box "Stepper"
+                                "You must close the stepper window before closing the DrScheme window.")
+                   #f)
+                 (super-can-close?)))
+
            
            (send (get-button-panel) change-children
                  (lambda (l)

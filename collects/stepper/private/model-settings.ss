@@ -81,21 +81,20 @@
      'model-settings
      'caller))
   
-  (define-struct test-struct ())
+  (define-struct test-struct () (make-inspector))
   
   (define get-render-settings
     (contract
      (-> render-settings?)
      (lambda ()
-       (fprintf (current-error-port)
-                "true : ~e\n(make-test-struct) : ~e\n(substring (render-to-string '(3)) 0 5) : ~e\n"
-                (string=? (render-to-string #t) "true")
-                (render-to-string (make-test-struct))
-                (substring (render-to-string '(3)) 0 5))
        (let* ([true-false-printed/bool (string=? (render-to-string #t) "true")]
               [constructor-style-printing/bool (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
+              [rendered-list (render-to-string '(3))]
+              [rendered-list-substring (substring rendered-list 
+                                                  0 
+                                                  (min 5 (string-length rendered-list)))]
               [abbreviate-cons-as-list/bool (and constructor-style-printing/bool
-                                                 (string=? (substring (render-to-string '(3)) 0 5) "(list"))])
+                                                 (string=? rendered-list-substring "(list"))])
          (vector
           (lambda () true-false-printed/bool)
           (lambda () constructor-style-printing/bool)

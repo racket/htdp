@@ -198,6 +198,9 @@
      'caller))
   
   (define (skip-redex-step? mark-list)
+    (fprintf (current-error-port) "construcitor-style-printing?: ~e\nabbreviate-cons-as-list?: ~e\n"
+             (constructor-style-printing?)
+             (abbreviate-cons-as-list?))
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
            (or (kernel:kernel-syntax-case expr #f
@@ -233,9 +236,7 @@
                            (length (cdr (syntax->list (syntax terms)))))
                           (or (and (constructor-style-printing?)
                                    (if (abbreviate-cons-as-list?)
-                                       (or (eq? fun-val (global-lookup 'list))
-                                           (and (eq? fun-val (global-lookup 'cons))
-                                                (second-arg-is-list? mark-list)))    
+                                       (eq? fun-val (global-lookup 'list))    
                                        (and (eq? fun-val (global-lookup 'cons))
                                             (second-arg-is-list? mark-list))))
                               ;(model-settings:special-function? 'vector fun-val)
