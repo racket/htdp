@@ -386,17 +386,16 @@
 	   (check-single-result-expr (syntax->list (syntax (expr ...)))
 				     #f
 				     stx)
+	   
            (syntax-property
             (check-definition-new 
              'define
              stx
              (car names)
-             (with-syntax ([fn (car (syntax-e #'name-seq))] 
-                            [args (cdr (syntax-e #'name-seq))])
-                (quasisyntax/loc stx (define fn #,(syntax-property
-                                                   #`(lambda args expr ...)
-                                                   'stepper-define-type
-                                                   'shortened-proc-define)))))
+             (syntax-property
+              (syntax/loc stx (define name-seq expr ...))
+              'stepper-hint
+              'shortened-proc-define))
             'stepper-skipto
             (list syntax-e cdr syntax-e cdr car)))]
 	;; Constant/lambda with too many or too few parts:
