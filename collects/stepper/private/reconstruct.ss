@@ -12,6 +12,7 @@
            "model-settings.ss"
            "shared.ss"
            "highlight-placeholder.ss"
+           "display-exp-interface.ss"
            "my-macros.ss"
            "lifting.ss")
 

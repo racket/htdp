@@ -5,8 +5,7 @@
 	   (lib "contract.ss")
            (lib "etc.ss")
            (lib "list.ss")
-           (lib "class.ss")
-           (lib "mred.ss" "mred"))
+           (lib "class.ss"))
 
   ; CONTRACTS
   
@@ -40,8 +39,6 @@
    varref-set-remove-bindings
    binding-set-varref-set-intersect
    step-result?
-   exp-without-holes?
-   exp-with-holes?
    (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs))
    (struct before-error-result (finished-exprs exp redex err-msg after-exprs))
    (struct error-result (finished-exprs err-msg))
@@ -85,28 +82,6 @@
    reset-profiling-table ; profiling info
    get-set-pair-union-stats ; profiling info
    )
-  
-  ; an exp-with-holes is either:
-  ; - a pair of exp-with-holes's,
-  ; - null,
-  ; - a symbol, or
-  ; - the highlight-placeholder
-  
-  (define exp-without-holes-base-case? (union symbol? number? string? null? (lambda (v) (is-a? v snip%))))
-  
-  (define exp-without-holes?
-    (union  exp-without-holes-base-case?
-           (and/f pair? (cons/p (lx ((flat-named-contract-predicate exp-without-holes?) _))
-                                (lx ((flat-named-contract-predicate exp-without-holes?) _))))))
-  
-  (define exp-with-holes-base-case? 
-    (union exp-without-holes-base-case?
-          (lx (eq? _ highlight-placeholder))))
-  
-  (define exp-with-holes?
-    (union exp-with-holes-base-case?
-          (and/f pair? (cons/p (lx ((flat-named-contract-predicate exp-with-holes?) _)) 
-                               (lx ((flat-named-contract-predicate exp-with-holes?) _))))))
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
