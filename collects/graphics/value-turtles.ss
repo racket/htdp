@@ -1,6 +1,3 @@
-;; won't work -- imperative.
-
-
 (require-library "math.ss")
 (require-library "function.ss")
 (define-struct turtle (x y angle))
@@ -13,9 +10,9 @@
 
 (define pi/2 (/ pi 2))
 (define (set-box/f b v) (when (box? b) (set-box! b v)))
-
-(define icon-pen (send the-pen-list find-or-create-pen "SALMON" 1 'xor))
-(define icon-brush (send the-brush-list find-or-create-brush "SALMON" 'xor))
+(define icon-color "PURPLE")
+(define icon-pen (send the-pen-list find-or-create-pen icon-color 1 'xor))
+(define icon-brush (send the-brush-list find-or-create-brush icon-color 'xor))
 (define blank-pen (send the-pen-list find-or-create-pen "BLACK" 1 'transparent))
 (define w-pen (send the-pen-list find-or-create-pen "white" 1 'solid))
 (define b-pen (send the-pen-list find-or-create-pen "black" 1 'solid))
@@ -297,53 +294,3 @@
 (define (merge tv . tvs) (send tv merge-op tvs))
 (define (clean tv) (send tv clean-op))
 
-;; testing
-
-(require-library "pretty.ss")
-(require-library "macro.ss")
-(print-struct #t)
-
-(define test
-  (let* ([f (make-object frame% "frame" #f 400 400)]
-	 [t (make-object text%)])
-    (make-object editor-canvas% f t)
-    (send f show #t)
-    (lambda (ttls)
-      (send t insert ttls)
-      (send t insert #\newline))))
-
-
-(define (regular-poly sides radius tv)
-  (local [(define theta (/ (* 2 pi) sides))
-	  (define side-len (* 2 radius (sin (/ theta 2))))
-	  (define (draw-sides n tv)
-	    (cond
-	     [(zero? n) tv]
-	     [else
-	      (draw-sides
-	       (sub1 n)
-	       (turn/radians
-		theta
-		(draw side-len tv)))]))]
-    (merge
-     (clean
-      (draw-sides
-       sides
-       (turn/radians
-	(/ (+ pi theta) 2)
-	(move
-	 radius
-	 tv))))
-     tv)))
-
-(define t1 (turtles 150 150))
-(define t2 (turn/radians (/ pi 2) (turtles 150 150)))
-(define t3 (merge t1 t2))
-(define t4 (merge (turtles 150 150) (turn/radians (/ pi 2) (turtles 150 150))))
-(define t5 (move 20 t4))
-
-(test
- (regular-poly
-  5
-  30
-  (turtles 150 150)))
