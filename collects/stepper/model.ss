@@ -120,7 +120,6 @@
    (lambda ()
      (set! user-primitive-eval (current-eval))
      (d:basis:initialize-parameters (make-custodian) i:settings)
-     (d:rep:invoke-teachpack)
      (set! user-namespace (current-namespace))
      (set! user-pre-defined-vars (map car (make-global-value-list)))
      (set! user-vocabulary (d:basis:current-vocabulary))
@@ -128,11 +127,6 @@
      (set! par-abbreviate-cons-as-list (p:abbreviate-cons-as-list))
      (set! par-cons (global-defined-value 'cons))
      (set! par-vector (global-defined-value 'vector))
-     (p:current-print-convert-hook 
-      (lambda (v basic-convert sub-convert)
-        (if (image? v)
-            v
-            (basic-convert v))))
      (semaphore-post stepper-return-val-semaphore)))
   (semaphore-wait stepper-return-val-semaphore)
   
@@ -142,7 +136,12 @@
         (send-to-user-eventspace
          (lambda ()
            (set! print-convert-result
-                 (p:print-convert val))
+                 (parameterize ([p:current-print-convert-hook
+                                 (lambda (v basic-convert sub-convert)
+                                   (if (image? v)
+                                       v
+                                       (basic-convert v)))])
+                   (p:print-convert val)))
            (semaphore-post stepper-return-val-semaphore)))
         (semaphore-wait stepper-return-val-semaphore)
         print-convert-result)))

@@ -3,7 +3,7 @@
           mzlib:function^
           [e : zodiac:interface^]
           [utils : stepper:cogen-utils^]
-          [b : userspace:basis^]
+          [b : plt:basis^]
           stepper:marks^
           [s : stepper:model^]
 	  stepper:shared^)
@@ -443,7 +443,7 @@
                  
                  ; begin, begin0 : may not occur directly (or indirectly?) except in advanced
                  
-                 ; letrec-values
+                 ; let-values
                  
 ;                 [(z:let-values-form? expr)
 ;                  (let+ ([val var-sets (z:let-values-form-vars expr)]
@@ -454,14 +454,17 @@
 ;                                              (mark-binding-value (find-var-binding mark-list arg-sym)))
 ;                                            arg-temp-syms)]
 ;                         [val rhs-list
-;                              (let loop ([var-sets var-sets] [rhs-vals rhs-vals])
-;                                (if (null? var-sets)
-;                                    null
+;                              (let loop ([var-sets var-sets] [rhs-vals rhs-vals] [rhs-sources vals])
+;                                (if (eq? (car rhs-vals) *undefined*) 
+;                                    (map rectify-source-current-marks rhs-sources)
 ;                                    (let*-values ([first-set (car var-sets)]
 ;                                                  [(set-vals remaining) (list-partition rhs-vals (length first-set))])
-;                                      (if (null? first-set)
-;                                          (cons `(values) (loop (cdr var-sets) remaining))
-;                                          (cons 
+;                                      (cons 
+;                                       (case (length first-set)
+;                                         ((0) `(values))
+;                                         ((1) (car set-vals))
+;                                         (else `(values ,@set-vals)))
+;                                       (loop (cdr var-sets) remaining (cdr rhs-sources))))))]
 ;
 ;                         [val (values annotated-vals free-vars-vals)
 ;                              (dual-map non-tail-recur vals)]
