@@ -4,8 +4,6 @@
 	  [drscheme : drscheme:export^]
 	  [zodiac : zodiac:system^])
 
-;; won't need above the line
-
 (define read/snips (lambda x (error x)))
 
 (define (snipize obj)
@@ -81,7 +79,7 @@
     (public
       [make-editor
        (lambda ()
-	 (make-object plain-text% (make-delta family)))])
+	 (make-object (drscheme:unit:program-editor-mixin plain-text%) (make-delta family)))])
 
     (sequence
       (super-init (make-editor)))))
@@ -144,12 +142,6 @@
   (class* renderable-editor-snip% (zodiac:expands<%>) ()
     (inherit get-editor)
 
-;; cannot do this because the styles information in the saved texts screws up.
-   (override
-     [make-editor
-      (lambda ()
-	(make-object (scheme:text-mixin text:basic%)))])
-
     (public
       [expand
        (lambda (obj)
@@ -164,10 +156,13 @@
 	      `(,snipize ,(read))
 	      (zodiac:make-zodiac #f loc loc)))))])
 
-;    (override
-;      [make-editor
-;       (lambda ()
-;	 (make-object (drscheme:unit:text-with-error-mixin plain-text%) (make-delta 'modern)))])
+
+;; MATTHEW
+;; cannot do this because the styles information in the saved texts screws up.
+;   (override
+;     [make-editor
+;      (lambda ()
+;	(make-object (drscheme:unit:program-editor-mixin (scheme:text-mixin text:basic%))))])
 
     (override
       [make-snip (lambda () (make-object evaluated-snip%))])
@@ -243,7 +238,7 @@
       (cond
        [(not snip)
 	(unless (null? replacements)
-	  (error 'replace-in-template "found end without doing all replacements"))
+	  (error 'replace-in-template "found end without doing all replacements: ~s" replacements))
 	(void)]
        
        [(transformable? snip)
@@ -306,8 +301,7 @@
 
     (frame:reorder-menus this)))
 
-
-(define utils (require-library "utils.ss" "typeset"))
+(define utils (invoke-unit/sig (require-library "utils.ss" "typeset") mred^ framework^))
 
 (define (typeset-rep-extension super-text%)
   (class/d super-text% args
@@ -318,7 +312,7 @@
     (define (reset-console)
       (super-reset-console)
       (parameterize ([current-namespace user-namespace])
-	(global-define-values/invoke-unit/sig typeset:utils^ utils #f mred^ framework^)))
+	(global-define-values/invoke-unit/sig typeset:utils^ utils)))
 
     (apply super-init args)))
 
