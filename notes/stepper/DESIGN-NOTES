@@ -682,5 +682,14 @@ language's elaborator, so the first use is obsolete.  The second one
 is more or less obsolete as well, because I'm not sure that cheap- or
 ankle-wrap are ever going to be used again.
 
+Also, the 'lambda-bound-var' property is going away; in v200, I don't
+see a good way to get from a bound variable to its binding, which 
+makes it more or less impossible to keep track of things by attaching
+properties to bindings.  In fact, it doesn't really even make sense
+to try and find the binding for an occurrence in v200, because it's 
+not even known.  Instead, I've just added another recursion argument
+called 'let-bound-variables", which is basically what the property
+was anyway.
+
 2002-01-08
 
