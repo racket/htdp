@@ -469,8 +469,9 @@
                            (if ((string-length str) . <= . len)
                                str
                                (string-append (substring str 0 (max 0 (- len 3))) "..."))))))
-                    (drscheme:teachpack:install-teachpacks 
-                     (frame:preferences:get 'drscheme:teachpacks))) ; this belongs in model, but I'd need a unit rewrite
+                    ;(drscheme:teachpack:install-teachpacks  ; not needed anymore?
+                    ; (frame:preferences:get 'drscheme:teachpacks)) ; this belongs in model, but I'd need a unit rewrite
+                    )
                   void ; kill
                   iter)))
              'program-expander
