@@ -55,7 +55,7 @@
   (define undefined (letrec ([x x]) x))
 
   ;; Wrapped around top-level definitions to disallow re-definition:
-  (define (check-top-level-not-defined id)
+  (define (check-top-level-not-defined who id)
     ((with-handlers ([not-break-exn? (lambda (exn) void)])
        (let ([b (identifier-binding id)])
 	 ;; if it's not top-level, raise an exn
@@ -64,7 +64,7 @@
 	     ;; At top-level, might be bound to syntax or value:
 	     (with-handlers ([exn:syntax? (lambda (exn) void)])
 	       (eval id))))
-       (lambda () (error 'define "cannot redefine name: ~a" (syntax-e id))))))
+       (lambda () (error who "cannot redefine name: ~a" (syntax-e id))))))
 
   ;; For quasiquote and shared:
   (require (rename "teachprims.ss" the-cons advanced-cons))
@@ -179,20 +179,21 @@
     ;; At the top level, wrap `defn' to first check for
     ;; existing definitions of the `names'. The `names'
     ;; argument is a syntax list of identifiers.
-    (define (check-definitions-new stx names defn)
+    (define (check-definitions-new who stx names defn)
       (if (eq? (syntax-local-context) 'top-level)
 	  (with-syntax ([(name ...) names]
-			[defn defn])
+			[defn defn]
+			[who who])
 	    (syntax/loc stx
 	      (begin
-		(check-top-level-not-defined #'name)
+		(check-top-level-not-defined 'who #'name)
 		...
 		defn)))
 	  defn))
 
     ;; Same as above, but for one name
-    (define (check-definition-new stx name defn)
-      (check-definitions-new stx (list name) defn))
+    (define (check-definition-new who stx name defn)
+      (check-definitions-new who stx (list name) defn))
     
     ;; Check context for a `define' before even trying to
     ;; expand
@@ -283,6 +284,7 @@
 					'lambda
 					(syntax expr))
 	      (check-definition-new
+	       'define
 	       stx
 	       (syntax name)
 	       (syntax/loc stx (define (name . arg-seq) lexpr ...))))]
@@ -303,7 +305,8 @@
 	     "expected a sequence of function arguments after `lambda', but nothing's there")]
 	   ;; Constant def
 	   [_else
-	    (check-definition-new 
+	    (check-definition-new
+	     'define
 	     stx
 	     (syntax name)
 	     (syntax/loc stx (define name expr)))])]
@@ -349,6 +352,7 @@
 				     'define
 				     stx)
 	   (check-definition-new 
+	    'define
 	    stx
 	    (car names)
 	    (syntax/loc stx (define name-seq expr ...))))]
@@ -478,7 +482,8 @@
 			     (let ()
 			       (define-struct name_ (field_ ...))
 			       (values to-define-name ...)))))])
-		 (check-definitions-new stx 
+		 (check-definitions-new 'define-struct
+					stx 
 					(syntax (name_ to-define-name ...)) 
 					defn)))))]
 	[(_ name_ something . rest)
@@ -1172,6 +1177,7 @@
 	 (and (identifier? (syntax name))
 	      (ok-definition-context))
 	 (check-definition-new
+	  'define
 	  stx
 	  (syntax name)
 	  (syntax/loc stx (define (name) expr)))]
