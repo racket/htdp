@@ -19,6 +19,7 @@
    insert-highlighted-value
    binding-indexer 
    binding-index-reset
+   get-lifted-var
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -56,22 +57,23 @@
 ;    (eq? (z:zodiac-origin binding) 'bogus))
 
   ; make-binding-source creates a pool of bindings, indexed by arbitrary keys. These bindings
-  ; not eq? to any other bindings, but a client can always get the same binding by
+  ; not eq? to any other bindings[*], but a client can always get the same binding by
   ; invoking the resulting procedure with the same key (numbers work well). make-binding-source
   ; also takes a string which will be part of the printed representation of the binding's
   ; name; this makes debugging easier.
+  ; [*] actually, this is not true if you don't use a one-to-one function as the binding-maker
   ; make-gensym-source : (string -> (key -> binding))
   
-;  (define (make-binding-source id-string binding-maker)
-;    (let ([assoc-table (make-hash-table-weak)])
-;      (lambda (key)
-;        (let ([maybe-fetch (hash-table-get assoc-table key (lambda () #f))])
-;          (or maybe-fetch
-;              (begin
-;                (let* ([new-binding (binding-maker 
-;                                     (string-append id-string (format "~a" key) "-"))])
-;                  (hash-table-put! assoc-table key new-binding)
-;                  new-binding)))))))
+  (define (make-binding-source id-string binding-maker)
+    (let ([assoc-table (make-hash-table 'weak)])
+      (lambda (key)
+        (let ([maybe-fetch (hash-table-get assoc-table key (lambda () #f))])
+          (or maybe-fetch
+              (begin
+                (let* ([new-binding (binding-maker 
+                                     (string-append id-string (format "~a" key) "-"))])
+                  (hash-table-put! assoc-table key new-binding)
+                  new-binding)))))))
   
   
   ; get-binding-name extracts the S-expression name for a binding. Zodiac
@@ -114,12 +116,19 @@
 ;         (not (eq? arg1 arg2p)))
 
   
-  ; get-lifted-gensym maintains the mapping between let-bindings and the gensym
+  ; get-lifted-var maintains the mapping between let-bindings and the syntax object
   ; which is used to capture its index at runtime.
   
-;  (define get-lifted-gensym
-;    (make-binding-source "lifter" gensym))
-;  
+  (define lifted-index 0)
+  (define (next-lifted-symbol str)
+    (let ([index lifted-index]) 
+      (set! lifted-index (+ lifted-index 1))
+      (datum->syntax-object #f (string->symbol (string-append str (number->string index))))))
+
+  (define get-lifted-var
+    (make-binding-source "lifter-" next-lifted-symbol))
+
+  
   ; gensyms needed by many modules:
 
   ; no-sexp is used to indicate no sexpression for display.
@@ -207,3 +216,11 @@
   
 
   )
+
+; test cases
+;(require shared)
+;
+;(eq? (syntax-object->datum (get-lifted-var 'ab)) 'lifter-ab-0)
+;(eq? (syntax-object->datum (get-lifted-var 'cd)) 'lifter-cd-1)
+;(eq? (syntax-object->datum (get-lifted-var 'ef)) 'lifter-ef-2)
+;(eq? (syntax-object->datum (get-lifted-var 'cd)) 'lifter-cd-1)
