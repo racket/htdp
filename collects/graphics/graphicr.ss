@@ -12,9 +12,9 @@
   (define-struct sixkey (value))
   (define graphics-flag #f)
   (define global-viewport-list '())
-  (define global-color-vector (make-vector 300))
-  (define global-pen-vector (make-vector 300))
-  (define global-brush-vector (make-vector 300))
+  (define global-color-vector (make-vector 300 #f))
+  (define global-pen-vector (make-vector 300 #f))
+  (define global-brush-vector (make-vector 300 #f))
   (define default-font (make-object mred:font% 12 'roman 'normal 'normal))
   
   (define sixlib-canvas%
@@ -605,7 +605,7 @@
 	  [(p width height color)
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'solid))
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
 	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
 	    viewport p width height)])))
     
@@ -616,8 +616,8 @@
 	  [(p width height color)
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'solid))
-	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'solid)))
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush (get-color color) 'solid)))
 	    viewport p width height)])))
   
   (define (draw-ellipse viewport)
@@ -627,7 +627,7 @@
 	  [(p width height color)
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'solid))
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
 	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
 	    viewport p width height)])))
   
@@ -638,8 +638,8 @@
 	  [(p width height color)
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'solid))
-	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'solid)))
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush (get-color color) 'solid)))
 	    viewport p width height)])))
   
   (define (flip-rectangle viewport)
@@ -649,7 +649,7 @@
 	  [(p width height color)
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'xor))
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'xor))
 	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
 	    viewport p width height)])))
   
@@ -661,7 +661,7 @@
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "BLACK" 1 'transparent))
-	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'xor)))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush (get-color color) 'xor)))
 	    viewport p width height)])))
   
   (define (flip-ellipse viewport)
@@ -671,7 +671,7 @@
 	  [(p width height color)
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'xor))
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'xor))
 	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
 	    viewport p width height)])))
   
@@ -683,7 +683,7 @@
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "BLACK" 1 'transparent))
-	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'xor)))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush (get-color color) 'xor)))
 	    viewport p width height)])))
   
   (define (clear-rectangle viewport)
