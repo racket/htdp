@@ -52,7 +52,6 @@
 	      [bh (box 0)])
 	  (get-extent dc x y bw bh #f #f #f #f)
 	  (get-inset bl br bt bb)
-	  (super-draw dc x y left top right bottom dx dy draw-caret)
 	  (let ([old-pen (send dc get-pen)])
 	    (send dc set-pen pen)
 	    (send dc draw-rectangle
@@ -60,7 +59,8 @@
 		  (+ y (unbox bt))
 		  (- (unbox bw) (unbox bl) (unbox br))
 		  (- (unbox bh) (unbox bt) (unbox bb)))
-	    (send dc set-pen old-pen))))])
+	    (send dc set-pen old-pen))
+          (super-draw dc x y left top right bottom dx dy draw-caret)))])
 
     (override
       [write
@@ -82,7 +82,7 @@
 	 (make-object (drscheme:unit:program-editor-mixin plain-text%) (make-delta family)))])
 
     (sequence
-      (super-init (make-editor)))))
+      (super-init (make-editor) #f))))
 
 (define constant-snip%
   (class* renderable-editor-snip% (zodiac:expands<%>) (family)
