@@ -590,17 +590,11 @@
                                                input-user-defined-names))
             
             (define (non-annotated-proc? varref)
-              (printf "non-annotated-proc? ~e\n" (syntax-e varref))
-              (kernel:kernel-syntax-case varref ()
+              (kernel:kernel-syntax-case varref #f
                 [(#%top . id)
-                 (begin ; TEMP
-                   (when (eq? (syntax-e 'make-mamba))
-                     (printf "make-mamba in list: ~e?: ~e\n"
-                             (map syntax-e struct-proc-names)
-                             (ormap (lx (module-identifier=? (syntax id) _)) struct-proc-names)))
                  (or
                   (memq (syntax-e (syntax id)) beginner-defined:defined-names)
-                  (ormap (lx (module-identifier=? (syntax id) _)) struct-proc-names)))]
+                  (ormap (lx (module-identifier=? (syntax id) _)) struct-proc-names))]
                 [id
                  (identifier? (syntax id))
                  (case (identifier-binding (syntax id))
@@ -668,7 +662,6 @@
                        
                        [(syntax-property expr 'stepper-skip-completely)
                         (let ([maybe-struct-names (syntax-property expr 'stepper-skip-completely)])
-                          (printf "maybe-struct-names: ~e\n" (map syntax-e maybe-struct-names))
                           (when (pair? maybe-struct-names)
                             (set! struct-proc-names
                                   (append struct-proc-names maybe-struct-names)))
