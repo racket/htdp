@@ -410,7 +410,7 @@
   
   (t bad-cond
   (test-upto-int/lam "(cond)"
-                     `((error "test-input::0: cond: expected a question--answer clause after `cond', but nothing's there in: (cond)"))))
+                     `((error "cond: expected a question--answer clause after `cond', but nothing's there"))))
   
   (t just-else
   (test-upto-int/lam "(cond [else 3])"
@@ -473,6 +473,17 @@
 						     ((hilite (+ 23 13))))
                                        (before-after ((hilite (+ 23 13))) ((hilite 36)))
                                        (finished (36)))))
+  
+  (t lam-let
+     (test-intermediate-sequence "(let ([a (lambda (x) (+ x 5))]) (a 6))"
+                                 `((before-after ((let ([a (lambda (x) (+ x 5))]) (a 6)))
+                                                 ((hilite (define a_0 (lambda (x) (+ x 5)))) (hilite (a 6))))
+                                   (before-after-finished ((define a_0 (lambda (x) (+ x 5))))
+                                                          ((hilite (a 6)))
+                                                          ((hilite (+ 6 5))))
+                                   (before-after ((hilite (+ 6 5)))
+                                                 ((hilite 11)))
+                                   (finished (11)))))
   
   (t whocares
   (test-upto-int "(define c1 false) (define (d2 x) (or c1 false x)) (d2 false)"
@@ -1182,6 +1193,6 @@
      (test-teachpack-sequence " (define (f2c x) x) (convert-gui f2c)" `() ; placeholder
                                ))
   
-  #;(run-tests '(and1))
-  (run-all-tests)
+  (run-tests '(lam-let) #;(let-scoping1))
+  #;(run-all-tests)
   )
