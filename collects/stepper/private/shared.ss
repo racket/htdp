@@ -268,8 +268,8 @@
        (lambda args ; key or key & failure-thunk
          (apply hash-table-get closure-table args))
        (lambda (key)
-         (with-handlers ([exn:application:mismatch? (lambda (dc-exn) #f)])
-           (hash-table-get closure-table key)
+         (let/ec k
+           (hash-table-get closure-table key (lambda () (k #f)))
            #t)))))
   
   ;(begin (closure-table-put! 'foo 'bar)
