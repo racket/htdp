@@ -1,12 +1,3 @@
-#|
-
-based on 103d105 with these changes:
-
-  removed mrspidey prims, turtle prims, eval, eval-string, pretty-print parameters
-  moved assignment, ho prims to advanced
-
-|#
-
 
 (module lang-names mzscheme
   (provide beginner-names intermediate-adds advanced-adds)
@@ -35,8 +26,6 @@ based on 103d105 with these changes:
       number->string
       string->number
       or
-      filename-extension
-      make-directory*
       equal?
       make-string
       string-length
@@ -59,19 +48,9 @@ based on 103d105 with these changes:
       integer->char
       char-upcase
       char-downcase
-      build-list
-      compose
       char-whitespace?
-      remove*
       seventh
-      regexp-match-exact?
       symbol=?
-      build-absolute-path
-      define-values
-      delete-directory/files
-      file-name-from-path
-      values
-      void?
       posn?
       null
       pair?
@@ -137,7 +116,6 @@ based on 103d105 with these changes:
       eof
       read
       first
-      path-only
       format
       fourth
       char?
@@ -146,13 +124,9 @@ based on 103d105 with these changes:
       char>?
       not
       eq?
-      rec
-      nor
       lambda
       quote
-      remv
       string?
-      remv*
       rest
       second
       string-ref
@@ -161,11 +135,9 @@ based on 103d105 with these changes:
       true
       string<?
       string>?
-      last-pair
       string<=?
       string>=?
       substring
-      case-lambda
       char<=?
       char>=?
       char-ci=?
@@ -174,71 +146,37 @@ based on 103d105 with these changes:
       char-ci<=?
       char-ci>=?
       boolean?
-      raise
-      char->string
       +
       >=
       if
-      identity
-      evcase
       cosh
       sgn
-      remq*
-      explode-path
       pi
       define
-      merge-input
-      define-constructor
-      read-from-string
-      find-relative-path
-      dynamic-enable-break
       define-struct
-      ignore-errors
       struct?
-      remove
-      recur
-      read-from-string-all
-      nand
-      build-relative-path
-      make-temporary-file
       sixth
-      expr->string
-      newline-string
-      find-library
-      normalize-path
-      dynamic-disable-break
-      void
-      consumer-thread
       cdr
       list?
       list
       memq
       assq
-      local
-      foldl
-      remq
       -))
   
   (define intermediate-adds
     '(time
       let 
-      let*-values
       unquote-splicing
       let-struct
       letrec
       let*
-      letrec-values
-      let-values
       unquote
       quasiquote
+      local
       ))
   
   (define advanced-adds
-    '(loop-until
-      with-semaphore
-      semaphore-wait-multiple
-      make-semaphore
-      procedure?
+    '(procedure?
       assf
       mergesort
       set-cdr!
@@ -268,7 +206,10 @@ based on 103d105 with these changes:
       ormap
       build-string
       build-vector
+      build-list
+      compose
       call/cc
+      raise
       set-car!
       box
       box?
@@ -283,16 +224,14 @@ based on 103d105 with these changes:
       vector?
       vector-ref
       promise?
-      parameterize
+      void?
       unless
       move
       let/cc
       set-posn-x!
       set-posn-y!
-      set!-values
       call-with-current-continuation
       with-handlers
-      display-lines-in-drawing
       andmap
       for-each
       quicksort))
