@@ -107,8 +107,18 @@
           [body-exps (cddr o-form)])
       `(define (,name ,@args) ,@body-exps)))
   
+  (define (final-mark-list? mark-list)
+    (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
+ 
+  (define (stop-here? mark-list all-defs)
+    (not(and (pair? mark-list)
+             (let ([expr (mark-source (car mark-list))])
+               (and (z:varref? expr)
+                    (or (z:bound-varref? expr)
+                        (not (memq (z:varref-var expr) (apply append all-defs)))
+                        (procedure? (mark-binding-value
+                                     (find-var-binding mark-list (z:varref-var expr))))))))))
   
-   
   (define (rectify-source-expr expr mark-list lexically-bound-vars)
     (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
       (cond [(z:varref? expr)
@@ -277,7 +287,7 @@
            (if (null? mark-list)
                so-far
                (let* ([top-mark (car mark-list)]
-                      [expr (car (top-mark))])
+                      [expr (mark-source top-mark)])
                  (cond 
                    ; variable references
                    [(z:varref? expr)
@@ -380,26 +390,27 @@
                  [old-exp-vars (list-take current-def-num all-defs-list)])
              (map rectify-old-expression old-exps old-exp-vars)))
          
-         (define current-def 
-           (if (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final))
-               "***FINAL***"
-               (let loop ([so-far nothing-so-far] [mark-list mark-list] [first #t])
-                 (if (null? mark-list)
-                     (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
-                     (loop 
-                      (let ([reconstructed (reconstruct-inner mark-list so-far)])
-                        (if first
-                            `(> ,reconstructed <)
-                            reconstructed))
-                      (cdr mark-list)
-                      #f)))))
+         (define current-def-thunk
+           (lambda ()
+             (let loop ([so-far nothing-so-far] [mark-list mark-list] [first #t])
+               (if (null? mark-list)
+                   (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
+                   (loop 
+                    (let ([reconstructed (reconstruct-inner mark-list so-far)])
+                      (if first
+                          `(> ,reconstructed <)
+                          reconstructed))
+                    (cdr mark-list)
+                    #f)))))
          
-         (define last-defs
-           (if (>= current-def-num (length expr-list))
-               ()
-               (map (lambda (expr) (rectify-top-level expr #f null)) 
-                    (list-tail expr-list (+ current-def-num 1)))))
+         (define last-defs-thunk
+           (lambda () 
+             (if (>= current-def-num (length expr-list))
+                 ()
+                 (map (lambda (expr) (rectify-top-level expr #f null)) 
+                      (list-tail expr-list (+ current-def-num 1))))))
          )
       
-      (append old-defs (list current-def) last-defs))))
- 
+      (if (final-mark-list? mark-list)
+          old-defs
+          (append old-defs (list (current-def-thunk)) (last-defs-thunk))))))
