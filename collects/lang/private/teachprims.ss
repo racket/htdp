@@ -1,7 +1,8 @@
 
 (module teachprims mzscheme
 
-  (require "../imageeq.ss")
+  (require "../imageeq.ss" 
+           (lib "list.ss"))
   
   (define-syntax (define-teach stx)
     (syntax-case stx ()
@@ -132,6 +133,11 @@
   (define-teach beginner *
     (lambda (a b . args)
       (apply * a b args)))
+  
+  (define-teach beginner member 
+    (lambda (a b)
+      (check-second 'member a b)
+      (not (boolean? (member a b)))))
 
   (define-teach beginner cons 
     (lambda (a b)
@@ -242,6 +248,25 @@
       (check-three a b c 'equal~? values 'any values 'any positive-real? 'non-negative-real)
       (tequal? a b c)))
 
+  (define (qcheck fmt-str x)
+    (raise
+     (make-exn:fail:contract
+      (string->immutable-string
+       (string-append "quicksort: " (format fmt-str x)))
+      (current-continuation-marks))))
+    
+  (define-teach intermediate quicksort
+    (lambda (l cmp?)
+      (unless (beginner-list? l) 
+        (qcheck "first argument must be of type <list>, given ~e" l))
+      (unless (and (procedure? cmp?) (procedure-arity-includes? cmp? 2))
+        (qcheck "second argument must be a <procedure> that accepts two arguments, given ~e" cmp?))
+      (quicksort l (lambda (x y) 
+                     (define r (cmp? x y))
+                     (unless (boolean? r)
+                       (qcheck "the results of the procedure argument must be of type <boolean>, produced ~e" r))
+                     r))))
+  
   (define-teach advanced cons 
     (lambda (a b)
       (check-second/cycle 'cons a b)
@@ -277,6 +302,7 @@
 	   beginner-/
 	   beginner-*
 	   beginner-list?
+           beginner-member
 	   beginner-cons
 	   beginner-list*
 	   beginner-append
@@ -286,6 +312,7 @@
 	   beginner-equal?
 	   beginner-equal~?
 	   beginner-=~
+           intermediate-quicksort
 	   advanced-cons
 	   advanced-set-cdr!
 	   advanced-set-rest!
