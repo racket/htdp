@@ -17,7 +17,9 @@
    [binding-set-union (-> (listof binding-set?) binding-set?)]
    [varref-set-union (-> (listof varref-set?) varref-set?)]
    [in-closure-table (-> any? boolean?)]
-   [sublist (-> number? number? list? list?)])
+   [sublist (-> number? number? list? list?)]
+   [attach-info (-> syntax? syntax? syntax?)]
+   [transfer-info (-> syntax? syntax? syntax?)])
   
   (provide
    step-result?
@@ -501,6 +503,25 @@
                   (sublist 0 (- end 1) (cdr lst)))
             (sublist (- begin 1) (- end 1) (cdr lst)))))
   
+  
+  ; attach-info : SYNTAX-OBJECT SYNTAX-OBJECT -> SYNTAX-OBJECT
+  ; attach-info attaches to a generated piece of syntax the origin & source information of another.
+  ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
+  (define (attach-info stx expr)
+    (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
+           [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
+           [it (syntax-property it 'user-stepper-else (syntax-property expr 'stepper-else))]
+           [it (syntax-property it 'user-source (syntax-source expr))]
+           [it (syntax-property it 'user-position (syntax-position expr))])
+      it))
+  
+  (define (transfer-info stx expr)
+    (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'user-origin))]
+           [it (syntax-property it 'user-stepper-hint (syntax-property expr 'user-stepper-hint))]
+           [it (syntax-property it 'user-stepper-else (syntax-property expr 'user-stepper-else))]
+           [it (syntax-property it 'user-source (syntax-property expr 'user-source))]
+           [it (syntax-property it 'user-position (syntax-property expr 'user-position))])
+      it))
   )
   
 ; test cases

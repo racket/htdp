@@ -25,13 +25,8 @@
              (lambda (index-mangler list-of-subtries)
                (let loop ([index 0] [remaining list-of-subtries])
                  (unless (null? remaining)
-                   (let* ([subexpr (cadar remaining)]
-                          [new-contexts (cons (make-context-record stx (index-mangler index) kind) context-so-far)])
-                     (if (eq? subexpr highlight-placeholder)
-                         (success-escape new-contexts)
-                         (begin
-                           ((caar remaining) subexpr new-contexts)
-                           (loop (+ index 1) (cdr remaining)))))))))
+                   ((caar remaining) (cadar remaining) (cons (make-context-record stx (index-mangler index) kind) context-so-far))
+                   (loop (+ index 1) (cdr remaining))))))
            
            (define try->offset-try
              (lambda (try)
@@ -72,6 +67,8 @@
                   (expr-iterator stx context-so-far)])))
            
            (define (expr-iterator stx context-so-far)
+             (when (eq? (syntax-e stx) highlight-placeholder)
+               (success-escape context-so-far))
              (let* ([try (make-try-all-subexprs stx 'expr context-so-far)]
                     [try-exprs (lambda (index-mangler exprs) (try index-mangler (map (lambda (expr) `(,expr-iterator ,expr)) (syntax->list exprs))))]
                     [try-exprs-offset (try->offset-try try-exprs)] 
@@ -121,8 +118,12 @@
                   (void)]
                  [(#%top . var)
                   (void)]
+                 [(a b c) ; extension to handle unknown contexts:
+                  (and (eq? (syntax-e #'a) '...)
+                       (eq? (syntax-e #'c) '...))
+                  (try-exprs-offset 1 #'(b))]
                  [else
-                  (error 'expr-syntax-object-iterator "unknown expr: ~a" 
+                  (error 'expr-iterator "unknown expr: ~a" 
                          (syntax-object->datum stx))]))))
         
         (if (eq? stx highlight-placeholder)
@@ -135,8 +136,8 @@
   (define-syntax (test-begin stx)
     (syntax-case stx ()
       [(_ expr ...)
-       #'(begin expr ...) ; testing version
-       ;#'(void) ; non-testing version
+       ;#'(begin expr ...) ; testing version
+       #'(void) ; non-testing version
        ]))
   
   (test-begin
@@ -176,7 +177,11 @@
    
    (printf "equal? ~v\n" (equal? actual expected))
    ;(printf "shared: ~v\n" (sexp-shared actual expected))
-   )
+   
+   (local
+       ((define actual (find-highlight #`#,highlight-placeholder)))
+     
+     (printf "equal?: ~v\n" (null? actual))))
   
   ; substitute-in-syntax takes a syntax expression (which must be a proper syntax list) and a path
   ; (represented by a list of numbers) and a syntax-expression to insert.  If the path is null, the
@@ -225,7 +230,7 @@
     (let-values ([(highlighted-defs highlighted-body) (if lift-in-highlighted?
                                                           (lift-helper highlighted #f null)
                                                           (values null highlighted))])
-      (let loop ([ctx-list ctx-list] [so-far-defs (map (lambda (x) highlight-placeholder) highlighted-defs)] [body highlight-placeholder])
+      (let loop ([ctx-list ctx-list] [so-far-defs (map (lambda (x) #`#,highlight-placeholder) highlighted-defs)] [body #`#,highlight-placeholder])
         (if (null? ctx-list)
             (values (append so-far-defs (list body)) (append highlighted-defs (list highlighted-body)))
             (let*-values ([(ctx) (car ctx-list)]
@@ -245,7 +250,8 @@
             (lambda ()
               (kernel:kernel-syntax-case stx #f
                 [(tag ([(var ...) rhs] ...) body ...)
-                 (let* ([defns (syntax->list #'((define-values (var ...) rhs) ...))]
+                 (let* ([defns (map (lambda (defn-stx) (syntax-property (transfer-info defn-stx stx) 'stepper-hint 'lifted-define))
+                                    (syntax->list #'((define-values (var ...) rhs) ...)))]
                         [bodies-list (syntax->list #'(body ...))]
                         [body (if (= (length bodies-list) 1) ; as far as I can tell, this source info is comprehensively lost.
                                   (car bodies-list)
@@ -298,5 +304,7 @@
      (printf "equal?: ~v\n" (equal? actual-sexps expected-sexps))
      (printf "equal?: ~v\n" (equal? actual-highlights expected-highlights))
      ;(printf "shared: ~v\n" (sexp-shared actual expected))
-     )))
+     )
+   
+   ))
  

@@ -267,11 +267,13 @@
   ;      ((listof sexp-with-highlights) (listof sexp-without-highlights?)))
   
   (define (unwind stx highlight lift-at-highlight?)
-    (let*-values ([(stx-a highlight-a-lst) (macro-unwind stx (list highlight))])
-      (unless (= (length highlight-a-lst) 1)
-        (error 'unwind "macro-unwind returned a list of highlights not of length 1: ~v\n" 
-               (map syntax-object->datum highlight-a-lst)))
-      (lift stx-a (car highlight-a-lst) lift-at-highlight?)))
+    (let*-values ([(stx-a highlight-a-lst) (macro-unwind stx (list highlight))]
+                  [(_) (unless (= (length highlight-a-lst) 1)
+                         (error 'unwind "macro-unwind returned a list of highlights not of length 1: ~v" 
+                                (map syntax-object->datum highlight-a-lst)))]
+                  [(stx-b-lst highlight-b-lst) 
+                   (lift stx-a (car highlight-a-lst) lift-at-highlight?)])
+      (second-pass-unwind stx-b-lst highlight-b-lst)))
   
   ; unwind-no-highlight is really just macro-unwind, but with the 'right' interface that
   ; makes it more obvious what it does.
@@ -281,11 +283,49 @@
     (macro-unwind stx null))
   
   
+
+  (define (second-pass-unwind stxs highlights)
+    (local
+        ((define highlight-queue-src (make-queue))
+         (define highlight-queue-dest (make-queue))
+         
+         (define (inner stx)
+           (if (eq? (syntax-e stx) highlight-placeholder)
+               (begin (queue-push highlight-queue-dest (inner (queue-pop highlight-queue-src)))
+                      highlight-placeholder-stx)
+               (kernel:kernel-syntax-case stx #f
+                 [(define-values (name . others) body)
+                  (let* ([vars (syntax->list (syntax vars-stx))])
+                    (unless (null? #'others)
+                      (error 'reconstruct "reconstruct fails on multiple-values define\n"))
+                    (case (syntax-property stx 'stepper-define-hint)
+                      ((lambda-define) 
+                       #`(define name body))
+                      ((shortened-proc-define) 
+                       (kernel:kernel-syntax-case #`body #f
+                         [(lambda (arg ...) lambda-body)
+                          #`(define (name arg ...) lambda-body)]
+                         [else ; (e.g., highlight-placeholder)
+                          #`(define name body)]))
+                      ((non-lambda-define) 
+                       #`(define name body))
+                      [(lifted-define)
+                       #`(define name body)]
+                      (else (error 'reconstruct-top-level "unexpected stepper-define-hint: ~e\n" (syntax-property stx 'stepper-define-hint)))))]
+                 [else stx]))))
+      
+      (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
+      (let* ([main (map inner stxs)]
+             [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
+        (values main new-highlights))))
+
+  
+  
   ;(->* (syntax? (listof syntax?)) 
   ;     (syntax? (listof syntax?)))
   
   (define (macro-unwind stx highlights)
-    
+
     (local
         ((define highlight-queue-src (make-queue))
          (define highlight-queue-dest (make-queue))
@@ -385,34 +425,6 @@
   
   
                                                                        
-                                                                       
-                                                                       
-                                ;              ;             ;;        
-                                ;                           ;          
-        ;    ;                  ;                           ;          
-  ;;;  ;;;; ;;;;   ;;;    ;;;;  ; ;;;          ;   ; ;;;   ;;;   ;;;;  
- ;   ;  ;    ;    ;   ;  ;      ;;   ;         ;   ;;   ;   ;   ;    ; 
-     ;  ;    ;        ;  ;      ;    ;         ;   ;    ;   ;   ;    ; 
-  ;;;;  ;    ;     ;;;;  ;      ;    ;  ;;;;;  ;   ;    ;   ;   ;    ; 
- ;   ;  ;    ;    ;   ;  ;      ;    ;         ;   ;    ;   ;   ;    ; 
- ;   ;  ;    ;    ;   ;  ;      ;    ;         ;   ;    ;   ;   ;    ; 
-  ;;;;;  ;;   ;;   ;;;;;  ;;;;  ;    ;         ;   ;    ;   ;    ;;;;  
-                                                                       
-                                                                       
-                                                                       
-
-  ; attach-info : SYNTAX-OBJECT SYNTAX-OBJECT -> SYNTAX-OBJECT
-  ; attach-info attaches to a generated piece of syntax the origin & source information of another.
-  ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
-  (define (attach-info stx expr)
-    (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
-           [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
-           [it (syntax-property it 'user-stepper-else (syntax-property expr 'stepper-else))]
-           [it (syntax-property it 'user-source (syntax-source expr))]
-           [it (syntax-property it 'user-position (syntax-position expr))])
-      it))                                                                                                  
-                                                                                                  
-
                                                                                                                
  ; ;;  ;;;    ;;;   ;;;   ; ;;           ;;;   ;;;   ;   ;  ; ;;  ;;;   ;;;           ;;;  ;    ;  ; ;;;   ; ;;
  ;;   ;   ;  ;     ;   ;  ;;  ;         ;     ;   ;  ;   ;  ;;   ;     ;   ;         ;   ;  ;  ;   ;;   ;  ;;  
@@ -627,25 +639,8 @@
       [else
        (kernel:kernel-syntax-case source #f
           [(define-values vars-stx body)
-           (let* ([vars (syntax->list (syntax vars-stx))])
-             (unless (= (length vars) 1)
-               (error 'reconstruct "reconstruct fails on multiple-values define\n"))
-             (with-syntax ([name (car vars)])
-               (case (syntax-property source 'stepper-define-hint)
-                 ((lambda-define) 
-                  (with-syntax ([recon reconstructed])
-                    (syntax (define name recon))))
-                 ((shortened-proc-define) 
-                  (kernel:kernel-syntax-case reconstructed #f
-                    [(lambda (arg ...) body)
-                     (syntax (define (name arg ...) body))]
-                    [else ; (e.g., highlight-placeholder)
-                     (with-syntax ([recon reconstructed])
-                       (syntax (define name recon)))]))
-                 ((non-lambda-define) 
-                  (with-syntax ([recon reconstructed])
-                    (syntax (define name recon))))
-                 (else (error 'reconstruct-top-level "unexpected stepper-define-hint: ~e\n" (syntax-property source 'stepper-define-hint))))))]
+           (attach-info #`(define-values vars-stx #,reconstructed)
+                        source)]
           [else
            reconstructed])]))
   
@@ -878,21 +873,6 @@
                       reconstructed)
                   (cdr mark-list)
                   #f))))
-         
-         ; we're turning off lifting, for the moment:
-         
-         ;         (define (rectify-let-values-step)
-         ;           (let*-values ([(redex) (recon-source-expr (mark-source (car mark-list)) mark-list render-settings)]
-         ;                         [(before-step) (recon null highlight-placeholder-stx (cdr mark-list) #f)]
-         ;                         [(r-before r-after reduct) (recon-inner mark-list nothing-so-far)]
-         ;                         [(new-defs) (append r-before r-after)]
-         ;                         [(after-step) (recon (build-list (length new-defs) 
-         ;                                                          (lambda (x) highlight-placeholder-stx))
-         ;                                              highlight-placeholder-stx
-         ;                                              (cdr mark-list) 
-         ;                                              #f)])
-         ;             (append (unwind before-step (list redex))
-         ;                     (unwind after-step (append new-defs (list reduct))))))
          
          (define answer
            (map (lambda (x) (map syntax-object->datum x))
