@@ -8,7 +8,7 @@
    clear-circle clear-solid-disk clear-solid-rect clear-solid-line
    clear-all
    sleep-for-a-while
-   WHITE YELLOW RED BLUE GREEN BLACK
+;   WHITE YELLOW RED BLUE GREEN BLACK
    @VP))
 
 (define-signature drawS coreDrawS)

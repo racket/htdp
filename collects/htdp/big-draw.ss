@@ -49,11 +49,7 @@
 	  (apply (lambda (p1 p2 . c)
 		   (check-arg name (posn? p1) "posn" "first" p1)
 		   (check-arg name (posn? p2) "posn" "second" p2)
-		   (f p1 p2 (if (null? c)
-				BLACK
-				(let ((c (car c)))
-				  (check-arg name (rgb? c) "color" "third" c)
-				  c))))
+		   (f p1 p2 (symbol->color (if (null? c) 'black (car c)))))
 	    x))))
 
     (define (make-rect name f)
@@ -64,11 +60,7 @@
 		   (check-arg name (posn? p) "posn" "first" p)
 		   (check-arg name (and (integer? w) (> w 0)) "positive integer" "second" w)
 		   (check-arg name (and (integer? h) (> h 0)) "positive integer" "third" h)
-		   (f p w h (if (null? c)
-				BLACK
-				(let ((c (car c)))
-				  (check-arg name (rgb? c) "color" "fourth" c)
-				  c))))
+		   (f p w h  (symbol->color (if (null? c) 'black (car c)))))
 	    x))))
 	
     (define (make-circle name f)
@@ -79,8 +71,7 @@
 		   (check-arg name (posn? p) "posn" "first" p)
 		   (check-arg name (and (integer? r) (> r 0)) "positive integer" "second" r)
 		   (let ((d (* r 2))
-			 (c (if (null? c) BLACK (car c))))
-		     (check-arg name (rgb? c) "color" "third" c)
+			 (c (symbol->color (if (null? c) 'black (car c)))))
 		     (f (make-posn (- (posn-x p) r) (- (posn-y p) r)) d d c)))
 	    x))))
 
@@ -122,12 +113,18 @@
   
     (define @VP #f)
 
-    (define WHITE (make-rgb 1 1 1))
-    (define YELLOW (make-rgb 1 1 0))
-    (define RED (make-rgb 1.0 0 0))
-    (define GREEN (make-rgb 0 1.0 0))
-    (define BLUE (make-rgb 0 0 1.0))
-    (define BLACK (make-rgb 0 0 0))
+    ;; symbol->color : symbol -> color
+    ;; to convert symbol to 
+    (define (symbol->color s)
+      (check-arg 'draw.ss (symbol? s) "symbol" "first" s)
+      (case s 
+	((white)   (make-rgb 1 1 1))
+	((yellow)  (make-rgb 1 1 0))
+	((red)     (make-rgb 1.0 0 0))
+	((green)   (make-rgb 0 1.0 0))
+	((blue)    (make-rgb 0 0 1.0))
+	((black)   (make-rgb 0 0 0))
+	(else (error 'draw.ss "The symbol ~e is not a legal color in draw.ss." s))))
   
     ))
 
