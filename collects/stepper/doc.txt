@@ -294,3 +294,7 @@ yank all of that 'comes-from-blah' crap if read->raw works.
 
 annotater philosophy: don't look at the source; just expand based on the 
 parsed expression.  The information you need to reconstruct the 
+
+*************
+
+for savings, I could elide the guard-marks on all but the top level.
