@@ -434,7 +434,7 @@
                                                 annotated)
                                 free-vars))]
                       
-                      [lambda-clause-abstraction 
+                      [lambda-clause-abstraction
                        (lambda (clause)
                          (with-syntax ([(args-stx . bodies) clause])
                            (let*-2vals ([(annotated-body free-varrefs)

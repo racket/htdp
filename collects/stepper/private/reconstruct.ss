@@ -336,6 +336,9 @@
                                                   (syntax-property stx 'user-position)
                                                   'or)]
                   
+                  [(comes-from-local)
+                   (unwind-local stx)]
+                  
                   [(comes-from-recur)
                    (unwind-recur stx)]
                   
