@@ -23,6 +23,9 @@
      middle-mouse-click?
      right-mouse-click?
      
+     set-on-key-event
+     set-on-tick-event
+     init-world
      get-key-press
      ready-key-press
      key-value

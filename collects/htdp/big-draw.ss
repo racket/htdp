@@ -36,7 +36,11 @@
      (define-primitive sleep-for-a-while sleep-for-a-while/proc)
      (define-primitive wait-for-mouse-click wait-for-mouse-click/proc)
      (define-primitive get-mouse-event get-mouse-event/proc)
-     (define-primitive get-key-event get-key-event/proc)     
+     (define-primitive get-key-event get-key-event/proc)  
+     
+     (define-higher-order-primitive on-key-event on-key-event/proc (handle-event))
+     (define-higher-order-primitive on-tick-event on-tick-event/proc (_ handle-tick))
+     (define-primitive big-bang big-bang/proc)
      
      (define the-error
        (lambda x
@@ -80,6 +84,15 @@
      
      (define %get-key-event the-error)
      (define (get-key-event/proc) (%get-key-event)) 
+     
+     (define %on-key-event the-error)
+     (define (on-key-event/proc f) (%on-key-event f))
+     
+     (define %on-tick-event the-error)
+     (define (on-tick-event/proc w f) (%on-tick-event w f))
+     
+     (define %big-bang the-error)
+     (define (big-bang/proc w) (%big-bang w))     
 
      (define %get-mouse-event the-error)
      (define (get-mouse-event/proc) (%get-mouse-event))
@@ -157,8 +170,8 @@
          (set! %clear-all (clear-viewport current-window))
          
          (set! %draw-solid-line
-               (make-line 'draw-solid-line
-                          (draw-line current-window)))
+               (make-line 'draw-solid-line (draw-line current-window)))
+         
          (set! %clear-solid-line
                (make-line 'clear-solid-line
                           (lambda (p1 p2 c)
@@ -197,6 +210,34 @@
                  (cond
                    [(ready-key-press @vp) => key-value]
                    [else false])))
+         
+         (set! %on-key-event
+               (lambda (f)
+                 (check-proc 'on-key-event f 2 'first 'two)
+                 ((set-on-key-event @vp) 
+                  (lambda (x y) (f (key-value x) y)))))
+         
+         (set! %on-tick-event
+               (lambda (w0 f)
+                 (check-arg 'on-tick-event 
+                            (and (number? w0) (>= w0 0))
+                            "number [of seconds] between 0 and 1000000"
+                            "first"
+                            w0)
+                 (let* ([w (ceiling (* 1000 w0))]
+                        [w (if (exact? w) w (inexact->exact w))])
+                   (check-arg 'on-tick-event 
+                              (and (integer? w) (exact? w) (<= 0 w 1000000000))
+                              "number [of seconds] between 0 and 1000000"
+                              "first"
+                              w)
+                   (check-proc 'on-key-event f 1 'second 'one)
+                   ((set-on-tick-event @vp) w f))))
+         
+         (set! %big-bang
+               (lambda (w) 
+                 ((init-world @vp) w)
+                 #t))
 
 	 (set! %get-mouse-event
                (lambda ()
@@ -226,6 +267,8 @@
        (set! %wait-for-mouse-click the-error)
        
        (set! %get-key-event the-error)
+       (set! %on-key-event the-error)
+       (set! %big-bang the-error)
 
        (set! %get-mouse-event the-error)
        #t)

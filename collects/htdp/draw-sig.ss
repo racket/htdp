@@ -18,9 +18,12 @@
         clear-all
         sleep-for-a-while
         wait-for-mouse-click ; -> posn
-        get-key-event ; -> (union #f char symbol)
+        get-key-event   ; -> (union #f char symbol)
 	get-mouse-event ; -> (union #f posn)
-        get-@VP
+        get-@VP        
+        big-bang        ; World -> true
+        on-key-event    ; (union char symbol) World -> World 
+        on-tick-event   ; World -> World 
         ))
   
   (define-signature draw^ core-draw^))

@@ -5,6 +5,7 @@
 (module graphics-posn-less-unit mzscheme
   (require (lib "unitsig.ss")
 	   (lib "mred-sig.ss" "mred")
+           (lib "mred.ss" "mred")
 	   (lib "class.ss")
 	   (lib "class100.ss")
 	   (lib "etc.ss")
@@ -145,6 +146,9 @@
        
        [on-event 
 	(lambda (mouse-event)
+          ;; this does deal with mouse events
+          ;; so let's try and put hooks in here
+          ;; after I know that it is a "good" sixm mouseclick
 	  (let* ([x (send mouse-event get-x)]
 		 [y (send mouse-event get-y)]
 		 [left? (send mouse-event button-down? 'left)]
@@ -161,9 +165,38 @@
        
        [on-char
 	(lambda (key-event)
-	  (send press-queue add (make-sixkey (send key-event get-key-code))))])
+          (let ([the-event (make-sixkey (send key-event get-key-code))])
+            (if (procedure? on-char-proc)
+                (set! the-world (on-char-proc the-event the-world))
+                (send press-queue add the-event))))])
+      
+      ;; --- timing stuff : MF 4/4/2004
+      (private-field
+        [the-world #f]
+        ;; KeyEvent World -> Void
+        [on-char-proc void]
+        [the-time (new timer%
+                       [notify-callback 
+                        (lambda () (set! the-world (on-tick-proc the-world)))])]
+        ;; World -> World 
+        [on-tick-proc void])
       
       (public
+        [set-on-char-proc 
+         (lambda (f)
+           (if (eq? on-char-proc void)
+               (set! on-char-proc f)
+               (error 'on-event "the event action has been set already")))]
+        [set-on-tick-proc ;; Number [seconds] (World -> World) -> Void
+         (lambda (delta f)
+           (if (eq? on-tick-proc void)
+               (set! on-tick-proc f)
+               (error 'on-tick "the timing action has been set already"))
+           (send the-time start delta))]
+        [init-world (lambda (w) (set! the-world w))])
+      ;; --- end timing stuff
+      
+      (public 
 	[get-click
 	 (lambda ()
 	   (send click-queue remove))]
@@ -252,6 +285,18 @@
   (define (get-mouse-click viewport)
     (send (viewport-canvas viewport) get-click-now))
   
+  (define (init-world viewport)
+    (lambda (w)
+      (send (viewport-canvas viewport) init-world w)))
+  
+  (define (set-on-key-event viewport)
+    (lambda (f)
+      (send (viewport-canvas viewport) set-on-char-proc f)))
+  
+  (define (set-on-tick-event viewport)
+    (lambda (delta f)
+      (send (viewport-canvas viewport) set-on-tick-proc delta f)))
+
   (define (get-key-press viewport) 
     (send (viewport-canvas viewport) get-press-now))
   
