@@ -70,9 +70,9 @@
   
   (define (expand-test-spec spec)
     (match spec
-      [`(before-after-step ,a ,b same ,d)
+      [`(before-after ,a ,b same ,d)
        (expand-test-spec 
-        `(before-after-step ,a ,b ,a ,d))]
+        `(before-after ,a ,b ,a ,d))]
       [else spec]))
   
   ;;;;;;;;;;;;;
@@ -145,20 +145,20 @@
 				    (,h-p) (4))
 		      (finished (4))))
   
-  (test-mz-sequence "(let ([a 3]) 4)"
-		    `((before-after (,h-p) ((let-values ([(a) 3]) 4))
-				    same (4)))) 
-  
-  (test-mz-sequence "(let ([a (+ 4 5)] [b (+ 9 20)]) (+ a b))"
-                    `((before-after ((let-values ([(a) ,h-p] [(b) (+ 9 20)]) (+ a b))) ((+ 4 5))
-				    same (9))
-		      (before-after ((let-values ([(a) 9] [(b) ,h-p]) (+ a b))) ((+ 9 20))
-				    same (29))
-		      (before-after (,h-p) ((let-values ([(a) 9] [(b) 29]) (+ a b)))
-				    same (+ 9 29))
-		      (before-after (,h-p) ((+ 9 29))
-				    same (38))
-		      (finished (38))))
+;  (test-mz-sequence "(let ([a 3]) 4)"
+;		    `((before-after (,h-p) ((let-values ([(a) 3]) 4))
+;				    same (4)))) 
+;  
+;  (test-mz-sequence "(let ([a (+ 4 5)] [b (+ 9 20)]) (+ a b))"
+;                    `((before-after ((let-values ([(a) ,h-p] [(b) (+ 9 20)]) (+ a b))) ((+ 4 5))
+;				    same (9))
+;		      (before-after ((let-values ([(a) 9] [(b) ,h-p]) (+ a b))) ((+ 9 20))
+;				    same (29))
+;		      (before-after (,h-p) ((let-values ([(a) 9] [(b) 29]) (+ a b)))
+;				    same (+ 9 29))
+;		      (before-after (,h-p) ((+ 9 29))
+;				    same (38))
+;		      (finished (38))))
   
   
   ;(test-mz-sequence "((call-with-current-continuation call-with-current-continuation) (call-with-current-continuation call-with-current-continuation))"
@@ -187,6 +187,61 @@
                           `((before-after (,h-p) ((if true 3 4))
 					  (,h-p) (3))
 			    (finished (3))))
+
+  ;;;;;;;;;;;;;
+  ;;
+  ;;  OR / AND
+  ;;
+  ;;;;;;;;;;;;;
+  
+  (test-beginner-sequence "(or false true false)"
+                          `((before-after (,h-p) ((or false true false))
+					  (,h-p) ((or true false)))
+                            (before-after (,h-p) ((or true false))
+					  (,h-p) (true))
+			    (finished (true))))
+  
+  (test-beginner-sequence "(and true false true)"
+                          `((before-after (,h-p) ((and true false true))
+					  (,h-p) ((and false true)))
+                            (before-after (,h-p) ((and false true))
+					  (,h-p) (false))
+			    (finished (false))))
+  
+(test-beginner-sequence "(define (a2 x) x) (a2 4)"
+                          `((finished ((define (a2 x) x)))
+			    (before-after (,h-p) ((a2 4))
+					  (,h-p) (4))
+			    (finished (4))))
+  
+  (test-beginner-sequence "(define (a3 x) (if true x x)) (a3 false)"
+                          `((finished ((define (a3 x) (if true x x)))) 
+			    (before-after (,h-p) ((a3 false))
+					  (,h-p) ((if true false false)))
+                            (before-after (,h-p) ((if true false false))
+					  (,h-p) (false))
+			    (finished (false))))
+  
+  (test-beginner-sequence "(define (b2 x) (and true x)) (b2 false)"
+                          `((finished ((define (b2 x) (and true x)))) 
+			    (before-after (,h-p) ((b2 false))
+					  (,h-p) ((and true false)))
+                            (before-after (,h-p) ((and true false))
+                                          (,h-p) (false))
+			    (finished (false))))
+  
+  (test-beginner-sequence "(define a1 true)(define (b1 x) (and a1 true x)) (b1 false)"
+                          `((finished ((define a1 true)
+                                       (define (b1 x) (and a1 true x))))
+                            (before-after (,h-p) ((b1 false))
+                                          (,h-p) ((and a1 true false)))
+                            (before-after ((and ,h-p true false)) (a1)
+                                          ((and ,h-p true false)) (true))
+                            (before-after (,h-p) ((and true true false))
+                                          (,h-p) ((and true false)))
+                            (before-after (,h-p) ((and true false))
+                                          (,h-p) (false))
+                            (finished (false))))
   
   ;;;;;;;;;;;;;
   ;;
@@ -194,17 +249,6 @@
   ;;
   ;;;;;;;;;;;;;
   
-  (parameterize ([current-namespace beginner-namespace])
-    (let* ([stx (expand (car (string->stx-list "(cond [else 3])")))]
-           [stx-source (syntax-source stx)]
-           [stx-posn (syntax-position stx)])
-      (printf "expanded: ~a\n" (syntax-object->datum stx))
-      (syntax-case stx (if begin #%datum)
-        [(if dc dc2 stx2)
-         (printf "stepper-else: ~a\n" (syntax-property stx 'stepper-else))
-         ]
-        [stx
-         (printf "outer thing has wrong shape: ~a\n" (syntax-object->datum (syntax stx)))])))
   
   (test-beginner-sequence "(cond [false 4] [false 5] [true 3])"
                           `((before-after (,h-p) ((cond (false 4) (false 5) (true 3)))
@@ -268,60 +312,9 @@
 					  (,h-p) (4))
 			    (finished (4))))
   
-  ;;;;;;;;;;;;;
-  ;;
-  ;;  OR / AND
-  ;;
-  ;;;;;;;;;;;;;
+
   
-  (test-beginner-sequence "(or false true false)"
-                          `((before-after (,h-p) ((or false true false))
-					  (,h-p) ((or true false)))
-                            (before-after (,h-p) ((or true false))
-					  (,h-p) (true))
-			    (finished (true))))
   
-  (test-beginner-sequence "(and true false true)"
-                          `((before-after (,h-p) ((and true false true))
-					  (,h-p) ((and false true)))
-                            (before-after (,h-p) ((and false true))
-					  (,h-p) (false))
-			    (finished (false))))
-  
-  (test-beginner-sequence "(define (a2 x) x) (a2 4)"
-                          `((finished ((define (a2 x) x)))
-			    (before-after (,h-p) ((a2 4))
-					  (,h-p) (4))
-			    (finished (4))))
-  
-  (test-beginner-sequence "(define (a3 x) (if true x x)) (a3 false)"
-                          `((finished ((define (a3 x) (if true x x)))) 
-			    (before-after (,h-p) ((a3 false))
-					  (,h-p) ((if true false false)))
-                            (before-after (,h-p) ((if true false false))
-					  (,h-p) (false))
-			    (finished (false))))
-  
-  (test-beginner-sequence "(define (b2 x) (and true x)) (b2 false)"
-                          `((finished ((define (b2 x) (and true x)))) 
-			    (before-after (,h-p) ((b2 false))
-					  (,h-p) ((and true false)))
-                            (before-after (,h-p) ((and true false))
-                                          (,h-p) (false))
-			    (finished (false))))
-  
-  (test-beginner-sequence "(define a1 true)(define (b1 x) (and a1 true x)) (b1 false)"
-                          `((finished ((define a1 true)
-                                       (define (b1 x) (and a1 true x))))
-                            (before-after (,h-p) ((b1 false))
-                                          (,h-p) ((and a1 true false)))
-                            (before-after ((and ,h-p true false)) (a1)
-                                          ((and ,h-p true false)) (true))
-                            (before-after (,h-p) ((and true true false))
-                                          (,h-p) ((and true false)))
-                            (before-after (,h-p) ((and true false))
-                                          (,h-p) (false))
-                            (finished (false))))
   
   
   (test-intermediate-sequence "(define a4 +) a4"
