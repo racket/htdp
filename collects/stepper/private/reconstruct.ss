@@ -249,19 +249,21 @@
 ;                      new-index)]))))
   
   ; construct-lifted-name 
-  ; (-> syntax? (union false? num?) symbol?)
+  ; (-> syntax? (union num? false?) symbol?)
   
-  (define (construct-lifted-name binding dynamic-index)
-    (if dynamic-index
-        (string->symbol
-         (string-append (symbol->string (syntax-e binding)) "_" 
-                        (number->string dynamic-index)))
-        (syntax-e binding)))
+  (define/contract construct-lifted-name
+    (-> syntax? (union number? false?) syntax?)
+    (lambda (binding dynamic-index)
+      (if dynamic-index
+          #`#,(string->symbol
+               (string-append (symbol->string (syntax-e binding)) "_" 
+                              (number->string dynamic-index)))
+          binding)))
 
-  ; binding-lifted-name ((listof mark) SYNTAX-OBJECT -> num)
+  ; binding-lifted-name ((listof mark) SYNTAX-OBJECT -> (union symbol? false?))
   
   (define (binding-lifted-name mark-list binding)
-      (construct-lifted-name binding (lookup-binding mark-list (get-lifted-var binding))))
+    (construct-lifted-name binding (lookup-binding mark-list (get-lifted-var binding) module-identifier=? (lambda () #f))))
 
                                                                 ;              ;  ;               
                                                                                ;                  
@@ -286,11 +288,16 @@
   
   ; unwind-no-highlight is really just macro-unwind, but with the 'right' interface that
   ; makes it more obvious what it does.
-  ; [unwind-no-highlight (-> syntax? syntax?)]
+  ; [unwind-no-highlight (-> syntax? (listof syntax?))]
   
   (define (unwind-no-highlight stx)
     (let-values ([(stxs _) (macro-unwind (list stx) null)])
       stxs))
+  
+  ; unwind-only-highlight : syntax? -> (listof syntax?)
+  (define (unwind-only-highlight stx)
+    (let-values ([(highlights unwounds) (unwind highlight-placeholder-stx stx #t)])
+      unwounds))
   
   (define (first-of-one x) 
     (unless (= (length x) 1)
@@ -317,6 +324,10 @@
                (let ([fall-through
                       (lambda ()
                         (kernel:kernel-syntax-case stx #f
+                          [id
+                           (identifier? stx)
+                           (or (syntax-property stx 'stepper-lifted-name)
+                               stx)]
                           [(define-values dc ...)
                            (unwind-define stx)]
                           [(#%app exp ...)
@@ -398,6 +409,9 @@
          (define (unwind-local stx)
            (kernel:kernel-syntax-case stx #f
              [(letrec-values ([vars exp] ...) body) ; at least through intermediate, define-values may not occur in local.
+              (printf "lifted-names on vars in unwind-local: ~e\n" (map (lx (map (lx (cond [(syntax-property _ 'stepper-lifted-name) => syntax-e]
+                                                                                           [else #f])) (syntax->list _)))
+                                                                        (syntax->list #`(vars ...))))
               (with-syntax ([defns (map inner (syntax->list #`((define-values vars exp) ...)))])
                 #`(local defns #,(inner #'body)))]
              [else (error 'unwind-local "expected a letrec-values, given: ~e" (syntax-object->datum stx))]))
@@ -439,7 +453,7 @@
          
          (define (unwind-and/or stx user-source user-position label)
            (if (eq? stx highlight-placeholder-stx)
-               (begin (queue-push highlight-queue-dest (unwind-and/or (queue-pop highlight-queue-src) user-source user-position))
+               (begin (queue-push highlight-queue-dest (unwind-and/or (queue-pop highlight-queue-src) user-source user-position label))
                       highlight-placeholder-stx)
                (let ([clause-padder (case label
                                       [(and) #`true]
@@ -518,8 +532,13 @@
                                  [right-sides (map recur (syntax->list (syntax (val ...))))]
                                  [recon-body (let-recur (syntax body) binding-list)])
                             (with-syntax ([(recon-val ...) right-sides]
-                                          [recon-body recon-body])
-                              (syntax (label ((vars recon-val) ...) recon-body))))))]
+                                          [recon-body recon-body]
+                                          [(new-vars ...) (map (lx (map (lx (syntax-property _
+                                                                                             'stepper-lifted-name
+                                                                                             (binding-lifted-name mark-list _)))
+                                                                        _))
+                                                               bindings)])
+                              (syntax (label ((new-vars recon-val) ...) recon-body))))))]
                      [recon-lambda-clause
                       (lambda (clause)
                         (with-syntax ([(args . bodies-stx) clause])
@@ -575,7 +594,9 @@
                                         (if (ormap (lambda (binding)
                                                      (bound-identifier=? binding var))
                                                    lexically-bound-bindings)
-                                            var
+                                            (syntax-property var
+                                                             'stepper-lifted-name
+                                                             (binding-lifted-name mark-list var))
                                             (case (syntax-property var 'stepper-binding-type)
                                               ((lambda-bound) 
                                                (recon-value (lookup-binding mark-list var) render-settings))
@@ -695,7 +716,8 @@
                  [name (if base-name
                            (construct-lifted-name #`#,base-name (closure-record-lifted-name closure-record))
                            #f)])
-            (if (eq? name assigned-name)
+            (printf "name: ~e\nassigned-name: ~e\n" (syntax-e name) (syntax-e assigned-name))
+            (if (eq? (syntax-e name) (syntax-e assigned-name))
                 (first-of-one (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null render-settings)))
                 #`#,name))
           #`#,((render-settings-render-to-sexp render-settings) val))))
@@ -749,7 +771,6 @@
                                      (map (lambda (binding-set rhs)
                                             (make-let-glump
                                              (map (lambda (binding)
-                                                    (printf "binding \"~e\" has lifted name \"~e\"\n" (syntax-object->datum binding) (binding-lifted-name mark-list binding))
                                                     (syntax-property binding
                                                                      'stepper-lifted-name
                                                                      (binding-lifted-name mark-list binding)))
@@ -943,8 +964,9 @@
                                   [(after-stxs after-highlights) (unwind recon-expr redex #t)])
                        (list before-stxs before-highlights after-stxs after-highlights))))
                   ((late-let-break)
-                   (let* ([one-level-recon (unwind-no-highlight (recon-inner mark-list nothing-so-far))])
-                     (sublist 0 (- (length one-level-recon) 1) one-level-recon)))
+                   (let* ([one-level-recon (unwind-only-highlight (recon-inner mark-list nothing-so-far))])
+                     (printf "one-level-recon: ~e\n" (map syntax-object->datum one-level-recon))
+                     (list (sublist 0 (- (length one-level-recon) 1) one-level-recon))))
                   (else
                    (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
          
