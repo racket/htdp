@@ -124,55 +124,32 @@ tracing todo:
 	  ;; set-printing-parameters : settings ( -> TST) -> TST
 	  ;; is implicitly exposed to the stepper.  watch out!  --  john
           (define/public (set-printing-parameters settings thunk)
-            (let ([image-test
-                   (lambda (val port)
-                     (and (let ([rep (drscheme:rep:current-rep)])
-                            (and rep
-                                 (not (eq? port (send rep get-value-port)))
-                                 (not (eq? port (send rep get-out-port)))
-                                 (not (eq? port (send rep get-err-port)))))
-                          (or (is-a? val image-snip%)
-                              (is-a? val cache-image-snip%))))])
-              (parameterize ([pc:booleans-as-true/false #t]
-                             [pc:abbreviate-cons-as-list (get-abbreviate-cons-as-list)]
-                             [pretty-print-print-hook
-                              (let ([oh (pretty-print-print-hook)])
-                                (lambda (val write? port)
-                                  (cond
-                                    [(image-test val port)
-                                     (display image-string port)]
-                                    [else (oh val write? port)])))]
-                             [pretty-print-size-hook
-                              (let ([oh (pretty-print-size-hook)])
-                                (lambda (val write? port)
-                                  (cond
-                                    [(image-test val port)
-                                     (string-length image-string)]
-                                    [else (oh val write? port)])))]                                   
-                             [pretty-print-show-inexactness #t]
-                             [pretty-print-exact-as-decimal #t]
-                             [pc:use-named/undefined-handler
-                              (lambda (x)
-                                (and (get-use-function-output-syntax?)
-                                     (procedure? x)
-                                     (object-name x)))]
-                             [pc:named/undefined-handler
-                              (lambda (x)
-                                (string->symbol
-                                 (format "function:~a" (object-name x))))])
-                (thunk))))
+            (parameterize ([pc:booleans-as-true/false #t]
+                           [pc:abbreviate-cons-as-list (get-abbreviate-cons-as-list)]
+                           [pretty-print-show-inexactness #t]
+                           [pretty-print-exact-as-decimal #t]
+                           [pc:use-named/undefined-handler
+                            (lambda (x)
+                              (and (get-use-function-output-syntax?)
+                                   (procedure? x)
+                                   (object-name x)))]
+                           [pc:named/undefined-handler
+                            (lambda (x)
+                              (string->symbol
+                               (format "function:~a" (object-name x))))])
+              (thunk)))
           
-          (define/override (render-value/format value settings port put-snip width)
+          (define/override (render-value/format value settings port width)
             (set-printing-parameters
              settings
              (lambda ()
-               (super render-value/format value settings port put-snip width))))
+               (super render-value/format value settings port width))))
           
-          (define/override (render-value value settings port put-snip)
+          (define/override (render-value value settings port)
             (set-printing-parameters
              settings
              (lambda ()
-               (super render-value value settings port put-snip))))
+               (super render-value value settings port))))
           
           (super-instantiate ())))
       
