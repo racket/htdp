@@ -564,78 +564,142 @@
   (define clear-line (make-do-line clear-it))
   (define flip-line (make-do-line flip-it))
   
-  (define make-do-box
-    (lambda (go name get-pen-name set-pen-name
-		get-current-pen-name set-viewport-pen white-pen
-		get-brush-name set-brush-name invisi-brush)
-      (let ([f (make-draw-proc name get-pen-name set-pen-name 
-			       get-current-pen-name set-viewport-pen white-pen)])
-	(lambda (viewport)
-	  (let ([f (f viewport)]
-		[get-brush (ivar/proc (viewport-DC viewport) get-brush-name)]
-		[set-brush-1 (ivar/proc (viewport-DC viewport) set-brush-name)]
-		[set-brush-2 (ivar/proc (viewport-buffer-DC viewport) set-brush-name)])
-	    (letrec ([the-function
-		      (case-lambda
-		       [(posn width height) (the-function posn width height #f)]
-		       [(posn width height color)
-			(f color
-			   (lambda (draw-1 draw-2 flip clear)
-			     (let* ([x (posn-x posn)]
-				    [y (posn-y posn)]
-				    [orig (get-brush)]
-				    [draw (lambda ()
-					    (set-brush-1 invisi-brush)
-					    (set-brush-2 invisi-brush)
-					    (draw-1 x y width height)
-					    (draw-2 x y width height)
-					    (set-brush-1 orig)
-					    (set-brush-2 orig))])
-			       (go draw
-				   (lambda () (flip draw))
-				   (lambda () (clear draw))))))])])
-	      the-function))))))
+  (define (draw/clear/flip ivar)
+    (lambda (init-dc viewport p width height)
+      (let ([DC (viewport-DC viewport)]
+	    [buffer-DC (viewport-buffer-DC viewport)])
+	(init-dc DC)
+	(init-dc buffer-DC)
+	((ivar/proc DC ivar) (posn-x p) (posn-y p) width height)
+	((ivar/proc buffer-DC ivar) (posn-x p) (posn-y p) width height))))
   
-  (define make-do-rectangle
-    (lambda (go)
-      (make-do-box go 'draw-rectangle 'get-pen 'set-pen 
-		   'get-current-pen set-viewport-pen white-pen
-		   'get-brush 'set-brush invisi-brush)))
+  (define draw/clear/flip-rectangle (draw/clear/flip 'draw-rectangle))
+  (define draw/clear/flip-ellipse (draw/clear/flip 'draw-ellipse))
   
-  (define make-do-solid-rectangle
-    (lambda (go)
-      (make-do-box go 'draw-rectangle 'get-brush 'set-brush  
-		   'get-current-brush set-viewport-brush white-brush
-		   'get-pen 'set-pen invisi-pen)))
+  (define (draw-rectangle viewport)
+    (rec draw-rectangle-viewport
+	 (case-lambda 
+	  [(p width height) (draw-rectangle-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (draw/clear/flip-rectangle
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
+	    viewport p width height)])))
+    
+  (define (draw-solid-rectangle viewport)
+    (rec draw-solid-rectangle-viewport
+	 (case-lambda 
+	  [(p width height) (draw-solid-rectangle-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (draw/clear/flip-rectangle
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'solid)))
+	    viewport p width height)])))
   
-  (define make-do-ellipse
-    (lambda (go)
-      (make-do-box go 'draw-ellipse 'get-pen 'set-pen  
-		   'get-current-pen set-viewport-pen white-pen
-		   'get-brush 'set-brush invisi-brush)))
+  (define (draw-ellipse viewport)
+    (rec draw-ellipse-viewport
+	 (case-lambda 
+	  [(p width height) (draw-ellipse-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (draw/clear/flip-ellipse
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
+	    viewport p width height)])))
   
-  (define make-do-solid-ellipse
-    (lambda (go)
-      (make-do-box go 'draw-ellipse 'get-brush 'set-brush   
-		   'get-current-brush set-viewport-brush white-brush
-		   'get-pen 'set-pen invisi-pen)))
+  (define (draw-solid-ellipse viewport)
+    (rec draw-solid-ellipse-viewport
+	 (case-lambda 
+	  [(p width height) (draw-solid-ellipse-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (draw/clear/flip-ellipse
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'solid)))
+	    viewport p width height)])))
   
-  (define draw-rectangle (make-do-rectangle draw-it))
-  (define clear-rectangle (make-do-rectangle clear-it))
-  (define flip-rectangle (make-do-rectangle flip-it))
+  (define (flip-rectangle viewport)
+    (rec flip-rectangle-viewport
+	 (case-lambda 
+	  [(p width height) (flip-rectangle-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (draw/clear/flip-rectangle
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'xor))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
+	    viewport p width height)])))
   
-  (define draw-solid-rectangle (make-do-solid-rectangle draw-it))
-  (define clear-solid-rectangle (make-do-solid-rectangle clear-it))
-  (define flip-solid-rectangle (make-do-solid-rectangle flip-it))
+  (define (flip-solid-rectangle viewport)
+    (rec flip-solid-rectangle-viewport
+	 (case-lambda 
+	  [(p width height) (flip-solid-rectangle-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (draw/clear/flip-rectangle
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'xor))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'xor)))
+	    viewport p width height)])))
   
-  (define draw-ellipse (make-do-ellipse draw-it))
-  (define clear-ellipse (make-do-ellipse clear-it))
-  (define flip-ellipse (make-do-ellipse flip-it))
+  (define (flip-ellipse viewport)
+    (rec flip-ellipse-viewport
+	 (case-lambda 
+	  [(p width height) (flip-ellipse-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (draw/clear/flip-ellipse
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'xor))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
+	    viewport p width height)])))
   
-  (define draw-solid-ellipse (make-do-solid-ellipse draw-it))
-  (define clear-solid-ellipse (make-do-solid-ellipse clear-it))
-  (define flip-solid-ellipse (make-do-solid-ellipse flip-it))
+  (define (flip-solid-ellipse viewport)
+    (rec flip-solid-ellipse-viewport
+	 (case-lambda 
+	  [(p width height) (flip-solid-ellipse-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (draw/clear/flip-ellipse
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'xor))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'xor)))
+	    viewport p width height)])))
   
+  (define (clear-rectangle viewport)
+    (rec clear-rectangle-viewport
+	 (lambda (p width height)
+	   (draw/clear/flip-rectangle
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "WHITE" 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
+	    viewport p width height))))
+  
+  (define (clear-solid-rectangle viewport)
+    (rec clear-solid-rectangle-viewport
+	 (lambda (p width height)
+	   (draw/clear/flip-rectangle
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "WHITE" 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "WHITE" 'solid)))
+	    viewport p width height))))
+  
+  (define (clear-ellipse viewport)
+    (rec clear-ellipse-viewport
+	 (lambda (p width height)
+	   (draw/clear/flip-ellipse
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "WHITE" 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
+	    viewport p width height))))
+  
+  (define (clear-solid-ellipse viewport)
+    (rec clear-solid-ellipse-viewport
+	 (lambda (p width height)
+	   (draw/clear/flip-ellipse
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "WHITE" 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "WHITE" 'solid)))
+	    viewport p width height))))
+
   (define make-do-pointlist
     (lambda (go name get-pen-name set-pen-name
 		get-current-pen-name set-viewport-pen white-pen
