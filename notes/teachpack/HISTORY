@@ -1,3 +1,13 @@
+
+------------------------------------------------------------------------
+VERSION 102				  [Thu Jun 22 18:22:48 CDT 2000]
+
+* Added "convert.ss" to teachpacks/htdp
+
+* Fixed error messages for some arity tests
+
+* Fixed documentation 
+
 ------------------------------------------------------------------------
 
 VERSION 101				  [Tue Oct 26 22:28:38 CDT 1999]
