@@ -7,13 +7,15 @@
   (require (lib "unitsig.ss"))
   
   #cs(define-signature core-draw^
-       (start stop 
-              draw-circle draw-solid-disk draw-solid-rect draw-solid-line
-              clear-circle clear-solid-disk clear-solid-rect clear-solid-line
-              clear-all
-              sleep-for-a-while
-              wait-for-mouse-click ; -> posn
-              ;WHITE YELLOW RED BLUE GREEN BLACK
-              get-@VP))
+       (start 
+        start/cartesian-plane
+        stop 
+        draw-circle draw-solid-disk draw-solid-rect draw-solid-line
+        clear-circle clear-solid-disk clear-solid-rect clear-solid-line
+        clear-all
+        sleep-for-a-while
+        wait-for-mouse-click ; -> posn
+        ;WHITE YELLOW RED BLUE GREEN BLACK
+        get-@VP))
   
   (define-signature draw^ core-draw^))

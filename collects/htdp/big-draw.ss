@@ -1,6 +1,7 @@
 (module big-draw mzscheme
   (require "error.ss"
            "draw-sig.ss"
+           (lib "etc.ss")
 	   (lib "posn.ss" "lang")
            (lib "unitsig.ss")
            (prefix mred: (lib "mred.ss" "mred"))
@@ -123,10 +124,26 @@
       (set! %wait-for-mouse-click
             (lambda ()
               (mouse-click-posn
-               (get-mouse-click @vp))))))
+               (get-mouse-click @vp))))
+
+      #t))
+
+  ;; start/cartesian-plane : Number Number -> true
+  ;; start up a canvas of size width x height  and draw a centered cartesian coordinate
+  (define (start/cartesian-plane width height)
+    (check-arg 'start/cartesian-plane
+      (and (integer? WIDTH) (> WIDTH 0)) "positive integer" "first" WIDTH)
+    (check-arg 'start/cartesian-plane
+      (and (integer? HEIGHT) (> HEIGHT 0)) "positive integer" "second" HEIGHT)    
+    (local ((define trash  (start width height))
+	    (define mid-x  (quotient width 2))
+	    (define mid-y  (quotient height 2)))
+      (and (draw-solid-line (make-posn mid-x 0) (make-posn mid-x height))
+   	   (draw-solid-line (make-posn 0 mid-y) (make-posn width mid-y)))))
   
   (define (stop)
-    (close-graphics))
+    (close-graphics)
+    #t)
   
   (define @vp #f)
   #cs(define (get-@VP) @vp)
