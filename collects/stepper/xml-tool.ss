@@ -192,10 +192,9 @@
           (define/override (make-snip) 
             (instantiate scheme-snip% () (splice? splice?)))
           
-          (rename [super-write write])
           (define/override (write stream-out)
             (send stream-out put (if splice? 0 1))
-            (super-write stream-out))
+            (super write stream-out))
           
           (inherit show-border set-snipclass)
           (define/override (get-color)
@@ -224,9 +223,8 @@
         
       (define (add-file-keymap-mixin %)
         (class %
-          (rename [super-get-keymaps get-keymaps])
           (define/override (get-keymaps)
-            (cons (keymap:get-file) (super-get-keymaps)))
+            (cons (keymap:get-file) (super get-keymaps)))
           (super-instantiate ())))
       
       (define scheme-snipclass%
@@ -253,24 +251,21 @@
         (class text:keymap% 
           (init-field [delta (make-object style-delta%)])
           (inherit change-style copy-self-to)
-          (rename [super-after-insert after-insert]
-                  [super-on-insert on-insert])
           (inherit begin-edit-sequence end-edit-sequence)
           (define/override (copy-self)
             (let ([t (make-object plain-text% delta)])
               (copy-self-to t)
               t))
           (define/override (on-insert x y)
-            (super-on-insert x y)
+            (super on-insert x y)
             (begin-edit-sequence))
           (define/override (after-insert x y)
-            (super-after-insert x y)
+            (super after-insert x y)
             (change-style delta x (+ x y))
             (end-edit-sequence))
           
-          (rename [super-get-keymaps get-keymaps])
           (define/override (get-keymaps)
-            (cons (keymap:get-file) (super-get-keymaps)))
+            (cons (keymap:get-file) (super get-keymaps)))
           
           (inherit set-styles-sticky)
           (super-instantiate ())
@@ -299,19 +294,16 @@
 
       (define xml-text-mixin
         (mixin (editor:keymap<%> editor:standard-style-list<%> (class->interface text%)) ()
-          (rename [super-get-keymaps get-keymaps])
           (define/override (get-keymaps)
-            (cons xml-keymap (super-get-keymaps)))
+            (cons xml-keymap (super get-keymaps)))
           
-          (rename [super-after-insert after-insert]
-                  [super-on-insert on-insert])
           (inherit begin-edit-sequence end-edit-sequence
                    change-style get-style-list)
           (define/override (on-insert start rng)
-            (super-on-insert start rng)
+            (super on-insert start rng)
             (begin-edit-sequence))
           (define/override (after-insert start rng)
-            (super-after-insert start rng)
+            (super after-insert start rng)
             (change-style (send (get-style-list) find-named-style "XML")
                           start 
                           (+ start rng))

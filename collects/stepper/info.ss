@@ -12,5 +12,5 @@
   (define tool-icons (list '("foot-up.png" "icons") 
 			   #;'("foot-up.png" "icons")
 			   ))
-  (define compile-omit-files `("private/test-annotate.ss"))
+  (define compile-omit-files `("private/test-annotate.ss" "debugger-tool.ss"))
 )

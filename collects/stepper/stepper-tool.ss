@@ -59,7 +59,6 @@
         (class (drscheme:frame:basics-mixin (frame:frame:standard-menus-mixin frame:frame:basic%))
           
           (init-field drscheme-frame)
-          (rename [super-on-close on-close])
           (public set-printing-proc)
           
           (define (set-printing-proc proc)
@@ -119,7 +118,7 @@
             (when custodian
               (custodian-shutdown-all custodian))
             (send drscheme-frame on-stepper-close)
-            (super-on-close))
+            (super on-close))
           
           (super-instantiate ("Stepper" #f stepper-initial-width stepper-initial-height))))
       

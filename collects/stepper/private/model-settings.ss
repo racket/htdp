@@ -85,7 +85,7 @@
   
   (define (check-global-defined identifier)
     (with-handlers
-        ([exn:variable? (lambda args #f)])
+        ([exn:fail:contract:variable? (lambda args #f)])
       (global-lookup identifier)
       #t))
   

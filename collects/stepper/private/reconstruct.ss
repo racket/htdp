@@ -141,7 +141,7 @@
   (define (skip-redex-step? mark-list render-settings)
     
     (define (varref-skip-step? varref)
-      (with-handlers ([exn:variable? (lambda (dc-exn) #f)])
+      (with-handlers ([exn:fail:contract:variable? (lambda (dc-exn) #f)])
         (let ([val (lookup-binding mark-list varref)])
           (equal? (syntax-object->interned-datum (recon-value val render-settings))
                   (syntax-object->interned-datum (case (syntax-property varref 'stepper-binding-type)

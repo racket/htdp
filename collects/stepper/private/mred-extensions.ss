@@ -379,12 +379,11 @@
                                                                                                    
   (define stepper-canvas%
     (class editor-canvas% ()
-      (rename (super-on-size on-size))
       (inherit get-editor)
       (override*
         [on-size 
          (lambda (width height)
-           (super-on-size width height)
+           (super on-size width height)
            (let ([editor (get-editor)])
              (when editor
                (send editor reset-width this))))])
