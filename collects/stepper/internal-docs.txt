@@ -59,7 +59,9 @@ stepper-skip-completely :
 stepper-hint : 
  this is the most generally applied syntax property.  In general, it
  informs the reconstructor what macro this source expression came
- from.  
+ from. 
+
+ See notes below about 'being careful with stepper-hint'.
 
 (Transferred.)
 
@@ -76,13 +78,18 @@ stepper-hint :
  [ 'comes-from-let ] : expression was expanded from let
  [ 'comes-from-local ] : expression was expanded from local
 
- [ lambda-define ] : source had form (define id (lambda ...))
+ [ lambda-define ] : source had form (define id (lambda ...)).
+    NOTE: this tag is applied to _both_ the define and the enclosed
+    lambda.  This is because in the case of a local, the defines
+    themselves are swallowed up by the expansion of internal defines.
 
  [ non-lambda-define ] : source had form (define id exp) where exp !=
  (lambda ...)
+   NOTE: see prior note.
 
  [ shortened-proc-define ] : source had form (define (id arg ...) body
  ...)
+   NOTE: see prior note.
 
 stepper-prim-name: 
  this is attached to the expansion of primitives introduced with the

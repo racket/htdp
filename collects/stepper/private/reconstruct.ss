@@ -383,6 +383,7 @@
              [else (error 'macro-unwind "unexpected shape for expression: ~v with hint ~v" 
                           (syntax-object->datum stx) 
                           (syntax-property stx 'user-stepper-hint))]))
+         
          (define (unwind-mz-let stx)
            (with-syntax ([(label ([(var) rhs] ...) . bodies) stx])
              (with-syntax ([(rhs2 ...) (map inner (syntax->list #'(rhs ...)))]
@@ -397,7 +398,7 @@
               (with-syntax ([(exp2 ...) (map inner (syntax->list #'(exp ...)))])
                 #`(local ((define var exp2) ...) #,(inner #'body)))]
              [(define-values (var) body)
-              #`(define (var) body)]))
+              (unwind-define stx)]))
          
          (define (unwind-quasiquote-the-cons-application stx)
            (syntax-case (recur-on-pieces stx) ()
