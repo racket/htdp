@@ -44,8 +44,7 @@
          (set! old-locked (send editor is-locked?))
          (send editor lock #t))
        (lambda ()
-         (let* ([fill-chars (make-fill-chars editor)]
-                [port (make-input-port 'name fill-chars #f void)]
+         (let* ([port (open-input-text-editor editor)]
                 [xml (with-handlers ([exn:xml? (translate-xml-exn-to-rep-exn editor)])
                        (read-xml port))]
                 [xexpr (xml->xexpr (document-element xml))]
@@ -136,39 +135,6 @@
          (loop (- i 1))]
         [else #f])))
   
-  
-  ;; make-fill-chars : text -> string -> (union (tst number number number -> (values snip number)) number)
-  ;; given an editor, makes the second argument to `make-custom-port'
-  ;; that reads from the editor. If it finds a transformable?
-  ;; snip, it returns snip via the ``special'' functionality of custom ports.
-  (define (make-fill-chars text)
-    (let ([ptr 0]
-          [continue #f]
-          [saved-bytes #f]
-          [sema (make-semaphore 1)])
-      (lambda (bytes)
-        (semaphore-wait sema)
-        (let ([snip (send text find-snip ptr 'after-or-none)])
-          (begin0
-            (cond
-              [(not snip)
-               eof]
-              [(transformable? snip)
-               (set! ptr (+ ptr 1))
-               (lambda (src line col pos)
-                 (values (make-wrapped snip text line col pos) 1))]
-              [(and continue
-                    (continue . < . (bytes-length saved-bytes)))
-               (bytes-set! bytes 0 (bytes-ref saved-bytes continue))
-               (set! continue (+ continue 1))
-               1]
-              [else
-               (set! saved-bytes (string->bytes/utf-8 (string (send text get-character ptr))))
-               (bytes-set! bytes 0 (bytes-ref saved-bytes 0))
-               (set! ptr (+ ptr 1))
-               (set! continue 1)
-               1])
-            (semaphore-post sema))))))
   
   ;; transformable? : snip -> boolean
   ;; deteremines if a snip can be expanded here
