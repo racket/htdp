@@ -86,5 +86,8 @@
 (test 14 'loop (let ([f 14]) (recur f ([f f]) f)))
 
 (test 7779 'time (time 7779))
+(syntax-test #'time)
+(syntax-test #'(time))
+(syntax-test #'(time 1 2))
 (syntax-test #'(time (define x 5)))
 

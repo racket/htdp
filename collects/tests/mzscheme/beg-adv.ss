@@ -34,6 +34,7 @@
 (syntax-test #'(define-struct a (b 10)))
 (syntax-test #'(define-struct (a) (b)))
 (syntax-test #'(define-struct a (b b)))
+(syntax-test #'(+ 1 (define-struct a (b))))
 
 (define x 5)
 (define (f y) (+ x y))

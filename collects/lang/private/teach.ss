@@ -89,7 +89,7 @@
 
     (define (check-single-result-expr exprs where enclosing-expr)
       (check-single-expression where
-			       (format "within ~a" where)
+			       "for the function body"
 			       enclosing-expr
 			       exprs))
 
@@ -98,8 +98,7 @@
       (teach-syntax-error
        'define
        stx
-       "found a `define' that is embedded in an expression, ~
-        but all `define's must be at the top level"))
+       "expected an expression, but found a definition that is not at the top level"))
       
     (syntax-case stx ()
       ;; Constant or lambda def:
@@ -168,8 +167,8 @@
 		(car names)
 		"expected a name for ~a, but found ~a"
 		(cond
-		 [(zero? pos) "a defined function"]
-		 [else (format "the ~a argument" (ordinal pos))])
+		 [(zero? pos) "a function"]
+		 [else (format "the function's ~a argument" (ordinal pos))])
 		(something-else (car names))))
 	     (loop (cdr names) (add1 pos))))
 	  (when (null? (cdr names))
@@ -234,6 +233,14 @@
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
   (define-syntax (beginner-define-struct stx)
+    
+    (unless (or (memq (syntax-local-context) '(top-level module))
+		(identifier? stx))
+      (teach-syntax-error
+       'define-struct
+       stx
+       "expected an expression, but found a definition that is not at the top level"))
+    
     (syntax-case stx ()
       [(_ name . __)
        (not (identifier? (syntax name)))
@@ -344,7 +351,7 @@
 				    (eq? 'lexical (identifier-binding fun)))])
 		    (unless (and (identifier? fun) (or lex-ok? undef-check? (not lex?)))
 		      (teach-syntax-error
-		       'application
+		       '|function call|
 		       fun
 		       "expected a ~a after an ~
                         open parenthesis, but found ~a"
@@ -357,17 +364,17 @@
 		    ;;The following check disallows calling thunks:
 		    '(when (null? (syntax->list (syntax (rand ...))))
 		       (teach-syntax-error
-			'application
+			'|function call|
 			stx
 			"expected an argument after the function name for a function call, ~
                         but nothing's there"))
 		    (syntax (#%app rator rand ...)))]
 		 [(_)
 		  (teach-syntax-error
-		   'application
+		   '|function call|
 		   stx
 		   (format
-		    "expected a ~a after after an open parenthesis, but nothing's there"
+		    "expected a ~a after an open parenthesis, but nothing's there"
 		    (if lex-ok?
 			"name"
 			"defined name or a primitive operation name")))]
@@ -498,7 +505,7 @@
 	   (teach-syntax-error
 	    'quote
 	    stx
-	    "expected a tag after a ', found ~a"
+	    "expected a name after a ', found ~a"
 	    (something-else sym)))
 	 (syntax (quote expr)))]
       [_else (bad-use-error 'quote stx)]))
@@ -782,6 +789,13 @@
 	    'lambda
 	    (syntax arg-seq)
 	    "expected at least one argument name in the sequence after `lambda', but found none"))
+	 (let ([dup (check-duplicate-identifier args)])
+	   (when dup
+	     (teach-syntax-error
+	      'lambda
+	      dup
+	      "found an argument name that is used more than once: ~a"
+	      (syntax-e dup))))
 	 (check-single-expression 'lambda
 				  "within lambda"
 				  stx
@@ -897,7 +911,9 @@
 	    (memq (syntax-local-context) '(top-level module)))
        (syntax/loc stx (define (name) expr))]
       [(_ . rest)
-       (syntax/loc stx (beginner-define . rest))]))
+       (syntax/loc stx (beginner-define . rest))]
+      [_else
+       (bad-use-error 'define stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; lambda (advanced)
@@ -951,9 +967,9 @@
        (syntax (#%app rator rand ...))]
       [(_)
        (teach-syntax-error
-	'application
+	'|function call|
 	stx
-	"expected a defined name or a primitive operation name after after an ~
+	"expected a defined name or a primitive operation name after an ~
          open parenthesis, but nothing's there")]
       [_else (bad-use-error '#%app stx)]))
 
