@@ -4,7 +4,7 @@
           [z : zodiac:system^]
           [d : drscheme:export^]
           [p : mzlib:print-convert^]
-          [e : stepper:error^]
+          [e : zodiac:interface^]
           [a : stepper:annotate^]
           [r : stepper:reconstruct^]
           stepper:shared^)
@@ -155,41 +155,33 @@
            (d:interface:set-zodiac-phase 'reader)
            (let* ([new-expr (with-handlers
                                 ((exn:read? exception-handler))
-                              (reader))]
-                  [new-parsed (if (z:eof? new-expr)
-                                 #f
-                                 (begin
-                                   (d:interface:set-zodiac-phase 'expander)
-                                   (with-handlers
-                                       ((exn:syntax? exception-handler))
-                                     (z:scheme-expand new-expr 'previous user-vocabulary))))])
-             (send-to-drscheme-eventspace
-              (lambda ()
-                (continue-next-expr new-expr new-parsed)))))))))
+                              (reader))])
+             (if (z:eof? new-expr)
+                 (begin
+                   (send-to-drscheme-eventspace
+                    (lambda ()
+                      (i:receive-result (make-finished-result finished-exprs))))
+                   'finished)
+                 (let* ([new-parsed (if (z:eof? new-expr)
+                                        #f
+                                        (begin
+                                          (d:interface:set-zodiac-phase 'expander)
+                                          (with-handlers
+                                              ((exn:syntax? exception-handler))
+                                            (z:scheme-expand new-expr 'previous user-vocabulary))))])
+                   (let*-values ([(annotated-list envs) (a:annotate (list new-expr) (list new-parsed) packaged-envs break #f)]
+                                 [(annotated) (car annotated-list)])
+                     (set! packaged-envs envs)
+                     (set! current-expr new-parsed)
+                     (check-for-repeated-names new-parsed exception-handler)
+                     (current-exception-handler exception-handler)
+                     (let ([expression-result
+                            (user-primitive-eval annotated)])
+                       (send-to-drscheme-eventspace
+                        (lambda ()
+                          (add-finished-expr expression-result)
+                          (read-next-expr)))))))))))))
 
-         
-  (define (continue-next-expr read parsed)
-    (let/ec k
-      (let ([exn-handler (make-exception-handler k)])
-        (if (z:eof? read)
-            (i:receive-result (make-finished-result finished-exprs))
-            (let*-values ([(annotated-list envs) (a:annotate (list read) (list parsed) packaged-envs break #f)]
-                          [(annotated) (car annotated-list)])
-              (set! packaged-envs envs)
-              (set! current-expr parsed)
-              (check-for-repeated-names parsed exn-handler)
-              (send-to-user-eventspace
-               (lambda ()
-                 (let/ec k
-                   (current-exception-handler (make-exception-handler k))
-                   (let ([expression-result
-                          (user-primitive-eval annotated)])
-                     (send-to-drscheme-eventspace
-                      (lambda ()
-                        (add-finished-expr expression-result)
-                        (read-next-expr))))))))))))
-         
-         
   (define (check-for-repeated-names expr exn-handler)
     (with-handlers
         ((exn:user? exn-handler))

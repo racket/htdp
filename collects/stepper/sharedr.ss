@@ -1,6 +1,6 @@
 (unit/sig stepper:shared^
   (import [z : zodiac:system^]
-	  [e : stepper:error^]
+	  [e : zodiac:interface^]
           stepper:client-procs^)
   
   ; A step-result is either:

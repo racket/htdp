@@ -1,7 +1,7 @@
 (unit/sig stepper:reconstruct^
   (import [z : zodiac:system^]
           mzlib:function^
-          [e : stepper:error^]
+          [e : zodiac:interface^]
           [utils : stepper:cogen-utils^]
           [b : userspace:basis^]
           stepper:marks^
@@ -226,13 +226,13 @@
                      [(comes-from-case-lambda? expr)
                       `(case-lambda ,@(map list o-form-arglists o-form-bodies))]
                      [else
-                      (e:dynamic-error expr "unknown source for case-lambda")]))]
+                      (e:internal-error expr "unknown source for case-lambda")]))]
             
             ; we won't call rectify-source-expr on define-values expressions
             
             [else
              (print-struct #t)
-             (e:dynamic-error
+             (e:internal-error
               expr
               (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))])))
  
@@ -357,8 +357,8 @@
                  [(z:varref? expr)
                   (if (eq? so-far nothing-so-far)
                       (rectify-source-current-marks expr)
-                      (e:dynamic-error expr 
-                                       "variable reference given as context"))]
+                      (e:internal-error expr 
+                                       	"variable reference given as context"))]
                  
                  ; applications
                  
@@ -446,7 +446,7 @@
                  
                  [else
                   (print-struct #t)
-                  (e:dynamic-error
+                  (e:internal-error
                    expr
                    (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))]))))
          
