@@ -295,7 +295,7 @@
                 (define (en/dis-able-buttons)
                   (send previous-button enable (not (zero? view)))
                   (send home-button enable (not (zero? view)))
-                  (send next-button enable (not never-step-again)))
+                  (send next-button enable (not (and never-step-again (= view (- (length view-history) 1))))))
                 
                 (define (disable-buttons)
                   (send previous-button enable #f)
