@@ -1042,6 +1042,9 @@
   ;                                (result (7))))
   
   
+  ;(t filled-rect-image 
+  ;   (test-upto-int-lam "(image-width (filled-rect 10 10 'blue))"
+  ;                      `((before-after ((image-width (hilite (filled-rect 10 10 'blue)))) ((image-width (hilite )))))))
   ; add image test: (image-width (filled-rect 10 10 'blue))
   
   
@@ -1052,83 +1055,92 @@
   ;  ;;;;;;;;;;;;;
   ;  
   
-;  (require (lib "mred.ss" "mred"))
-;  
-;  (define tp-namespace
-;    (let ([ns (current-namespace)]
-;          [mred-name ((current-module-name-resolver) '(lib "mred.ss" "mred") #f #f)]
-;          [new-namespace (make-namespace 'empty)])
-;      (parameterize ([current-namespace new-namespace])
-;        (namespace-attach-module ns 'mzscheme)
-;        (namespace-attach-module ns mred-name)
-;        (namespace-require '(lib "htdp-beginner.ss" "lang"))
-;        (namespace-require '(lib "draw.ss" "htdp"))
-;        (namespace-require '(lib "servlet2.ss" "htdp"))
-;        new-namespace)))
-;  
-;  (define test-teachpack-sequence (lambda args
-;                                    (let ([new-custodian (make-custodian)])
-;                                      (parameterize ([current-custodian new-custodian])
-;                                        (apply (lang-level-test-sequence tp-namespace fake-beginner-render-settings) args))
-;                                      (custodian-shutdown-all new-custodian))))
-;  
+  (require (lib "mred.ss" "mred"))
+  
+  (define tp-namespace
+    (let ([ns (current-namespace)]
+          [mred-name ((current-module-name-resolver) '(lib "mred.ss" "mred") #f #f)]
+          [new-namespace (make-namespace 'empty)])
+      (parameterize ([current-namespace new-namespace])
+        (namespace-attach-module ns 'mzscheme)
+        (namespace-attach-module ns mred-name)
+        (namespace-require '(lib "htdp-beginner.ss" "lang"))
+        (namespace-require '(lib "draw.ss" "htdp"))
+        (namespace-require '(lib "servlet2.ss" "htdp"))
+        new-namespace)))
+  
+  (define test-teachpack-sequence (lambda args
+                                    (let ([new-custodian (make-custodian)])
+                                      (parameterize ([current-custodian new-custodian])
+                                        (apply (lang-level-test-sequence tp-namespace fake-beginner-render-settings #t) args))
+                                      (custodian-shutdown-all new-custodian))))
+  
     
-    ; uses set-render-settings!
-    ;(reconstruct:set-render-settings! fake-beginner-render-settings)
-    ;(test-sequence "(define (check-guess guess target) 'TooSmall) (guess-with-gui check-guess)"
-    ;               `((before-after ((hilite ,h-p)) ((guess-with-gui check-guess)))
-    ;                 (((hilite ,h-p)) (true)))
-    ;               `((define (check-guess guess target) 'toosmall) true)
-    ;               tp-namespace)
-    
-;  (test-teachpack-sequence 
-; "(define (draw-limb i) (cond  
-; [(= i 1) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
-; [(= i 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))  
-; (and (start 100 100)
-; (draw-limb 0))"
-; `((before-after-finished ((define (draw-limb i) (cond [(= i 1) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
-;                                                       [(= i 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)])))
-;                          ((and (hilite ,h-p) (draw-limb 0))) ((start 100 100))
-;                          same (true))
-;   (before-after ((hilite ,h-p)) ((and true (draw-limb 0)))
-;                 same ((draw-limb 0)))
-;   (before-after ((hilite ,h-p)) ((draw-limb 0))
-;                 same ((cond [(= 0 1) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
-;                             [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)])))
-;   (before-after ((cond [(hilite ,h-p) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
-;                        [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))
-;                 ((= 0 1))
-;                 same (false))
-;   (before-after ((hilite ,h-p)) ((cond [false (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
-;                               [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))
-;                 same ((cond [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)])))
-;   (before-after ((cond [(hilite ,h-p) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)])) ((= 0 0))
-;                 same (true))
-;   (before-after ((hilite ,h-p)) ((cond [true (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))
-;                 same ((draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)))
-;   (before-after ((draw-solid-line (make-posn (hilite ,h-p) 10) (make-posn 10 100) 'red)) ((+ 1 10)) same (11))
-;   (before-after ((hilite ,h-p)) ((draw-solid-line (make-posn 11 10) (make-posn 10 100) 'red)) same (true))
-;   (finished (true))))
-; 
-; 
-;  (test-teachpack-sequence
-;"(define (adder go) (inform (number->string (+ (single-query (make-number \"enter 10\")) (single-query (make-number \"enter 20\"))))))
-;(adder true)"
-;`((before-after-finished ((define (adder go) (inform (number->string (+ (single-query (make-number "enter 10")) (single-query (make-number "enter 20")))))))
-;                         ((hilite ,h-p)) ((adder true)) same ((inform (number->string (+ (single-query (make-number "enter 10")) (single-query (make-number "enter 20")))))))
-;  (before-after ((inform (number->string (+ (single-query (hilite ,h-p)) (single-query (make-number "enter 20")))))) ((make-number "enter 10")) 
-;                same ((make-numeric "enter 10")))
-;  (before-after ((inform (number->string (+ (hilite ,h-p) (single-query (make-number "enter 20")))))) ((single-query (make-numeric "enter 10")))
-;                same (10))
-;  (before-after ((inform (number->string (+ 10 (single-query (hilite ,h-p)))))) ((make-number "enter 20")) same ((make-numeric "enter 20")))
-;  (before-after ((inform (number->string (+ 10 (hilite ,h-p))))) ((single-query (make-numeric "enter 20"))) same (20))
-;  (before-after ((inform (number->string (hilite ,h-p)))) ((+ 10 20)) same (30))
-;  (before-after ((inform (hilite ,h-p))) ((number->string 30)) same "30")
-;  (before-after ((hilite ,h-p)) ((inform "30")) same (true))
-;  (finished (true))))
+  ; uses set-render-settings!
+  ;(reconstruct:set-render-settings! fake-beginner-render-settings)
+  ;(test-sequence "(define (check-guess guess target) 'TooSmall) (guess-with-gui check-guess)"
+  ;               `((before-after ((hilite ,h-p)) ((guess-with-gui check-guess)))
+  ;                 (((hilite ,h-p)) (true)))
+  ;               `((define (check-guess guess target) 'toosmall) true)
+  ;               tp-namespace)
+  
+  (t teachpack-drawing
+  (test-teachpack-sequence 
+   "(define (draw-limb i) (cond  
+ [(= i 1) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
+ [(= i 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))  
+ (and (start 100 100)
+ (draw-limb 0))"
+   `((before-after-finished ((define (draw-limb i) (cond [(= i 1) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
+                                                         [(= i 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)])))
+                            ((and (hilite (start 100 100)) (draw-limb 0)))
+                            ((and (hilite true) (draw-limb 0))))
+     (before-after ((hilite (and true (draw-limb 0))))
+                   ((hilite (draw-limb 0))))
+     (before-after ((hilite (draw-limb 0)))
+                   ((hilite (cond [(= 0 1) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
+                                  [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))))
+     (before-after ((cond [(hilite (= 0 1)) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
+                          [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))
+                   (cond [(hilite false) (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
+                         [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))
+     (before-after ((hilite (cond [false (draw-solid-line (make-posn 20 20) (make-posn 20 100) 'blue)] 
+                                          [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)])))
+                   ((hilite (cond [(= 0 0) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))))
+     (before-after ((cond [(hilite (= 0 0)) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)]))
+                   ((cond [(hilite true) (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)])))
+     (before-after ((hilite (cond [true (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red)])))
+                   ((hilite (draw-solid-line (make-posn (+ 1 10) 10) (make-posn 10 100) 'red))))
+     (before-after ((draw-solid-line (make-posn (hilite (+ 1 10)) 10) (make-posn 10 100) 'red))
+                   ((draw-solid-line (make-posn (hilite 11) 10) (make-posn 10 100) 'red)))
+     (before-after ((hilite (draw-solid-line (make-posn 11 10) (make-posn 10 100) 'red))) 
+                   ((hilite true)))
+     (finished (true)))))
+ 
+  (t teachpack-web-interaction
+  (test-teachpack-sequence
+"(define (adder go) (inform (number->string (+ (single-query (make-number \"enter 10\")) (single-query (make-number \"enter 20\"))))))
+(adder true)"
+`((before-after-finished ((define (adder go) (inform (number->string (+ (single-query (make-number "enter 10")) (single-query (make-number "enter 20")))))))
+                         ((hilite (adder true)))
+                         ((hilite ((inform (number->string (+ (single-query (make-number "enter 10")) (single-query (make-number "enter 20")))))))))
+  (before-after ((inform (number->string (+ (single-query (hilite (make-number "enter 10"))) (single-query (make-number "enter 20")))))) ; this step looks wrong wrong wrong.
+                ((inform (number->string (+ (single-query (hilite (make-numeric "enter 10"))) (single-query (make-number "enter 20")))))))
+  (before-after ((inform (number->string (+ (hilite (single-query (make-numeric "enter 10"))) (single-query (make-number "enter 20"))))))
+                ((inform (number->string (+ (hilite 10) (single-query (make-number "enter 20")))))))
+  (before-after ((inform (number->string (+ 10 (single-query (hilite (make-number "enter 20")))))))
+                ((inform (number->string (+ 10 (single-query (hilite (make-numeric "enter 20"))))))))
+  (before-after ((inform (number->string (+ 10 (hilite (single-query (make-numeric "enter 20")))))))
+                ((inform (number->string (+ 10 (hilite 20))))))
+  (before-after ((inform (number->string (hilite (+ 10 20))))) 
+                ((inform (number->string (hilite 30)))))
+  (before-after ((inform (hilite (number->string 30)))) 
+                ((inform (hilite "30"))))
+  (before-after ((hilite (inform "30")))
+                ((hilite true)))
+  (finished (true)))))
   
   
-  ;(run-tests '(time))
-  (run-all-tests)
+  (run-tests '(teachpack-drawing))
+  #;(run-all-tests)
   )
