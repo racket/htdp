@@ -188,7 +188,7 @@
 				  (with-syntax ([name name])
 				    (syntax/loc stx
 				      (check-top-level-not-defined 'who #'name))))
-				names)])
+				(syntax->list names))])
 	      (syntax/loc stx
 		(begin
 		  check ...
