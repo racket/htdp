@@ -1048,34 +1048,49 @@
 	     (intermediate-local [(define-values (name) rhs-expr) ...] expr)))]
 	[_else (bad-let-form 'letrec stx stx)]))
 
+    
+    
+;    (letrec-syntaxes+values ([(name) (make-undefined-check
+;                                                                  (quote-syntax name)
+;                                                                  (quote-syntax check-not-undefined)
+;                                                                  (quote-syntax tmp-id))]
+;                                                         ...)
+;                                                        ([(tmp-id) rhs-expr] 
+;                                                         ...)
+;                                                        expr)
+    
     (define (intermediate-let/proc stx)
       (syntax-case stx ()
 	[(_ ([name rhs-expr] ...) expr)
 	 (let ([names (syntax->list (syntax (name ...)))])
 	   (and (andmap identifier/non-kw? names)
 		(not (check-duplicate-identifier names))))
-	 (with-syntax ([(tmp ...)
-                        (map (lambda (tmp orig) (syntax-property tmp 'stepper-orig-name orig))
-                             (generate-temporaries #'(name ...))
-                             (syntax->list #'(name ...)))]
-		       [(rhs-expr ...) (map allow-local-lambda 
-					    (syntax->list (syntax (rhs-expr ...))))])
-           (with-syntax ([(rhs-expr2 ...) (map
-                                           (lambda (stx) 
-                                             (syntax-property stx 'stepper-skipto 
-                                                              (list syntax-e cdr car syntax-e car syntax-e cdr car)))
-                                           (syntax->list 
-                                           #'((let ([name rhs-expr])
-                                                name) ...)))])
+         (with-syntax ([(tmp-id ...)
+                        ;; Generate tmp-ids that at least look like the defined
+                        ;;  ids, for the purposes of error reporting, etc.:
+                        (map (lambda (name)
+                               (syntax-property
+                                (datum->syntax-object
+                                 #f
+                                 (string->uninterned-symbol
+                                  (symbol->string (syntax-e name))))
+                                'stepper-orig-name
+                                name))
+                             (syntax->list #`(name ...)))])
+           (with-syntax ([(rhs-expr ...) (map allow-local-lambda 
+                                              (syntax->list (syntax (rhs-expr ...))))])
              (syntax-property
-              (syntax/loc stx
-                (let ([tmp 
-                       ;; Use `name' to preserve inferred names:
-                       rhs-expr2]
-                      ...)
-                  ;; Use `local' to tell `#%app' about the bindings:
-                  (intermediate-local [(define-values (name ...) (values tmp ...))]
-                                      expr)))
+              (quasisyntax/loc stx
+                (let-values ([(tmp-id) rhs-expr] ...)
+                  #,(syntax-property
+                     #`(let-syntaxes ([(name) (make-undefined-check
+                                               (quote-syntax name)
+                                               (quote-syntax check-not-undefined)
+                                               (quote-syntax tmp-id))]
+                                      ...)
+                         expr)
+                     'stepper-skipto
+                     (list syntax-e cdr cdr car))))
               'stepper-hint
               'comes-from-let)))]
 	[_else (bad-let-form 'let stx stx)]))
@@ -1105,7 +1120,11 @@
 	   ;; pattern-match again to pull out the formals:
 	   (syntax-case stx ()
 	     [(_ formals . rest)
-	      (syntax/loc stx (lambda formals make-lambda-generative . rest))]))]
+	      (quasisyntax/loc stx (lambda formals #,(syntax-property
+                                                    #`make-lambda-generative
+                                                    'stepper-skip-completely
+                                                    #t) 
+                                     . rest))]))]
 	[_else stx]))
 
     ;; Helper function:
