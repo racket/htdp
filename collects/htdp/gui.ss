@@ -2,6 +2,7 @@
   (require (lib "error.ss" "htdp")
     (lib "mred.ss" "mred")
     (lib "class.ss")
+    (lib "list.ss")
     (lib "etc.ss"))
 
   (provide 
@@ -70,16 +71,13 @@
 	     (error 'create-window "item added to window twice")]
 	    [(and p (not C)) (set! C (builder p)) C]
 	    [(and (not p) C) C]
-	    [(and (not p) (not C)) (error 'gui "GUI items must be added to window before use (see create-window)")])))))
+	    [(and (not p) (not C))
+             (error 'gui "gui-items must be added to window before use (see create-window)")])))))
 
   ;; create-window : (listof (listof gui-item)) -> true
   ;; to add gui-items to the window and to show window
   (define (create-window loi)
-    (check-arg 'create-window
-      (and (list? loi)
-	(andmap list? loi)
-	(andmap (lambda (l) (andmap gui-item? l)) loi))
-      "list of lists of gui-items" "first" loi)
+    (check-list-list 'create-window (listoflistof? gui-item? "gui-item" loi) "gui-items" loi)
     (if up
 	(error 'create-window "only one window can be created at a time")
 	(set! up true))
@@ -89,6 +87,33 @@
 		  (for-each (lambda (i) ((gui-item-builder i) p)) loi)))
               loi)
     (show-window))
+
+  ;; (_ -> Boolean) String X -> (union String true)
+  (define (listoflistof? pred? pred given)
+    (cond
+      [(not (list? given)) (format NONLIST given)]
+      [(find-non list? given)
+       => (lambda (non-list)
+	    (format NONLISTLIST non-list))]
+      [(ormap identity (map (lambda (ll) (find-non pred? ll)) given))
+       => (lambda (non-x)
+	    (format NONX pred non-x))]
+      [else #t]))
+
+  (define NONLIST "list expected, given: ~e")
+  (define NONLISTLIST "list of lists expected, given list with ~e")
+  (define NONX "list of lists of ~a expected, given list of lists with ~e")
+
+
+  #| Tests ------------------------------------------------------------------
+  (listoflistof? number? "number" '((1 2 3) (4 5 6)))
+
+  (string=? (format NONX "number" 'a)
+    (listoflistof? number? "number" '((1 2 3) (4 a 6))))
+
+  (string=? (format NONLISTLIST 1)
+    (listoflistof? number? "number" '(1 (2 3) (4 5 6))))
+  |#
 
   ;; up: boolean
   ;; to record whether the window is created 
@@ -117,7 +142,10 @@
     (check-proc 'make-button call-back 1 'second "1 argument")
     (create-gui-item 
       (lambda (the-panel)
-	(make-object button% label the-panel (lambda (b e) (call-back e))))))
+	(make-object button% label
+	  the-panel
+	  (lambda (b e)
+	    (check-result 'button-callback boolean? "Boolean" (call-back e)))))))
 
   ;; make-choice : (listof str) -> gui-item
   ;; to create a choice-item that permits users to choose from the
