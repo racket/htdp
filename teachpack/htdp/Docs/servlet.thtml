@@ -1,5 +1,4 @@
 { (define LIBNAME "Scheme Web Servlets")
-  (define FILENAME "servlet.ss")
   (include "head.tinc") }
 
 <p>The teachpack <code>servlet.ss</code> provides structures and

@@ -1,5 +1,4 @@
 { (define LIBNAME "Simplified Scheme Web Servlets")
-  (define FILENAME "servlet2.ss")
   (include "head.tinc") }
 
 <p>This teachpack provides a simplified API for PLT Scheme servlets. The
