@@ -3,9 +3,6 @@
 
   (provide graphics^ graphics:posn-less^ graphics:posn^)
 
-;(require-library "macro.ss")
-;(require-library "files.ss")
-
   (define-signature graphics:posn^
     (make-posn posn? posn-x posn-y))
 
