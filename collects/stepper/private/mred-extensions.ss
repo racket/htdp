@@ -229,6 +229,10 @@
       (define clear-highlight-thunks null)
       (define (reset-style)
         (change-style (send (get-style-list) find-named-style "Standard")))
+      (define (set-last-style)
+        (change-style (send (get-style-list) find-named-style "Standard")
+		      (sub1 (last-position))
+		      (last-position)))
                
       (define (reformat-sexp width)
         (when (not (eq? pretty-printed-width width))
@@ -262,7 +266,7 @@
                          [pretty-print-print-hook
                           ; this print-hook is called for confusable highlights and for images.
                           (lambda (value display? port)
-                            (cond [(image? value) (insert (send value copy))]
+                            (cond [(image? value) (insert (send value copy)) (set-last-style)]
                                   [(eq? value highlight-placeholder) (insert (format "~s" (car remaining-highlights)))]
                                   [else (error 'stepper-GUI "pretty-print-print-hook: expected an image or a highlight-placeholder, got: ~e" value)]))]
                          [pretty-print-display-string-handler
@@ -293,7 +297,10 @@
                                 (set! clear-highlight-thunks
                                       (cons (highlight-range highlight-begin highlight-end highlight-color #f #f)
                                             clear-highlight-thunks))
-                                (set! highlight-begin #f))))])
+                                (set! highlight-begin #f))))]
+			 ;; mflatt: MAJOR HACK - this setting needs to come from the language
+			 ;;  somehow
+			 [read-case-sensitive #t])
             (pretty-print sexp))))
                
       (define (advance-substitute exp)
