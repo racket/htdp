@@ -29,5 +29,5 @@ special teaching functions:
 
  * _posn.ss_ - provides the `posn' structure
 
- * _imageeq.ss- provides the `image=?' function
+ * _imageeq.ss_ - provides the `image=?' function
 
