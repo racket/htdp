@@ -141,7 +141,8 @@
            (or (and (z:varref? expr)
                     (or (z:bound-varref? expr)
                         (let ([var (z:varref-var expr)])
-                          (or (s:check-pre-defined-var var)
+                          (or (and (s:check-pre-defined-var var)
+                                   (procedure? (s:global-lookup var)))
                               (call-with-current-continuation
                                (lambda (k)
                                  (with-handlers ([exn:variable?
