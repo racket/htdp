@@ -486,8 +486,11 @@
          (define normal-break
            (make-break 'normal-break))
 
-         (define result-break
-           (make-break 'result-break))
+         (define result-exp-break
+           (make-break 'result-exp-break))
+         
+         (define result-value-break
+           (make-break 'result-value-break))
          
          (define input-struct-proc-names (car annotate-environment))
          (define input-user-defined-names (cadr annotate-environment))
@@ -514,7 +517,7 @@
 
          ; wcm-pre-break-wrap : call simple-wcm-wrap with a pre-break on the expr
          (define (wcm-pre-break-wrap debug-info expr)
-           (simple-wcm-wrap debug-info (d->so `(begin (,result-break) ,expr))))
+           (simple-wcm-wrap debug-info (d->so `(begin (,result-exp-break) ,expr))))
          
          (define (break-wrap expr)
            (d->so `(begin (,normal-break) ,expr)))
@@ -533,7 +536,7 @@
          (define (return-value-wrap expr)
            (d->so
             `(let* ([result ,expr])
-               (,result-break result)
+               (,result-value-break result)
                result)))
 
 ;  For Multiple Values:         
@@ -545,32 +548,6 @@
 ;              (#%apply #%values result-values))))
 
          
-;         (define (find-read-expr expr)
-;           (when (not (z:zodiac? expr))
-;             (error 'find-read-expr "argument to find-read-expr is not a zodiac expr: ~a" expr))
-;           (let ([offset (z:location-offset (z:zodiac-start expr))])
-;             (let search-exprs ([exprs red-exprs])
-;               (let* ([later-exprs (filter 
-;                                    (lambda (expr) 
-;                                      (<= offset (z:location-offset (z:zodiac-finish expr))))
-;                                    exprs)]
-;                      [expr 
-;                       (car later-exprs)])
-;                 (if (= offset (z:location-offset (z:zodiac-start expr)))
-;                     expr
-;                     (cond
-;                       ((z:scalar? expr) (internal-error expr "starting offset inside scalar:" offset))
-;                       ((z:sequence? expr) 
-;                        (let ([object (z:read-object expr)])
-;                            (cond
-;                            ((z:list? expr) (search-exprs object))
-;                            ((z:vector? expr) 
-;                             (search-exprs (vector->list object))) ; can source exprs be here?
-;                            ((z:improper-list? expr)
-;                             (search-exprs (search-exprs object))) ; can source exprs be here? (is this a bug?)
-;                            (else (internal-error expr "unknown expression type in sequence")))))
-;                       (else (internal-error expr "unknown read type"))))))))
-;  
          (define (defined-names expr)
            (syntax-case expr (define-values)
                    [(define-values vars body)

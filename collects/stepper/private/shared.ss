@@ -401,7 +401,7 @@
   
   (define (break-kind? symbol)
     (case symbol
-      ((normal-break result-break double-break late-let-break) #t)
+      ((normal-break result-exp-break result-value-break double-break late-let-break) #t)
       (else #f)))
              
   )
