@@ -113,6 +113,12 @@ stepper-proc-define-name : stores the name to which a procedure
 
   (Transferred.)
 
+stepper-orig-name: attached to an uninterned symbol used by
+   the expansion of define so that the stepper can compare the
+   name attached to a lambda to the name of a definition.
+
+  (Not transferred.)
+
 stepper-prim-name: 
  this is attached to the expansion of primitives introduced with the
  'define-primitive' form. Its value indicates what name to give to

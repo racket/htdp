@@ -391,9 +391,12 @@
             (with-syntax ([fn (car (syntax-e #'name-seq))] 
                           [args (cdr (syntax-e #'name-seq))])
               (quasisyntax/loc stx (define fn #,(syntax-property
-                                                 #`(lambda args expr ...)
-                                                 'stepper-define-type
-                                                 'shortened-proc-define))))))]
+                                                 (syntax-property
+                                                  #`(lambda args expr ...)
+                                                  'stepper-define-type
+                                                  'shortened-proc-define)
+                                                 'stepper-proc-define-name
+                                                 #`fn))))))]
 	;; Constant/lambda with too many or too few parts:
 	[(_ name expr ...)
 	 (identifier/non-kw? (syntax name))
@@ -975,10 +978,13 @@
 				;;  ids, for the purposes of error reporting, etc.:
 				(map (lambda (def-ids)
 				       (map (lambda (def-id)
-                                              (datum->syntax-object
-                                               #f
-                                               (string->uninterned-symbol
-                                                (symbol->string (syntax-e def-id)))))
+                                              (syntax-property
+                                               (datum->syntax-object
+                                                #f
+                                                (string->uninterned-symbol
+                                                 (symbol->string (syntax-e def-id))))
+                                               'stepper-orig-name
+                                               def-id))
 					    (syntax->list def-ids)))
 				     (syntax->list (syntax ((def-id ...) ...))))])
 		   
