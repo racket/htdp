@@ -37,7 +37,9 @@
   (class editor-snip% (family color)
     (inherit get-editor get-style)
 
-    (private [pen (send the-pen-list find-or-create-pen color 1 'solid)])
+    (private
+      [pen (send the-pen-list find-or-create-pen color 1 'solid)]
+      [brush (send the-brush-list find-or-create-brush "BLACK" 'transparent)])
 
     (inherit get-extent get-inset)
     (rename [super-draw draw])
@@ -52,15 +54,18 @@
 	      [bh (box 0)])
 	  (get-extent dc x y bw bh #f #f #f #f)
 	  (get-inset bl br bt bb)
-	  (let ([old-pen (send dc get-pen)])
+	  (super-draw dc x y left top right bottom dx dy draw-caret)
+          (let ([old-pen (send dc get-pen)]
+		[old-brush (send dc get-brush)])
 	    (send dc set-pen pen)
+	    (send dc set-brush brush)
 	    (send dc draw-rectangle
 		  (+ x (unbox bl))
 		  (+ y (unbox bt))
 		  (- (unbox bw) (unbox bl) (unbox br))
 		  (- (unbox bh) (unbox bt) (unbox bb)))
-	    (send dc set-pen old-pen))
-          (super-draw dc x y left top right bottom dx dy draw-caret)))])
+	    (send dc set-pen old-pen)
+	    (send dc set-brush old-brush))))])
 
     (override
       [write
