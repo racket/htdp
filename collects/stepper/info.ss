@@ -1,1 +1,3 @@
-(module info (lib "infotab.ss" "setup")  (define name "Stepper")  (define tools '(("stepper-tool.ss"))))
+(module info (lib "infotab.ss" "setup")
+  (define name "Stepper")
+  (define tools '(("stepper-tool.ss"))))

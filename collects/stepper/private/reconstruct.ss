@@ -1,6 +1,5 @@
 (module reconstructor mzscheme
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
-           (prefix utils: "utils.ss")
            "marks.ss"
            (prefix model: "model.ss")
            "shared.ss"
@@ -34,13 +33,6 @@
   (make-contract-checker BOOLEAN boolean?)
   (make-contract-checker SYNTAX-OBJECT syntax?)
   
-;(unit/sig stepper:reconstruct^
-;  (import [z : zodiac^]
-;          [utils : stepper:cogen-utils^]
-;          stepper:marks^
-;          [s : stepper:model^]
-;	  stepper:shared^)
-
   (define the-undefined-value (letrec ([x x]) x))
   
   (define nothing-so-far (gensym "nothing-so-far-"))
@@ -119,7 +111,20 @@
   ; test cases
   ; (test '((1 2 3) (4 5 6)) reshape-list '(1 2 3 4 5 6) '((a b c) (d e f)))
   ; (test '(() () 1 (2 3) ()) reshape-list '(1 2 3) '(() () a (b c) ()))
-  
+                                                                     
+                                                                     
+                                                     ;               
+                                                     ;               
+ ; ;;  ;;;    ;;;   ;;;   ; ;;         ;   ;   ;;;   ;  ;   ;   ;;;  
+ ;;   ;   ;  ;     ;   ;  ;;  ;        ;   ;  ;   ;  ;  ;   ;  ;   ; 
+ ;    ;   ;  ;     ;   ;  ;   ;         ; ;       ;  ;  ;   ;  ;   ; 
+ ;    ;;;;;  ;     ;   ;  ;   ;  ;;;;;  ; ;    ;;;;  ;  ;   ;  ;;;;; 
+ ;    ;      ;     ;   ;  ;   ;         ; ;   ;   ;  ;  ;   ;  ;     
+ ;    ;      ;     ;   ;  ;   ;         ;;    ;   ;  ;  ;  ;;  ;     
+ ;     ;;;;   ;;;   ;;;   ;   ;          ;     ;;;;; ;   ;; ;   ;;;; 
+                                                                     
+                                                                     
+                                                                     
   ; recon-value : value -> syntax-object
   ; recon-value print-converts a value.  If the value is a closure, recon-value
   ; prints the name attached to the procedure, unless we're on the right-hand-side
@@ -141,7 +146,7 @@
                 (let ([mark (closure-record-mark closure-record)])
                   (recon-source-expr (mark-source mark) (list mark)))])]
         [else
-         (d->so (s:print-convert val))])))
+         (d->so (model:print-convert val))])))
   
   (define (let-rhs-recon-value val)
     (recon-value val 'let-rhs))
@@ -155,7 +160,20 @@
         (let ([p (open-output-string)])
           (display k p)
           (not (not (regexp-match r (get-output-string p))))))))
-  
+                                                                                         
+                                                                                         
+       ;      ;                                                                     ;;;  
+       ;                                                          ;                    ; 
+  ;;;  ;   ;  ;  ; ;;;         ;    ; ;    ; ;    ;          ;;; ;;;;  ;;;   ; ;;;     ; 
+ ;     ;  ;   ;  ;;   ;         ;  ;   ;  ;   ;  ;          ;     ;   ;   ;  ;;   ;    ; 
+ ;     ; ;    ;  ;    ;          ;;     ;;     ;;           ;     ;   ;   ;  ;    ;   ;  
+  ;;   ;;     ;  ;    ;  ;;;;;   ;;     ;;     ;;    ;;;;;   ;;   ;   ;;;;;  ;    ;  ;   
+    ;  ; ;    ;  ;    ;          ;;     ;;     ;;              ;  ;   ;      ;    ;  ;   
+    ;  ;  ;   ;  ;;   ;         ;  ;   ;  ;   ;  ;             ;  ;   ;      ;;   ;      
+ ;;;   ;   ;  ;  ; ;;;         ;    ; ;    ; ;    ;         ;;;    ;;  ;;;;  ; ;;;   ;   
+                 ;                                                           ;           
+                 ;                                                           ;           
+                                                                                         
   (define (skip-result-step? mark-list)
     (in-inserted-else-clause mark-list))
   
@@ -174,12 +192,12 @@
                    (let ([id (syntax-e (syntax id-stx))])
                      (with-handlers
                          ([exn:variable? (lambda args #f)])
-                       (or (and (s:check-pre-defined-var id)
-                                (or (procedure? (s:global-lookup id))
-                                    (and (s:true-false-printed?)
+                       (or (and (model:check-pre-defined-var id)
+                                (or (procedure? (model:global-lookup id))
+                                    (and (model:true-false-printed?)
                                          (or (eq? id 'true)
                                              (eq? id 'false)))))
-                           (let ([val (s:global-lookup id)])
+                           (let ([val (model:global-lookup id)])
                              (and (procedure? val)
                                   (not (continuation? val))
                                   (cond [(closure-table-lookup val (lambda () #f)) =>
@@ -192,14 +210,14 @@
                           (procedure-arity-includes? 
                            fun-val
                            (length (cdr (syntax->list (syntax terms)))))
-                          (or (and (s:constructor-style-printing?)
-                                   (if (s:abbreviate-cons-as-list?)
-                                       (or (s:special-function? 'list fun-val)
-                                           (and (s:special-function? 'cons fun-val)
+                          (or (and (model:constructor-style-printing?)
+                                   (if (model:abbreviate-cons-as-list?)
+                                       (or (model:special-function? 'list fun-val)
+                                           (and (model:special-function? 'cons fun-val)
                                                 (second-arg-is-list? mark-list)))    
-                                       (and (s:special-function? 'cons fun-val)
+                                       (and (model:special-function? 'cons fun-val)
                                             (second-arg-is-list? mark-list))))
-                              ;(s:special-function? 'vector fun-val)
+                              ;(model:special-function? 'vector fun-val)
                               (and (eq? fun-val void)
                                    (eq? (cdr (syntax->list (syntax terms))) null))
                               (struct-constructor-procedure? fun-val))))])))))
@@ -508,7 +526,7 @@
                                                                                                                                     
 
   ; reconstruct-completed : reconstructs a completed expression or definition.  This now
-  ; relies upon the s:global-lookup procedure to find values in the user-namespace.
+  ; relies upon the model:global-lookup procedure to find values in the user-namespace.
   
   (define (reconstruct-completed expr value)
     ; unwinding will go here?
@@ -516,7 +534,7 @@
      (kernel:kernel-syntax-case expr #f
          [(define-values vars-stx body)
           (let* ([vars (syntax->list (syntax vars-stx))]
-                 [values (map s:global-lookup vars)]
+                 [values (map model:global-lookup vars)]
                  [recon-vars (map recon-value values)])
             (attach-info (d->so `(define-values ,(syntax vars-stx) (values ,recon-vars))) expr))]
          [else
@@ -582,26 +600,8 @@
                      (recon-source-expr expr mark-list))]
                   [top-mark (car mark-list)]
                   [expr (mark-source top-mark)]
-                  ; reconstruct-lifted ((listof symbol) sexp -> sexp)
-                  ; reconstruct-lifted really should take into account the original source expression. Local may
-                  ; screw me up. We'll cross that bridge when we get to it.
-                  
-                  (define (reconstruct-lifted names sexp)
-                    (case (length names)
-                      ((0) `(define-values () ,sexp))
-                      ((1) (if (and (pair? sexp)
-                                    (eq? (car sexp) 'lambda))
-               (o-form-lambda->define sexp (car names))
-               `(define ,(car names) ,sexp)))
-      (else `(define-values ,names ,sexp))))
        
-  (define (reconstruct-lifted-val name val)
-    (let ([rectified-val (let-rhs-rectify-value val)])
-      (if (and (procedure? val)
-               (pair? rectified-val)
-               (eq? (car rectified-val) 'lambda))
-          (o-form-lambda->define rectified-val name)
-          `(define ,name ,rectified-val))))
+
   
 
                   [recon-let
@@ -626,25 +626,32 @@
                                     [num-defns-done (mark-binding-value (lookup-binding mark-list let-counter))]
                                     [(done-defs not-done-defs)
                                      (n-split-list num-defns-done zipped)]
+                                    [recon-lifted-val 
+                                     (lambda (name val)
+                                      (let ([rectified-val (let-rhs-recon-value val)])
+                                        (d->so `(define ,name ,rectified-val))))]
+                                    [recon-lifted 
+                                     (lambda (names expr)
+                                       (d->so `(define-values ,names ,expr)))]                                    
                                     [before-defs
                                      (multi-append
                                       (map
                                        (lambda (info)
                                          (let* ([rhs-val-set (car info)]
                                                 [rhs-lifted-name-set (caddr info)])
-                                           (map reconstruct-lifted-val rhs-lifted-name-set rhs-val-set)))
+                                           (map recon-lifted-val rhs-lifted-name-set rhs-val-set)))
                                        done-defs))]
                                     [reconstruct-remaining-def
                                      (lambda (rhs-lifted-name-set rhs-source raw-local-source)
                                        (let ([rhs-source (cadr info)]
                                              [rhs-lifted-name-set (caddr info)])
-                                         (reconstruct-lifted rhs-lifted-name-set
+                                         (recon-lifted rhs-lifted-name-set
                                                              (recon-source-expr-current-marks rhs-source))))]
                                     [after-defs
                                      (if (pair? not-done-defs)
                                          (if (eq? so-far nothing-so-far)
                                              (map reconstruct-remaining-def not-done-defs)
-                                             (cons (reconstruct-lifted (car rhs-lifted-name-sets) so-far)
+                                             (cons (recon-lifted (car rhs-lifted-name-sets) so-far)
                                                    (map reconstruct-remaining-def (cdr not-done-defs))))
                                          null)]
                                     [rectified-body (recon-source-expr body mark-list)])
