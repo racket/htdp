@@ -453,31 +453,10 @@
     
   ; until this remove* goes into list.ss?
   
-  (define my-remove*
-    (lambda (l r equal?)
-      (cond [(null? r) null]
-            [(let ([first-r (car r)])
-               (let loop ([l-rest l])
-                 (cond [(null? l-rest) (cons first-r (my-remove* l (cdr r) equal?))]
-                       [(equal? (car l-rest) first-r) (my-remove* l (cdr r) equal?)]
-                       [else (loop (cdr l-rest))])))])))
-
-  ;(equal? (my-remove* `(a b c d) `()  equal?) `())
-  ;(equal? (my-remove* `(a b c d) `(q b m d l) equal?)
-  ;        `(q m l))
-
-
   (define (set-pair-union a-set b-set comparator)
     (cond [(null? b-set) a-set]
           [(null? a-set) b-set]
-          [else (append (my-remove* a-set b-set comparator) a-set)])
-    ;              ; for best running time: put short list first
-    ;              (let loop ([a-set a-set])
-    ;                (if (null? a-set)
-    ;                    b-set
-    ;                    (let ()
-    ;                      (if (ormap (lambda (elt) ()))))))
-    )
+          [else (append (remove* a-set b-set comparator) a-set)]))
   
   (define (varref-set-pair-union a-set b-set)
     (set-pair-union a-set b-set free-identifier=?))

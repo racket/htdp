@@ -36,8 +36,8 @@
     (string-constant-list
      (beginning-student
       beginning-student/abbrev
-      ;intermediate-student
-      ;intermediate-student/lambda
+      intermediate-student
+      intermediate-student/lambda
       )))
   
   (provide tool@)

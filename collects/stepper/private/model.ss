@@ -193,7 +193,7 @@
                                                                        (list-ref reconstruct-quadruple 3)
                                                                        after))))]
                      [(late-let-break)
-                      (let ([new-finished (car (r:reconstruct-current current-expr mark-list break-kind returned-value-list render-settings))])
+                      (let ([new-finished (r:reconstruct-current current-expr mark-list break-kind returned-value-list render-settings)])
                         (set! finished-exprs (append finished-exprs new-finished)))]
                      [else (error 'break "unknown label on break")])))))
          
@@ -222,8 +222,9 @@
       
       (program-expander
        (lambda () 
-         (error-display-handler err-display-handler)
-         ;(void)
+         ; swap these to allow errors to escape (e.g., when debugging)
+         ;(error-display-handler err-display-handler)
+         (void)
          )
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)
