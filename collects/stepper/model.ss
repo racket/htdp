@@ -205,10 +205,7 @@
              (send-to-drscheme-eventspace
               (lambda ()
                 (let* ([reconstruct-pair
-                        (r:reconstruct-current current-expr 
-                                               mark-list
-                                               break-kind
-                                               returned-value-list)]
+                        (r:reconstruct-current current-expr mark-list break-kind returned-value-list)]
                        [reconstructed (car reconstruct-pair)]
                        [redex (cadr reconstruct-pair)])
                   (finish-thunk reconstructed redex)))))])
@@ -222,10 +219,9 @@
               (continue-user-computation)))
            (suspend-user-computation))]
         [(result-break)
-         (when (if (not (null? returned-value-list))
-                   (not (r:skip-redex-step? mark-list))
-                   (and (not (eq? held-expr no-sexp))
-                        (not (r:skip-result-step? mark-list))))
+         (when (not (or (r:skip-redex-step? mark-list)
+                        (and (null? returned-value-list)
+                             (eq? held-expr no-sexp))))
            (reconstruct-helper 
             (lambda (reconstructed reduct)
 ;              ; this invariant (contexts should be the same)
@@ -246,7 +242,21 @@
                 (set! held-expr no-sexp)
                 (set! held-redex no-sexp)
                 (i:receive-result result))))
-           (suspend-user-computation))])))
+           (suspend-user-computation))]
+        [(double)
+         ; a double-break occurs at the beginning of a let's body.
+         (send-to-drscheme-eventspace
+          (lambda ()
+            (let* ([reconstruct-quadruple
+                    (r:reconstruct-current current-expr mark-list)])
+              (set! finished-exprs (append finished-exprs (caddr reconstruct-quadruple)))
+              (when (not (eq? held-expr no-expr))
+                (e:internal-error 'break-reconstruction
+                                  "held-expr not empty when a double-break occurred"))
+              (i:receive-result (apply make-before-after-result 
+                                       finished-exprs
+                                       reconstruct-quadruple)))))
+         (suspend-user-computation)])))
   
   (define (handle-exception exn)
     (if held-expr
