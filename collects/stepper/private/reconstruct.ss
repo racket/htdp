@@ -183,7 +183,8 @@
                       (let ([val (lookup-binding mark-list expr)])
                         (and (procedure? val)               ; don't halt for varrefs ...
                              (not (continuation? val))      ; ... bound to non-continuation procedures ...
-                             (has-right-name expr val)))])] ; ... which already have the right name.
+                             (has-right-name (binding-lifted-name mark-list expr) 
+                                             val)))])]      ; ... which already have the right name.
                   [(#%top . id-stx)
                    (let ([id (syntax id-stx)])
                      (with-handlers
@@ -215,17 +216,17 @@
   ; identifier would be rendered identically to the procedure value.
   (define (has-right-name id val)
     (let ([closure-record (closure-table-lookup val (lambda () #f))])     
-      (if closure-record
-          (let* ([mark (closure-record-mark closure-record)]
-                 [base-name (closure-record-name closure-record)])
-            (if base-name
-                (let* ([lifted-index (closure-record-lifted-index closure-record)]
-                       [name (if lifted-index
-                                 (construct-lifted-name base-name lifted-index)
-                                 base-name)])
-                  (eq? (syntax-e id) (syntax-e name)))
-                #f))
-          #f)))
+                    (if closure-record
+                        (let* ([mark (closure-record-mark closure-record)]
+                               [base-name (closure-record-name closure-record)])
+                          (if base-name
+                              (let* ([lifted-index (closure-record-lifted-index closure-record)]
+                                     [name (if lifted-index
+                                               (construct-lifted-name base-name lifted-index)
+                                               base-name)])
+                                (eq? (syntax-e id) (syntax-e name)))
+                              #f))
+                        #f)))
   
   
   
