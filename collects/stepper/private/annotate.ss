@@ -604,14 +604,12 @@
                                                                    #f procedure-name-info)))]
                                [cheap-wrap-recur (lambda (expr) (let-values ([(ann _) (tail-recur expr)]) ann))]
                                [no-enclosing-recur (lambda (expr) (annotate/inner expr 'all #f #f #f))]
-                               [make-debug-info-quoted-source (lambda (expr . rest)
-                                                                (apply make-debug-info #`(quote-syntax #,expr) rest))]
                                [make-debug-info-normal (lambda (free-bindings)
-                                                         (make-debug-info-quoted-source expr tail-bound free-bindings 'none foot-wrap?))]
+                                                         (make-debug-info expr tail-bound free-bindings 'none foot-wrap?))]
                                [make-debug-info-app (lambda (tail-bound free-bindings label)
-                                                      (make-debug-info-quoted-source expr tail-bound free-bindings label foot-wrap?))]
+                                                      (make-debug-info expr tail-bound free-bindings label foot-wrap?))]
                                [make-debug-info-let (lambda (free-bindings binding-list let-counter)
-                                                      (make-debug-info-quoted-source expr 
+                                                      (make-debug-info expr 
                                                                        (binding-set-union (list tail-bound 
                                                                                                 binding-list
                                                                                                 (list let-counter)))
