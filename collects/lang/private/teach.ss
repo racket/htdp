@@ -863,7 +863,7 @@
 				     (syntax-case clause ()
 				       [(question answer)
 					(begin
-					  (unless (and (symbol? (syntax question))
+					  (unless (and (identifier? (syntax question))
 						       (module-identifier=? (syntax question) #'beginner-else))
 					    (local-expand (syntax question) 'expression null))
 					  (local-expand (syntax answer) 'expression null))])))
@@ -907,7 +907,7 @@
 			(let ([parts (syntax->list clause)])
 			  ;; to ensure the illusion of left-to-right checking, make sure 
 			  ;; the question and first answer (if any) are ok:
-			  (unless (and (symbol? (car parts))
+			  (unless (and (identifier? (car parts))
 				       (module-identifier=? (car parts) #'beginner-else))
 			    (local-expand (car parts) 'expression null))
 			  (unless (null? (cdr parts))
