@@ -62,6 +62,10 @@
 
 (convert-gui f2c) 
 
+(define (f2x x) (* x x x x))
+;; (convert-gui f2x)
+;; must result in an error 
+
 ;; TEST BY HAND: (convert-gui first)
 ;; first is blamed but not nicely 
 
