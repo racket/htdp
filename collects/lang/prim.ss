@@ -43,68 +43,68 @@
       (not (eq? '_ (syntax-e arg))))
     (syntax-case stx ()
       [(_ name implementation (arg ...))
-       (let* ([args (syntax->list (syntax (arg ...)))]
-	      [new-args (generate-temporaries args)])
+       (let ([args (syntax->list (syntax (arg ...)))])
          (for-each (lambda (id)
                      (unless (identifier? id)
                        (raise-syntax-error #f "not an identifier" stx id)))
                    (cons (syntax name)
                          args))
-         (with-syntax ([(new-arg ...) new-args]
-		       [(checks ...)
-                        (map (lambda (arg new-arg)
-                               (if (not (is-proc-arg? arg))
-                                   #'(void)
-                                   #`(unless (and (identifier? (#,#'syntax #,new-arg))
-						  (not (identifier-binding (#,#'syntax #,new-arg))))
-                                       (raise-syntax-error
-                                        #f
-                                        (format
-                                         "primitive operator ~a expects a defined procedure name (usually `~a') in this position"
-					 'name
-                                         '#,arg)
-                                        s
-                                        (#,#'syntax #,new-arg)))))
-                             args new-args)]
-                       [(wrapped-arg ...)
-                        (map (lambda (arg new-arg)
-                               (if (not (is-proc-arg? arg)) 
-				   new-arg
-				   #`(#%top . #,new-arg)))
-                             args new-args)]
-                       [num-arguments (length args)])
-	   (with-syntax ([impl #'(let ([name (lambda (new-arg ...)
-					       (implementation new-arg ...))])
-				   name)])
-	     (syntax/loc stx
-	       (define-syntax (name s)
-		 (syntax-case s ()
-		   [(__ . ___)
-		    ;; HACK: see above
-		    (module-identifier=? #'#%top (datum->syntax-object s '#%top))
-		    (syntax/loc s (impl . ___))]
-		   [__
-		    ;; HACK: see above
-		    (module-identifier=? #'#%top (datum->syntax-object s '#%top))
-		    (syntax/loc s impl)]
-		   [(__ new-arg ...)
-		    (begin
-		      checks ...
-		      ;; s is a well-formed use of the primitive;
-		      ;; generate the primitive implementation
-		      (syntax/loc s (impl wrapped-arg ...)))]
-		   [(__ . rest)
-		    (raise-syntax-error
-		     #f
-		     (format
-		      "primitive operator requires ~a arguments"
-		      num-arguments)
-		     s)]
-		   [_else
-		    (raise-syntax-error
-		     #f
-		     (string-append
-		      "this primitive operator must be applied to arguments; "
-		      "expected an open parenthesis before the operator name")
-		     s)]))))))])))
+	 (let ([new-args (generate-temporaries args)])
+	   (with-syntax ([(new-arg ...) new-args]
+			 [(checks ...)
+			  (map (lambda (arg new-arg)
+				 (if (not (is-proc-arg? arg))
+				     #'(void)
+				     #`(unless (and (identifier? (#,#'syntax #,new-arg))
+						    (not (identifier-binding (#,#'syntax #,new-arg))))
+					 (raise-syntax-error
+					  #f
+					  (format
+					   "primitive operator ~a expects a defined procedure name (usually `~a') in this position"
+					   'name
+					   '#,arg)
+					  s
+					  (#,#'syntax #,new-arg)))))
+			       args new-args)]
+			 [(wrapped-arg ...)
+			  (map (lambda (arg new-arg)
+				 (if (not (is-proc-arg? arg)) 
+				     new-arg
+				     #`(#%top . #,new-arg)))
+			       args new-args)]
+			 [num-arguments (length args)])
+	     (with-syntax ([impl #'(let ([name (lambda (new-arg ...)
+						 (implementation new-arg ...))])
+				     name)])
+	       (syntax/loc stx
+		   (define-syntax (name s)
+		     (syntax-case s ()
+		       [(__ . ___)
+			;; HACK: see above
+			(module-identifier=? #'#%top (datum->syntax-object s '#%top))
+			(syntax/loc s (impl . ___))]
+		       [__
+			;; HACK: see above
+			(module-identifier=? #'#%top (datum->syntax-object s '#%top))
+			(syntax/loc s impl)]
+		       [(__ new-arg ...)
+			(begin
+			  checks ...
+			  ;; s is a well-formed use of the primitive;
+			  ;; generate the primitive implementation
+			  (quasisyntax/loc s (#,(quote-syntax impl) wrapped-arg ...)))]
+		       [(__ . rest)
+			(raise-syntax-error
+			 #f
+			 (format
+			  "primitive operator requires ~a arguments"
+			  num-arguments)
+			 s)]
+		       [_else
+			(raise-syntax-error
+			 #f
+			 (string-append
+			  "this primitive operator must be applied to arguments; "
+			  "expected an open parenthesis before the operator name")
+			 s)])))))))])))
 
