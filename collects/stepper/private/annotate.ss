@@ -264,9 +264,8 @@
               (lambda (stx)
                 (loop stx let-bound-bindings (lambda (x) #f) (lambda (x) #f)))]
              [recur-with-bindings
-              (lambda (vars exps)
-                (map (lambda (stx) (loop stx (append vars let-bound-bindings) (lambda (x) #f) (lambda (x) #f))) 
-                     exps))]
+              (lambda (exp vars)
+                (loop exp (append vars let-bound-bindings) (lambda (x) #f) (lambda (x) #f)))]
              [recur-in-cond
               (lambda (stx new-cond-test)
                 (loop stx let-bound-bindings new-cond-test (lambda (x) #f)))]
@@ -277,12 +276,13 @@
               (lambda (stx rec?)
                 (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
                   (let* ([vars-list (foldl (lambda (a b) (append b a)) null (map syntax->list (syntax->list (syntax (vars ...)))))]
-                         [labelled-vars-list (map (lambda (var-list) (recur-with-bindings vars-list (syntax->list var-list)))
+                         [labelled-vars-list (map (lambda (var-list) (map (lambda (exp) (recur-with-bindings exp (syntax->list var-list)))
+                                                                          vars-list))
                                                   (syntax->list (syntax (vars ...))))]
                          [rhs-list (if rec?
                                        (recur-with-bindings vars-list (syntax->list (syntax (rhs ...))))
                                        (map recur-regular (syntax->list (syntax (rhs ...)))))]
-                         [new-bodies (recur-with-bindings vars-list (syntax->list (syntax bodies)))]
+                         [new-bodies (map (lambda (exp) (recur-with-bindings exp vars-list)) (syntax->list (syntax bodies)))]
                          [new-bindings (map list labelled-vars-list rhs-list)])
                     (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))]
              [do-and/or
@@ -290,23 +290,22 @@
               ; the and/or macro. Therefore, this code is fragile.
               (lambda (new-and/or-test stx tag)
                 (kernel:kernel-syntax-case stx #f
-                  [(let-values [(part-0 test)] (if part-1 part-2 rest))
-                   (let ([new-if (syntax-property (rebuild-stx `(if ; HERE!
-                                                                 ,@(map 
-                                                                       (lambda (stx)
-                                                                         (
-                                                                         recur-with-bindings (list (syntax part-1)
-                                                                                                 (syntax part-2))
-                                                                                           (list (syntax part-0)))
-                                                                    ; the part-0 binding cannot occur in the rest:
-                                                                    ,(recur-in-and/or (syntax rest) new-and/or-test))
-                                                               stx)
+                  [(let-values [(test-var test-exp)] (if if-test then else))
+                   (let* ([new-test (recur-with-bindings (syntax if-test) (list (syntax test-var)))]
+                          [new-then-else (case tag
+                                           ((comes-from-and) (list (recur-in-and/or (syntax then) new-and/or-test (list (syntax test-var)))
+                                                                   (recur-with-bindings (syntax else) (list (syntax test-var)))))
+                                           ((comes-from-or) (list (recur-with-bindings (syntax then) (list (syntax test-var)))
+                                                                  (recur-in-and/or (syntax else) new-and/or-test (list (syntax test-var))))))]
+                          [new-if (syntax-property (rebuild-stx `(if ,new-test
+                                                                     ,@new-then-else)
+                                                                stx)
                                                   'stepper-hint
                                                   tag)])
                      (syntax-property (rebuild-stx `(let-values ([,(syntax-property (recur-regular (syntax part-0))
                                                                                     'stepper-binding-type
                                                                                     'let-bound)
-                                                                  ,(recur-regular (syntax test))])
+                                                                  ,(recur-regular (syntax test-exp))])
                                                       ,new-if)
                                                    stx)
                                       'stepper-hint
