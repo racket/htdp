@@ -828,7 +828,7 @@
                       (datum->syntax-object expr `(if ,annotated-test ,annotated-then ,annotated-else))])
                   (2vals
                    (if foot-wrap?
-                       (wcm-wrap (make-debug-info-normal free-varrefs) annotated-if)
+                       (wcm-break-wrap (make-debug-info-normal free-varrefs) annotated-if)
                        (appropriate-wrap annotated-if free-varrefs))
                    free-varrefs))]
                
@@ -846,7 +846,7 @@
                       (datum->syntax-object expr `(if ,annotated-test ,annotated-then))])
                   (2vals
                    (if foot-wrap?
-                       (wcm-wrap (make-debug-info-normal free-varrefs) annotated-if)
+                       (wcm-break-wrap (make-debug-info-normal free-varrefs) annotated-if)
                        (appropriate-wrap annotated-if free-varrefs))
                    free-varrefs))]
                

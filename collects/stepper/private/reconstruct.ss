@@ -100,7 +100,7 @@
   ; using 'apply'.
   
   (define (multi-append lol)
-    (foldl (lambda (a b) (append b a)) null))
+    (foldl (lambda (a b) (append b a)) null lol))
   
   ; reshape-list : ('a list) ('b sexp) -> ('a tree)
   ; reshape-list produces a new sexp with the shape of <template> whose in-order leaf traversal
@@ -750,7 +750,8 @@
                 
                 [else
                  (error
-                  "stepper:reconstruct: unknown object to reconstruct, ~a" expr)])))
+                  'recon-inner
+                  "stepper:reconstruct: unknown object to reconstruct: ~a" (syntax-object->datum expr))])))
            
          
          (define redex #f)
