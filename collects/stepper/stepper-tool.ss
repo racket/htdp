@@ -22,6 +22,22 @@
 	     (object-name v))
 	(print-convert v)))
     
+  
+  ; have to define this as a macro because string-constant is a macro
+  (define-syntax string-constant-list
+    (lambda (stx)
+      (syntax-case stx ()
+        [(_ (constant-name ...))
+         #`(list (string-constant constant-name) ...)])))
+  
+  ; hidden invariant: this list should be a sublist of the language-level dialog (i.e., same order):
+  (define stepper-works-for
+    (string-constant-list
+     (beginning-student
+      beginning-student/abbrev
+      intermediate-student
+      intermediate-student/lambda)))
+  
   (provide tool@)
   
   (define tool@
@@ -364,17 +380,14 @@
                     (send stepper-frame show #t)
                     (let* ([settings (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))]
                            [language (drscheme:language-configuration:language-settings-language settings)]
-                           [language-level (car (last-pair (send language get-language-position)))]
-                           [beginner-language-level (string-constant beginning-student)]
-                           [beginner-wla-language-level (string-constant beginning-student/abbrev)])
-                      (if (or (string=? language-level beginner-language-level)
-                              (string=? language-level beginner-wla-language-level))
+                           [language-level (car (last-pair (send language get-language-position)))])
+                      (if (member language-level stepper-works-for)
                           (set! stepper-frame (view-controller-go this program-expander))
                           (message-box "Stepper"
                                        (string-append
                                         "The language level is set to \"" language-level "\". "
-                                        "Currently, the stepper works only for the \"" beginner-language-level
-                                        "\" and the \"" beginner-wla-language-level "\" language levels."))))))))
+                                        "Currently, the stepper works only for the \"" (car stepper-works-for)
+                                        "\" through the \"" (car (reverse stepper-works-for)) "\" language levels."))))))))
           
           (rename [super-enable-evaluation enable-evaluation])
           (define/override (enable-evaluation)
