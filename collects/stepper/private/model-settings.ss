@@ -26,6 +26,7 @@
    
    get-render-settings ; (-> render-settings?)
    fake-beginner-render-settings ; render-settings?
+   fake-beginner-wla-render-settings ; render-settings? ("beginner-with-list-abbreviations")
    fake-mz-render-settings ; render-settings?
    
    render-settings? ; predicate
@@ -61,16 +62,24 @@
      'model-settings
      'caller))
   
-  (define (fake-beginner-render-to-sexp val)
-    (parameterize ([booleans-as-true/false #t]
-                   [constructor-style-printing #t]
-                   [abbreviate-cons-as-list #f])
-      (print-convert val)))
+  (define (make-fake-render-to-sexp true/false constructor-style abbreviate)
+    (lambda (val)
+      (parameterize ([booleans-as-true/false true/false]
+                     [constructor-style-printing constructor-style]
+                     [abbreviate-cons-as-list abbreviate])
+        (print-convert val))))
     
   (define fake-beginner-render-settings
     (contract
      render-settings?
-     (vector (lambda () #t) (lambda () #t) (lambda () #f) fake-beginner-render-to-sexp)
+     (vector (lambda () #t) (lambda () #t) (lambda () #f) (make-fake-render-to-sexp #t #t #f))
+     'model-settings
+     'caller))
+  
+    (define fake-beginner-wla-render-settings
+    (contract
+     render-settings?
+     (vector (lambda () #t) (lambda () #t) (lambda () #t) (make-fake-render-to-sexp #t #t #t))
      'model-settings
      'caller))
   

@@ -155,7 +155,7 @@
                 (let ([mark (closure-record-mark closure-record)])
                   (recon-source-expr (mark-source mark) (list mark) null))])]
         [else
-         (d->so (datum->syntax-object #'here (render-to-sexp val)))])))
+         (d->so (render-to-sexp val))])))
   
   (define (let-rhs-recon-value val)
     (recon-value val 'let-rhs))
@@ -198,9 +198,6 @@
      'caller))
   
   (define (skip-redex-step? mark-list)
-    (fprintf (current-error-port) "construcitor-style-printing?: ~e\nabbreviate-cons-as-list?: ~e\n"
-             (constructor-style-printing?)
-             (abbreviate-cons-as-list?))
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
            (or (kernel:kernel-syntax-case expr #f
@@ -317,8 +314,16 @@
                                                      (syntax-property stx 'user-source)
                                                      (syntax-property stx 'user-position)
                                                      'or))
+                     ((quasiquote-the-cons-application) (unwind-quasiquote-the-cons-application stx))
                      (else (recur-on-pieces stx)))
                    (recur-on-pieces stx))))
+         
+         (define (unwind-quasiquote-the-cons-application stx)
+           (syntax-case (recur-on-pieces stx) ()
+             [(the-cons . rest)
+              (syntax (cons . rest))]
+             [else
+              (error 'reconstruct "unexpected result for unwinding the-cons application")]))
          
          (define (unwind-cond stx user-source user-position)
            (if (eq? stx highlight-placeholder-stx)
