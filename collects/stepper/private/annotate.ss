@@ -4,8 +4,7 @@
            (lib "etc.ss")
            "marks.ss"
            "shared.ss"
-           "my-macros.ss"
-           (prefix model: "model.ss"))
+           "my-macros.ss")
 
   (provide
    initial-env-package
@@ -205,7 +204,7 @@
 ;           [full-body (append setters (list `(values ,@arg-temp-syms)))])
 ;      `(#%let-values ((,arg-temp-syms ,annotated)) ,@full-body)))
   
-  (define initial-env-package null)
+  (define initial-env-package (list null null 0))
   
   (define (extract-top-level-vars exprs)
     (apply append
@@ -313,7 +312,7 @@
   ;    only of varrefs.  This one might go away later, or be toggled into a "no-opt" flag.
   ;
   
-  (define (annotate expr input-struct-proc-names break wrap-style . wrap-opts-list)
+  (define (annotate expr annotate-environment break wrap-style . wrap-opts-list)
     (local
 	((define cheap-wrap? (eq? wrap-style 'cheap-wrap))
          (define ankle-wrap? (eq? wrap-style 'ankle-wrap))
@@ -332,6 +331,15 @@
            (lambda returned-value-list
              (break (current-continuation-marks) debug-key kind returned-value-list)))
 
+         (define input-struct-proc-names (car annotate-environment))
+         (define input-user-defined-names (cadr annotate-environment))
+         (define binding-index (caddr annotate-environment))
+         
+         (define (binding-indexer)
+           (let ([index binding-index])
+             (set! binding-index (+ binding-index 1))
+             index))
+         
          ; wrap creates the w-c-m expression.
          
          ; here are the possible configurations of wcm's, pre-breaks, and breaks (not including late-let & double-breaks):
@@ -408,27 +416,35 @@
 ;                            (else (internal-error expr "unknown expression type in sequence")))))
 ;                       (else (internal-error expr "unknown read type"))))))))
 ;  
-         (define (struct-procs-defined expr)
-           (let ([origin (syntax-property expr 'origin)])
-             (if (and origin
-                      (andmap (lambda (origin-entry)
-                                (eq? (syntax-e origin-entry) 'define-struct))
-                              origin))
-                 (syntax-case expr (define-values)
+         (define (defined-names expr)
+           (syntax-case expr (define-values)
                    [(define-values vars body)
                     (syntax->list (syntax vars))]
                    [else
-                    null])
+                    null]))
+         
+         (define (struct-procs-defined expr)
+           (let ([origin (syntax-property expr 'origin)])
+             (if (and origin
+                      (ormap (lambda (origin-entry)
+                               (eq? (syntax-e origin-entry) 'define-struct))
+                             origin))
+                 (defined-names expr)
                  null)))
          
          (define struct-proc-names (append (struct-procs-defined expr)
                                            input-struct-proc-names))
          
+         (define user-defined-names (append (defined-names expr)
+                                       input-user-defined-names))
+         
          (define (non-annotated-proc? varref)
-           (let ([name (syntax-e varref)])
-             (or (and (model:check-pre-defined-var name)
-                      (not (eq? name 'apply)))
-                 (memq name struct-proc-names))))
+           (or (not (ormap (lambda (id)
+                             (bound-identifier=? id varref))
+                           user-defined-names))
+               (ormap (lambda (id)
+                        (bound-identifier=? id varref))
+                      struct-proc-names)))
          
          (define (top-level-annotate/inner expr)
            (annotate/inner expr 'all #f #t #f null))
@@ -1020,4 +1036,4 @@
          ; body of local
       (let* ([annotated-expr (annotate/top-level expr)])
         ;(printf "annotated: ~n~a~n" (car annotated-exprs))
-        (values annotated-expr struct-proc-names)))))
+        (values annotated-expr (list struct-proc-names user-defined-names binding-index))))))

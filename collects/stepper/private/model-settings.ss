@@ -1,6 +1,7 @@
 (module model-settings mzscheme
   (require "mred-extensions.ss"
-           (prefix p: (lib "pconvert.ss")))
+           (prefix p: (lib "pconvert.ss"))
+           "my-macros.ss")
   
   (provide
 
@@ -16,22 +17,23 @@
    
    ;print-convert
    print-convert)
+  
+  (make-contract-checker SYMBOL symbol?)
    
   (define (true-false-printed?) (p:booleans-as-true/false))
   (define (constructor-style-printing?) (p:constructor-style-printing))
   (define (abbreviate-cons-as-list?) (p:abbreviate-cons-as-list))
   
-;  (define (check-pre-defined-var identifier)
-;    (memq identifier user-pre-defined-vars))
-  
-  (define (check-global-defined identifier)
+  (define check-global-defined
+    (checked-lambda ((identifier SYMBOL))
     (with-handlers
         ([exn:variable? (lambda args #f)])
       (global-lookup identifier)
-      #t))
+      #t)))
   
-  (define (global-lookup identifier)
-    (namespace-variable-binding identifier))
+  (define global-lookup
+    (checked-lambda ((identifier SYMBOL))
+      (namespace-variable-binding identifier)))
   
    (define (print-convert val)
      (parameterize ([p:current-print-convert-hook

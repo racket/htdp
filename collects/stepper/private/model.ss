@@ -3,7 +3,6 @@
            (lib "mred.ss" "mred")  
            (prefix frame: (lib "framework.ss" "framework"))
            "my-macros.ss"
-           (prefix i: "model-input.ss")
            (prefix a: "annotate.ss")
            (prefix r: "reconstruct.ss")
            "shared.ss")
@@ -34,7 +33,7 @@
     (parameterize ([current-eventspace eventspace])
       (queue-callback thunk)))
 
-  (define (go interactions-text defns-text)
+  (define (go interactions-text defns-text receive-result)
     (local
   
         ((define finished-exprs null)
@@ -49,49 +48,20 @@
            (send-to-eventspace drscheme-eventspace thunk))
          
          (define user-computation-semaphore (make-semaphore))
-         (define expand-program-semaphore (make-semaphore))
-
          
-         (define (step-through-expression)
+         (define (step-through-expression expanded expand-next-expression)
            ; is there an eof test?
            ; if so, here's the old thing to to do:
-           ; (i:receive-result (make-finished-result finished-exprs))
+           ; (receive-result (make-finished-result finished-exprs))
            (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
                                                        'foot-wrap)])
              (set! packaged-envs envs)
              (set! current-expr expanded)
-             (check-for-repeated-names expanded exception-handler)
              (let ([expression-result
                     (parameterize ([current-exception-handler exception-handler])
                       (user-primitive-eval annotated))])
                (add-finished-expr expression-result)
-               (semaphore-post expand-program-semaphore))))
-         
-         (send interactions-text
-               expand-program
-               (drscheme:language:make-text/pos defns-text 
-                                                0
-                                                (send defns-text last-position)) 
-               (preferences:get drscheme:language-configuration:get-settings-preferences-symbol)
-               (lambda (error? expanded send-to-user-eventspace continue-thunk)
-                 (if (error?)
-                     (handle-exception (cadr expanded))
-                     (
-                     
-          (lambda (expression)
-            
-)
-  
-         (define (check-for-repeated-names expr exn-handler)
-           (with-handlers
-               ([exn:user? exn-handler]
-                [exn:syntax? exn-handler])
-             (when (z:define-values-form? expr)
-               (for-each (lambda (name) 
-                           (when (check-global-defined name)
-                             (e:static-error "define" 'kwd:define expr
-                                             "name is already bound: ~s" name)))
-                         (map z:varref-var (z:define-values-form-vars expr))))))
+               (send-to-drscheme-eventspace expand-next-expression))))
          
          (define (add-finished-expr expression-result)
            (let ([reconstructed (r:reconstruct-completed current-expr expression-result)])
@@ -198,7 +168,7 @@
                         (set! held-redex-list no-sexp)
                         (send-to-drscheme-eventspace
                          (lambda ()
-                           (i:receive-result result user-semaphore))))))]
+                           (receive-result result user-semaphore))))))]
                  [(double-break)
                   ; a double-break occurs at the beginning of a let's evaluation.
                   (let* ([reconstruct-quadruple
@@ -211,7 +181,7 @@
                           (double-redivide finished-exprs 
                                            (list-ref reconstruct-quadruple 0) 
                                            (list-ref reconstruct-quadruple 2))])
-                      (i:receive-result (make-before-after-result new-finished
+                      (receive-result (make-before-after-result new-finished
                                                                   current-pre
                                                                   (list-ref reconstruct-quadruple 1)
                                                                   current-post
@@ -223,25 +193,34 @@
                     (set! finished-exprs (append finished-exprs new-finished)))]
                  [else (error 'break "unknown label on break")]))))
   
-  (define (handle-exception exn)
-    (if (not (eq? held-expr-list no-sexp))
-        (let*-values
-            ([(before current after) (redivide held-expr-list)])
-          (i:receive-result (make-before-error-result (append finished-exprs before) 
-                                                      current held-redex-list (exn-message exn) after)))
-        (begin
-          (i:receive-result (make-error-result finished-exprs (exn-message exn))))))
+         (define (handle-exception exn)
+           (if (not (eq? held-expr-list no-sexp))
+               (let*-values
+                   ([(before current after) (redivide held-expr-list)])
+                 (receive-result (make-before-error-result (append finished-exprs before) 
+                                                             current held-redex-list (exn-message exn) after)))
+               (begin
+                 (receive-result (make-error-result finished-exprs (exn-message exn))))))
   
-  (define (make-exception-handler k)
-    (lambda (exn)
-      (send-to-drscheme-eventspace
-       (lambda ()
-         (handle-exception exn)))
-      (k)))
+         (define (make-exception-handler k)
+           (lambda (exn)
+             (send-to-drscheme-eventspace
+              (lambda ()
+                (handle-exception exn)))
+             (k))))
+  
+  (send interactions-text
+        expand-program
+        (drscheme:language:make-text/pos defns-text 
+                                         0
+                                         (send defns-text last-position)) 
+        (preferences:get drscheme:language-configuration:get-settings-preferences-symbol)
+        (lambda (error? expanded send-to-user-eventspace continue-thunk)
+          (if (error?)
+              (handle-exception (cadr expanded))
+              (begin
+                (send-to-user-eventspace
+                 (lambda ()
+                   (message-box #f "in user's eventspace"))
+                 (message-box #f "back in drscheme's eventspace")))))))))    
 
-    (binding-index-reset)
-    
-    
-    
-    ; result of invoking stepper-instance : (->)
-    continue-user-computation))

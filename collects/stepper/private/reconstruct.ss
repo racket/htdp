@@ -1,7 +1,9 @@
-(module reconstructor mzscheme
+(module reconstruct mzscheme
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
+           (lib "list.ss")
+           (lib "etc.ss")
            "marks.ss"
-           (prefix model: "model.ss")
+           (prefix model-settings: "model-settings.ss")
            "shared.ss"
            "my-macros.ss")
 
@@ -32,6 +34,9 @@
   
   (make-contract-checker BOOLEAN boolean?)
   (make-contract-checker SYNTAX-OBJECT syntax?)
+  (make-contract-checker MARK-LIST 
+                         (lambda (arg) 
+                           (andmap procedure? arg))) 
   
   (define the-undefined-value (letrec ([x x]) x))
   
@@ -85,7 +90,7 @@
           (loop (- count 1) (cdr remaining) (cons (car remaining) so-far)))))
   
   ; test cases
-  (test (2vals '(a b c) '(d e f)) n-split-list 3 '(a b c d e f))
+  ; (test (2vals '(a b c) '(d e f)) n-split-list 3 '(a b c d e f))
 
   ; multi-append : (('a list) list) -> ('a list)
   ; applies append to a bunch of lists.  Would be trivial, except I'm trying to avoid
@@ -146,7 +151,7 @@
                 (let ([mark (closure-record-mark closure-record)])
                   (recon-source-expr (mark-source mark) (list mark)))])]
         [else
-         (d->so (model:print-convert val))])))
+         (d->so (model-settings:print-convert val))])))
   
   (define (let-rhs-recon-value val)
     (recon-value val 'let-rhs))
@@ -192,48 +197,39 @@
                    (let ([id (syntax-e (syntax id-stx))])
                      (with-handlers
                          ([exn:variable? (lambda args #f)])
-                       (or (and (model:check-pre-defined-var id)
-                                (or (procedure? (model:global-lookup id))
-                                    (and (model:true-false-printed?)
-                                         (or (eq? id 'true)
-                                             (eq? id 'false)))))
-                           (let ([val (model:global-lookup id)])
+                       (let ([val (model-settings:global-lookup id)])
+                         (or (and (model-settings:true-false-printed?)
+                                  (or (eq? id 'true)
+                                      (eq? id 'false)))
                              (and (procedure? val)
-                                  (not (continuation? val))
-                                  (cond [(closure-table-lookup val (lambda () #f)) =>
-                                         (lambda (x)
-                                           (eq? var (closure-record-name x)))]
-                                        [else #f]))))))]
+                                  (or (not (closure-table-lookup val (lambda () #f))) ; not user-defined
+                                      (and (not (continuation? val))
+                                           (cond [(closure-table-lookup val (lambda () #f)) =>
+                                                  (lambda (x)
+                                                    (eq? id (closure-record-name x)))] ; has wrong name
+                                                 [else #f]))))))))]
                   [(#%app . terms)
-                   (let ([fun-val (mark-binding-value (lookup-binding mark-list (get-arg-binding 0)))])
+                   (let ([fun-val (mark-binding-value (lookup-binding mark-list (get-arg-var 0)))])
                      (and (procedure? fun-val)
                           (procedure-arity-includes? 
                            fun-val
                            (length (cdr (syntax->list (syntax terms)))))
-                          (or (and (model:constructor-style-printing?)
-                                   (if (model:abbreviate-cons-as-list?)
-                                       (or (model:special-function? 'list fun-val)
-                                           (and (model:special-function? 'cons fun-val)
+                          (or (and (model-settings:constructor-style-printing?)
+                                   (if (model-settings:abbreviate-cons-as-list?)
+                                       (or (eq? fun-val (model-settings:global-lookup 'list))
+                                           (and (eq? fun-val (model-settings:global-lookup 'cons))
                                                 (second-arg-is-list? mark-list)))    
-                                       (and (model:special-function? 'cons fun-val)
+                                       (and (eq? fun-val (model-settings:global-lookup 'cons))
                                             (second-arg-is-list? mark-list))))
-                              ;(model:special-function? 'vector fun-val)
+                              ;(model-settings:special-function? 'vector fun-val)
                               (and (eq? fun-val void)
                                    (eq? (cdr (syntax->list (syntax terms))) null))
                               (struct-constructor-procedure? fun-val))))])))))
   
   (define (second-arg-is-list? mark-list)
-    (let ([arg-val (mark-binding-value (lookup-binding mark-list (get-arg-binding 2)))])
+    (let ([arg-val (mark-binding-value (lookup-binding mark-list (get-arg-var 2)))])
       (list? arg-val)))
     
-  (define (in-inserted-else-clause mark-list)
-    (and (not (null? mark-list))
-         (let ([expr (mark-source (car mark-list))])
-           (or (and (z:zodiac? expr)
-                    (not (z:if-form? expr))
-                    (comes-from-cond? expr))
-               (in-inserted-else-clause (cdr mark-list))))))
-  
 ;   ; static-binding-indexer (z:parsed -> integer)
 ;  
 ;  (define static-binding-indexer
@@ -281,7 +277,18 @@
  ;   ;   ;  ;   ;  ;     ;    ;   ;      ;  ;;  ;   ;  ; ; ; ;  ;  ;   ;  ;   ;;  ;  ;   ;  ;  ;; 
  ;   ;   ;   ;;;;;  ;;;  ;     ;;;        ;; ;  ;   ;   ;   ;   ;  ;   ;   ;;; ;  ;  ;   ;   ;; ; 
                                                                                                 ; 
-                                                                                            ;;;;  
+
+  (define (in-inserted-else-clause mark-list) 
+    #f)
+;  (define (in-inserted-else-clause mark-list)
+;    (and (not (null? mark-list))
+;         (let ([expr (mark-source (car mark-list))])
+;           (or (and (z:zodiac? expr)
+;                    (not (z:if-form? expr))
+;                    (comes-from-cond? expr))
+;               (in-inserted-else-clause (cdr mark-list))))))
+  
+;;;;  
 ; (define comes-from-define?
 ;    (make-check-raw-first-symbol 'define))
 ;
@@ -420,91 +427,93 @@
       (letrec
         ([inner
           (checked-lambda ((expr SYNTAX-OBJECT) (mark-list MARK-LIST) (lexically-bound-bindings BINDING-SET))
-            (let ([recur (lambda (expr) (inner expr mark-list lexically-bound-bindings))]
-                  [let-recur (lambda (expr bindings)
-                               (inner expr mark-list (append bindings lexically-bound-bindings)))]
-                  
-                  [recon-basic
-                   (lambda ()
-                     (with-syntax ([(label . bodies) expr])
-                       (d->so `((syntax label) ,@(map recur (syntax->list (syntax bodies)))))))]
-                  [recon-let/rec
-                   (lambda ()
-                     (with-syntax ([(label  ((vars val) ...) body) expr])
-                       (let* ([bindings (map syntax->list (syntax->list (syntax (vars ...))))]
-                              [binding-list (multi-append bindings)]
-                              [right-sides (map recur (syntax->list (syntax (val ...))))]
-                              [recon-body (let-recur (syntax body) binding-list)])
-                         (with-syntax ([(recon-val ...) right-sides]
-                                       [recon-body recon-body])
-                           (syntax (label ((vars recon-val) ...) recon-body))))))]
-                  [recon-lambda-clause
-                   (lambda (clause)
-                     (with-syntax ([(args . bodies-stx) clause])
-                       (let* ([arglist (ilist-flatten (syntax->ilist args))]
-                              [bodies (map (lambda (body) (let-recur body arglist))
-                                           (syntax->list (syntax bodies-stx)))])
-                         (cons (syntax args) bodies))))]
-                  [recon (kernel:kernel-syntax-case expr #f
-                                                    
-                     ; lambda
-                     [(lambda . clause-stx)
-                      (let* ([clause (recon-lambda-clause (syntax clause-stx))])
-                        (d->so `(lambda ,@clause)))]
-                     
-                     ; case-lambda
-                     [(case-lambda . clauses-stx)
-                      (let* ([clauses (map recon-lambda-clause (syntax->list (syntax clauses-stx)))])
-                        (d->so `(case-lambda ,@clauses)))]
-                     
-                     ; if, begin, begin0
-                     [(if test then else) (recon-basic)]
-                     [(if test then) (recon-basic)]
-                     [(begin . bodies) (recon-basic)]
-                     [(begin0 . bodies) (recon-basic)]
-                     
-                     ; let-values, letrec-values
-                     [(let-values . rest) (recon-let/rec)]
-                     [(letrec-values . rest) (recon-let/rec)]
-                     
-                     ; set! : set! doesn't fit into this scheme. It would be a mistake to allow it to proceed.
-                     
-                     ; quote 
-                     [(quote body) (recon-value (syntax-e body))]
-                     
-                     ; quote-syntax : like set!, the current stepper cannot handle quote-syntax
-                     
-                     ; with-continuation-mark
-                     [(with-continuation-mark . rest) (recon-basic)]
-                     
-                     ; application
-                     [(#%app . terms) (d->so (map recur (syntax->list (syntax terms))))]
-                     
-                     ; #%datum
-                     [(#%datum . datum) (recon-value (syntax-e body))]
-                     
-                     ; varref                        
-                     [var-stx
-                      (identifier? expr)
-                      (let* ([var (syntax var)])
-                        (cond [(eq? (identifier-binding var) 'lexical)
-                               ; has this varref's binding not been evaluated yet?
-                               (if (ormap (lambda (binding)
-                                            (bound-identifier=? binding var))
-                                          lexically-bound-bindings)
-                                   var
-                                   (case (syntax-property var 'stepper-binding-type)
-                                     ((lambda-bound) 
-                                      (recon-value (mark-binding-value (lookup-binding mark-list binding))))
-                                     ((let-bound)
-                                      (d->so (binding-lifted-name mark-list binding)))
-                                     (else
-                                      (error 'recon-source-expr "no 'stepper-binding-type property found"))))]
-                              [else ; top-level-varref
-                               var]))]
-                     
-                     [else
-                      (error 'recon-source "no matching clause for syntax: ~a" expr)])])
+            (let* ([recur (lambda (expr) (inner expr mark-list lexically-bound-bindings))]
+                   [let-recur (lambda (expr bindings)
+                                (inner expr mark-list (append bindings lexically-bound-bindings)))]
+                   
+                   [recon-basic
+                    (lambda ()
+                      (with-syntax ([(label . bodies) expr])
+                        (d->so `((syntax label) ,@(map recur (syntax->list (syntax bodies)))))))]
+                   [recon-let/rec
+                    (lambda ()
+                      (with-syntax ([(label  ((vars val) ...) body) expr])
+                        (let* ([bindings (map syntax->list (syntax->list (syntax (vars ...))))]
+                               [binding-list (multi-append bindings)]
+                               [right-sides (map recur (syntax->list (syntax (val ...))))]
+                               [recon-body (let-recur (syntax body) binding-list)])
+                          (with-syntax ([(recon-val ...) right-sides]
+                                        [recon-body recon-body])
+                            (syntax (label ((vars recon-val) ...) recon-body))))))]
+                   [recon-lambda-clause
+                    (lambda (clause)
+                      (with-syntax ([(args . bodies-stx) clause])
+                        (let* ([arglist (ilist-flatten (syntax->ilist (syntax args)))]
+                               [bodies (map (lambda (body) (let-recur body arglist))
+                                            (syntax->list (syntax bodies-stx)))])
+                          (cons (syntax args) bodies))))]
+                   [recon (kernel:kernel-syntax-case expr #f
+                                                     
+                                                     ; lambda
+                                                     [(lambda . clause-stx)
+                                                      (let* ([clause (recon-lambda-clause (syntax clause-stx))])
+                                                        (d->so `(lambda ,@clause)))]
+                                                     
+                                                     ; case-lambda
+                                                     [(case-lambda . clauses-stx)
+                                                      (let* ([clauses (map recon-lambda-clause (syntax->list (syntax clauses-stx)))])
+                                                        (d->so `(case-lambda ,@clauses)))]
+                                                     
+                                                     ; if, begin, begin0
+                                                     [(if test then else) (recon-basic)]
+                                                     [(if test then) (recon-basic)]
+                                                     [(begin . bodies) (recon-basic)]
+                                                     [(begin0 . bodies) (recon-basic)]
+                                                     
+                                                     ; let-values, letrec-values
+                                                     [(let-values . rest) (recon-let/rec)]
+                                                     [(letrec-values . rest) (recon-let/rec)]
+                                                     
+                                                     ; set! : set! doesn't fit into this scheme. It would be a mistake to allow it to proceed.
+                                                     
+                                                     ; quote 
+                                                     [(quote body) (recon-value (syntax-e (syntax body)))]
+                                                     
+                                                     ; quote-syntax : like set!, the current stepper cannot handle quote-syntax
+                                                     
+                                                     ; with-continuation-mark
+                                                     [(with-continuation-mark . rest) (recon-basic)]
+                                                     
+                                                     ; application
+                                                     [(#%app . terms) (d->so (map recur (syntax->list (syntax terms))))]
+                                                     
+                                                     ; #%datum
+                                                     [(#%datum . datum) (recon-value (syntax-e (syntax body)))]
+                                                     
+                                                     ; varref                        
+                                                     [var-stx
+                                                      (identifier? expr)
+                                                      (let* ([var (syntax var)])
+                                                        (cond [(eq? (identifier-binding var) 'lexical)
+                                                               ; has this varref's binding not been evaluated yet?
+                                                               (if (ormap (lambda (binding)
+                                                                            (bound-identifier=? binding var))
+                                                                          lexically-bound-bindings)
+                                                                   var
+                                                                   (case (syntax-property var 'stepper-binding-type)
+                                                                     ((lambda-bound) 
+                                                                      (recon-value (mark-binding-value (lookup-binding mark-list var))))
+                                                                     ((let-bound)
+                                                                      (d->so (binding-lifted-name mark-list var)))
+                                                                     (else
+                                                                      (error 'recon-source-expr "no 'stepper-binding-type property found"))))]
+                                                              [else ; top-level-varref
+                                                               var]))]
+                                                     [(#%top . var)
+                                                      (syntax var)]
+                                                     
+                                                     [else
+                                                      (error 'recon-source "no matching clause for syntax: ~a" expr)])])
               (attach-info recon expr)))])
         (inner expr mark-list null)))
  
@@ -526,7 +535,7 @@
                                                                                                                                     
 
   ; reconstruct-completed : reconstructs a completed expression or definition.  This now
-  ; relies upon the model:global-lookup procedure to find values in the user-namespace.
+  ; relies upon the model-settings:global-lookup procedure to find values in the user-namespace.
   
   (define (reconstruct-completed expr value)
     ; unwinding will go here?
@@ -534,7 +543,7 @@
      (kernel:kernel-syntax-case expr #f
          [(define-values vars-stx body)
           (let* ([vars (syntax->list (syntax vars-stx))]
-                 [values (map model:global-lookup vars)]
+                 [values (map model-settings:global-lookup vars)]
                  [recon-vars (map recon-value values)])
             (attach-info (d->so `(define-values ,(syntax vars-stx) (values ,recon-vars))) expr))]
          [else
@@ -568,7 +577,7 @@
   ; highlight-placeholder, which is replaced by the highlighted redex in the construction of the 
   ; text%
   
-  reconstruct-current : SYNTAX-OBJECT (list-of mark) symbol (list-of value) -> (list SYNTAX-OBJECT SYNTAX-OBJECT)
+  ; reconstruct-current : SYNTAX-OBJECT (list-of mark) symbol (list-of value) -> (list SYNTAX-OBJECT SYNTAX-OBJECT)
 
   (define (reconstruct-current expr mark-list break-kind returned-value-list)
     
@@ -606,15 +615,12 @@
 
                   [recon-let
                    (lambda ()
-                     (with-syntax ([(label ((vars val) ...) . bodies)])
+                     (with-syntax ([(label ((vars rhs) ...) . bodies) expr])
                        (let*-2vals ([binding-sets (map syntax->list (syntax->list (syntax (vars ...))))]
                                     [binding-list (multi-append binding-sets)]
-                                    [dummy-var-list (if letrec?
-                                                        binding-list
-                                                        (build-list (length binding-list) get-arg-binding))]
                                     [rhs-vals (map (lambda (arg-binding) 
                                                      (mark-binding-value (lookup-binding mark-list arg-binding)))
-                                                   dummy-var-list)]
+                                                   binding-list)]
                                     [rhs-val-sets (reshape-list rhs-vals binding-sets)]
                                     [rhs-lifted-name-sets
                                      (map (lambda (binding-set)
@@ -622,7 +628,7 @@
                                                    (binding-lifted-name mark-list binding))
                                                  binding-set))
                                           binding-sets)]
-                                    [zipped (zip rhs-val-sets rhs-sources rhs-lifted-name-sets)]
+                                    [zipped (zip rhs-val-sets (syntax->list (syntax (rhs ...))) rhs-lifted-name-sets)]
                                     [num-defns-done (mark-binding-value (lookup-binding mark-list let-counter))]
                                     [(done-defs not-done-defs)
                                      (n-split-list num-defns-done zipped)]
@@ -642,11 +648,11 @@
                                            (map recon-lifted-val rhs-lifted-name-set rhs-val-set)))
                                        done-defs))]
                                     [reconstruct-remaining-def
-                                     (lambda (rhs-lifted-name-set rhs-source raw-local-source)
+                                     (lambda (info)
                                        (let ([rhs-source (cadr info)]
                                              [rhs-lifted-name-set (caddr info)])
                                          (recon-lifted rhs-lifted-name-set
-                                                             (recon-source-expr-current-marks rhs-source))))]
+                                                             (recon-source-current-marks rhs-source))))]
                                     [after-defs
                                      (if (pair? not-done-defs)
                                          (if (eq? so-far nothing-so-far)
@@ -654,13 +660,14 @@
                                              (cons (recon-lifted (car rhs-lifted-name-sets) so-far)
                                                    (map reconstruct-remaining-def (cdr not-done-defs))))
                                          null)]
-                                    [rectified-body (recon-source-expr body mark-list)])
-                         (values before-defs after-defs rectified-body))))])
+                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list))
+                                                           (syntax->list (syntax bodies)))])
+                         (values before-defs after-defs (d->so `(begin ,@rectified-bodies))))))])
              (attach-info
               (kernel:kernel-syntax-case expr #f 
                 ; variable references
                 [id
-                 (identifier? id)
+                 (identifier? (syntax id))
                  (so-far-only
                   (if (eq? so-far nothing-so-far)
                       (recon-source-current-marks expr)
@@ -670,7 +677,7 @@
                 [(#%app . terms)
                  (so-far-only
                   (let* ([sub-exprs (syntax->list (syntax terms))]
-                         [arg-temps (build-list (length sub-exprs) get-arg-binding)]
+                         [arg-temps (build-list (length sub-exprs) get-arg-var)]
                          [arg-vals (map (lambda (arg-temp) 
                                           (mark-binding-value (lookup-binding mark-list arg-temp)))
                                         arg-temps)])
@@ -678,7 +685,7 @@
                       ((not-yet-called)
                        (let*-2vals ([(evaluated unevaluated) (split-list (lambda (x) (eq? x *unevaluated*))
                                                                          (zip sub-exprs arg-vals))]
-                                    [rectified-evaluated (map rectify-value evaluated)])
+                                    [rectified-evaluated (map recon-value evaluated)])
                                    (d->so
                                     (if (null? unevaluated)
                                         rectified-evaluated
@@ -691,7 +698,7 @@
                             `(...) ; in unannotated code
                             `(... ,so-far ...))))
                       (else
-                       (internal-error expr "bad label in application mark")))))]
+                       (error "bad label in application mark in expr: ~a" expr)))))]
                 
                 ; define-struct 
                 ;               
@@ -714,8 +721,8 @@
                                       (recon-source-current-marks (syntax test))
                                       so-far)])
                     (d->so `(if ,test-exp 
-                                ,(recon-source-current-marks (z:if-form-then expr))
-                                ,(recon-source-current-marks (z:if-form-else expr))))))]
+                                ,(recon-source-current-marks (syntax then))
+                                ,(recon-source-current-marks (syntax else))))))]
                 
                 ; quote : there is no break on a quote.
                 
@@ -732,9 +739,8 @@
                 ; lambda : there is no break on a lambda
                 
                 [else
-                 (internal-error
-                  expr
-                  (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))])
+                 (error
+                  "stepper:reconstruct: unknown object to reconstruct, ~a" expr)])
               expr)))
            
          
