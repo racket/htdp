@@ -42,7 +42,6 @@
            (prefix r: "reconstruct.ss")
            "shared.ss"
            "marks.ss"
-           "highlight-placeholder.ss"
            "testing-shared.ss"
            "model-settings.ss")
  
@@ -174,7 +173,7 @@
                                                                     after
                                                                     'normal))))]
                      [(late-let-break)
-                      (let ([new-finished (car (r:reconstruct-current mark-list break-kind returned-value-list render-settings))])
+                      (let ([new-finished (r:reconstruct-current mark-list break-kind returned-value-list render-settings)])
                         (set! finished-exprs (append finished-exprs new-finished)))]
                      
                      [(expr-finished-break)

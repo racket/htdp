@@ -1,13 +1,11 @@
 (module lifting mzscheme
-  (require "highlight-placeholder.ss"
-           (lib "etc.ss")
+  (require (lib "etc.ss")
            (lib "contract.ss")
            (prefix kernel: (lib "kerncase.ss" "syntax"))
            (lib "match.ss")
-           "shared.ss"
            "testing-shared.ss"
+           "shared.ss"
            "my-macros.ss"
-           (lib "sexp-diff.ss" "tests" "utils")
            (lib "mz-testing.ss" "tests" "utils")) 
   
   (define-struct context-record (stx index kind))

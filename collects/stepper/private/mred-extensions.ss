@@ -215,7 +215,7 @@
   (define stepper-sub-text%
     (class f:text:standard-style-list% ()
       
-      (init-field exps highlights highlight-color)
+      (init-field exps highlight-color)
 
       (inherit insert get-style-list set-style-list change-style highlight-range last-position lock erase
                begin-edit-sequence end-edit-sequence get-start-position select-all clear)

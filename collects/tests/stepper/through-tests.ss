@@ -2,8 +2,6 @@
   (require (lib "shared.ss" "stepper" "private")
            (lib "model.ss" "stepper" "private")
            (lib "model-settings.ss" "stepper" "private")
-           (lib "highlight-placeholder.ss" "stepper" "private")
-           (lib "testing-shared.ss" "stepper" "private")
            (lib "match.ss")
            (lib "sexp-diff.ss" "tests" "utils")
            "module-elaborator.ss")
@@ -115,15 +113,15 @@
                  (compare-steps actual `(before-after ,before ,after))))]
       [`(before-after-finished ,finished-exprs . ,rest)
        (and (before-after-result? actual)
-            (compare-finished (map syntax-object->hilite-datum (before-after-result-finished-exprs actual)) finished-exprs)
+            (compare-finished (map syntax-object->interned-datum (before-after-result-finished-exprs actual)) finished-exprs)
             (compare-steps actual `(before-after ,@rest)))]
       [`(before-after-finished-waiting ,finished-exprs . ,rest)
        (and (before-after-result? actual)
-            (compare-finished (map syntax-object->hilite-datum (before-after-result-finished-exprs actual)) finished-exprs)
+            (compare-finished (map syntax-object->interned-datum (before-after-result-finished-exprs actual)) finished-exprs)
             (compare-steps actual `(before-after-waiting ,@rest)))]
       [`(finished ,finished-exprs)
        (and (finished-result? actual)
-            (compare-finished (map syntax-object->hilite-datum (finished-result-finished-exprs actual)) finished-exprs))]
+            (compare-finished (map syntax-object->interned-datum (finished-result-finished-exprs actual)) finished-exprs))]
       [`(error ,err-msg)
        (and (error-result? actual)
             (equal? err-msg (error-result-err-msg actual)))]
@@ -155,9 +153,6 @@
                                       #f)))
              (list-tail finished-exps (- (length finished-exps) (length expected-exps)))
              expected-exps)))
- 
-  
-  (define h-p highlight-placeholder)
   
   (define list-of-tests null)
   
@@ -173,10 +168,12 @@
   
   (define (run-all-tests)
     (for-each (lambda (test-pair)
+                (printf "running test: ~v\n" (car test-pair))
                 ((cadr test-pair)))
               list-of-tests))
   
   (define (run-test name)
+    (printf "running test: ~v\n" name)
     ((cadr (assq name list-of-tests))))
   
   (define (run-tests names)
@@ -352,8 +349,8 @@
   (test-intermediate/lambda-sequence "(define a1 true)(define (b1 x) (and a1 true x)) (b1 false)"
                                      `((before-after-finished ((define a1 true)
                                                                (define (b1 x) (and a1 true x))) 
-                                                              (((hilite b1) false)) ()
-                                                              (((hilite (lambda (x) (and a1 true x))) false)) ())
+                                                              (((hilite b1) false))
+                                                              (((hilite (lambda (x) (and a1 true x))) false)))
                                        (before-after ((hilite ((lambda (x) (and a1 true x)) false))) ((hilite (and a1 true false))))
                                        (before-after ((and (hilite a1) true false)) ((and (hilite true) true false)))
                                        (before-after ((hilite (and true true false))) ((hilite false)))
@@ -526,7 +523,7 @@
                       (before-after ((hilite (map (lambda (x) x) `(3 4 5))))
                                     ((... (hilite 3) ...)))
                       (before-after ((hilite ...))
-                                    ((... (hilite 4) ...)) (4))
+                                    ((... (hilite 4) ...)))
                       (before-after ((hilite ...))
                                     ((... (hilite 5) ...)))
                       (before-after ((hilite ...)) ((hilite `(3 4 5))))
@@ -1019,6 +1016,6 @@
 ;  (finished (true))))
   
   
-  ;(run-tests '(top-app))
-  (run-all-tests)
+  (run-tests '(prims qq-splice))
+  ;(run-all-tests)
   )

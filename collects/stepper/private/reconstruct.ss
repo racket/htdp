@@ -11,9 +11,7 @@
            "marks.ss"
            "model-settings.ss"
            "shared.ss"
-           "highlight-placeholder.ss"
            "my-macros.ss"
-           "testing-shared.ss"
            "lifting.ss")
 
   (provide/contract 
@@ -98,7 +96,8 @@
   ; (test '(() () 1 (2 3) ()) reshape-list '(1 2 3) '(() () a (b c) ()))
   
   
-  
+  (define (mark-as-highlight stx)
+    (syntax-property stx 'stepper-highlight #t))
                                                      ;               
                                                      ;               
  ; ;;  ;;;    ;;;   ;;;   ; ;;         ;   ;   ;;;   ;  ;   ;   ;;;  
@@ -127,7 +126,7 @@
                                    base-name)])
                     (if (and assigned-name (free-identifier=? base-name assigned-name))
                         (recon-source-expr (mark-source mark) (list mark) null null render-settings)
-                        (re-intern-identifier #`#,name)))
+                        #`#,name))
                   (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
             (let ([rendered ((render-settings-render-to-sexp render-settings) val)])
               (if (symbol? rendered)
@@ -171,17 +170,16 @@
     (define (varref-skip-step? varref)
       (with-handlers ([exn:variable? (lambda (dc-exn) #f)])
         (let ([val (lookup-binding mark-list varref)])
-          (equal? (syntax-object->datum (recon-value val render-settings))
-                  (syntax-object->datum (re-intern-identifier
-                                         (case (syntax-property varref 'stepper-binding-type)
-                                           ([let-bound]
-                                            (binding-lifted-name mark-list varref))
-                                           ([non-lexical]
-                                            varref)
-                                           (else
-                                            (error 'varref-skip-step? "unexpected value for stepper-binding-type: ~e for variable: ~e\n"
-                                                   (syntax-property varref 'stepper-binding-type)
-                                                   varref)))))))))
+          (equal? (syntax-object->interned-datum (recon-value val render-settings))
+                  (syntax-object->interned-datum (case (syntax-property varref 'stepper-binding-type)
+                                                   ([let-bound]
+                                                    (binding-lifted-name mark-list varref))
+                                                   ([non-lexical]
+                                                    varref)
+                                                   (else
+                                                    (error 'varref-skip-step? "unexpected value for stepper-binding-type: ~e for variable: ~e\n"
+                                                           (syntax-property varref 'stepper-binding-type)
+                                                           varref))))))))
     
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
@@ -396,8 +394,8 @@
               (unless (null? (syntax-e #'others))
                 (error 'reconstruct "reconstruct fails on multiple-values define: ~v\n" (syntax-object->datum stx)))
               (let* ([printed-name (or (syntax-property #`name 'stepper-lifted-name)
-                                       (syntax-property #'name 'stepper-orig-name)
-                                       #'name)]
+                                        (syntax-property #'name 'stepper-orig-name)
+                                        #'name)]
                      [unwound-body (inner #'body)]
                      [define-type (syntax-property unwound-body 'user-stepper-define-type)]) ; see notes in internal-docs.txt
                 (if define-type
@@ -566,7 +564,7 @@
                                                                                 (syntax-property _
                                                                                              'stepper-lifted-name
                                                                                              (binding-lifted-name mark-list _))
-                                                                                (re-intern-identifier _)))
+                                                                                _))
                                                                         _))
                                                                bindings)])
                               (syntax (label ((new-vars recon-val) ...) recon-body))))))]
@@ -629,7 +627,7 @@
                                                  (not (ormap (lambda (binding)
                                                                (bound-identifier=? binding var))
                                                              use-lifted-names)))
-                                            (re-intern-identifier var)
+                                            var
 
                                             
                                             (case (syntax-property var 'stepper-binding-type)
@@ -954,10 +952,7 @@
                      (let ([reconstructed (recon-inner mark-list so-far)])
                        (recon
                         (if first
-                            (syntax-property 
-                             reconstructed
-                             'stepper-highlight
-                             #t)
+                            (mark-as-highlight reconstructed)
                             reconstructed)
                         (cdr mark-list)
                         #f))])]))
@@ -973,12 +968,12 @@
               (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
                                     (recon-source-expr (mark-source (car mark-list)) mark-list null null render-settings)
                                     (recon-value (car returned-value-list) render-settings))])
-                (unwind (recon (syntax-property innermost 'stepper-highlight #t) (cdr mark-list) #f) #f)))
+                (unwind (recon (mark-as-highlight innermost) (cdr mark-list) #f) #f)))
              ((normal-break)
               (unwind (recon nothing-so-far mark-list #t) #f))
              ((double-break)
               (let* ([source-expr (mark-source (car mark-list))]
-                     [innermost-before (recon-source-expr source-expr mark-list null null render-settings)]
+                     [innermost-before (mark-as-highlight (recon-source-expr source-expr mark-list null null render-settings))]
                      [newly-lifted-bindings (syntax-case source-expr (letrec-values)
                                               [(letrec-values ([vars . rest] ...) . bodies)
                                                (apply append (map syntax->list (syntax->list #`(vars ...))))]
@@ -986,12 +981,12 @@
                                                (apply append (map syntax->list (syntax->list #`(vars ...))))]
                                               [else (error 'reconstruct "expected a let-values as source for a double-break, got: ~e"
                                                            (syntax-object->datum source-expr))])]
-                     [innermost-after (recon-source-expr (mark-source (car mark-list)) mark-list null newly-lifted-bindings render-settings)])
-                (list (unwind (recon (syntax-property innermost-before 'stepper-highlight #t) (cdr mark-list) #f) #f)
-                      (unwind (recon (syntax-property innermost-after 'stepper-highlight #t) (cdr mark-list) #f) #t))))
+                     [innermost-after (mark-as-highlight (recon-source-expr (mark-source (car mark-list)) mark-list null newly-lifted-bindings render-settings))])
+                (list (unwind (recon innermost-before (cdr mark-list) #f) #f)
+                      (unwind (recon innermost-after (cdr mark-list) #f) #t))))
              ((late-let-break)
-              (let* ([one-level-recon (unwind-only-highlight (recon-inner mark-list nothing-so-far))])
-                (list (sublist 0 (- (length one-level-recon) 1) one-level-recon))))
+              (let* ([one-level-recon (unwind-only-highlight (mark-as-highlight (recon-inner mark-list nothing-so-far)))])
+                (sublist 0 (- (length one-level-recon) 1) one-level-recon)))
              (else
               (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
       

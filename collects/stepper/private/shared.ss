@@ -1,11 +1,8 @@
 (module shared mzscheme
   
   (require "my-macros.ss"
-	   "highlight-placeholder.ss"
 	   (lib "contract.ss")
-           (lib "etc.ss")
-           (lib "list.ss")
-           (lib "class.ss"))
+           (lib "list.ss"))
 
   ; CONTRACTS
   
@@ -57,7 +54,6 @@
    flatten-take
    closure-table-put!
    closure-table-lookup
-   insert-highlighted-value
    get-lifted-var
    get-arg-var
    zip
@@ -284,18 +280,6 @@
   ;       (and (eq? (in-closure-table 'blatz) #f)
   ;            (eq? (in-closure-table 'foo) #t)))
  
-  ; insert-highlighted-value : sexp sexp -> sexp
-  ; replaces highlight-placeholder in the first sexp with the second sexp
-  
-  (define (insert-highlighted-value exp inserted)
-    (let ([recur (lambda (exp) (insert-highlighted-value exp inserted))])
-      (cond [(list? exp)
-             (map recur exp)]
-            [(vector? exp)
-             (list->vector (map recur (vector->list exp)))]
-            [(eq? exp highlight-placeholder)
-             inserted]
-            [else exp])))
   
   ;; arglist : for our puposes, an ilist is defined like this:
   ;; arglist : (union identifier? null? (cons identifier? arglist?) (syntax (cons identifier? arglist?))
@@ -536,6 +520,49 @@
   (define (re-intern-identifier identifier)
     #`#,(string->symbol (symbol->string (syntax-e identifier))))
   
+  
+  (provide/contract [syntax-object->hilite-datum (syntax? ; input
+                                                  . -> .
+                                                  any)]) ; sexp with 'hilite'
+  
+  ;; syntax-object->hilite-datum : takes a syntax object with zero or more
+  ;; subexpressions tagged with the 'stepper-highlight' syntax-property
+  ;; and turns it into a datum, where expressions with the 'stepper-highlight'
+  ;; property result in (hilite <datum>) rather than <datum>. It also
+  ;; re-interns all identifiers.
+  ;; 
+  ;; this procedure is useful in checking the output of the stepper.
+  
+  (define (syntax-object->hilite-datum stx)
+    (let ([datum (syntax-case stx ()
+                   [(a . rest) (cons (syntax-object->hilite-datum #`a) (syntax-object->hilite-datum #`rest))]
+                   [id
+                    (identifier? stx)
+                    (string->symbol (symbol->string (syntax-e stx)))]
+                   [else (if (syntax? stx)
+                             (syntax-object->datum stx)
+                             stx)])])
+      (if (syntax-property stx 'stepper-highlight)
+          `(hilite ,datum)
+          datum)))
+  
+  (provide/contract [syntax-object->interned-datum (syntax? ; input
+                                                    . -> .
+                                                    any)]) ; sexp 
+  
+  ;; syntax-object->interned-datum : like syntax-object->datum, except
+  ;; that it re-interns all identifiers.  Useful in checking whether
+  ;; two sexps will have the same printed representation.
+  
+  (define (syntax-object->interned-datum stx)
+    (syntax-case stx ()
+      [(a . rest) (cons (syntax-object->interned-datum #`a) (syntax-object->interned-datum #`rest))]
+      [id
+       (identifier? stx)
+       (string->symbol (symbol->string (syntax-e stx)))]
+      [else (if (syntax? stx)
+                (syntax-object->datum stx)
+                stx)]))
 
   )
   
