@@ -343,6 +343,11 @@
                 (fall-through))
             stx))
          
+         (define (transfer-highlight from to)
+           (if (syntax-property from 'stepper-highlight)
+               (syntax-property to 'stepper-highlight #t)
+               to))
+         
          (define (unwind-recur stx)
            (with-syntax ([(app-keywd letrec-term argval ...) stx]) ; if you use #%app, it gets captured here
              (with-syntax ([(new-argval ...) (map inner (syntax->list #`(argval ...)))])
@@ -351,11 +356,8 @@
                    [(letrec ([loop-name (lambda (argname ...) . bodies)]) loop-name-2)
                     (unless (module-identifier=? #`loop-name #`loop-name-2)
                       (error "unexpected syntax for 'recur': ~v" stx))
-                    (let ([recur-exp #`(recur loop-name ([argname new-argval] ...) . bodies)])
-                      (if (syntax-property unwound 'stepper-highlight)
-                          (syntax-property recur-exp 'stepper-highlight)
-                          recur-exp))]
-                   [else #`(#,(inner #`letrec-term) new-argval ...)])))))
+                    (transfer-highlight unwound #`(recur loop-name ([argname new-argval] ...) . bodies))]
+                   [else #`(#,unwound new-argval ...)])))))
          
          (define (unwind-define stx)
            (kernel:kernel-syntax-case stx #f

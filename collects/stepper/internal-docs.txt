@@ -77,9 +77,7 @@ stepper-hint :
  of 'cond'. This tag is applied to all the if's, but not to the else
  clause.
 
- [ 'comes-from-let ] : expression was expanded from let
  [ 'comes-from-let* ] : expression was expanded from let*
- [ 'comes-from-letrec ] : expression was expanded from letrec
  [ 'comes-from-local ] : expression was expanded from local
 
  [ 'from-xml-box ] : expression was expanded from an xml box
@@ -87,13 +85,21 @@ stepper-hint :
                         (inside an xml box)
  [ 'from-splice-box ] : expression was expanded from a scheme splice
 		        box (inside an xml box)
+ [ 'comes-from-recur ] : expression was expanded from a 'recur'
 
 stepper-define-type: 
  this is attached to the right-hand sides of defines to indicate what
  kind of define they came from. 
 
  [ 'shortened-proc-define ] : this lambda arose from the expansion
-    of (define (id arg ...) body)
+    of (define (id arg ...) body).  N.B.: anything tagged with this 
+    property must also have a 'stepper-proc-define-name
+    property.
+
+ [ 'lambda-define ] : this lambda arose from the expansion of 
+    (define id (lambda (
+
+
 
   (Transferred.)
 

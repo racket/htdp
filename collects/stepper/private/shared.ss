@@ -491,7 +491,8 @@
            [it (syntax-property it 'stepper-xml-hint (syntax-property expr 'stepper-xml-hint))]
            [it (syntax-property it 'user-source (syntax-property expr 'user-source))]
            [it (syntax-property it 'user-position (syntax-property expr 'user-position))]
-           [it (syntax-property it 'stepper-highlight (syntax-property expr 'stepper-highlight))])
+           [it (syntax-property it 'stepper-highlight (or (syntax-property expr 'stepper-highlight)
+                                                          (syntax-property it 'stepper-highlight)))])
       it))
   
   (define (values-map fn . lsts)
