@@ -459,9 +459,8 @@
                                                               ;                                 
                                                               ;                                 
             
-            (define annotate/inner
-              (contract 
-               (-> syntax? binding-set? boolean? boolean? any? (vector/p syntax? binding-set?))
+            (define/contract annotate/inner
+               (-> syntax? binding-set? boolean? boolean? (union false? syntax? (list/p syntax? syntax?)) (vector/p syntax? binding-set?))
                (lambda (expr tail-bound pre-break? top-level? procedure-name-info)
                  
                  (when (syntax-property expr 'stepper-define-struct-hint)
@@ -533,8 +532,9 @@
                                [wcm-break-wrap (lambda (debug-info expr)
                                                  (wcm-wrap debug-info (break-wrap expr)))]
                                [inferred-name-patch (lambda (annotated)
+                                                      (printf "procedure-name-info: ~a\n bool-test: ~a\n" procedure-name-info (if procedure-name-info #t #f))
                                                       (if (and procedure-name-info (not (memq 'no-closure-capturing wrap-opts)))
-                                                          (let ([name (ccond [(symbol? procedure-name-info) procedure-name-info]
+                                                          (let ([name (ccond [(syntax? procedure-name-info) procedure-name-info]
                                                                              [(and (list? procedure-name-info)
                                                                                    (= (length procedure-name-info) 2))
                                                                               (car procedure-name-info)])])
@@ -567,7 +567,7 @@
                                 (lambda (annotated-lambda free-varrefs)
                                   (let*-2vals
                                       ([closure-info (make-debug-info-app 'all free-varrefs 'none)]
-                                       [closure-name (cond [(symbol? procedure-name-info) procedure-name-info]
+                                       [closure-name (cond [(syntax? procedure-name-info) procedure-name-info]
                                                            [(pair? procedure-name-info) (car procedure-name-info)]
                                                            [else #f])]
                                        [closure-storing-proc
@@ -632,13 +632,12 @@
                                   (with-syntax ([(_ ([(var ...) val] ...) . bodies) stx])
                                     (let*-2vals
                                      ([binding-sets (map syntax->list (syntax->list #'((var ...) ...)))]
-                                      [binding-name-sets (mapmap syntax-e binding-sets)]
                                       [binding-list (apply append binding-sets)]
                                       [vals (syntax->list #'(val ...))]
                                       [lifted-var-sets (map (lx (map get-lifted-var _)) binding-sets)]
                                       [lifted-vars (apply append lifted-var-sets)]
                                       [(annotated-vals free-varref-sets-vals)
-                                       (2vals-map let-rhs-recur vals binding-name-sets lifted-var-sets binding-sets)]
+                                       (2vals-map let-rhs-recur vals binding-sets lifted-var-sets binding-sets)]
                                       [(annotated-body free-varrefs-body)
                                        ((let-body-recur binding-list) 
                                         (if (= (length (syntax->list (syntax bodies))) 1)
@@ -905,11 +904,13 @@
                              (let*-2vals
                               ([vars (syntax->list (syntax vars-stx))]
                                [(annotated-val free-varrefs-val)
-                                (define-values-recur (syntax body) (if (not (null? vars))
-                                                                       (syntax-e (car vars))
-                                                                       #f))])
+                                (begin
+                                  (printf "vars: ~a\n" (map syntax-e vars))
+                                  (define-values-recur (syntax body) (if (not (null? vars))
+                                                                         (car vars)
+                                                                       #f)))])
                               (2vals
-                               (quasisyntax/loc expr (define-values #,(syntax vars-stx) #,annotated-val))
+                               (quasisyntax/loc expr (define-values vars-stx #,annotated-val))
                                free-varrefs-val))]
                             
                             
@@ -945,9 +946,7 @@
                                           free-varrefs))]
                             
                             [else ; require, require-for-syntax, define-syntaxes, module, provide
-                             (2vals expr null)]))]))
-               'annotate/inner
-               'caller))
+                             (2vals expr null)]))])))
             
             (define (annotate/top-level expr)
               (let*-2vals ([(annotated dont-care)
@@ -956,5 +955,5 @@
          
          ; body of local
          (let* ([annotated-expr (annotate/top-level expr)])
-           ;(fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
+           (fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
            (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index))))))

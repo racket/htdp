@@ -120,10 +120,9 @@
               (if base-name
                   (let* ([lifted-index (closure-record-lifted-index closure-record)]
                          [name (if lifted-index
-                                   (construct-lifted-name #`#,base-name lifted-index)
-                                   #`#,base-name)])
-                    
-                    (if (and assigned-name (eq? (syntax-e name) (syntax-e assigned-name)))
+                                   (construct-lifted-name base-name lifted-index)
+                                   base-name)])
+                    (if (and assigned-name (free-identifier=? base-name assigned-name))
                         (recon-source-expr (mark-source mark) (list mark) null null render-settings)
                         #`#,name))
                   (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
@@ -132,9 +131,6 @@
                   #`#,rendered
                   #`(#%datum . #,rendered)))))))
     
-  (define (let-rhs-recon-value val render-settings)
-    (recon-value val render-settings 'let-rhs))
-  
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
  
@@ -190,6 +186,8 @@
                      (with-handlers
                          ([exn:variable? (lambda args #f)]) ; DO halt for unbound top-level varrefs
                        (let ([val (global-lookup (syntax-e id))])
+                         (when (eq? (syntax-e id) `a2)
+                           (printf "object-name: ~a\n" (object-name val)))
                          (or (and (procedure? val)                     ; don't halt for top-level procedure refs ...
                                   (eq? (syntax-e id) (object-name val)) ; with the right inferred name
                                   
@@ -199,7 +197,7 @@
 ;                                      (and (not (continuation? val))
 ;                                           (cond [(closure-table-lookup val (lambda () #f)) => ; are user fns with the right (original) name
 ;                                                  (lambda (x)
-;                                                    (eq? id (closure-record-name x)))] ; has wrong name
+;                                                    (eq? id (syntax-e (closure-record-name x))))] ; has wrong name
 ;                                                 [else #f])))
                                   )))))]
                   [(#%app . terms)
@@ -784,7 +782,7 @@
                                      (n-split-list num-defns-done glumps)]
                                     [recon-lifted-val
                                      (lambda (name val)
-                                       (let ([rectified-val (let-rhs-recon-value val render-settings)])
+                                       (let ([rectified-val (recon-value val render-settings name)])
                                          #`(#,name #,rectified-val)))]
                                     [recon-lifted 
                                      (lambda (names expr)
@@ -792,13 +790,15 @@
                                     [before-bindings
                                      (map
                                       (lambda (glump)
-                                        (let* ([rhs-val-set (map (lambda (val)
-                                                                   (let-rhs-recon-value val render-settings)) 
-                                                                 (let-glump-val-set glump))]
-                                               [rhs-name-set (let-glump-name-set glump)])
+                                        (let* ([name-set (let-glump-name-set glump)]
+                                               [rhs-val-set (map (lambda (val)
+                                                                   (if (> (length name-set) 0)
+                                                                       (recon-value val render-settings (car name-set))
+                                                                       (recon-value val render-settings))) 
+                                                                 (let-glump-val-set glump))])
                                           (if (= (length rhs-val-set) 1)
-                                              #`(#,rhs-name-set #,@rhs-val-set)
-                                              #`(#,rhs-name-set (values #,rhs-val-set)))))
+                                              #`(#,name-set #,@rhs-val-set)
+                                              #`(#,name-set (values #,rhs-val-set)))))
                                       done-glumps)]
                                     [reconstruct-remaining-def
                                      (lambda (glump)
