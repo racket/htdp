@@ -248,6 +248,34 @@
   (define (binding-lifted-name mark-list binding)
       (construct-lifted-name binding (lookup-binding mark-list (get-lifted-var binding))))
 
+;                                                                
+;                                                                
+;                                                                
+;   ;                       ;   ;    ;;;      ;                  
+;   ;                       ;       ;                            
+;   ;          ;            ;       ;    ;                       
+;   ;    ;;;  ;;;;          ;   ;  ;;;; ;;;;  ;   ; ;;     ;; ;  
+;   ;   ;   ;  ;            ;   ;   ;    ;    ;   ;;  ;   ;  ;;  
+;   ;  ;    ;  ;            ;   ;   ;    ;    ;   ;   ;  ;    ;  
+;   ;  ;;;;;;  ;    ;;;;;;  ;   ;   ;    ;    ;   ;   ;  ;    ;  
+;   ;  ;       ;            ;   ;   ;    ;    ;   ;   ;  ;    ;  
+;   ;   ;      ;            ;   ;   ;    ;    ;   ;   ;   ;  ;;  
+;   ;    ;;;;   ;;          ;   ;   ;     ;;  ;   ;   ;    ;; ;  
+;                                                             ;  
+;                                                        ;    ;  
+;                                                         ;;;;   
+
+  ;(-> mz-syntax?
+  ;    (listof sexp-with-highlights?))
+  
+  ; find-highlight will search a syntax object for the highlight-placeholder, and return an inside-out 
+  ; list of context frames leading down to that highlight-placeholder
+  (define (find-highlight stx)
+    (let loop ([stx stx])
+      ))
+  
+  
+  
                                                                 ;              ;  ;               
                                                                                ;                  
  ; ;;; ;;    ;;;    ;;;  ; ;;  ;;;       ;   ;  ; ;;  ;   ;   ; ;  ; ;;    ;;; ;  ;  ; ;;    ;; ; 
@@ -259,10 +287,10 @@
  ;   ;   ;   ;;;;;  ;;;  ;     ;;;        ;; ;  ;   ;   ;   ;   ;  ;   ;   ;;; ;  ;  ;   ;   ;; ; 
                                                                                                 ; 
   
-  (->* ((listof sexp-with-highlights) (listof sexp-without-highlights)) 
-       ((listof sexp-with-highlights) (listof sexp-without-highlights)))
+  ;(->* ((listof sexp-with-highlights) (listof sexp-without-highlights)) 
+  ;     ((listof sexp-with-highlights) (listof sexp-without-highlights)))
   
-  (define (unwind stx-list highlights)
+  (define (unwind stx highlights)
     
     (local
         ((define highlight-queue-src (make-queue))
@@ -357,7 +385,7 @@
                  (syntax (label . clauses))))))
       
       (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
-      (let* ([main (map inner stx-list)]
+      (let* ([main (list (inner stx))]
              [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
         (values main new-highlights))))
   
@@ -634,7 +662,7 @@
                                                  (lambda () 
                                                    (error 'reconstruct-completed "can't find user-defined proc in closure table: ~e\n" val)))]
            [mark (closure-record-mark closure-record)])
-      (caar (unwind (list (recon-source-expr (mark-source mark) (list mark) null render-settings)) null))))
+      (caar (unwind (recon-source-expr (mark-source mark) (list mark) null render-settings) null))))
 
                                                                                                                 
                                                                                                                 
@@ -880,13 +908,13 @@
                                          (recon-source-expr (mark-source (car mark-list)) mark-list null render-settings)
                                          (recon-value (car returned-value-list) render-settings))]
                           [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
-                     (unwind (list recon-expr) (list innermost))))
+                     (unwind recon-expr (list innermost))))
                   ((normal-break)
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
-                     (unwind (list recon-expr) (list redex))))
+                     (unwind recon-expr (list redex))))
                   ((double-break late-let-break)
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
-                     (unwind (list recon-expr) (list redex))))
+                     (unwind recon-expr (list redex))))
                   ;                  ((double-break)
                   ;                   (rectify-let-values-step))
                   ;                  ((late-let-break)

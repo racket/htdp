@@ -98,7 +98,7 @@
                  [(set! var val)
                   (try-exprs-offset 2 #'(val))]
                  [(quote _)
-                  (void)]
+                  (void)]q
                  [(quote-syntax _)
                   (void)]
                  [(with-continuation-mark key mark body)
