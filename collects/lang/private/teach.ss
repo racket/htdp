@@ -692,7 +692,10 @@
     (define (beginner-top/proc stx)
       (syntax-case stx ()
         [(_ . id)
-	 (syntax/loc stx (check-not-a-function 'id (#%top . id)))]))
+         (syntax-property
+          (syntax/loc stx (check-not-a-function 'id (#%top . id)))
+          'stepper-skipto
+          (list syntax-e cdr syntax-e cdr car))]))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; cond
