@@ -88,12 +88,15 @@
   (define (rectify-value val)
     (let ([closure-record (closure-table-lookup val (lambda () #f))])
       (if closure-record
-          (closure-record-name closure-record)
+          (or (closure-record-name closure-record)
+              (let ([mark (closure-record-mark closure-record)])
+                (o-form-case-lambda->lambda 
+                 (rectify-source-expr (mark-source mark) (list mark) null))))
           (parameterize
               ([p:constructor-style-printing (s:get-constructor-style-printing)]
                [p:abbreviate-cons-as-list (s:get-abbreviate-cons-as-list)]
                [p:empty-list-name (s:get-empty-list-name)]
-;               [p:show-sharing (s:get-show-sharing)]
+               [p:show-sharing (s:get-show-sharing)]
                [current-namespace (s:get-namespace)])
             (p:print-convert val)))))
   
@@ -113,6 +116,13 @@
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
  
+  (define continuation? 
+    (let ([r (regexp "#<continuation>")])
+      (lambda (k)
+        (let ([p (open-output-string)])
+          (display k p)
+          (not (not (regexp-match r (get-output-string p))))))))
+  
   (define (stop-here? mark-list)
     (not (and (pair? mark-list)
               (let ([expr (mark-source (car mark-list))])
@@ -127,6 +137,7 @@
                                         (let ([val (mark-binding-value
                                                     (find-var-binding mark-list (z:varref-var expr)))])
                                           (and (procedure? val)
+                                               (not (continuation? val))
                                                (eq? var
                                                     (closure-record-name 
                                                      (closure-table-lookup val))))))))))))
@@ -139,9 +150,21 @@
                                         (eq? fun-val list)
                                         (eq? fun-val (s:get-cons))))
                                (eq? fun-val (s:get-vector))
+                               (and (eq? fun-val void)
+                                    (eq? (z:app-args expr) null))
                                (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
                                  (and closure-record
-                                      (closure-record-constructor? closure-record)))))))))))
+                                      (closure-record-constructor? closure-record))))))
+                    (in-inserted-else-clause mark-list))))))
+  
+  (define (in-inserted-else-clause mark-list)
+    (cond [(null? mark-list) #f]
+          [(let ([expr (mark-source (car mark-list))])
+             (and (z:zodiac? expr)
+                  (not (z:if-form? expr))
+                  (comes-from-cond? expr)))
+           #t]
+          [else (in-inserted-else-clause (cdr mark-list))]))
     
   (define (rectify-source-expr expr mark-list lexically-bound-vars)
     (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
@@ -243,10 +266,12 @@
   
   (define (rectify-cond-clauses cond-source expr mark-list lexically-bound-vars)
     (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
-      (if (and (z:if-form? expr) (equal? cond-source (z:zodiac-start expr)))
-          (cons (list (rectify-source (z:if-form-test expr))
-                      (rectify-source (z:if-form-then expr)))
-                (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list lexically-bound-vars))
+      (if (equal? cond-source (z:zodiac-start expr))
+          (if (z:if-form? expr)
+              (cons (list (rectify-source (z:if-form-test expr))
+                          (rectify-source (z:if-form-then expr)))
+                    (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list lexically-bound-vars))
+              null)
           `((else ,(rectify-source expr))))))
   
   ; reconstruct : takes a parsed list of expressions, a list of continuation-marks,
