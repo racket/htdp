@@ -1012,7 +1012,7 @@
                   (2vals 
                    (ccond [(or cheap-wrap? ankle-wrap?)
                            (appropriate-wrap annotated free-varrefs)]
-                          ; as far as I can tell, we can skip the result-break on lexical vars...
+                          ; as far as I can tell, we can skip the result-break on lexical vars (unless we need it for module-vars)...
                           [foot-wrap? 
                            (wcm-break-wrap (make-debug-info-normal free-varrefs) annotated)])
                    free-varrefs))]
