@@ -196,8 +196,7 @@
     ;; when there aren't any exceptions.
     ;; if there are exceptions, wait for the user to click
     ;; "convert" to see an error.
-    (with-handlers ([(lambda (x) #t)
-                     (lambda (x) (void))])
+    (with-handlers ([not-break-exn? (lambda (x) (void))])
       (send sliderC set-value (in-slider-range (fahr->cel F-SLI-0))))
     (send frame show #t))
   
@@ -214,9 +213,9 @@
         (flush-output)
         (let* ([ans (read)])
           (cond
-            [(not (or (number? ans) (and (symbol? ans) (eq? ans 'x))))
+            [(or (eof-object? ans) (eq? ans 'x)) (void)]
+            [(not (number? ans))
              (printf "The input must be a number. Given: ~s~n" ans) (repl)]
-            [(eq? ans 'x) (void)]
             [(number? ans) 
              (let ([res (f ans)])
                (if (number? res)
