@@ -5,9 +5,9 @@
 (invoke-open-unit/sig 
  (compound-unit/sig
   (import)
-  (link [T : turtle^ ((require-library "turtler.ss" "graphics") F)]
-	[F : mzlib:function^ (mzlib:function@)])
-  (export (open T))))
+  (link [t : turtle^ ((require-library "turtler.ss" "graphics") f)]
+	[f : mzlib:function^ (mzlib:function@)])
+  (export (open t))))
 
 (require-relative-library "tmacro.ss")
 
