@@ -16,6 +16,9 @@
       (define (phase1) (void))
       (define (phase2) (void))
       
+      (define xml-box-color "purple")
+      (define scheme-box-color "blue")
+
       (define (make-string-snip obj)
         (let* ([str (format "~e" obj)]
                [sn (make-object string-snip% (string-length str))])
@@ -99,7 +102,7 @@
           
           (inherit show-border set-snipclass)
           (super-instantiate ()
-            (color "BLUE"))
+            (color xml-box-color))
           (show-border #t)
           (set-snipclass xml-snipclass)))
 
@@ -227,7 +230,7 @@
           
           (inherit show-border set-snipclass)
           (super-instantiate () 
-            (color "RED"))
+            (color scheme-box-color))
           (show-border #t)
           (set-snipclass evaluated-snipclass)))
       
