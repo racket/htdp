@@ -283,15 +283,14 @@
                        (lambda ()
                          (if (pair? (syntax-e stx))
                              (datum->syntax-object stx (syntax-pair-map (syntax-e stx) inner) stx stx)
-                             stx))]
-                      [origins (syntax-property stx 'user-origin)])
-                 (if (or (not origins) (null? origins))
-                     (recur-on-pieces)
-                     (case (syntax-e (car origins))
-                       ((cond) (unwind-cond stx 
+                             stx))])
+                 (if (syntax-property stx 'user-stepper-hint)
+                     (case (syntax-property stx 'user-stepper-hint)
+                       ((comes-from-cond) (unwind-cond stx 
                                             (syntax-property stx 'user-source)
                                             (syntax-property stx 'user-position)))
-                       (else (recur-on-pieces)))))))
+                       (else (recur-on-pieces)))
+                     (recur-on-pieces)))))
          
          (define (unwind-cond stx user-source user-position)
            (if (eq? stx highlight-placeholder-stx)
@@ -299,21 +298,19 @@
                       highlight-placeholder-stx)
                (with-syntax ([clauses
                               (let loop ([stx stx])
-                                (if (and (eq? user-source (syntax-property stx 'user-source))
-                                         (eq? user-position (syntax-property stx 'user-position)))
+                                (if (or (and (eq? user-source (syntax-property stx 'user-source))
+                                             (eq? user-position (syntax-property stx 'user-position)))
+                                        (syntax-property stx 'user-stepper-else))
                                     (syntax-case stx (if begin)
-                                      [(if test (begin result) else)
+                                      [(if test result else)
                                        (cons (inner (syntax (test result)))
                                              (loop (syntax else)))]
-                                      [(begin else-stx)
+                                      [else-stx
                                        ; source or synthesized else?
                                        (if (eq? 'inserted-else (syntax-property (syntax else-stx) 'user-stepper-hint))
                                            null
                                            (cons (inner (syntax (else else-stx)))
-                                                 null))]
-                                      [else
-                                       (error 'unwind-cond "unexpected structure for result of cond expansion: ~a"
-                                              (syntax-object->datum stx))])
+                                                 null))])
                                     (error 'unwind-cond "unexpected source for cond element ~a\n" (syntax-object->datum stx))))])
                  (syntax (cond . clauses))))))
       
@@ -328,6 +325,7 @@
   (define (attach-info stx expr)
     (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
            [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
+           [it (syntax-property it 'user-stepper-else (syntax-property expr 'stepper-else))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))                                                                                                  
