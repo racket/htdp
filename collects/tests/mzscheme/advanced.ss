@@ -52,6 +52,13 @@
 (test 2 'begin (begin 1 2))
 (test 3 'begin (begin 1 2 3))
 
+(syntax-test #'begin0)
+(syntax-test #'(begin0))
+
+(test 1 'begin0 (begin0 1))
+(test 2 'begin0 (begin0 2 1))
+(test 3 'begin0 (begin0 3 2 1))
+
 (syntax-test #'set!)
 (syntax-test #'(set!))
 (syntax-test #'(set! x))
@@ -98,6 +105,48 @@
 (test 1024 'loop (let loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
 
 (test 19 'lookup (recur empty-f () 19))
+
+(syntax-test #'case)
+(syntax-test #'(case))
+(syntax-test #'(case 5))
+(syntax-test #'(case 5 12))
+(syntax-test #'(case 5 []))
+(syntax-test #'(case 5 [5 10]))
+(syntax-test #'(case 5 [(5) 10] 12))
+(syntax-test #'(case 5 [(5)]))
+(syntax-test #'(case 5 [(5) 12 13]))
+(syntax-test #'(case 5 [("a") 10]))
+(syntax-test #'(case 5 [() 10]))
+(syntax-test #'(case 5 [(5 "a") 10]))
+(syntax-test #'(case 5 [else 12][(5) 10]))
+(syntax-test #'(case 5 [(5) 10][else 12][else 13]))
+
+(test 'a 'case (case 5 [(5) 'a]))
+(test 'b 'case (case 5 [(6) 'a][else 'b]))
+(test 'c 'case (case 5 [(6 5) 'c][else 'b]))
+(test 'd 'case (case 'hello [(6 5 hello) 'd][else 'b]))
+(test 'd 'case (case 'hello [(no) 10][(6 5 hello) 'd][else 'b]))
+(test 'cc 'case (case (+ 2 3) [(6 5) 'cc][else 'b]))
+
+(syntax-test #'when)
+(syntax-test #'(when))
+(syntax-test #'(when 10))
+(syntax-test #'(when 10 12 13))
+
+(err/rt-test (when 1 2))
+
+(test (void) 'when (when false 1))
+(test 11 'when (when true 11))
+
+(syntax-test #'unless)
+(syntax-test #'(unless))
+(syntax-test #'(unless 10))
+(syntax-test #'(unless 10 12 13))
+
+(err/rt-test (unless 1 2))
+
+(test (void) 'unless (unless true 1))
+(test 11 'unless (unless false 11))
 
 (syntax-test #'shared)
 (syntax-test #'(shared))
