@@ -1,0 +1,350 @@
+(unit/sig ()
+  (import mred^
+	  framework^
+	  [drscheme : drscheme:export^]
+	  [zodiac : zodiac:system^])
+
+;; won't need above the line
+
+(define read/snips (lambda x (error x)))
+
+(define (make-string-snip obj)
+  (let* ([str (format "~a" obj)]
+	 [sn (make-object string-snip% (string-length str))])
+    (send sn insert str (string-length str) 0)
+    sn))
+
+(define void-snip%
+  (class snip% () 
+    (inherit get-style)
+    (override
+      [copy
+       (lambda ()
+         (let ([ans (make-object void-snip%)])
+	   (send ans set-style (get-style))
+	   ans))])
+    (sequence (super-init))))
+
+(define (make-delta family)
+  (let ([d (make-object style-delta% 'change-family family)])
+    ;(send d set-delta-foreground "BLACK")
+    d))
+
+(define renderable-editor-snip%
+  (class editor-snip% (family color)
+    (inherit get-editor get-style)
+
+    (private [pen (send the-pen-list find-or-create-pen color 1 'solid)])
+
+    (inherit get-extent get-inset)
+    (rename [super-draw draw])
+    (override
+     [draw
+      (lambda (dc x y left top right bottom dx dy draw-caret)
+	(let ([bl (box 0)]
+	      [br (box 0)]
+	      [bt (box 0)]
+	      [bb (box 0)]
+	      [bw (box 0)]
+	      [bh (box 0)])
+	  (get-extent dc x y bw bh #f #f #f #f)
+	  (get-inset bl br bt bb)
+	  (super-draw dc x y left top right bottom dx dy draw-caret)
+	  (let ([old-pen (send dc get-pen)])
+	    (send dc set-pen pen)
+	    (send dc draw-rectangle
+		  (+ x (unbox bl))
+		  (+ y (unbox bt))
+		  (- (unbox bw) (unbox bl) (unbox br))
+		  (- (unbox bh) (unbox bt) (unbox bb)))
+	    (send dc set-pen old-pen))))])
+
+    (override
+      [write
+       (lambda (stream-out)
+	 (send (get-editor) write-to-file stream-out 0 'eof))])
+    (override
+      [copy
+       (lambda ()
+         (let ([snip (make-snip)])
+           (send snip set-editor (send (get-editor) copy-self))
+	   (send snip set-style (get-style))
+           snip))])
+    (public
+      [make-snip (lambda () (error 'make-snip "abstract method"))])
+
+    (public
+      [make-editor
+       (lambda ()
+	 (make-object plain-text% (make-delta family)))])
+
+    (sequence
+      (super-init (make-editor)))))
+
+(define constant-snip%
+  (class* renderable-editor-snip% (zodiac:expands<%>) (family)
+    (inherit get-editor)
+
+    (public
+      [expand
+       (lambda (obj)
+	 (zodiac:structurize-syntax
+	  `(,replace-in-template
+	    ',family
+	    ,(make-object editor-snip% (send (get-editor) copy-self))
+	    ,@(let loop ([snip (send (get-editor) find-first-snip)])
+		(cond
+		 [(not snip) `()]
+		 [(transformable? snip)
+		  `(,snip
+		    .
+		    ,(loop (send snip next)))]
+		 [else (loop (send snip next))])))
+	  obj))])
+
+    (public
+      [get-family (lambda () family)])
+
+    (override
+      [write
+       (lambda (stream-out)
+         (send stream-out << (symbol->string family))
+         (send (get-editor) write-to-file stream-out 0 'eof))]
+      [make-snip (lambda () (make-object constant-snip% family))])
+
+    (inherit show-border set-snipclass)
+    (sequence
+      (super-init family "BLUE")
+      (show-border #t)
+      (set-snipclass constant-snipclass))))
+
+(define constant-snipclass%
+  (class snip-class% ()
+    (override
+      [read
+       (lambda (stream-in)
+	 (let* ([family (string->symbol (send stream-in get-string))]
+                [snip (make-object constant-snip% (if (member family '(roman modern))
+                                                      family
+                                                      'modern))])
+	   (send (send snip get-editor) read-from-file stream-in)
+           snip))])
+    (sequence (super-init))))
+(define constant-snipclass (make-object constant-snipclass%))
+(send constant-snipclass set-version 1)
+(send constant-snipclass set-classname "robby:constant-snip")
+(send (get-the-snip-class-list) add constant-snipclass)
+
+(define evaluated-snip%
+  (class* renderable-editor-snip% (zodiac:expands<%>) ()
+    (inherit get-editor)
+
+;; cannot do this because the styles information in the saved texts screws up.
+;   (override
+;     [make-editor
+;      (lambda ()
+;	(make-object (scheme:text-mixin text:basic%)))])
+
+    (public
+      [expand
+       (lambda (obj)
+	 (let ([text (get-editor)])
+	   (let ([read
+		  (zodiac:read
+		   (gui-utils:read-snips/chars-from-text text 0 (send text last-position))
+		   (zodiac:make-location 0 0 0 text)
+		   #t 1)])
+	     (read))))])
+
+    (override
+      [make-editor
+       (lambda ()
+	 (make-object (drscheme:unit:text-with-error-mixin plain-text%) (make-delta 'modern)))])
+
+    (override
+      [make-snip (lambda () (make-object evaluated-snip%))])
+    
+    (inherit show-border set-snipclass)
+    (sequence
+      (super-init 'modern "RED")
+      (show-border #t)
+      (set-snipclass evaluated-snipclass))))
+
+(define evaluated-snipclass%
+  (class snip-class% ()
+    (override
+      [read
+       (lambda (stream-in)
+	 (let* ([snip (make-object evaluated-snip%)]
+                [editor (send snip get-editor)])
+	   (send editor read-from-file stream-in)
+           snip))])
+    (sequence (super-init))))
+
+(define evaluated-snipclass (make-object evaluated-snipclass%))
+(send evaluated-snipclass set-version 1)
+(send evaluated-snipclass set-classname "robby:evaluated-snip")
+(send (get-the-snip-class-list) add evaluated-snipclass)
+
+(define plain-text%
+  (class text:basic% ([delta (make-object style-delta%)])
+    (inherit change-style copy-self-to)
+    (rename [super-after-insert after-insert]
+            [super-on-insert on-insert])
+    (inherit begin-edit-sequence end-edit-sequence)
+    (override
+     [copy-self
+      (lambda ()
+	(let ([t (make-object plain-text% delta)])
+	  (copy-self-to t)
+	  t))]
+     [on-insert
+      (lambda (x y)
+	(super-on-insert x y)
+	(begin-edit-sequence))]
+     [after-insert 
+      (lambda (x y)
+	(super-after-insert x y)
+	(change-style delta x (+ x y))
+	(end-edit-sequence))])
+    (inherit set-styles-sticky)
+    (sequence
+      (super-init)
+      (set-styles-sticky #f))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;                                                     ;;;
+;;;                      EVALUATION                     ;;;
+;;;                                                     ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (transformable? snip)
+  (or (is-a? snip constant-snip%)
+      (is-a? snip evaluated-snip%)))
+
+(require-library "pretty.ss")
+(define (evaluate snip)
+  (let* ([transformed (transform snip)]
+	 [answer (eval transformed)])
+    (cond
+     [(is-a? answer snip%) (send answer copy)]
+     [(void? answer) (make-object void-snip%)]
+     [else (make-string-snip answer)])))
+
+(define (replace-in-template family template-snip . replacements)
+  (let* ([delta (make-delta family)]
+	 [text (make-object plain-text% delta)])
+    (send delta set-delta-foreground "BLACK")
+
+    (let loop ([replacements replacements]
+	       [snip (send (send template-snip get-editor) find-first-snip)])
+      (cond
+       [(not snip)
+	(unless (null? replacements)
+	  (error 'replace-in-template "found end without doing all replacements"))
+	(void)]
+       
+       [(transformable? snip)
+	(when (null? replacements)
+	  (error 'replace-in-template "found replacable without replacement"))
+	(let ([replacement (car replacements)]
+	      [pos (send text get-snip-position snip)])
+	  (send text insert (if (is-a? replacement snip%)
+				(send replacement copy)
+				(make-string-snip replacement))
+		(send text last-position) (send text last-position))
+	  (loop (cdr replacements)
+		(send snip next)))]
+
+       [else
+	(send text insert (send snip copy) (send text last-position) (send text last-position))
+	(loop replacements (send snip next))]))
+
+    (let ([snip (make-object editor-snip% text #f
+			     0 0 0 0
+			     0 0 0 0)])
+      (send text hide-caret #t)
+      (send snip set-tight-text-fit #t)
+      snip)))
+
+(define (transform snip)
+  (cond
+   [(is-a? snip constant-snip%)
+    (let ([editor (send snip get-editor)])
+      `(replace-in-template
+	,snip
+	,@(let loop ([snip (send editor find-first-snip)])
+	    (cond
+	     [(not snip) `()]
+	     [(transformable? snip)
+	      `(,(transform snip)
+		.
+		,(loop (send snip next)))]
+	     [else (loop (send snip next))]))))]
+   [(is-a? snip evaluated-snip%)
+    (let ([sexp (read/snips (send snip get-editor))])
+      (let loop ([sexp sexp])
+	(cond
+	 [(transformable? sexp) (transform sexp)]
+	 [(pair? sexp) (cons (loop (car sexp)) (loop (cdr sexp)))]
+	 [(vector? sexp) (list->vector (map loop (vector->list sexp)))]
+	 [(box? sexp) (box (loop (unbox sexp)))]
+	 [else sexp])))]
+   [else snip]))
+
+(define (typeset-frame-extension super%)
+  (class/d super% args
+    ((inherit get-editor get-menu-bar))
+
+    (apply super-init args)
+
+    (let* ([mb (get-menu-bar)]
+	   [menu (make-object menu% "Typeset" mb)]
+	   [insert-snip
+	    (lambda (make-obj)
+	      (let loop ([editor (get-editor)])
+		(let ([focused (send editor get-focus-snip)])
+		  (if (and focused
+			   (is-a? focused editor-snip%))
+		      (loop (send focused get-editor))
+		      (let ([snip (make-obj)])
+			(send editor insert snip)
+			(send editor set-caret-owner snip 'display))))))])
+      (make-object menu-item% "Modern Constant Snip" menu
+		   (lambda (menu evt)
+		     (insert-snip
+		      (lambda () (make-object constant-snip% 'modern))))
+		   #\m)
+      (make-object menu-item% "Roman Constant Snip" menu
+		   (lambda (menu evt)
+		     (insert-snip 
+		      (lambda () (make-object constant-snip% 'roman))))
+		   #\r)
+      (make-object menu-item% "Evaluated Snip" menu
+		   (lambda (menu evt)
+		     (insert-snip 
+		      (lambda () (make-object evaluated-snip%))))))
+
+    (frame:reorder-menus this)))
+
+
+(define utils (require-library "utils.ss" "typeset"))
+
+(define (typeset-rep-extension super-text%)
+  (class/d super-text% args
+    ((override reset-console)
+     (rename [super-reset-console reset-console])
+     (inherit user-namespace))
+
+    (define (reset-console)
+      (super-reset-console)
+      (parameterize ([current-namespace user-namespace])
+	(global-define-values/invoke-unit/sig typeset:utils^ utils #f mred^ framework^)))
+
+    (apply super-init args)))
+
+(drscheme:get/extend:extend-unit-frame typeset-frame-extension)
+(drscheme:get/extend:extend-interactions-text typeset-rep-extension)
+
+
+)
