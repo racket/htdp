@@ -20,5 +20,5 @@
 (create-window
  (list (list txt msg chc)
        (list (make-button "Okay?" call-back))
-       (list (make-button "Close" destroy))))
+       (list (make-button "Close" hide-window))))
 

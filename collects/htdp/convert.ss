@@ -30,7 +30,8 @@
             (send dc set-brush white-brush)
             (send dc draw-rectangle 0 0 width height)
             (send dc set-brush red-brush)
-            (send dc draw-rectangle 0 0 (* width (max 0 (min 1 (/ (- value SLI-MIN) (- SLI-MAX SLI-MIN))))) height)
+            (send dc draw-rectangle 0 0
+                  (* width (max 0 (min 1 (/ (- value SLI-MIN) (- SLI-MAX SLI-MIN))))) height)
             (let*-values ([(cw ch) (get-client-size)]
                           [(number) value])
               (when (and (number? number)
@@ -247,12 +248,13 @@
   ;; to read a number from file in, to convert it with f, and to write it to out
   (define (convert-file in f out)
     (check-arg 'convert-file (string? in) "string" "first" in)
-    (check-arg 'convert-file (file-exists? in) "name of existing file" "first" in)
+    (check-arg 'convert-file (file-exists? in) 
+               (format "name of existing file in ~a" (current-directory))
+               "first" in)
     (check-proc 'convert-file f 1 "convert-file" "one argument")
     (check-arg 'convert-file (string? out) "string" "third" out)
     (when (file-exists? out)
       (delete-file out))
     (with-output-to-file out
-      (lambda ()
-        (with-input-from-file in (make-reader-for f)))))
+      (lambda () (with-input-from-file in (make-reader-for f)))))
   )

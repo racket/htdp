@@ -1,4 +1,4 @@
-;; Language: Full
+;; Language: Advanced
 
 ; (load "tester.ss")
 ;; by hand, Beginner for plain, Full for errors 

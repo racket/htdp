@@ -13,7 +13,7 @@
     (else 'nothing_correct)))
 
 ;; Tests: 
-(eq? (check-guess 'white 'blue 'white 'blue) 'perfect_guess)
+(eq? (check-guess 'white 'blue 'white 'blue) 'perfect)
 (eq? (check-guess 'white 'blue 'red 'blue) 'one_color-at_correct_position)
 (eq? (check-guess 'white 'blue 'blue 'red) 'the_colors_occur)
 (eq? (check-guess 'white 'blue 'red 'green) 'nothing_correct)
