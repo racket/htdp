@@ -173,7 +173,7 @@
       (let ([exn-handler (make-exception-handler k)])
         (if (z:eof? read)
             (i:receive-result (make-finished-result finished-exprs))
-            (let*-values ([(annotated-list envs) (a:annotate (list read) (list parsed) packaged-envs break)]
+            (let*-values ([(annotated-list envs) (a:annotate (list read) (list parsed) packaged-envs break #f)]
                           [(annotated) (car annotated-list)])
               (set! packaged-envs envs)
               (set! current-expr parsed)

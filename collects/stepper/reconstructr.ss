@@ -108,17 +108,14 @@
                           (or (and (s:check-pre-defined-var var)
                                    (or (procedure? (s:global-lookup var))
                                        (eq? var 'empty)))
-                              (call-with-current-continuation
-                               (lambda (k)
-                                 (with-handlers ([exn:variable?
-                                                  (lambda (exn) (k #f))])
-                                   (let ([val (mark-binding-value
-                                               (find-var-binding mark-list (z:varref-var expr)))])
-                                     (and (procedure? val)
-                                          (not (continuation? val))
-                                          (eq? var
-                                               (closure-record-name 
-                                                (closure-table-lookup val (lambda () (k #f))))))))))))))
+                              (let ([val (if (z:top-level-varref? expr)
+                                             (s:global-lookup var)
+                                             (find-var-binding mark-list var))])
+                                (and (procedure? val)
+                                     (not (continuation? val))
+                                     (eq? var
+                                          (closure-record-name 
+                                           (closure-table-lookup val (lambda () #f))))))))))
                (and (z:app? expr)
                     (let ([fun-val (mark-binding-value
                                     (find-var-binding mark-list 
