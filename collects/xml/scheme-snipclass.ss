@@ -25,7 +25,7 @@
         (let* ([splice? (zero? (send stream-in get-exact))]
                [snip (instantiate scheme-snip% ()
                        (splice? splice?))])
-          (send (send snip get-editor) read-from-file stream-in)
+          (send (send snip get-editor) read-from-file stream-in #f)
           snip))
       (super-instantiate ())))
   

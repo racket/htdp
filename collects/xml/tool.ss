@@ -149,7 +149,7 @@
             (let* ([eliminate-whitespace-in-empty-tags? (zero? (send stream-in get-exact))]
                    [snip (instantiate xml-snip% ()
                            [eliminate-whitespace-in-empty-tags? eliminate-whitespace-in-empty-tags?])])
-              (send (send snip get-editor) read-from-file stream-in)
+              (send (send snip get-editor) read-from-file stream-in #f)
               snip))
           (super-instantiate ())))
       
