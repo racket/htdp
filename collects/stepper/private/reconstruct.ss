@@ -107,34 +107,31 @@
  ;     ;;;;   ;;;   ;;;   ;   ;          ;     ;;;;; ;   ;; ;   ;;;; 
                                                                      
                                                                      
-                                                                     
-  ; recon-value : value -> syntax-object
   ; recon-value print-converts a value.  If the value is a closure, recon-value
   ; prints the name attached to the procedure, unless we're on the right-hand-side
   ; of a let, or unless there _is_ no name.
   
-  (define (recon-value val render-settings . hint-list)
-    (let ([hint (if (pair? hint-list) (car hint-list))]
-          [closure-record (closure-table-lookup val (lambda () #f))])
-      (cond
-        [closure-record
-         (cond [(and (not (eq? hint 'let-rhs))
-                     (closure-record-name closure-record)) 
-                =>
-                (lambda (name)
-                  (cond [(closure-record-lifted-index closure-record) =>
-                         (lambda (lifted-index)
-                           #`#,(construct-lifted-name #`#,name lifted-index))]
-                        [else #`#,name]))]
-               [else
-                (let ([mark (closure-record-mark closure-record)])
-                  (recon-source-expr (mark-source mark) (list mark) null null render-settings))])]
-        [else
-         (let ([rendered ((render-settings-render-to-sexp render-settings) val)])
-           (if (symbol? rendered)
-               #`#,rendered
-               #`(#%datum . #,rendered)))])))
-  
+  (define recon-value
+    (opt-lambda (val render-settings [assigned-name #f])
+      (let ([closure-record (closure-table-lookup val (lambda () #f))])     
+        (if closure-record
+            (let* ([mark (closure-record-mark closure-record)]
+                   [base-name (closure-record-name closure-record)])
+              (if base-name
+                  (let* ([lifted-index (closure-record-lifted-index closure-record)]
+                         [name (if lifted-index
+                                   (construct-lifted-name #`#,base-name lifted-index)
+                                   #`#,base-name)])
+                    
+                    (if (and assigned-name (eq? (syntax-e name) (syntax-e assigned-name)))
+                        (recon-source-expr (mark-source mark) (list mark) null null render-settings)
+                        #`#,name))
+                  (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
+            (let ([rendered ((render-settings-render-to-sexp render-settings) val)])
+              (if (symbol? rendered)
+                  #`#,rendered
+                  #`(#%datum . #,rendered)))))))
+    
   (define (let-rhs-recon-value val render-settings)
     (recon-value val render-settings 'let-rhs))
   
@@ -503,7 +500,7 @@
   ; NB: the variable 'dont-lookup' contains a list of variables whose bindings occur INSIDE the expression
   ; being evaluated, and hence do NOT yet have values.
   
-  ; the 'check-for-lifted' vars are those bound by a let which does have lifted names.  it is used in
+  ; the 'use-lifted-names' vars are those bound by a let which does have lifted names.  it is used in
   ; rendering the lifting of a let or local to show the 'after' step, which should show the lifted names.
 
   (define/contract recon-source-expr 
@@ -526,11 +523,14 @@
                         (with-syntax ([(label . bodies) expr])
                           #`(label #,@(map recur (filter-skipped (syntax->list (syntax bodies)))))))]
                      [recon-let/rec
-                      (lambda ()
+                      (lambda (rec?)
                         (with-syntax ([(label  ((vars val) ...) body) expr])
                           (let* ([bindings (map syntax->list (syntax->list (syntax (vars ...))))]
                                  [binding-list (apply append bindings)]
-                                 [right-sides (map recur (syntax->list (syntax (val ...))))]
+                                 [recur-fn (if rec? 
+                                               (lambda (expr) (let-recur expr binding-list))
+                                               recur)]
+                                 [right-sides (map recur-fn (syntax->list (syntax (val ...))))]
                                  [recon-body (let-recur (syntax body) binding-list)])
                             (with-syntax ([(recon-val ...) right-sides]
                                           [recon-body recon-body]
@@ -570,8 +570,8 @@
                               [(begin0 . bodies) (recon-basic)]
                               
                               ; let-values, letrec-values
-                              [(let-values . rest) (recon-let/rec)]
-                              [(letrec-values . rest) (recon-let/rec)]
+                              [(let-values . rest) (recon-let/rec #f)]
+                              [(letrec-values . rest) (recon-let/rec #t)]
                               
                               ; set! : set! doesn't fit into this scheme. It would be a mistake to allow it to proceed.
                               
@@ -603,9 +603,11 @@
                                             (if (ormap (lambda (binding)
                                                          (bound-identifier=? binding var))
                                                        use-lifted-names)
-                                                (syntax-property var
-                                                                 'stepper-lifted-name
-                                                                 (binding-lifted-name mark-list var))
+                                                (begin
+                                                  ;(printf "looking up lifted name for variable: ~a\n" (syntax-e var))
+                                                  (syntax-property var
+                                                                   'stepper-lifted-name
+                                                                   (binding-lifted-name mark-list var)))
                                                 (re-intern-identifier var))
                                             
                                             (case (syntax-property var 'stepper-binding-type)
@@ -634,7 +636,7 @@
                                (error 'recon-source "no matching clause for syntax: ~a" expr)])])
                 (attach-info recon expr))))))
   
-  ;; re-intern-identifire : (identifier? -> identifier?)
+  ;; re-intern-identifier : (identifier? -> identifier?)
   ;; re-intern-identifier : some identifiers are uninterned, which breaks
   ;; test cases.  re-intern-identifier takes an identifier to a string
   ;; and back again to make in into an interned identifier.
@@ -692,12 +694,7 @@
                           (let* ([vars (syntax->list #'vars-stx)]
                                  [values (map global-lookup (map syntax-e vars))]
                                  [recon-vals (map (lambda (val var) 
-                                                    (if (procedure? val)
-                                                        (reconstruct-completed-procedure 
-                                                         val
-                                                         (or (syntax-property var 'stepper-lifted-name) var)
-                                                         render-settings)
-                                                        (recon-value val render-settings))) 
+                                                    (recon-value val render-settings (or (syntax-property var 'stepper-lifted-name) var))) 
                                                   values
                                                   vars)])
                             (if (= (length recon-vals) 1)
@@ -723,25 +720,6 @@
           [else
            reconstructed])]))
   
-  ; : (-> procedure? symbol? render-settings? syntax?)
-  ; constructs the lambda expression for a closure
-  (define (reconstruct-completed-procedure val assigned-name render-settings)
-    (let* ([closure-record (closure-table-lookup val 
-                                                 (lambda () 
-                                                   #f))])
-      (if closure-record  
-          (let* ([mark (closure-record-mark closure-record)]
-                 [base-name (closure-record-name closure-record)]
-                 [name (if base-name
-                           (if (closure-record-lifted-index closure-record)
-                               (construct-lifted-name #`#,base-name (closure-record-lifted-index closure-record))
-                               #`#,base-name)
-                           #`<unknown-procedure>)])
-            (if (eq? (syntax-e name) (syntax-e assigned-name))
-                (first-of-one (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
-                #`#,name))
-          #`#,((render-settings-render-to-sexp render-settings) val))))
-
                                                                                                                 
                                                                                                                 
                                                                                                                 
