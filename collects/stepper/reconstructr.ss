@@ -63,17 +63,30 @@
   
   (define comes-from-or?
     (make-check-raw-first-symbol 'or))
+  
+  (define comes-from-local?
+    (make-check-raw-first-symbol 'local))
 
-  (define (rectify-value val)
-    (let ([closure-record (closure-table-lookup val (lambda () #f))])
+  (define (rectify-value val . hint-list)
+    (let ([hint (if (pair? hint-list) (car hint-list))]
+          [closure-record (closure-table-lookup val (lambda () #f))])
       (cond
         [closure-record
-         (or (closure-record-name closure-record)
-             (let ([mark (closure-record-mark closure-record)])
-               (o-form-case-lambda->lambda 
-                (rectify-source-expr (mark-source mark) (list mark) null))))]
+         (cond [(and (not (eq? hint 'let-rhs))
+                     (closure-record-name closure-record)) =>
+                (lambda (name-info)
+                  (cond [(symbol? name-info) name-info]
+                        [(pair? name-info) (apply construct-lifted-name name-info)]
+                        [else (error 'rectify-value "bizarre info in closure-record name field: ~s~n" name-info)]))]
+               [else
+                (let ([mark (closure-record-mark closure-record)])
+                  (o-form-case-lambda->lambda 
+                   (rectify-source-expr (mark-source mark) (list mark) null)))])]
         [else
          (s:print-convert val)])))
+  
+  (define (let-rhs-rectify-value val)
+    (rectify-value val 'let-rhs))
   
   (define (o-form-case-lambda->lambda o-form)
     (cond [(eq? (car o-form) 'lambda)
@@ -117,13 +130,14 @@
                                          (eq? var 'empty)))
                                 (let ([val (if (z:top-level-varref? expr)
                                                (s:global-lookup var)
-                                               (lookup-binding mark-list (z:bound-varref-binding expr)))])
+                                               (mark-binding-value (lookup-binding mark-list (z:bound-varref-binding expr))))])
                                   (and (procedure? val)
                                        (not (continuation? val))
-                                       (cond [(closure-table-lookup val (lambda () #f)) =>
-                                              (lambda (x)
-                                                (eq? var (closure-record-name x)))]
-                                             [else #f]))))))))
+                                       (or (z:lexical-varref? expr)
+                                           (cond [(closure-table-lookup val (lambda () #f)) =>
+                                                  (lambda (x)
+                                                    (eq? var (closure-record-name x)))]
+                                                 [else #f])))))))))
                (and (z:app? expr)
                     (let ([fun-val (mark-binding-value
                                     (lookup-binding mark-list (get-arg-binding 0)))])
@@ -262,9 +276,12 @@
                                       (z:letrec-values-form-vals expr))]
                     [must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-names)]
                     [rectified-body (let-recur (z:letrec-values-form-body expr) binding-list)])
-               (if must-be-values?
-                   `(letrec-values ,(map list binding-names right-sides) ,rectified-body)
-                   `(letrec ,(map list (map car binding-names) right-sides) ,rectified-body)))]
+               (cond [(comes-from-local? expr)
+                      (rectify-local (z:sexp->raw (expr-read expr)) binding-names right-sides rectified-body)]
+                     [must-be-values?
+                      `(letrec-values ,(map list binding-names right-sides) ,rectified-body)]
+                     [else
+                      `(letrec ,(map list (map car binding-names) right-sides) ,rectified-body)]))]
                     
             [(z:case-lambda-form? expr)
              (let* ([arglists (z:case-lambda-form-args expr)]
@@ -279,7 +296,8 @@
                      (map (lambda (body binding-form-arglist) (let-recur body binding-form-arglist))
                           bodies
                           binding-form-arglists)])
-               (cond [(or (comes-from-lambda? expr) (comes-from-define? expr))
+               (cond [(or (comes-from-lambda? expr) (comes-from-define? expr) (comes-from-local? expr))
+                      ; this will _FAIL_ when case-lambda becomes legal
                       `(lambda ,(car o-form-arglists) ,(car o-form-bodies))]
                      [(comes-from-case-lambda? expr)
                       `(case-lambda ,@(map list o-form-arglists o-form-bodies))]
@@ -294,7 +312,7 @@
               expr
               (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))])))
  
-  ; these macro unwinders (and, or) are specific to beginner level
+  ; these macro unwinders (and, or) are specific to beginner & intermediate level
   
   (define (rectify-and-clauses and-source expr mark-list lexically-bound-bindings)
     (let ([rectify-source (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-bindings))])
@@ -319,6 +337,45 @@
                     (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list lexically-bound-bindings))
               null)
           `((else ,(rectify-source expr))))))
+  
+  (define (rectify-local raw name-sets right-sides body)
+    (let ([define-clauses (cadr raw)])
+      `(local
+           ,(map 
+             (lambda (clause name-set right-side)
+               (case (car clause)
+                 ((define-struct) clause)
+                 ((define)
+                  (cond [(pair? (cadr clause)) 
+                         (unless (eq? (car right-side) 'lambda)
+                           (error 'rectify-local "define-proc form in local doesn't match reconstructed rhs."))
+                         (o-form-lambda->define right-side (car name-set))]
+                        [else
+                         `(define ,(car name-set) ,right-side)]))
+                 ((define-values)
+                  `(define-values ,name-set ,right-side))))
+             define-clauses name-sets right-sides)
+         ,body)))
+  
+;  (equal? (rectify-local '(local ((define (ident x) x)
+;                                  (define another-ident (lambda (x) x))
+;                                  (define a 6)
+;                                  (define-values (m n) (values 45 2))
+;                                  (define-struct p (x y)))
+;                            (ident a))
+;                         '((ident) (another-ident) (a) (m n) (p))
+;                         '((lambda (x) x)
+;                           (lambda (x) x)
+;                           6
+;                           (values 45 2)
+;                           (struct a b c))
+;                         '(ident a))
+;          '(local ((define (ident x) x)
+;                                  (define another-ident (lambda (x) x))
+;                                  (define a 6)
+;                                  (define-values (m n) (values 45 2))
+;                                  (define-struct p (x y)))
+;                            (ident a)))
 
   ; reconstruct-completed : reconstructs a completed expression or definition.  This now
   ; relies upon the s:global-lookup procedure to find values in the user-namespace.
@@ -361,8 +418,19 @@
   (define (reconstruct-lifted names sexp)
     (case (length names)
       ((0) `(define-values () ,sexp))
-      ((1) `(define ,(car names) ,sexp))
+      ((1) (if (and (pair? sexp)
+                    (eq? (car sexp) 'lambda))
+               (o-form-lambda->define sexp (car names))
+               `(define ,(car names) ,sexp)))
       (else `(define-values ,names ,sexp))))
+       
+  (define (reconstruct-lifted-val name val)
+    (let ([rectified-val (let-rhs-rectify-value val)])
+      (if (and (procedure? val)
+               (pair? rectified-val)
+               (eq? (car rectified-val) 'lambda))
+          (o-form-lambda->define rectified-val name)
+          `(define ,name ,rectified-val))))
   
   (define (so-far-only so-far) (values null null so-far))
     
@@ -466,9 +534,7 @@
                                          [else
                                           (let*-values ([(first-set) (car rhs-lifted-name-sets)]
                                                         [(set-vals remaining) (list-partition rhs-vals (length first-set))]
-                                                        [(reconstructed) (map reconstruct-lifted
-                                                                              (map list first-set)
-                                                                              (map rectify-value set-vals))]
+                                                        [(reconstructed) (map reconstruct-lifted-val first-set set-vals)]
                                                         [(before after) (loop remaining
                                                                               (cdr rhs-sources)
                                                                               (cdr rhs-lifted-name-sets))])
@@ -569,6 +635,7 @@
                ; let-values
                
                [(z:let-values-form? expr)
+                
                 (rectify-let #f
                              (z:let-values-form-vars expr)
                              (z:let-values-form-vals expr)
