@@ -101,7 +101,7 @@
 		"to extract an element from a vector")
     (vector-length ((vector X) -> nat)
 		   "to determine the length of a vector")	
-    (vector-set! ((vectorof X) nat X -> (vectorof X))
+    (vector-set! ((vectorof X) nat X -> void)
 		 "to update a vector")
     (vector? (any -> boolean)
 	     "to determine if a value is a vector"))
