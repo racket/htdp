@@ -27,8 +27,8 @@
   
   ; bogus-varref is used so that we can create legal zodiac varrefs for temporary variables
   
-  (define (create-bogus-bound-varref name)
-    (z:make-bound-varref #f #f #f #f name #f))
+  (define (create-bogus-bound-varref name binding)
+    (z:make-bound-varref #f #f #f #f name binding))
   
   (define (create-bogus-top-level-varref name)
     (z:make-top-level-varref #f #f #f #f name))
@@ -68,15 +68,15 @@
                  (hash-table-put! assoc-table key new-sym)
                  new-sym)))))))
   
-  ; get-arg-symbol maintains a list of gensyms associated with the non-negative
+  ; get-arg-varref maintains a list of gensyms associated with the non-negative
   ; integers.  These symbols are used in the elaboration of applications; the nth
   ; in the application is evaluated and stored in a variable whose name is the nth
   ; gensym supplied by get-arg-symbol.
   
-  (define get-arg-symbol
+  (define get-arg-varref
     (let ([gensym-source (make-gensym-source "arg")])
       (lambda (arg-num)
-        (create-bogus-bound-varref (gensym-source arg-num)))))
+        (create-bogus-bound-varref (gensym-source arg-num) #f))))
   
   ; top-level-exp-gensym-source hands out gensyms for the expressions which are not top-level
   ; defines. these expressions' results are bound to variables named by these gensyms. Note that 
