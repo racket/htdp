@@ -642,67 +642,75 @@
                                           (before-after (,h-p) ((+ 3 4)) same (7))
                                           (finished (7)))))
   
-;    (test-intermediate-sequence "(define a12 3) (define c12 19) (let ([a12 13] [b12 a12]) (+ b12 a12 c12))"
-;                                `((before-after-finished ((define a12 3) (define c12 19))
-;                                                         (,h-p) ((let ([a12 13] [b12 a12]) (+ b12 a12 c12))) 
-;                                                         (,h-p ,h-p ,h-p) ((define a12_0 13) (define b12_1 a12) (+ b12_1 a12_0 c12)))
-;                                  (before-after-finished ((define a12_0 13))
-;                                                         ((define b12_1 ,h-p) (+ b12_1 a12_0 c)) (a12) same (3))
-;                                  (before-after-finished ((define b12_1 3))
-;                                                         ((+ ,h-p a12_0 c12)) (b12_1) same (3))
-;                                  (before-after ((+ 3 ,h-p c12)) (a12_0) same (13))
-;                                  (before-after ((+ 3 13 ,h-p)) (c12) same 19)
-;                                  (before-after (,h-p) ((+ 3 13 19)) same (35))
-;                                  (finished (35))))
-;    
-  ;  (test-intermediate-sequence "(let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
-  ;                              `((before-after (,h-p) ((let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
-  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
-  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
-  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
-  ;                                (finished ((define b_1 7) 9))))
-  ;  
-  ;  (test-intermediate-sequence "(define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
-  ;                              `((before-after-finished ((define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
-  ;                                                       ((define gprime ,h-p)) ((f cos))
-  ;                                                       same ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
-  ;                                (before-after ((define gprime ,h-p)) ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
-  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
-  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
-  ;  
-  ;  ;;;;;;;;;;;;;
-  ;  ;;
-  ;  ;;  LET*
-  ;  ;;
-  ;  ;;;;;;;;;;;;;
-  ;  
-  ;  (test-intermediate-sequence "(define a 3) (define c 19) (let* ([a 13] [b a]) (+ b a c))"
-  ;                              `((before-after-finished ((define a 3) (define c 19))
-  ;                                                       (,h-p) ((let* ([a 13] [b a]) (+ b a c))) 
-  ;                                                       (,h-p ,h-p ,h-p) ((define a_0 13) (define b_1 a_0) (+ b_1 a_0 c)))
-  ;                                (before-after-finished ((define a_0 13))
-  ;                                                       ((define b_1 ,h-p) (+ b_1 a_0 c)) (a_0) same (13))
-  ;                                (before-after-finished ((define b_1 13))
-  ;                                                       ((+ ,h-p a_0 c)) (b_1) same (13))
-  ;                                (before-after ((+ 13 ,h-p c)) (a_0) same (13))
-  ;                                (before-after ((+ 13 13 ,h-p)) (c) same 19)
-  ;                                (before-after (,h-p) ((+ 13 13 19)) same (45))
-  ;                                (finished (45))))
-  ;  
-  ;  (test-intermediate-sequence "(let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
-  ;                              `((before-after (,h-p) ((let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
-  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
-  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
-  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
-  ;                                (finished ((define b_1 7) 9))))
-  ;  
-  ;  (test-intermediate-sequence "(define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
-  ;                              `((before-after-finished ((define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
-  ;                                                       ((define gprime ,h-p)) ((f cos))
-  ;                                                       same ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
-  ;                                (before-after ((define gprime ,h-p)) ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
-  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
-  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
+  (t let-scoping3
+     (test-intermediate-sequence "(define a12 3) (define c12 19) (let ([a12 13] [b12 a12]) (+ b12 a12 c12))"
+                              `((before-after-finished ((define a12 3) (define c12 19))
+                                                       (,h-p) ((let ([a12 13] [b12 a12]) (+ b12 a12 c12))) 
+                                                       (,h-p ,h-p ,h-p) ((define a12_0 13) (define b12_0 a12) (+ b12_0 a12_0 c12)))
+                                (before-after-finished-waiting ((define a12_0 13))
+                                                       ((define b12_0 ,h-p)) (a12) same (3)
+                                                       ( (+ b12_0 a12_0 c12)))
+                                (before-after-finished ((define b12_0 3))
+                                                       ((+ ,h-p a12_0 c12)) (b12_0) same (3))
+                                (before-after ((+ 3 ,h-p c12)) (a12_0) same (13))
+                                (before-after ((+ 3 13 ,h-p)) (c12) same (19))
+                                (before-after (,h-p) ((+ 3 13 19)) same (35))
+                                (finished (35)))))
+    
+  (t let-lifting1
+     (test-intermediate-sequence "(let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+                                 `((before-after (,h-p) ((let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
+                                                 (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_0 (+ 3 4)) 9))
+                                   (before-after-finished-waiting ((define a_0 (lambda (x) (+ x 14))))
+                                                                  ((define b_0 ,h-p)) ((+ 3 4)) same (7)
+                                                                  (9))
+                                   (finished ((define b_0 7) 9)))))
+    
+    (t let-deriv
+       (test-intermediate-sequence "(define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
+                                   `((before-after-finished ((define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))
+                                                            ((define gprime ,h-p)) ((f cos))
+                                                            same ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))
+                                     (before-after ((define gprime ,h-p)) ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))
+                                                   (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) gp_0))
+                                     (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) (define gprime gp_0))))))
+    
+    ;;;;;;;;;;;;;
+    ;;
+    ;;  LET*
+    ;;
+    ;;;;;;;;;;;;;
+    
+    (t let*-scoping1
+       (test-intermediate-sequence "(define a 3) (define c 19) (let* ([a 13] [b a]) (+ b a c))"
+                                `((before-after-finished ((define a 3) (define c 19))
+                                                         (,h-p) ((let* ([a 13] [b a]) (+ b a c))) 
+                                                         (,h-p ,h-p ,h-p) ((define a_0 13) (define b_1 a_0) (+ b_1 a_0 c)))
+                                  (before-after-finished ((define a_0 13))
+                                                         ((define b_1 ,h-p) (+ b_1 a_0 c)) (a_0) same (13))
+                                  (before-after-finished ((define b_1 13))
+                                                         ((+ ,h-p a_0 c)) (b_1) same (13))
+                                  (before-after ((+ 13 ,h-p c)) (a_0) same (13))
+                                  (before-after ((+ 13 13 ,h-p)) (c) same 19)
+                                  (before-after (,h-p) ((+ 13 13 19)) same (45))
+                                  (finished (45)))))
+    
+    (t let*-lifting1
+       (test-intermediate-sequence "(let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+                                `((before-after (,h-p) ((let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
+                                                (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
+                                  (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
+                                                         ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
+                                  (finished ((define b_1 7) 9)))))
+    
+  (t let*-deriv
+     (test-intermediate-sequence "(define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
+                              `((before-after-finished ((define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))
+                                                       ((define gprime ,h-p)) ((f cos))
+                                                       same ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))
+                                (before-after ((define gprime ,h-p)) ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))
+                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) gp_0))
+                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) (define gprime gp_0))))))
   ;  
   ;  ;;;;;;;;;;;;;
   ;  ;;
@@ -730,13 +738,13 @@
   ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
   ;                                (finished ((define b_1 7) 9))))
   ;  
-  ;  (test-intermediate-sequence "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
-  ;                              `((before-after-finished ((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
+  ;  (test-intermediate-sequence "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
+  ;                              `((before-after-finished ((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))
   ;                                                       ((define gprime ,h-p)) ((f cos))
-  ;                                                       same ((letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
-  ;                                (before-after ((define gprime ,h-p)) ((letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
-  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
-  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
+  ;                                                       same ((letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))
+  ;                                (before-after ((define gprime ,h-p)) ((letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))
+  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) gp_0))
+  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) (define gprime gp_0)))))
   ;  ;;;;;;;;;;;;;
   ;  ;;
   ;  ;;  RECUR
@@ -1031,4 +1039,6 @@
 ;  (finished (true))))
   
   
-  (run-all-tests))
+  (run-tests '(let*-scoping1 let*-lifting1 let*-deriv))
+  ;(run-all-tests)
+  )

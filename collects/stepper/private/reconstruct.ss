@@ -413,8 +413,24 @@
              (with-syntax ([(rhs2 ...) (map inner (syntax->list #'(rhs ...)))]
                            [new-label (case (syntax-e #'label)
                                         [(let-values) #'let]
-                                        [(letrec-values) #'letrec])])
-               #`(let ([var rhs2] ...) . #,(map inner (syntax->list #'bodies))))))
+                                        [(letrec-values) #'letrec])]
+                           [bodies (map inner (syntax->list #'bodies))])
+               (if (and (syntax-case #`label (let-values)
+                          [let-values #t]
+                          [else #f])
+                        (pair? bodies)
+                        (null? (cdr bodies))
+                        (syntax-case (car bodies) (let*)
+                          [(let* bindings) #t]
+                          [else #f])
+                        (eq? (syntax-property stx 'user-stepper-source)
+                             (syntax-property (car bodies) 'user-stepper-source))
+                        (eq? (syntax-proprety stx 'user-stepper-position)
+                             (syntax-proprety (car bodies) 'user-stepper-position)))
+                   (syntax-case (car bodies) (let*) 
+                     [(let* bindings bodies)
+                      (transfer-info stx #`(label ))])
+               #`(label ([var rhs2] ...) . #,)))))
          
          (define (unwind-local stx)
            (kernel:kernel-syntax-case stx #f
