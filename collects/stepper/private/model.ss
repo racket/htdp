@@ -193,17 +193,17 @@
          
          (define (err-display-handler message exn)
            (if (not (eq? held-expr-list no-sexp))
-               (let*-values ([(before current after) (redivide held-expr-list)])
-                 (set! held-expr-list no-sexp)
-                 (receive-result (make-before-error-result (append finished-exprs before) 
-                                                           current message after)))
+                 (let*-values ([(before current after) (redivide held-expr-list)])
+                   (set! held-expr-list no-sexp)
+                   (receive-result (make-before-error-result (append finished-exprs before) 
+                                                             current message after)))
                (receive-result (make-error-result finished-exprs message)))))
       
       (program-expander
        (lambda () 
          ; swap these to allow errors to escape (e.g., when debugging)
-         ;(error-display-handler err-display-handler)
-         (void)
+         (error-display-handler err-display-handler)
+         ;(void)
          )
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)

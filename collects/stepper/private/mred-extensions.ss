@@ -228,7 +228,6 @@
                   (let* ([style (send (get-style-list) find-named-style "Standard")]
                          [char-width (send style get-text-width (send canvas get-dc))]
                          [width (floor (/ (- inner-width 18) char-width))])
-                    (printf "formatting exps: ~v\n" exps)
                     (reformat-sexp width)
                     (end-edit-sequence)))])
       
@@ -290,24 +289,18 @@
                           0)]
                        [pretty-print-pre-print-hook
                         (lambda (value p)
-                          (printf "pretty-print-pre-print-hook called with value: ~v\n" value)
                           (when (hash-table-get highlight-table value (lambda () #f))
-                            (printf "old highlight-begin: ~v\n" highlight-begin)
-                            (set! highlight-begin (get-start-position))
-                            (printf "new highlight-begin: ~v\n" highlight-begin)))]
+                            (set! highlight-begin (get-start-position))))]
                        [pretty-print-post-print-hook
                         (lambda (value p)
-                          (printf "pretty-print-post-print-hook called with value: ~v\n" value)
                           (when (hash-table-get highlight-table value (lambda () #f))
                             (let ([highlight-end (get-start-position)])
-                              (printf "highlight-end: ~v\n" highlight-end)
                               (unless highlight-begin
                                 (error 'format-whole-step "no highlight-begin to match highlight-end"))
                               (set! clear-highlight-thunks
                                     (cons (highlight-range highlight-begin highlight-end highlight-color #f #f)
                                           clear-highlight-thunks))
-                              (set! highlight-begin #f)
-                              (printf "highlight-begin value: ~v\n" highlight-begin))))]
+                              (set! highlight-begin #f))))]
                        ;; mflatt: MAJOR HACK - this setting needs to come from the language
                        ;;  somehow
                        [read-case-sensitive #t])
@@ -421,6 +414,7 @@
                get-admin get-snip-location get-dc needs-update hide-caret)
       (public* [reset-width 
                 (lambda (canvas)
+                  (lock #f)
                   (begin-edit-sequence)
                   (let* ([width-box (box 0)]
                          [canvas-width (begin (send (get-admin) get-view #f #f width-box #f) (unbox width-box))]
@@ -441,7 +435,8 @@
                         (coordinate-snip-sizes)
                         (send horiz-separator-1 reset-width)
                         (send horiz-separator-2 reset-width)))
-                    (end-edit-sequence)))])
+                    (end-edit-sequence)
+                    (lock #t)))])
 
       (define old-width #f)
       (define top-defs-snip (make-object stepper-editor-snip%))
@@ -493,8 +488,7 @@
                 (make-object stepper-sub-error-text% error-msg)))
       (send bottom-defs-snip set-editor
             (make-object stepper-sub-text% after-exprs #f))
-      ;(lock #t)
-      ))
+      (lock #t)))
   
   (define finished-text
     (instantiate (class text% ()
@@ -616,36 +610,20 @@
       (send new-text reset-width new-canvas)
       new-canvas))
   
-  (define a
-  (stepper-text-test (build-stx-with-highlight `((define x 3) 14))
-                     (build-stx-with-highlight `((* 13 (hilite (* 15 16)))))
-                     (build-stx-with-highlight `((hilite (+ 3 4)) (define y 4) 13 (+  (hilite 13) (hilite #f)) 13
-                                                      298 (+ (x 398 (hilite (+ x 398))) (hilite (x 398 (+ x 398)))) (hilite #f)))
-                     #f
-                     (build-stx-with-highlight `((define y (+ 13 14)) 80))))
   
-;  (stepper-text-test `()
-;                     `('uninteresting)
-;                     `()
-;                     `(13 ,highlight-placeholder)
-;                     `(13)
-;                     #f
-;                     `())
+;  (define a
+;    (stepper-text-test (build-stx-with-highlight `((define x 3) 14 15 #f 1))
+;                       (build-stx-with-highlight `((* 13 (hilite (* 15 16)))))
+;                       (build-stx-with-highlight `((hilite (+ 3 4)) (define y 4) 13 14 (+  (hilite 13) (hilite #f)) 13 
+;                                                   298 1 1 (+ (x 398 (hilite (+ x 398))) (hilite (x 398 (+ x 398)))) (hilite #f)))
+;                       #f
+;                       (build-stx-with-highlight `((define y (+ 13 14)) 80))))
   
   
-; this should be an error:
-;(stepper-text-test `()
-;                   `('uninteresting)
-;                   `(too-many-fill-ins) `() `() #f `())
-
-; so should this:
-;(stepper-text-test `()
-;                   `(uninteresting)
-;                   `() `(,highlight-placeholder ,highlight-placeholder) `(too-few-fill-ins) #f `())
   
-;  (stepper-text-test `() `(uninteresting but long series of lines) `() `() `() "This is an error message" `((define x 3 4 5)))
+;  (stepper-text-test `() `(uninteresting but long series of lines) `() "This is an error message" `((define x 3 4 5)))
   
-;(stepper-text-test `() `() `() `() `() "This is another error message" `(poomp))
+; (stepper-text-test  `() `() `() "This is another error message" `(poomp))
 
   )
 

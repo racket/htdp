@@ -486,6 +486,7 @@
            [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'stepper-define-type))]
            [it (syntax-property it 'user-stepper-proc-define-name (syntax-property expr 'stepper-proc-define-name))]
            [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'stepper-and/or-clauses-consumed))]
+           [it (syntax-property it 'user-stepper-xml-hint (syntax-property expr 'stepper-xml-hint))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))
@@ -497,6 +498,7 @@
            [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'user-stepper-define-type))]
            [it (syntax-property it 'user-stepper-proc-define-name (syntax-property expr 'user-stepper-proc-define-name))]
            [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'user-stepper-and/or-clauses-consumed))]
+           [it (syntax-property it 'user-stepper-xml-hint (syntax-property expr 'user-stepper-xml-hint))]
            [it (syntax-property it 'user-source (syntax-property expr 'user-source))]
            [it (syntax-property it 'user-position (syntax-property expr 'user-position))]
            [it (syntax-property it 'stepper-highlight (syntax-property expr 'stepper-highlight))])
@@ -526,10 +528,11 @@
                                                   any)]) ; sexp with 'hilite'
   
   ;; syntax-object->hilite-datum : takes a syntax object with zero or more
-  ;; subexpressions tagged with the 'stepper-highlight' syntax-property
-  ;; and turns it into a datum, where expressions with the 'stepper-highlight'
-  ;; property result in (hilite <datum>) rather than <datum>. It also
-  ;; re-interns all identifiers.
+  ;; subexpressions tagged with the 'stepper-highlight', 'stepper-xml-box', 'stepper-xml-unquote', and 'stepper-xml-splice' syntax-properties
+  ;; and turns it into a datum, where expressions with the named
+  ;; properties result in (hilite <datum>), (xml-box <datum>), (xml-unquote <datum>) and (xml-splice <datum>) rather than <datum>. It also
+  ;; re-interns all identifiers.  In cases where a given expression has more than one of these, they appear in the order
+  ;; listed.  That is, an expression with both highlight and xml-box annotations will result it (hilite (xml-box <datum>))
   ;; 
   ;; this procedure is useful in checking the output of the stepper.
   
@@ -542,9 +545,23 @@
                    [else (if (syntax? stx)
                              (syntax-object->datum stx)
                              stx)])])
-      (if (syntax-property stx 'stepper-highlight)
-          `(hilite ,datum)
-          datum)))
+      (let property-checker-loop ([properties (list 'stepper-highlight
+                                                    'from-xml-box
+                                                    'from-scheme-box
+                                                    'from-splice-box)]
+                                  [tags (list 'hilite
+                                              'xml-box
+                                              'xml-unquote
+                                              'xml-splice)]
+                                  [datum datum])
+        (if (null? properties)
+            datum
+            (property-checker-loop
+             (cdr properties)
+             (cdr tags)
+             (if (syntax-property stx (car properties))
+                 (list (car tags) datum)
+                 datum))))))
   
   (provide/contract [syntax-object->interned-datum (syntax? ; input
                                                     . -> .

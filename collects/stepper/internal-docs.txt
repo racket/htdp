@@ -115,6 +115,18 @@ stepper-define-type:
     this procedure was originally bound.  In the absence of set!,
     this solves the problem.
 
+stepper-xml-hint : indicates whether this expression came from an 
+xml-box.  The protocol is as follows:
+
+ [ 'from-xml-box ] : attached to the outer application that wraps
+   the result of expanding an xml-box
+
+ [ 'from-scheme-box ] : attached to the (begin ...) that wraps
+   the result of expanding a scheme-box
+
+ [ 'from-splice-box ] : attached to the (qq-append ...) that wraps
+   the result of expanding a splice-box
+
 stepper-proc-define-name : stores the name to which a procedure
    defined with the (define (fn arg ...) body) was bound.
 

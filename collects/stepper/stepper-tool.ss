@@ -362,41 +362,33 @@
         (define (receive-result result)
           (let ([step-text
                  (cond [(before-after-result? result) 
-                        (make-object x:stepper-text% 
-                          (before-after-result-finished-exprs result)
-                          (before-after-result-exp result)
-                          (before-after-result-redex result)
-                          (before-after-result-post-exp result)
-                          (before-after-result-reduct result)
-                          #f
-                          (before-after-result-after-exprs result))]
+                        (instantiate x:stepper-text% () 
+                          [finished-exprs (before-after-result-finished-exprs result)]
+                          [exps (before-after-result-exp result)]
+                          [post-exps (before-after-result-post-exp result)]
+                          [error-msg #f]
+                          [after-exprs (before-after-result-after-exprs result)])]
                        [(before-error-result? result)
-                        (make-object x:stepper-text%
-                          (before-error-result-finished-exprs result)
-                          (before-error-result-exp result)
-                          (before-error-result-redex result)
-                          null
-                          null
-                          (before-error-result-err-msg result)
-                          (before-error-result-after-exprs result))]
+                        (instantiate x:stepper-text% ()
+                          [finished-exprs (before-error-result-finished-exprs result)]
+                          [exps (before-error-result-exp result)]
+                          [post-exps null]
+                          [error-msg (before-error-result-err-msg result)]
+                          [after-exprs (before-error-result-after-exprs result)])]
                        [(error-result? result)
-                        (make-object x:stepper-text%
-                          (error-result-finished-exprs result)
-                          null
-                          null
-                          null
-                          null
-                          (error-result-err-msg result)
-                          null)]
+                        (instantiate x:stepper-text% ()
+                          [finished-exprs (error-result-finished-exprs result)]
+                          [exps null]
+                          [post-exps null]
+                          [error-msg (error-result-err-msg result)]
+                          [after-exprs null])]
                        [(finished-result? result)
-                        (make-object x:stepper-text%
-                          (finished-result-finished-exprs result)
-                          null
-                          null
-                          null
-                          null
-                          #f
-                          null)]
+                        (instantiate x:stepper-text% ()
+                          [finished-exprs (finished-result-finished-exprs result)]
+                          [exps null]
+                          [post-exps null]
+                          [error-msg #f]
+                          [after-exprs null])]
                        [(finished-stepping? result)
                         x:finished-text])]
                 [step-kind (or (and (before-after-result? result)

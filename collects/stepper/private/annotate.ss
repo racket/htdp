@@ -249,11 +249,6 @@
                            'lambda-bound])
                     'non-lexical))]
               
-              ; xml boxes
-              [(#%app . rest)
-               (eq? (syntax-property stx 'stepper-hint) 'from-xml-box)
-               (rewrite-xml-box stx recur-regular)]
-              
               [else
                (let ([content (syntax-e stx)])
                  (if (pair? content)
