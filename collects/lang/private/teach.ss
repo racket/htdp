@@ -186,9 +186,12 @@
 	    (with-syntax ([(check ...)
 			   (map (lambda (name)
 				  (with-syntax ([name name])
+				    ;; Make sure each check has the
+				    ;; source location of the original
+				    ;; expression:
 				    (syntax/loc stx
 				      (check-top-level-not-defined 'who #'name))))
-				(syntax->list names))])
+				(stx->list names))])
 	      (syntax/loc stx
 		(begin
 		  check ...
