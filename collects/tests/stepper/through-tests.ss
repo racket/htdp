@@ -271,6 +271,23 @@
   
   ;;;;;;;;;;;;;
   ;;
+  ;;  NOT
+  ;;
+  ;;;;;;;;;;;;;
+  
+  (test-upto-int/lam "(not (not #t))"
+                     `((before-after ((not ,h-p)) ((not true))
+                                     same (false))
+                       (before-after (,h-p) ((not false))
+                                     same (true))
+                       (finished (true))))
+  
+  (test-upto-int/lam "(not 5)"
+                     `((before-error (,h-p) ((not 5))
+                                    "not: expects boolean, given 5")))
+  
+  ;;;;;;;;;;;;;
+  ;;
   ;;  COND
   ;;
   ;;;;;;;;;;;;;
