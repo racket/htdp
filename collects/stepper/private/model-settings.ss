@@ -1,15 +1,10 @@
 (module model-settings mzscheme
-  (require (lib "mred.ss" "mred")
+  (require "mred-extensions.ss"
            (prefix p: (lib "pconvert.ss")))
   
   (provide
-   ; setup
-   gather-eventspace-info
-   
+
    ; namespace queries
-   set-user-namespace!
-   set-user-pre-defined-vars!
-   check-pre-defined-var
    check-global-defined
    global-lookup
    
@@ -17,35 +12,17 @@
    true-false-printed?
    constructor-style-printing?
    abbreviate-cons-as-list?
-   special-function?
-   
-   ; image?
-   image?
+   ;special-function?
    
    ;print-convert
    print-convert)
    
-  (define user-pre-defined-vars #f)
-  (define (set-user-pre-defined-vars! vars-list)
-    (set! user-pre-defined-vars vars-list))
+  (define (true-false-printed?) (p:booleans-as-true/false))
+  (define (constructor-style-printing?) (p:constructor-style-printing))
+  (define (abbreviate-cons-as-list?) (p:abbreviate-cons-as-list))
   
-  (define user-namespace #f)
-  (define (set-user-namespace! namespace)
-    (set! user-namespace namespace))
-  
-  (define (gather-eventspace-info)
-    (set! user-namespace (current-namespace))
-    (set! user-pre-defined-vars (map car (make-global-value-list)))
-    (set! user-vocabulary (d:basis:current-vocabulary))
-    (set! par-true-false-printed (p:booleans-as-true/false))
-    (set! par-constructor-style-printing (p:constructor-style-printing))
-    (set! par-abbreviate-cons-as-list (p:abbreviate-cons-as-list))
-    (set! par-special-functions (map (lambda (name) (list name (global-defined-value name)))
-                                     special-function-names)))
-  
-  (define (check-pre-defined-var identifier)
-    (memq identifier user-pre-defined-vars))
-  
+;  (define (check-pre-defined-var identifier)
+;    (memq identifier user-pre-defined-vars))
   
   (define (check-global-defined identifier)
     (with-handlers
@@ -54,10 +31,9 @@
       #t))
   
   (define (global-lookup identifier)
-    (parameterize ([current-namespace user-namespace])
-      (global-defined-value identifier)))
+    (namespace-variable-binding identifier))
   
-   (define print-convert
+   (define (print-convert val)
      (parameterize ([p:current-print-convert-hook
                      (lambda (v basic-convert sub-convert)
                        (if (image? v)
@@ -65,3 +41,4 @@
                            (basic-convert v)))])
        (p:print-convert val)))
    
+  )
