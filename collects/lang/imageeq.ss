@@ -22,7 +22,7 @@
                  (with-handlers ([not-break-exn? (lambda (x)
                                                    (fprintf op "err: ~a\n" (exn-message x))
                                                    #f)])
-                   (set! got-id (dynamic-require '(lib "image.ss" "lang" "private") 'id))
+                   (set! got-id (dynamic-require '(lib "imageeq.ss" "lang" "private") 'id))
                    ...)))))]))
 
   ;; This macro is used once for each individual function,
