@@ -141,7 +141,7 @@
 			      advanced-define
 			      advanced-lambda
 			      advanced-app
-			      advanced-set!
+			      advanced-set!  advanced-set!-continue
 			      advanced-when
 			      advanced-unless
 			      advanced-define-struct
@@ -272,9 +272,12 @@
 	;;  try expanding the first expression. We have to use
 	;;  `will-bind' to avoid errors for unbound ids that will actually
 	;;  be bound. Since they're used as stopping points, we may miss
-	;;  some errors after all. It's worth a try, though.
+	;;  some errors after all. It's worth a try, though. We also
+	;;  have to stop at advanced-set!, in case it's used with
+	;;  one of the identifiers in will-bind.
 	(when will-bind
-	  (local-expand (car exprs) 'expression will-bind))
+	  (local-expand (car exprs) 'expression (cons #'advanced-set!
+						      will-bind)))
 	;; First expression seems ok, report an error for 2nd and later:
 	(teach-syntax-error
 	 who
@@ -1684,52 +1687,83 @@
     ;; as lexically-bound variables that are not bound to
     ;; set!-transformer syntax values.
 
-    (define (advanced-set!/proc stx)
-      (syntax-case stx ()
-	[(_ id expr ...)
-	 (identifier? (syntax id))
-	 (let ([exprs (syntax->list (syntax (expr ...)))])
-	   ;; Check that id isn't syntax, and not lexical:
-	   (when ((with-handlers ([not-break-exn? (lambda (exn) (lambda () #t))])
-		    ;; First try syntax:
-		    (let ([binding (syntax-local-value (syntax id))])
-		      ;; If it's a transformer binding, then it can take care of itself...
-		      (if (set!-transformer? binding)
-			  (lambda () #f) ;; no lex check wanted
-			  (lambda ()
+    (define-values (advanced-set!/proc advanced-set!-continue/proc)
+      (let ([proc
+	     (lambda (continuing?)
+	       (lambda (stx)
+		 (syntax-case stx ()
+		   [(_ id expr ...)
+		    (identifier? (syntax id))
+		    (let ([exprs (syntax->list (syntax (expr ...)))])
+		      ;; Check that id isn't syntax, and not lexical.
+		      (when ((with-handlers ([not-break-exn? (lambda (exn) (lambda () #t))])
+			       ;; First try syntax:
+			       (let ([binding (syntax-local-value (syntax id))])
+				 ;; If it's a transformer binding, then it can take care of itself...
+				 (if (set!-transformer? binding)
+				     (lambda () #f) ;; no lex check wanted
+				     (lambda ()
+				       (teach-syntax-error
+					'set!
+					stx
+					(syntax id)
+					"expected a defined name after `set!', but found a keyword"))))))
+			;; Now try lexical:
+			(when (eq? 'lexical (identifier-binding (syntax id)))
+			  (teach-syntax-error
+			   'set!
+			   stx
+			   (syntax id)
+			   "expected a defined name after `set!', but found a function argument name")))
+		      ;; If we're in a module, we'd like to check here whether
+		      ;;  the identier is bound, but we need to delay that check
+		      ;;  in case the id is defined later in the module. So only
+		      ;;  do this in continuing mode:
+		      (when continuing?
+			(let ([binding (identifier-binding #'id)])
+			  (cond
+			   [(and (not binding)
+				 (syntax-source-module #'id))
 			    (teach-syntax-error
-			     'set!
-			     stx
-			     (syntax id)
-			     "expected a defined name after `set!', but found a keyword"))))))
-	     ;; Now try lexical:
-	     (when (eq? 'lexical (identifier-binding (syntax id)))
-	       (teach-syntax-error
-		'set!
-		stx
-		(syntax id)
-		"expected a defined name after `set!', but found a function argument name")))
-	   (check-single-expression 'set!
-				    "for the new value"
-				    stx
-				    exprs
-				    null)
-	   (syntax/loc stx (set! id expr ...)))]
-	[(_ id . __)
-	 (teach-syntax-error
-	  'set!
-	  stx
-	  (syntax id)
-	  "expected a defined name after `set!', but found ~a"
-	  (something-else (syntax id)))]
-	[(_)
-	 (teach-syntax-error
-	  'set!
-	  stx
-	  (syntax id)
-	  "expected a defined name after `set!', but nothing's there")]
-	[_else (bad-use-error 'set! stx)]))
-
+			     'unknown
+			     #'id
+			     #f
+			     "name is not defined")]
+			   [(and (list? binding)
+				 (or (not (module-path-index? (car binding)))
+				     (let-values ([(path rel) (module-path-index-split (car binding))])
+				       path)))
+			    (teach-syntax-error
+			     'unknown
+			     #'id
+			     #f
+			     "cannot set a primitive name")])))
+		      ;; Check the RHS
+		      (check-single-expression 'set!
+					       "for the new value"
+					       stx
+					       exprs
+					       null)
+		      (if continuing?
+			  (syntax/loc stx (set! id expr ...))
+			  (syntax/loc stx (#%app values (advanced-set!-continue id expr ...)))))]
+		   [(_ id . __)
+		    (teach-syntax-error
+		     'set!
+		     stx
+		     (syntax id)
+		     "expected a defined name after `set!', but found ~a"
+		     (something-else (syntax id)))]
+		   [(_)
+		    (teach-syntax-error
+		     'set!
+		     stx
+		     (syntax id)
+		     "expected a defined name after `set!', but nothing's there")]
+		   [_else (bad-use-error 'set! stx)])))])
+	(values (proc #f)
+		(proc #t))))
+    
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; when and unless (advanced)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
