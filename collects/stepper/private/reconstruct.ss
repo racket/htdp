@@ -181,20 +181,18 @@
                    (identifier? expr)
                    (case (syntax-property expr 'stepper-binding-type)
                      [(lambda-bound) #t]  ; don't halt for lambda-bound vars
-                     [(let-bound)
+                     [(let-bound non-lexical)
                       (let ([val (lookup-binding mark-list expr)])
                         (and (procedure? val)               ; don't halt for varrefs ...
                              (not (continuation? val))      ; ... bound to non-continuation procedures ...
                              (has-right-name (binding-lifted-name mark-list expr) 
                                              val)))])]      ; ... which already have the right name.
                   [(#%top . id-stx)
-                   (let ([id (syntax id-stx)])
-                     (with-handlers
-                         ([exn:variable? (lambda dc #f)]) ; DO halt for unbound top-level varrefs
-                       (let ([val (global-lookup (syntax-e id))])
-                         (or (and (procedure? val)                     ; don't halt for top-level procedure refs ...
-                                  (eq? (syntax-e id) (object-name val)) ; with the right inferred name
-                                  )))))]
+                   (let ([val (lookup-binding mark-list #`id-stx)])
+                     (and (procedure? val)               ; don't halt for varrefs ...
+                          (not (continuation? val))      ; ... bound to non-continuation procedures ...
+                          (has-right-name #`id-stx 
+                                          val)))]        ; ... which already have the right name.
                   [(#%app . terms)
                    ; don't halt for proper applications of constructors
                    (let ([fun-val (lookup-binding mark-list (get-arg-var 0))])
@@ -214,7 +212,7 @@
                  [else #f])))))
   
   ; has-right-name : (syntax? procedure? . -> . boolean?)
-  ; has-right-name takes a let-bound lexical identifier and a procedure value and returns true if the 
+  ; has-right-name takes an identifier and a procedure value and returns true if the 
   ; identifier would be rendered identically to the procedure value.
   (define (has-right-name id val)
     (let ([closure-record (closure-table-lookup val (lambda () #f))])     
@@ -348,26 +346,8 @@
                            (unwind-mz-let stx)]
                           [else
                            (recur-on-pieces stx)]))])
-                 (if (begin
-                       (call-with-output-file "/Users/clements/test1.txt"
-                         (lambda (port)
-                           (fprintf port "reconstruct.ss(1): calling-syntax-property with stx: ~a\n" (syntax-object->datum stx))) 'append)
-                       (let ([result (syntax-property stx 'user-stepper-hint)])
-                         (call-with-output-file "/Users/clements/test1.txt"
-                           (lambda (port)
-                             (fprintf port "call completed successfully.\n"))
-                           'append)
-                         result))
-                     (case (begin
-                             (call-with-output-file "/Users/clements/test1.txt"
-                               (lambda (port)
-                                 (fprintf port "reconstruct.ss(2): calling-syntax-property with stx: ~a\n" (syntax-object->datum stx))) 'append)
-                             (let ([result (syntax-property stx 'user-stepper-hint)])
-                               (call-with-output-file "/Users/clements/test1.txt"
-                                 (lambda (port)
-                                   (fprintf port "call completed successfully.\n"))
-                                 'append)
-                               result))
+                 (if (syntax-property stx 'user-stepper-hint)
+                     (case (syntax-property stx 'user-stepper-hint)
                      
                      
                      [(comes-from-cond) (unwind-cond stx 

@@ -496,24 +496,8 @@
   ; attach-info attaches to a generated piece of syntax the origin & source information of another.
   ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
   (define (attach-info stx expr)
-    (let* ([_1 (call-with-output-file "/Users/clements/test1.txt"
-		 (lambda (port)
-		   (fprintf port "about to add user-origin: ~a\nto syntax: ~a\n" (syntax-property expr 'origin)
-			    (syntax-object->datum stx)))
-		 'append)]
-	   [_4 (when (equal? (syntax-object->datum stx)
-			   `(lambda (b) (#%app + (#%datum . 14) b)))
-		     (syntax-property expr 'foozle))]
-	   [it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
-	   [_2 (call-with-output-file "/Users/clements/test1.txt"
-		 (lambda (port)
-		   (fprintf port "added user-origin.\n"))
-		 'append)]
+    (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
            [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
-	   [_3 (call-with-output-file "/Users/clements/test1.txt"
-		 (lambda (port)
-		   (fprintf port "added user-stepper-hint.\n"))
-                 'append)]
            [it (syntax-property it 'user-stepper-else (syntax-property expr 'stepper-else))]
            [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'stepper-define-type))]
            [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'stepper-and/or-clauses-consumed))]
@@ -523,16 +507,7 @@
   
   (define (transfer-info stx expr)
     (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'user-origin))]
-           [it (syntax-property it 'user-stepper-hint (begin
-                                                        (call-with-output-file "/Users/clements/test1.txt"
-                                                          (lambda (port)
-                                                            (fprintf port "shared.ss: calling-syntax-property with stx: ~a\n" (syntax-object->datum stx))) 'append)
-                                                        (let ([result (syntax-property stx 'user-stepper-hint)])
-                                                          (call-with-output-file "/Users/clements/test1.txt"
-                                                            (lambda (port)
-                                                              (fprintf port "call completed successfully.\n"))
-                                                            'append)
-                                                          result)))]
+           [it (syntax-property it 'user-stepper-hint (syntax-property stx 'user-stepper-hint))]
            [it (syntax-property it 'user-stepper-else (syntax-property expr 'user-stepper-else))]
            [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'user-stepper-define-type))]
            [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'user-stepper-and/or-clauses-consumed))]

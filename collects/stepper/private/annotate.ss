@@ -831,14 +831,10 @@
                              (normal-bundle null expr)]
                             
                             [(#%top . var-stx)
-                             (let*-2vals ([var (syntax var-stx)]
-                                          [free-varrefs null])
-                                         (2vals 
-                                          (if (not (memq (syntax-e var) beginner-defined:must-reduce))
-                                              (outer-wcm-wrap (make-debug-info-normal free-varrefs) expr)
-                                              (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                                              (return-value-wrap expr)))
-                                          free-varrefs))]
+                             (2vals
+                              (wcm-break-wrap (make-debug-info-normal (list #`var-stx))
+                                             (return-value-wrap (syntax-property #`var-stx 'stepper-dont-check-for-function #t)))
+                              (list #`var-stx))]
                             
                             [var-stx
                              (identifier? (syntax var-stx))
@@ -916,5 +912,5 @@
          ; body of local
          ;(printf "input: ~a\n" (syntax-object->datum expr))
          (let* ([annotated-expr (annotate/top-level expr)])
-           ;(printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
+           (printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
            annotated-expr))))

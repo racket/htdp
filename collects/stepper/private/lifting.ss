@@ -266,17 +266,7 @@
                 [else (error 'lift-helper "let or letrec does not have expected shape: ~v\n" (syntax-object->datum stx))]))])
     (kernel:kernel-syntax-case stx #f
       [(let-values . dc)
-       (not (eq? (begin
-                   (call-with-output-file "/Users/clements/test1.txt"
-                              (lambda (port)
-                                (fprintf port "lifting.ss: calling-syntax-property with stx: ~a\n" (syntax-object->datum stx))) 'append)
-                   (let ([result (syntax-property stx 'user-stepper-hint)])
-                     (call-with-output-file "/Users/clements/test1.txt"
-                       (lambda (port)
-                         (fprintf port "call completed successfully.\n"))
-                       'append)
-                     result)) 
-                 'comes-from-or))
+       (not (eq? (syntax-property stx 'user-stepper-hint) 'comes-from-or))
        (lift)]
       [(letrec-values . dc)
        (lift)]
