@@ -130,14 +130,17 @@
 	
 	[get-click
 	 (lambda ()
+	   (wx:yield) ;; this may add entries to the queue
 	   (send click-queue remove))]
 
 	[get-release
 	 (lambda ()
+	   (wx:yield) ;; this may add entries to the queue
 	   (send release-queue remove))]
 	
 	[get-press
 	 (lambda ()
+	   (wx:yield) ;; this may add entries to the queue
 	   (send press-queue remove))]
 
 	[wait-event
