@@ -45,7 +45,7 @@
          (send editor lock #t))
        (lambda ()
          (let* ([fill-chars (make-fill-chars editor)]
-                [port (make-custom-input-port fill-chars #f void)]
+                [port (make-input-port 'name fill-chars #f void)]
                 [xml (with-handlers ([exn:xml? (translate-xml-exn-to-rep-exn editor)])
                        (read-xml port))]
                 [xexpr (xml->xexpr (document-element xml))]

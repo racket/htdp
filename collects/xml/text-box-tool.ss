@@ -21,7 +21,7 @@
   ;; marshall: writable -> string
   (define (marshall s)
     (let ((os (open-output-string)))
-      (with-handlers ((not-break-exn? (lambda (x) "")))
+      (with-handlers ((exn:fail? (lambda (x) "")))
         (write s os)
         (get-output-string os))))
 
@@ -111,10 +111,10 @@
 
           ;; input-port -> (union (listof char) char eof-object? syntax-object)
           (define/private (get-next port)
-            (with-handlers ((exn:special-comment?
-                             (lambda (x)
-                               (get-next port))))
-              (read-char-or-special port)))
+	    (let ([v (read-char-or-special port)])
+	      (if (special-comment? v)
+		  (get-next port)
+		  v)))
           
           (define/public (read-one-special index source line column position)
             (let* ((ed (get-editor))
