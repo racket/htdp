@@ -1,3 +1,4 @@
+(require-library "macro.ss")
 (require-library "files.ss")
 
 (define-signature graphics^
