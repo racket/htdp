@@ -329,6 +329,31 @@
                 [(null? (cdr pair))
                  null])))
   
+  (define (make-queue)
+    (box null))
+  
+  (define (queue-push queue new)
+    (set-box! queue (append (unbox queue) (list new))))
+
+  (define (queue-pop queue)
+    (if (null? (unbox queue))
+        (error 'queue-pop "no elements in queue")
+        (let ([first (car (unbox queue))])
+          (set-box! queue (cdr (unbox queue)))
+          first)))
+  
+  (define (queue-length queue)
+    (length (unbox queue)))
+  
+  (define (rebuild-stx new old)
+    (syntax-recertify (datum->syntax-object old new old old)
+                      old
+                      (current-code-inspector)
+                      #f))
+  
+  (define break-kind?
+    (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break 'expr-finished-break 'define-struct-break))
+  
   ; functional update package
   
   (define second-arg (lambda (dc y) y))
@@ -359,31 +384,6 @@
   (define (skipto-reconstruct fn-list stx reconstructer)
     (update fn-list stx reconstructer 'discard))
   
-  
-  (define (make-queue)
-    (box null))
-  
-  (define (queue-push queue new)
-    (set-box! queue (append (unbox queue) (list new))))
-
-  (define (queue-pop queue)
-    (if (null? (unbox queue))
-        (error 'queue-pop "no elements in queue")
-        (let ([first (car (unbox queue))])
-          (set-box! queue (cdr (unbox queue)))
-          first)))
-  
-  (define (queue-length queue)
-    (length (unbox queue)))
-  
-  (define (rebuild-stx new old)
-    (syntax-recertify (datum->syntax-object old new old old)
-                      old
-                      (current-code-inspector)
-                      #f))
-  
-  (define break-kind?
-    (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break 'expr-finished-break 'define-struct-break))
   
   ; BINDING-/VARREF-SET FUNCTIONS
   
