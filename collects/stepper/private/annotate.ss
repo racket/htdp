@@ -389,9 +389,9 @@
                        [else
                         (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) stx)]))]
               [(begin body) ; else clauses of conds
-               (cond-test stx)q
-               (let ([new-body (recur-regular (syntax body))])
-                 (syntax-property (rebuild-stx `(begin ,new-body) stx) 'stepper-else #t))]
+               (cond-test stx)
+               (let ([new-body (syntax-property (recur-regular (syntax body)) 'stepper-else #t)])
+                 (syntax-property (rebuild-stx `(begin ,new-body) stx) 'stepper-skipto (list syntax-e cdr car)))]
               
               
               ; let/letrec :
