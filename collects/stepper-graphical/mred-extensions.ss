@@ -391,7 +391,7 @@
       
 
       (sequence (super-init line-spacing tabstops)
-                ;(hide-caret #t)
+                (hide-caret #t)
                 (set-style-list (f:scheme:get-style-list))
                 (let ([before-position (last-position)])
                   (for-each insert (list top-defs-snip (string #\newline) horiz-separator-1
@@ -410,7 +410,7 @@
                           (make-object stepper-sub-error-text% error-msg)))
                 (send bottom-defs-snip set-editor
                       (make-object stepper-sub-text% after-exprs null #f))
-                ;(lock #t)
+                (lock #t)
                 )))
 
 ;  (define (stepper-text-test . args)

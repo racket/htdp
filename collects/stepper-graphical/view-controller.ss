@@ -14,8 +14,6 @@
 
   (define stepper-initial-width 500)
   (define stepper-initial-height 500)
-  ;(define stepper-minimum-width 300)
-  ;(define stepper-minimum-height 150)
 
   (define image? x:image?)
   
@@ -25,12 +23,11 @@
       (public
         [set-printing-proc 
          (lambda (proc)
-           (printf "setting printing proc~n")
            (set! printing-proc proc))]
         [printing-proc (lambda (item evt)
                          (printf "shouldn't be called~n"))])
       (override
-        [file-menu:print (lambda (a b) (printing-proc a b))] ; something other than #f
+        [file-menu:print (lambda (a b) (printing-proc a b))] 
         [on-close
          (lambda ()
            (send drscheme-frame stepper-frame #f)
