@@ -65,9 +65,9 @@
     ;; GUI ---------------------------------------------------------------------
 
     ;; make-controller :
-    ;;   symbol layout number X (number X -> true) (number X -> true)  -> void
+    ;;   symbol layout number X (number X -> true) (number X -> true) (X -> true)-> void
     ;; effect: create a left-right controller that invokes move on delta
-    (define (make-controller tag layout shape delta left-right-action up-down-action)
+    (define (make-controller tag layout shape delta left-right-action up-down-action draw-shape)
       (check-arg  tag
 	(and (number? delta) (integer? delta) (>= delta 1))
 	"positive integer"
@@ -79,7 +79,7 @@
       (local ((define frame (make-object frame% TITLE #f 10 10))
 	      (define panel (make-object vertical-panel% frame))
 	      ;; control : bitmap% -> (_ _ -> void)
-	      ;; to check whcih button was clicked 
+	      ;; to check which button was clicked 
 	      (define (control an-item)
 		(lambda (x y)
 		  (evcase an-item
@@ -90,7 +90,8 @@
 		    (LEFT-ARROW
 		      (set! shape (left-right-action shape (- delta))))
 		    (RIGHT-ARROW
-		      (set! shape (left-right-action shape delta)))))))
+		      (set! shape (left-right-action shape delta))))
+		  (draw-shape shape))))
 	(make-button-table panel control layout)
 	(send frame show #t)
 	#t))
@@ -99,20 +100,20 @@
 
     (define (void2 x y) (void))
 
-    ;; control-left-right : X number (number X -> true) -> true
+    ;; control-left-right : X number (number X -> true) (X -> true) -> true
     ;; effect: create a window from which a user can control L/R moves
-    (define (control-left-right shape delta lr)
-      (make-controller 'control-left-right LEFT-RIGHT shape delta lr void2))
+    (define (control-left-right shape delta lr draw)
+      (make-controller 'control-left-right LEFT-RIGHT shape delta lr void2 draw))
 
-    ;; control-up-down : X number (number X -> true) -> true
+    ;; control-up-down : X number (number X -> true) (X -> true) -> true
     ;; effect: create a window from which a user can control U/D moves      
-    (define (control-up-down shape delta ud)
-      (make-controller 'control-up-down UP-DOWN shape delta void2 ud))
+    (define (control-up-down shape delta ud draw)
+      (make-controller 'control-up-down UP-DOWN shape delta void2 ud draw))
 
-    ;; control : X number (number X -> true) (number X -> true) -> true
+    ;; control : X number (number X -> true) (number X -> true) (X -> true) -> true
     ;; effect: create a window from which a user can control moves
-    (define (control shape delta lr ud)
-      (make-controller 'control FOUR shape delta lr ud))
+    (define (control shape delta lr ud draw)
+      (make-controller 'control FOUR shape delta lr ud draw))
 
     ))
 

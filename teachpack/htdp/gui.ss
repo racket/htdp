@@ -1,0 +1,125 @@
+(require-library "error.ss" "htdp")
+
+(define-signature guiS
+  (setup-gui show-gui hide-gui
+   make-text make-choice make-button make-message
+   get-text get-choice draw-message
+   create-frame))
+  
+(define guessU
+  (unit/sig guiS (import errorS plt:userspace^)
+
+    ;; DEFAULT VALUES:
+    ;; ----------------------------------------------------------------------------
+
+    ;; the-frame : frame% 
+    (define the-frame (make-object frame% "title" false 10 10))
+
+    ;; the-panel : pane% ; for arranging stacks of GUI elements 
+    (define the-panel (make-object vertical-pane% the-frame))
+
+    ;; INFRASTRUCTURE OPERATIONS:
+    ;; ----------------------------------------------------------------------------
+
+    ;; setup-gui : str num num -> true
+    ;; effect: to set up a frame of dimensons x and y, plus a panel
+    (define (setup-gui title x y)
+      (set! the-frame (make-object frame% title false x y))
+      (set! the-panel (make-object vertical-pane% the-frame))
+      (send the-frame show true)
+      true)
+
+    ;; show-gui : -> true
+    ;; effect: to show the frame
+    (define (show-gui)
+      (send the-frame show true)
+      true)
+
+    ;; hide-gui : -> true
+    ;; effect: to hide the frame 
+    (define (hide-gui . x)
+      (send the-frame show false)
+      true)
+
+    ;; MAKING ITEMS: 
+    ;; ----------------------------------------------------------------------------
+
+    (define-struct gui-item (builder))
+    ;; A gui-item[C < control%] is a structure: (make-gui-item f)
+    ;; where f is a function: (panel% -> C)
+
+    ;; create-gui-item : (panel% -> C[< control%])
+    ;; to create a memoizing gui-item 
+    (define (create-gui-item builder)
+      (let ([C false])
+	(make-gui-item (lambda (p) (or C (begin (set! C (builder p)) C))))))
+
+    ;; create-frame : (listof gui-item) -> true
+    ;; to add gui-items to the frame and to show frame
+    (define (create-frame loi)
+      (for-each (lambda (loi)
+		  (let ((p (make-object horizontal-pane% the-panel)))
+		    (send p set-alignment 'center 'center)
+		    (for-each (lambda (i) ((gui-item-builder i) p)) loi)))
+	loi)
+      (show-gui))
+      
+    ;; make-text : str -> gui-item
+    ;; to create a text-item with label lbl
+    (define (make-text lbl)
+      (create-gui-item
+	(lambda (the-panel) 
+	  (make-object text-field% lbl the-panel void))))
+
+    ;; make-message : str -> gui-item
+    ;; to create a message-item with current contents txt
+    (define (make-message txt)
+      (create-gui-item 
+	(lambda (the-panel)
+	  (make-object message% txt the-panel))))
+
+    ;; make-button : str (event% -> boolean) -> gui-item
+    ;; to create a button-item with label and call-back function 
+    (define (make-button label call-back)
+      (create-gui-item 
+	(lambda (the-panel)
+	  (make-object button% label the-panel (lambda (b e) (call-back e))))))
+
+    ;; make-choice : (listof str) -> gui-item
+    ;; to create a choice-item that permits users to choose from the
+    ;; alternatives on loc
+    (define (make-choice loc)
+      (create-gui-item 
+	(lambda (the-panel)
+	  (make-object choice% "" loc the-panel void))))
+
+    ;; DISPLAYING MESSAGES: 
+    ;; ----------------------------------------------------------------------------
+
+    ;; draw-message : gui-item[message%] str -> true
+    ;; to change the current contents of a message field 
+    (define (draw-message msg txt)
+      (send ((gui-item-builder msg) the-panel) set-label txt)
+      true)
+
+    ;; PROBING ITEMS: 
+    ;; ----------------------------------------------------------------------------
+
+    ;; get-text : gui-item[text-field%] -> str
+    ;; to determine the contents of a text-item 
+    (define (get-text a-text-gui)
+      (send ((gui-item-builder a-text-gui) the-panel) get-value))
+
+    ;; get-choice : gui-item[choice%] -> number
+    ;; to determine which choice is currently selected in a choice-item 
+    (define (get-choice a-choice)
+      (send ((gui-item-builder a-choice) the-panel) get-selection))
+
+    ))
+
+(compound-unit/sig
+  (import (PLT : plt:userspace^))
+  (link
+    (GUI  : guiS (guessU ERR PLT))
+    (ERR  : errorS  (errorU)))
+  (export (open GUI)))
