@@ -592,7 +592,7 @@
     (check-viewport 'draw-rectangle viewport)
     (rec draw-rectangle-viewport
 	 (case-lambda 
-	  [(p width height) (draw-rectangle-viewport p width height "BLACK")]
+	  [(p width height) (draw-rectangle-viewport p width height (make-rgb 0 0 0))]
 	  [(p width height color)
 	   (check 'draw-rectangle
 		  posn? p "posn"
@@ -609,7 +609,7 @@
     (check-viewport 'draw-solid-rectangle viewport)
     (rec draw-solid-rectangle-viewport
 	 (case-lambda 
-	  [(p width height) (draw-solid-rectangle-viewport p width height "BLACK")]
+	  [(p width height) (draw-solid-rectangle-viewport p width height (make-rgb 0 0 0))]
 	  [(p width height color)
 	   (check 'draw-solid-rectangle
 		  posn? p "posn"
@@ -626,7 +626,7 @@
     (check-viewport 'flip-rectangle viewport)
     (rec flip-rectangle-viewport
 	 (case-lambda 
-	  [(p width height) (flip-rectangle-viewport p width height "BLACK")]
+	  [(p width height) (flip-rectangle-viewport p width height (make-rgb 0 0 0))]
 	  [(p width height color)
 	   (check 'flip-rectangle
 		  posn? p "posn"
@@ -643,7 +643,7 @@
     (check-viewport 'flip-solid-rectangle viewport)
     (rec flip-solid-rectangle-viewport
 	 (case-lambda 
-	  [(p width height) (flip-solid-rectangle-viewport p width height "BLACK")]
+	  [(p width height) (flip-solid-rectangle-viewport p width height (make-rgb 0 0 0))]
 	  [(p width height color)
 	   (check 'flip-solid-rectangle
 		  posn? p "posn"
@@ -660,7 +660,7 @@
     (check-viewport 'draw-ellipse viewport)
     (rec draw-ellipse-viewport
 	 (case-lambda 
-	  [(p width height) (draw-ellipse-viewport p width height "BLACK")]
+	  [(p width height) (draw-ellipse-viewport p width height (make-rgb 0 0 0))]
 	  [(p width height color)
 	   (check 'draw-ellipse
 		  posn? p "posn"
@@ -677,7 +677,7 @@
     (check-viewport 'draw-solid-ellipse viewport)
     (rec draw-solid-ellipse-viewport
 	 (case-lambda 
-	  [(p width height) (draw-solid-ellipse-viewport p width height "BLACK")]
+	  [(p width height) (draw-solid-ellipse-viewport p width height (make-rgb 0 0 0))]
 	  [(p width height color)
 	   (check 'draw-solid-ellipse
 		  posn? p "posn"
@@ -694,7 +694,7 @@
     (check-viewport 'flip-ellipse viewport)
     (rec flip-ellipse-viewport
 	 (case-lambda 
-	  [(p width height) (flip-ellipse-viewport p width height "BLACK")]
+	  [(p width height) (flip-ellipse-viewport p width height (make-rgb 0 0 0))]
 	  [(p width height color)
 	   (check 'flip-ellipse
 		  posn? p "posn"
@@ -711,7 +711,7 @@
     (check-viewport 'flip-solid-rectangle viewport)
     (rec flip-solid-ellipse-viewport
 	 (case-lambda 
-	  [(p width height) (flip-solid-ellipse-viewport p width height "BLACK")]
+	  [(p width height) (flip-solid-ellipse-viewport p width height (make-rgb 0 0 0))]
 	  [(p width height color)
 	   (check 'flip-solid-ellipse
 		  posn? p "posn"
