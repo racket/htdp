@@ -3,7 +3,7 @@
 (module convert mzscheme
   (require (lib "unitsig.ss")
            (lib "etc.ss")
-           (lib "class.s")
+           (lib "class.ss")
            (lib "mred.ss" "mred")
            (lib "error.ss" "htdp"))
            
