@@ -78,6 +78,7 @@ stepper-hint :
  clause.
 
  [ 'comes-from-let ] : expression was expanded from let
+ [ 'comes-from-let* ] : expression was expanded from let*
  [ 'comes-from-local ] : expression was expanded from local
 
 stepper-define-type: 
@@ -187,8 +188,13 @@ STEPPER-HINT COLLISIONS
 
  Q.E.D.
 
- exceptions: the beginner cond expands into the mzscheme cond, which is 
+ exceptions:
+ 
+1) the beginner cond expands into the mzscheme cond, which is 
 then annotated by the top-level-rewrite. In this case, the expansion
 of the beginner cond does not add any stepper-hint properties, so no
 collision can occur.
 
+2) the intermediate let* expands into the beginner let; both add a 
+stepper-hint.  To resolve this, the expansion of let allows an existing
+stepper-hint to stand.

@@ -1098,16 +1098,23 @@
     (define (intermediate-let*/proc stx)
       (syntax-case stx ()
 	[(_ () expr)
-	 (syntax (let () expr))]
+         (syntax-property
+          #`(let () expr)
+          'stepper-skipto
+          (list syntax-e cdr cdr car))]
 	[(_ ([name0 rhs-expr0] [name rhs-expr] ...) expr)
 	 (let ([names (syntax->list (syntax (name0 name ...)))])
 	   (andmap identifier/non-kw? names))
 	 (with-syntax ([rhs-expr0 (allow-local-lambda (syntax rhs-expr0))])
-	   (syntax/loc stx
-	     (intermediate-let ([name0 rhs-expr0])
-	       (intermediate-let* ([name rhs-expr]
-				   ...)
-		   expr))))]
+           (syntax-property
+            (quasisyntax/loc stx
+              (intermediate-let ([name0 rhs-expr0])
+                                #,(quasisyntax/loc stx 
+                                    (intermediate-let* ([name rhs-expr]
+                                                        ...)
+                                                       expr))))
+            'stepper-hint
+            'comes-from-let*))]
 	[_else (bad-let-form 'let* stx stx)]))
 
     ;; Helper function: allows `beginner-lambda' instead

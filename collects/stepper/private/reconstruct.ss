@@ -309,6 +309,23 @@
       (error 'first-of-one "expected a list of length one in: ~v" x))
     (car x))
   
+  (define (improper-member elt improper-list)
+    (cond [(pair? improper-list)
+           (or (eq? elt (car improper-list))
+               (improper-member elt (cdr improper-list)))]
+          [else
+           (eq? elt improper-list)]))
+  
+  (define-syntax (noisy-and stx)
+    (syntax-case stx ()
+      [(_) #`#t]
+      [(_ a b ...)
+       (with-syntax ([inner (syntax/loc stx (noisy-and b ...))]
+                     [error (syntax/loc #`a (error 'noisy-and "and clause failed"))])
+       (syntax/loc stx (if a inner error)))]
+      [else
+       (error 'noisy-and "bad syntax for noisy-and")]))
+  
   ;(->* (syntax? (listof syntax?)) 
   ;     (syntax? (listof syntax?)))
   
@@ -366,15 +383,6 @@
                      [(comes-from-local)
                       (unwind-local stx)]
                      
-;                     [(comes-from-let)
-;                      (kernel:kernel-syntax-case stx #f
-;                        [(define-values . rest) 
-;                         (unwind-define stx)]
-;                        [(let-values . rest)
-;                         (with-syntax ([(let ([tmp rhs] ...) (local ((define var dc) ...) body)) (unwind-mz-let stx)])
-;                           #`(let ([var rhs] ...) body))]
-;                        [else (error 'unwind-macro "unexpected form for comes-from-let: ~v\n" (syntax-object->datum stx))])]
-                     
                      ((quasiquote-the-cons-application) (unwind-quasiquote-the-cons-application stx))
                      
                      (else (fall-through)))
@@ -411,26 +419,23 @@
          (define (unwind-mz-let stx)
            (with-syntax ([(label ([(var) rhs] ...) . bodies) stx])
              (with-syntax ([(rhs2 ...) (map inner (syntax->list #'(rhs ...)))]
-                           [new-label (case (syntax-e #'label)
-                                        [(let-values) #'let]
-                                        [(letrec-values) #'letrec])]
-                           [bodies (map inner (syntax->list #'bodies))])
-               (if (and (syntax-case #`label (let-values)
-                          [let-values #t]
-                          [else #f])
-                        (pair? bodies)
-                        (null? (cdr bodies))
-                        (syntax-case (car bodies) (let*)
-                          [(let* bindings) #t]
-                          [else #f])
-                        (eq? (syntax-property stx 'user-stepper-source)
-                             (syntax-property (car bodies) 'user-stepper-source))
-                        (eq? (syntax-proprety stx 'user-stepper-position)
-                             (syntax-proprety (car bodies) 'user-stepper-position)))
-                   (syntax-case (car bodies) (let*) 
-                     [(let* bindings bodies)
-                      (transfer-info stx #`(label ))])
-               #`(label ([var rhs2] ...) . #,)))))
+                           [new-label (if (improper-member 'comes-from-let* (syntax-property stx 'user-stepper-hint))
+                                          #`let*
+                                          (case (syntax-e #'label)
+                                            [(let-values) #'let]
+                                            [(letrec-values) #'letrec]))]
+                           [new-bodies (map inner (syntax->list #'bodies))])
+               (syntax-case #`new-bodies (let*)           ; is this let and the nested one part of a let*?
+                 [((let* bindings inner-body ...))
+                  (and 
+                   (improper-member 'comes-from-let* (syntax-property stx 'user-stepper-hint))
+                   (eq? (syntax-property stx 'user-stepper-source)
+                        (syntax-property (car (syntax->list #`new-bodies)) 'user-stepper-source))
+                   (eq? (syntax-property stx 'user-stepper-position)
+                        (syntax-property (car (syntax->list #`new-bodies)) 'user-stepper-position)))
+                  (transfer-info #`(let* #,(append (syntax->list #`([var rhs2] ...)) (syntax->list #`bindings)) inner-body ...) stx)]
+                 [else
+                  (transfer-info #`(new-label ([var rhs2] ...) . new-bodies) stx)]))))
          
          (define (unwind-local stx)
            (kernel:kernel-syntax-case stx #f
