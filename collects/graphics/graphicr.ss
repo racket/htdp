@@ -863,7 +863,7 @@
 			   (make-object wx:sixlib-canvas%
 					frame 0 0 
 					(* scale width) (* scale height)
-					wx:const-retained "canvas")]
+					0 "canvas")]
 			  [DC (send canvas get-dc)]
 			  [buffer-DC (make-object wx:memory-dc% DC)]
 			  [viewport (make-viewport label canvas)])
