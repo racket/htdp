@@ -4,7 +4,8 @@
            (lib "contract.ss")
            (prefix kernel: (lib "kerncase.ss" "syntax"))
            (lib "match.ss")
-           "shared.ss") 
+           "shared.ss"
+           (lib "mz-testing.ss" "tests" "utils")) 
   
   (define-struct context-record (stx index kind))
 
@@ -132,14 +133,16 @@
   (define-syntax (test-begin stx)
     (syntax-case stx ()
       [(_ expr ...)
-       ;#'(begin expr ...) ; testing version
-       #'(void) ; non-testing version
+       #'(begin expr ...) ; testing version
+       ;#'(void) ; non-testing version
        ]))
   
   (define (datum-ize-context-record cr)
      (list (syntax-object->datum (context-record-stx cr))
                           (context-record-index cr)
                           (context-record-kind cr)))
+  
+  (test-begin (section 'stepper-lifting))
 
   (test-begin
    ; TEST OF FIND-HIGHLIGHT
@@ -160,9 +163,6 @@
                                      (letrec-values (((a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))) 
                                                      ((b) (lambda (x) (#%app #,highlight-placeholder-stx x)))) (let-values () (#%app a x)))))))
 
-   (define actual (map datum-ize-context-record
-                       (find-highlight test-datum)))
-   
    (define expected (list (list `(#%app ,highlight-placeholder x) '(0) 'expr)
                           (list `(lambda (x) (#%app ,highlight-placeholder x)) '(2) 'expr)
                           (list `(letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))) '(1 1 1) 'expr)
@@ -171,13 +171,10 @@
                           (list `(define-values (f) (lambda (x) (let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))))) '(2)
                                                'general-top-level)))
    
-   (printf "equal? ~v\n" (equal? actual expected))
+   (test expected map datum-ize-context-record (find-highlight test-datum))
    ;(printf "shared: ~v\n" (sexp-shared actual expected))
    
-   (local
-       ((define actual (find-highlight highlight-placeholder-stx)))
-     
-     (printf "equal?: ~v\n" (null? actual))))
+   (test #t null? (find-highlight highlight-placeholder-stx)))
   
   ; substitute-in-syntax takes a syntax expression (which must be a proper syntax list) and a path
   ; (represented by a list of numbers) and a syntax-expression to insert.  If the path is null, the
@@ -298,10 +295,11 @@
         (define expected-highlights 
           '((define-values (a) 4) (define-values (b) 9) (define-values (c) 12) (p q))))
      
-     (printf "equal?: ~v\n" (equal? actual-sexps expected-sexps))
-     (printf "equal?: ~v\n" (equal? actual-highlights expected-highlights))
+     (test expected-sexps map so->d actual-stxs)
+     (test expected-highlights map so->d actual-stx-highlights)
      ;(printf "shared: ~v\n" (sexp-shared actual expected))
      )
    
+   (report-errs)
    ))
  

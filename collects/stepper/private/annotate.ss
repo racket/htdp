@@ -304,6 +304,16 @@
                (cond-test stx)
                (syntax-property stx 'stepper-skip-completely #t)]
               
+              ; wrapper on a local.  This is necessary because teach.ss expands local into a trivial let wrapping a bunch of
+              ;  internal defines, and therefore the letrec-values on which I want to hang the 'stepper-hint doesn't yet
+              ;  exist.  So we patch it up after expansion.  And we discard the outer 'let' at the same time.
+              [(let-values () expansion-of-local)
+               (and (syntax-case #`expansion-of-local (letrec-values)
+                      [(letrec-values x ...) #t]
+                      [else #f])
+                    (eq? (syntax-property stx 'stepper-hint) 'comes-from-local))
+               (recur-regular
+                (syntax-property #`expansion-of-local 'stepper-hint 'comes-from-local))]
               
               ; let/letrec :
               [(let-values x ...) (do-let/rec stx #f)]

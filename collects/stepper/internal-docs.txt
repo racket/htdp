@@ -25,7 +25,8 @@ main annotation.  This procedure is called 'top-level-rewrite'.
 
 Therefore, the stepper's syntax-property additions occur in two
 textual locations: collects/lang/private/teach.ss, and
-collects/stepper/private/annotate.ss.
+collects/stepper/private/annotate.ss (with a few stray ones 
+in collects/lang/private/teachhelp.ss).
 
 Also, in order to be visible to the reconstructor, these properties
 must be explicitly transferred from the annotated source code syntax
@@ -38,7 +39,6 @@ of 'or' has a corresponding 'or' element in its 'origin field.  The
 reason is that this element appears only on the outermost expression
 in the expansion, and during runtime reconstruction, this outermost
 expression may be gone.
-
 
 Here are the syntax properties added, the values they may be
 associated with, their meanings, whether they're transferred
@@ -102,6 +102,14 @@ stepper-skipto :
  along a given path for the expression to be annotated.  In
  particular, the value bound to stepper-skipto must be a list whose
  elements are car, cdr, or syntax-e. (Not transferred)
+
+Some uses:
+ - applied to the 'check-undefined' check added on local-bound variables.
+ - applied to the spurious 'let' that's wrapped around a local.
+
+Where it's used: the stepper-skipto label is used by the 2nd-pass
+macro-labeler and the annotater.  Both are in annotate.ss.  In addition
+to skipping inward, a stepper hint 
 
 stepper-else : 
  [ #t ] : Initially applied to the 'true' that the cond macro
