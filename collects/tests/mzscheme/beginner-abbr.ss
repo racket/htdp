@@ -17,27 +17,22 @@
 
 ;; Check export names:
 (require (lib "docprovide.ss" "syntax"))
-(let ([docs (lookup-documentation '(lib "beginner.ss" "lang") 'procedures)])
+(let ([docs (lookup-documentation '(lib "beginner-abbr.ss" "lang") 'procedures)])
   (for-each
    (lambda (row)
      (for-each
       (lambda (doc)
-	(let ([v (dynamic-require '(lib "beginner.ss" "lang") (car doc))])
+	(let ([v (dynamic-require '(lib "beginner-abbr.ss" "lang") (car doc))])
 	  (when (procedure? v)
 	    (test (car doc) object-name v))))
       (cdr row)))
    docs))
 
-(require (lib "beginner.ss" "lang"))
+(require (lib "beginner-abbr.ss" "lang"))
 
 (load-relative "beg-adv.ss")
 (load-relative "beg-intm.ss")
 (load-relative "beg-bega.ss")
-
-(syntax-test #'quote)
-(syntax-test #''1)
-(syntax-test #''"hello")
-(syntax-test #''(1 2))
-(syntax-test #'''a)
+(load-relative "bega-adv.ss")
 
 (report-errs)

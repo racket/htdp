@@ -15,10 +15,6 @@
 ;; Don't need these:
 (define no-extra-if-tests? #t)
 
-;; After we require beginner, thunks no longer work:
-(define (do-report-errs ignored)
-  (report-errs))
-
 ;; Check export names:
 (require (lib "docprovide.ss" "syntax"))
 (let ([docs (lookup-documentation '(lib "beginner.ss" "lang") 'procedures)])
@@ -36,6 +32,7 @@
 
 (load-relative "beg-adv.ss")
 (load-relative "beg-intm.ss")
+(load-relative "beg-bega.ss")
 
 (syntax-test #'quote)
 (syntax-test #''1)
@@ -43,9 +40,4 @@
 (syntax-test #''(1 2))
 (syntax-test #'''a)
 
-(syntax-test #'(define x (lambda (y) (lambda (z) z))))
-(syntax-test #'(lambda (x) 10))
-
-(syntax-test #'(lambda (f) (f f)))
-
-(do-report-errs #t)
+(report-errs)

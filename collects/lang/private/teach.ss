@@ -354,11 +354,12 @@
 		       (if lex?
 			   "a function argument name"
 			   (something-else fun))))
-		    (when (null? (syntax->list (syntax (rand ...))))
-		      (teach-syntax-error
-		       'application
-		       stx
-		       "expected an argument after the function name for a function call, ~
+		    ;;The following check disallows calling thunks:
+		    '(when (null? (syntax->list (syntax (rand ...))))
+		       (teach-syntax-error
+			'application
+			stx
+			"expected an argument after the function name for a function call, ~
                         but nothing's there"))
 		    (syntax (#%app rator rand ...)))]
 		 [(_)

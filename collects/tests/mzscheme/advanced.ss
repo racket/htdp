@@ -24,6 +24,7 @@
 (require (lib "advanced.ss" "lang"))
 
 (load-relative "beg-adv.ss")
+(load-relative "bega-adv.ss")
 (load-relative "intm-adv.ss")
 
 (err/rt-test (1 2 3))
