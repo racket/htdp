@@ -21,3 +21,8 @@ Changes for v200:
 Total rewrite for new syntax. Addition of test suites.
 Addition of somewhat more systematic macro unwinding.
 Lots of bug fixes.
+
+Changes for v201:
+
+Minor bug fixes.
+
