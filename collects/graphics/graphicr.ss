@@ -29,157 +29,159 @@
 
    (define wx:sixlib-canvas%
      (class-asi wx:canvas% 
-		(inherit get-parent set-size)
-		(private
-		 (current-mouse-posn (make-posn 0 0))
-		 (queue%
-		  (make-class ()
-			      (private
-			       [queue '()]
-			       [last #f])
-			      (public
-			       [flush
-				(lambda ()
-				  (set! queue '())
-				  (set! last #f))]
-			       [add
-				(lambda (v)
-				  (if last
-				      (begin
-					(set-cdr! last (cons v '()))
-					(set! last (cdr last)))
-				      (begin
-					(set! queue (cons v '()))
-					(set! last queue))))]
-			       [remove
-				(lambda ()
-				  (if (null? queue)
-				      #f
-				      (begin0
-				       (car queue)
-				       (set! queue (cdr queue))
-				       (if (null? queue)
-					   (set! last #f)))))])))
-		 (click-queue (make-object queue%))
-		 (release-queue (make-object queue%))
-		 (press-queue (make-object queue%))
-		 (reset-size
-		  (lambda ()
-		    (let ([width (* scale width)]
-			  [height (* scale height)])
-		      (let ([f (get-parent)])
-			(send f set-size -1 -1 
-			      (+ FRAME-W-DELTA width)
-			      (+ FRAME-H-DELTA height)))
-		      (set-size -1 -1 
-				(+ CANVAS-W-DELTA width) 
-				(+ CANVAS-H-DELTA height))
-		      (set! bitmap (make-object wx:bitmap% width height))
-		      (send buffer-DC select-object bitmap)
-		      (send buffer-DC set-brush (send DC get-brush))
-		      (send buffer-DC set-pen (send DC get-pen))
-		      (let ([f (send DC get-font)])
-			(unless (null? f)
-				(send buffer-DC set-font f)))
-		      (send buffer-DC clear)
-		      (send DC clear)))))
-		
-		
-		(public
-		 viewport
-		 (set-viewport (lambda (x) (set! viewport x)))
-		 (scale 1.0)
-		 (height 0)
-		 (width 0)
-		 (label 0)
-		 current-pen
-		 current-brush
-		 bitmap
-		 DC
-		 buffer-DC
-		 (get-current-pen (lambda () current-pen))
-		 (get-current-brush (lambda () current-brush))
-		 (remember-pen (lambda (pen) (set! current-pen pen)))
-		 (remember-brush (lambda (brush) (set! current-brush brush)))
-		 (leaving-event
-		  (make-object wx:mouse-event% wx:const-event-type-leave-window))
-		 
-		 (on-paint
-		  (lambda ()
-		    (send DC blit 0 0 width height buffer-DC 0 0 wx:const-copy)))
+       (inherit get-parent set-size)
+       (private
+	 [current-mouse-posn (make-posn 0 0)]
+	 [queue%
+	  (class null ()
+	    (private
+	      [queue '()]
+	      [last #f])
+	    (public
+	      [flush
+	       (lambda ()
+		 (set! queue '())
+		 (set! last #f))]
+	      [add
+	       (lambda (v)
+		 (if last
+		     (begin
+		       (set-cdr! last (cons v '()))
+		       (set! last (cdr last)))
+		     (begin
+		       (set! queue (cons v '()))
+		       (set! last queue))))]
+	      [remove
+	       (lambda ()
+		 (if (null? queue)
+		     #f
+		     (begin0
+		      (car queue)
+		      (set! queue (cdr queue))
+		      (if (null? queue)
+			  (set! last #f)))))])
+	    (sequence
+	      (super-init)))]
+	 [click-queue (make-object queue%)]
+	 [release-queue (make-object queue%)]
+	 [press-queue (make-object queue%)]
+	 [reset-size
+	  (lambda ()
+	    (let ([width (* scale width)]
+		  [height (* scale height)])
+	      (let ([f (get-parent)])
+		(send f set-size -1 -1 
+		      (+ FRAME-W-DELTA width)
+		      (+ FRAME-H-DELTA height)))
+	      (set-size -1 -1 
+			(+ CANVAS-W-DELTA width) 
+			(+ CANVAS-H-DELTA height))
+	      (set! bitmap (make-object wx:bitmap% width height))
+	      (send buffer-DC select-object bitmap)
+	      (send buffer-DC set-brush (send DC get-brush))
+	      (send buffer-DC set-pen (send DC get-pen))
+	      (let ([f (send DC get-font)])
+		(unless (null? f)
+		  (send buffer-DC set-font f)))
+	      (send buffer-DC clear)
+	      (send DC clear)))])
+       
+       
+       (public
+	 viewport
+	 [set-viewport (lambda (x) (set! viewport x))]
+	 [scale 1.0]
+	 [height 0]
+	 [width 0]
+	 [label 0]
+	 current-pen
+	 current-brush
+	 bitmap
+	 DC
+	 buffer-DC
+	 [get-current-pen (lambda () current-pen)]
+	 [get-current-brush (lambda () current-brush)]
+	 [remember-pen (lambda (pen) (set! current-pen pen))]
+	 [remember-brush (lambda (brush) (set! current-brush brush))]
+	 [leaving-event
+	  (make-object wx:mouse-event% wx:const-event-type-leave-window)]
+	 
+	 [on-paint
+	  (lambda ()
+	    (send DC blit 0 0 width height buffer-DC 0 0 wx:const-copy))]
 
-		 (on-event 
-		  (lambda (mouse-event)
-		    (let* ([x (send mouse-event get-x)]
-			   [y (send mouse-event get-y)]
-			   [left? (send mouse-event button-down? 1)]
-			   [middle? (send mouse-event button-down? 2)]
-			   [right? (send mouse-event button-down? 3)]
-			   [sixm (make-sixmouse x y left? middle? right?)])
-		      (set! current-mouse-posn (make-posn x y))
-		      (cond
-		       [(send mouse-event button-down?) 
-			(send click-queue add sixm)]
-		       [(send mouse-event button-up?)
-			(send release-queue add sixm)]
-		       [else (void)]))))
+	 [on-event 
+	  (lambda (mouse-event)
+	    (let* ([x (send mouse-event get-x)]
+		   [y (send mouse-event get-y)]
+		   [left? (send mouse-event button-down? 1)]
+		   [middle? (send mouse-event button-down? 2)]
+		   [right? (send mouse-event button-down? 3)]
+		   [sixm (make-sixmouse x y left? middle? right?)])
+	      (set! current-mouse-posn (make-posn x y))
+	      (cond
+	       [(send mouse-event button-down?) 
+		(send click-queue add sixm)]
+	       [(send mouse-event button-up?)
+		(send release-queue add sixm)]
+	       [else (void)])))]
 
-		 (on-char
-		  (lambda (key-event)
-		    (send press-queue add (make-sixkey (send key-event key-code)))))
+	 [on-char
+	  (lambda (key-event)
+	    (send press-queue add (make-sixkey (send key-event key-code))))]
 
-		 (get-click
-		  (lambda ()
-		    (send click-queue remove)))
-		 
-		 (get-release
-		  (lambda ()
-		    (send release-queue remove)))
+	 [get-click
+	  (lambda ()
+	    (send click-queue remove))]
+	 
+	 [get-release
+	  (lambda ()
+	    (send release-queue remove))]
 
-		 (get-press
-		  (lambda ()
-		    (send press-queue remove)))
+	 [get-press
+	  (lambda ()
+	    (send press-queue remove))]
 
-		 (get-posn (lambda () current-mouse-posn))
-		 (set-DC (lambda (new-DC) (set! DC new-DC)))
-		 (set-buffer-DC (lambda (new-buffer-DC) (set! buffer-DC
-							      new-buffer-DC)))
+	 [get-posn (lambda () current-mouse-posn)]
+	 [set-DC (lambda (new-DC) (set! DC new-DC))]
+	 [set-buffer-DC (lambda (new-buffer-DC) (set! buffer-DC
+						      new-buffer-DC))]
 
-		 (set-geometry
-		  (lambda (new-width new-height new-scale)
-		    (set! height new-height)
-		    (set! width new-width)
-		    (set! scale new-scale)
-		    (reset-size)))
-		 (set-height (lambda (new-height) 
-			       (set! height new-height)
-			       (reset-size)))
-		 (set-width (lambda (new-width) 
-			      (set! width new-width)
-			      (reset-size)))
-		 (set-scale (lambda (new-scale)
-			      (set! scale new-scale)
-			      (send DC set-user-scale scale scale)
-			      (send buffer-DC set-user-scale scale scale)
-			      (reset-size)))
-		 
-		 
-		 (viewport-flush-input
-		  (lambda ()
-		    (send click-queue flush)
-		    (send release-queue flush)
-		    (send press-queue flush))))))
+	 [set-geometry
+	  (lambda (new-width new-height new-scale)
+	    (set! height new-height)
+	    (set! width new-width)
+	    (set! scale new-scale)
+	    (reset-size))]
+	 [set-height (lambda (new-height) 
+		       (set! height new-height)
+		       (reset-size))]
+	 [set-width (lambda (new-width) 
+		      (set! width new-width)
+		      (reset-size))]
+	 [set-scale (lambda (new-scale)
+		      (set! scale new-scale)
+		      (send DC set-user-scale scale scale)
+		      (send buffer-DC set-user-scale scale scale)
+		      (reset-size))]
+	 
+	 
+	 [viewport-flush-input
+	  (lambda ()
+	    (send click-queue flush)
+	    (send release-queue flush)
+	    (send press-queue flush))])))
 
    (define sixlib-frame%
      (class-asi wx:frame%
-		(rename [super-on-close on-close])
-		(public
-		 canvas
-		 [set-canvas (lambda (x) (set! canvas x))]
-		 [on-close
-		  (lambda ()
-		    (close-viewport (ivar canvas viewport))
-		    (super-on-close))])))
+       (rename [super-on-close on-close])
+       (public
+	 canvas
+	 [set-canvas (lambda (x) (set! canvas x))]
+	 [on-close
+	  (lambda ()
+	    (close-viewport (ivar canvas viewport))
+	    (super-on-close))])))
 
    (define repaint
      (lambda (viewport)
