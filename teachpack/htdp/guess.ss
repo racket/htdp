@@ -19,7 +19,7 @@
     (define WIDTH (* GUESS BUT-SIZE))
     (define HIGHT BUT-SIZE)
 
-    (define STOPS (list 'perfect! 'Perfect 'perfect 'perfect_guess 'perfect!))
+    (define STOPS (list 'Perfect 'perfect 'perfect! 'perfect_guess))
 
     (define TRUMPET
       (make-object bitmap% 
@@ -102,7 +102,7 @@
                 (send message-panel change-children (lambda (x) empty))
                 (make-object message% TRUMPET message-panel)
                 (make-object button% "New Game?" message-panel new-game)
-		(make-object button% "QUIT?" message-panel
+		(make-object button% "CLOSE?" message-panel
 		  (lambda (x y)
 		    (send frame show #f))))
               ;; guesses: status vector

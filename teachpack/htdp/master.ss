@@ -2,7 +2,7 @@
 
 (define-signature masterS (master))
 
-(define (masterU N)
+(define masterU
   (unit/sig masterS (import errorS plt:userspace^)
     
     #| ------------------------------------------------------------------------
@@ -15,20 +15,18 @@
     (define COLORS
       (list 'black 'white 'red 'blue 'green 'gold 'pink 'orange 'purple 'navy))
 
-    (define COL#   (length COLORS))
+    (define COL# (length COLORS))
 
-    (define GUESSES# N) ;; need to change check-guess then, see below
+    (define GUESSES# 2) 
 
     (define BUT-SIZE 30)
     (define WIDTH (* COL# BUT-SIZE))
     (define HIGHT BUT-SIZE)
 
-    (define STOPS (list 'PerfectGuess 'perfect_guess 'perfect!))
+    (define STOPS (list 'Perfect 'perfect 'PerfectGuess 'perfect_guess 'perfect!))
 
     (define TRUMPET
-      (make-object bitmap%
-	           (build-path (collection-path "icons") "trumpet.xbm")
-		   'xbm))
+      (make-object bitmap% (build-path (collection-path "icons") "trumpet.xbm") 'xbm))
 
     #|
   cd ~.../plt/collects/icons 
@@ -138,8 +136,8 @@
     (define guess-buttons
       (map (lambda (p) (make-object colored-button% "gray" p void)) guess-panels))
 
-    #| ------------------------------------------------------------------------
-    State of Game |#
+    ;; ------------------------------------------------------------------------
+    ;; State of Game
 
     (define choices null)
     (define (new-game . x)
@@ -168,8 +166,8 @@
 	    (check-guess choices (reverse! guessed-colors)))
 	(set! guessed-colors null)))
 
-    #| ------------------------------------------------------------------------
-    Student Contribution |#
+    ;; ------------------------------------------------------------------------
+    ;; Student Contribution
 
     (define check-guess #f)))
 
@@ -177,5 +175,5 @@
   (import (PLT : plt:userspace^))
   (link
     (ERR  : errorS (errorU))
-    (DRAW : masterS ((masterU 2) ERR PLT)))
+    (DRAW : masterS (masterU ERR PLT)))
   (export (open DRAW)))
