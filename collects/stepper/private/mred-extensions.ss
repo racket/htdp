@@ -10,8 +10,9 @@
    stepper-text%
    image?
    separator-snip% ;; these last two aren't required, but are useful 
-   vertical-separator-snip%) ;; for debugging purposes
-
+   vertical-separator-snip% ;; for debugging purposes
+   stepper-warning%)
+   
   (define test-dc (make-object bitmap-dc% (make-object bitmap% 1 1)))
   (define reduct-highlight-color (make-object color% 255 255 255))
   (define redex-highlight-color (make-object color% 255 255 255))
@@ -506,6 +507,37 @@
         (boolean? val)
         (string? val)
         (symbol? val)))
+  
+  (define warning-color "yellow")
+  (define program-changed-warning-str (string-constant stepper-program-has-changed))
+  (define window-closed-warning-str (string-constant stepper-program-window-closed))
+  (define warning-font (send the-font-list find-or-create-font 18 'decorative 'normal 'bold #f))
+  
+  (define stepper-warning%
+    (class canvas%
+      
+      (inherit get-dc get-client-size)
+      (define/override (on-paint)
+        (let ([dc (get-dc)])
+          (send dc set-font warning-font) 
+          (let-values ([(cw ch) (get-client-size)]
+                       [(tw th ta td) (send dc get-text-extent warning-str)])
+            (send dc set-pen (send the-pen-list find-or-create-pen warning-color 1 'solid))
+            (send dc set-brush (send the-brush-list find-or-create-brush warning-color 'solid))
+            (send dc draw-rectangle 0 0 cw ch)
+            (send dc draw-text 
+                  warning-str
+                  (- (/ cw 2) (/ tw 2))
+                  (- (/ ch 2) (/ th 2))))))
+      
+      (super-instantiate ())
+      (inherit min-width min-height stretchable-height)
+      (let-values ([(tw th ta td) (send (get-dc) get-text-extent warning-str warning-font)])
+        (min-width (+ 2 (inexact->exact (ceiling tw))))
+        (min-height (+ 2 (inexact->exact (ceiling th)))))
+      
+      (stretchable-height #f)))
+
   
 ;  (define (stepper-text-test . args)
 ;  (let* ([new-frame (make-object frame% "test-frame")]

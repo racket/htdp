@@ -35,7 +35,6 @@
           (init-field drscheme-frame)
           (rename [super-on-close on-close])
           (public set-printing-proc)
-          (override  on-close) ; file-menu:print
           
           (define (set-printing-proc proc)
             (set! printing-proc proc))
@@ -45,6 +44,27 @@
           
           (define (file-menu:print a b) (printing-proc a b))
           
+          (inherit get-area-container)
+          (define already-warned? #f)
+          (define/public (original-program-changed)
+            (unless already-warned?
+              (set! already-warned? #t)
+              (let ([warning-msg (instantiate x:stepper-warning% ()
+                                   (parent (get-area-container)))])
+                (send (get-area-container)
+                      change-children
+                      (lambda (l)
+                        (list (car l)
+                              warning-msg
+                              (cadr l)))))))
+
+          (define can-step #t)
+          (define/public (get-can-step)
+            can-step)
+          (define/public (stop-stepping)
+            (set! can-step #f))
+          
+          (override  on-close) ; file-menu:print
           (define (on-close)
             (send drscheme-frame on-stepper-close)
             (super-on-close))
@@ -120,7 +140,11 @@
                   (send previous-button enable #f)
                   (send home-button enable #f)
                   (if (= view (- (length view-history) 1))
-                      (update-view/next-step (+ view 1))
+                      (if (send s-frame get-can-step)
+                          (update-view/next-step (+ view 1))
+                          (message-box (string-append
+                                        "The source text for this program is no longer in"
+                                        "memory.  No further steps can be computed.")))
                       (update-view (+ view 1))))
                 
                 (define (previous)
@@ -229,93 +253,109 @@
         (drscheme:unit:make-bitmap
          "Step"
          (build-path (collection-path "icons") "foot.bmp")))
+
+      (define stepper-unit-frame<%>
+        (interface ()
+          get-stepper-frame
+          on-stepper-close))
       
-      (drscheme:get/extend:extend-unit-frame
-       (lambda (super%)
-         (class super% 
-           
-           (inherit get-button-panel get-interactions-text get-definitions-text)
-           (rename [super-disable-evaluation disable-evaluation]
-                   [super-enable-evaluation enable-evaluation]
-                   [super-can-close? can-close?]
-                   [super-on-close on-close])
-           
-           (super-instantiate ())
-           
-                 
-           (define program-expander
-             (contract
-              (-> (-> void?) ; init
-                  (-> (union eof-object? syntax? (cons/p string? any?)) (-> void?) void?) ; iter
-                  void?)
-              (lambda (init iter)
-                (drscheme:eval:expand-program
-                 (drscheme:language:make-text/pos (get-definitions-text) 
-                                                  0
-                                                  (send (get-definitions-text)
-                                                        last-position)) 
-                 (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))
-		 #f
-                 (lambda ()
-                   (init)
-                   (drscheme:teachpack:install-teachpacks 
-                    (frame:preferences:get 'drscheme:teachpacks))) ; this belongs in model, but I'd need a unit rewrite
-                 void ; kill
-                 iter))
-              'program-expander
-              'caller))
-           
-           (define stepper-button 
-             (make-object button%
-               (stepper-bitmap this)
-               (get-button-panel)
-               (lambda (button evt)
-                 (begin
-                   (disable-evaluation)
-                   (set! stepper-frame (view-controller-go this program-expander))))))
-           
-           (define/override (enable-evaluation)
-             (send stepper-button enable #t)
-             (super-enable-evaluation))
-           
-           (define/override (disable-evaluation)
-             (send stepper-button enable #f)
-             (super-disable-evaluation))
-           
-           (define stepper-frame #f)
-           
-           (define/public (on-stepper-close)
-             (set! stepper-frame #f)
-             (enable-evaluation))
-           
-           (define/override (can-close?)
-             (if stepper-frame
-                 (begin 
-                   (message-box "Stepper"
-                                "You must close the stepper window before closing the DrScheme window.")
-                   #f)
-                 (super-can-close?)))
-           
-           (define/override (on-close)
-             (callback-unregisterer)
-             (super-on-close))
+      (define (stepper-unit-frame-mixin super%)
+        (class* super% (stepper-unit-frame<%>)
+          
+          (inherit get-button-panel get-interactions-text get-definitions-text)
+          (rename [super-on-close on-close])
+          
+          (define stepper-frame #f)
+          (define/public (on-stepper-close)
+            (set! stepper-frame #f))
+          (define/public (get-stepper-frame) stepper-frame)
+          
+          (super-instantiate ())
+          
+          (define program-expander
+            (contract
+             (-> (-> void?) ; init
+                 (-> (union eof-object? syntax? (cons/p string? any?)) (-> void?) void?) ; iter
+                 void?)
+             (lambda (init iter)
+               (drscheme:eval:expand-program
+                (drscheme:language:make-text/pos (get-definitions-text) 
+                                                 0
+                                                 (send (get-definitions-text)
+                                                       last-position)) 
+                (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))
+                #f
+                (lambda ()
+                  (init)
+                  (drscheme:teachpack:install-teachpacks 
+                   (frame:preferences:get 'drscheme:teachpacks))) ; this belongs in model, but I'd need a unit rewrite
+                void ; kill
+                iter))
+             'program-expander
+             'caller))
+          
+          (define stepper-button 
+            (make-object button%
+              (stepper-bitmap this)
+              (get-button-panel)
+              (lambda (button evt)
+                (set! stepper-frame (view-controller-go this program-expander)))))
+          
+          (rename [super-enable-evaluation enable-evaluation])
+          (define/override (enable-evaluation)
+            (send stepper-button enable #t)
+            (super-enable-evaluation))
+          
+          (rename [super-disable-evaluation disable-evaluation])
+          (define/override (disable-evaluation)
+            (send stepper-button enable #f)
+            (super-disable-evaluation))
+          
+          (define/override (on-close)
+            (when stepper-frame
+              (send stepper-frame stop-stepping))
+            (callback-unregisterer)
+            (super-on-close))
+          
+          (define (on-language-level-change pref-name new-settings)
+            (let* ([language (drscheme:language-configuration:language-settings-language new-settings)]
+                   [language-level (car (last-pair (send language get-language-position)))])
+              (if (or (string=? language-level (string-constant beginning-student))
+                      (string=? language-level (string-constant beginning-student/abbrev)))
+                  (send (get-button-panel) change-children
+                        (lx (cons stepper-button (remq stepper-button _))))
+                  (send (get-button-panel) change-children
+                        (lx (remq stepper-button _)))))) 
+          
+          (define callback-unregisterer
+            (frame:preferences:add-callback (drscheme:language-configuration:get-settings-preferences-symbol) on-language-level-change))
+          (on-language-level-change (drscheme:language-configuration:get-settings-preferences-symbol) 
+                                    (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol)))))
+      
 
-           (define (on-language-level-change pref-name new-settings)
-             (let* ([language (drscheme:language-configuration:language-settings-language new-settings)]
-                    [language-level (car (last-pair (send language get-language-position)))])
-                   (if (or (string=? language-level (string-constant beginning-student))
-                           (string=? language-level (string-constant beginning-student/abbrev)))
-                       (send (get-button-panel) change-children
-                             (lx (cons stepper-button (remq stepper-button _))))
-                       (send (get-button-panel) change-children
-                             (lx (remq stepper-button _)))))) 
-           
-           (define callback-unregisterer
-             (frame:preferences:add-callback (drscheme:language-configuration:get-settings-preferences-symbol) on-language-level-change))
-           (on-language-level-change (drscheme:language-configuration:get-settings-preferences-symbol) 
-                                     (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))))))
-
-
+      (define (stepper-definitions-text-mixin %)
+        (class %
+          
+          (inherit get-top-level-window)
+          (define/private (notify-stepper-frame-of-change)
+            (let ([win (get-top-level-window)])
+              (when (is-a? win stepper-unit-frame<%>) ;; should only be #f when win is #f.
+                (let ([stepper-window (send win get-stepper-frame)])
+                  (when stepper-window
+                    (send stepper-window original-program-changed))))))
+          
+          (rename [super-on-insert on-insert])
+          (define/override (on-insert x y)
+            (super-on-insert x y)
+            (notify-stepper-frame-of-change))
+          
+          (rename [super-on-delete on-delete])
+          (define/override (on-delete x y)
+            (super-on-delete x y)
+            (notify-stepper-frame-of-change))
+          
+          (super-instantiate ())))
+      
       ;; COPIED FROM drscheme/private/language.ss
       ;; simple-module-based-language-convert-value : TST settings -> TST
       (define (simple-module-based-language-convert-value value simple-settings)
@@ -334,4 +374,7 @@
       (define (set-print-settings language simple-settings thunk)
         (unless (method-in-interface? 'set-printing-parameters (object-interface language))
           (error 'stepper-tool "language object does not contain set-printing-parameters method"))
-        (send language set-printing-parameters simple-settings thunk)))))
+        (send language set-printing-parameters simple-settings thunk))
+      
+      (drscheme:get/extend:extend-unit-frame stepper-unit-frame-mixin)
+      (drscheme:get/extend:extend-definitions-text stepper-definitions-text-mixin))))
