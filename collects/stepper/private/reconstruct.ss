@@ -281,8 +281,8 @@
     (macro-unwind stx null))
   
   
-  (->* (syntax? (listof syntax?)) 
-       (syntax? (listof syntax?)))
+  ;(->* (syntax? (listof syntax?)) 
+  ;     (syntax? (listof syntax?)))
   
   (define (macro-unwind stx highlights)
     
@@ -379,7 +379,7 @@
                  (syntax (label . clauses))))))
       
       (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
-      (let* ([main (list (inner stx))]
+      (let* ([main (inner stx)]
              [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
         (values main new-highlights))))
   
@@ -907,7 +907,7 @@
                   ((normal-break)
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
                      (let-values ([(a b) (unwind recon-expr redex #f)])
-                       (list a b)))))
+                       (list a b))))
                   ((double-break late-let-break)
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
                      (let-values ([(before-stxs before-highlights) (unwind recon-expr redex #f)]

@@ -8,7 +8,7 @@
   
   (define-struct context-record (stx index kind))
 
-  (provide/contract [lift (->* (syntax? syntax?)
+  (provide/contract [lift (->* (syntax? syntax? boolean?)
                                ((listof syntax?) (listof syntax?)))] )
   
   (define (lift stx highlight lift-in-highlight?)
@@ -27,7 +27,7 @@
                  (unless (null? remaining)
                    (let* ([subexpr (cadar remaining)]
                           [new-contexts (cons (make-context-record stx (index-mangler index) kind) context-so-far)])
-                     (if (eq? (syntax-e subexpr) highlight-placeholder)
+                     (if (eq? subexpr highlight-placeholder)
                          (success-escape new-contexts)
                          (begin
                            ((caar remaining) subexpr new-contexts)
