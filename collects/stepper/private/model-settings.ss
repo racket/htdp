@@ -74,7 +74,8 @@
                                                0 
                                                (min 5 (string-length rendered-list)))]
            [abbreviate-cons-as-list? (and constructor-style-printing?
-                                              (string=? rendered-list-substring "(list"))])
+                                              (string=? rendered-list-substring "(list"))]
+           [dc (fprintf (current-error-port) "~s\n" (render-to-string (exact->inexact (/ 1.0 3))))])
       (make-render-settings
        true-false-printed?
        constructor-style-printing?

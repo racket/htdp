@@ -365,9 +365,12 @@
         ; receive-result takes a result from the model and renders it on-screen
         ; : (step-result -> void)
         (define (receive-result result)
+          (fprintf (current-error-port) "result: ~v\n" result)
+          (fprintf (current-error-port) "trying to call render-to-string: ~v\n" (render-to-string (exact->inexact 1/3)))
           (let ([step-text
                  (cond [(before-after-result? result) 
                         (instantiate x:stepper-text% () 
+                          [render-to-string render-to-string]
                           [finished-exprs (before-after-result-finished-exprs result)]
                           [exps (before-after-result-exp result)]
                           [post-exps (before-after-result-post-exp result)]
@@ -375,6 +378,7 @@
                           [after-exprs (before-after-result-after-exprs result)])]
                        [(before-error-result? result)
                         (instantiate x:stepper-text% ()
+                          [render-to-string render-to-string]
                           [finished-exprs (before-error-result-finished-exprs result)]
                           [exps (before-error-result-exp result)]
                           [post-exps null]
@@ -382,6 +386,7 @@
                           [after-exprs (before-error-result-after-exprs result)])]
                        [(error-result? result)
                         (instantiate x:stepper-text% ()
+                          [render-to-string render-to-string]
                           [finished-exprs (error-result-finished-exprs result)]
                           [exps null]
                           [post-exps null]
@@ -389,6 +394,7 @@
                           [after-exprs null])]
                        [(finished-result? result)
                         (instantiate x:stepper-text% ()
+                          [render-to-string render-to-string]
                           [finished-exprs (finished-result-finished-exprs result)]
                           [exps null]
                           [post-exps null]
