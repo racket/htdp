@@ -207,20 +207,17 @@
                                                        'foot-wrap)])
              (set! packaged-envs envs)
              (set! current-expr expanded)
-             (with-handlers ([(lambda (exn) #f); #t) 
-                              (lambda (exn) 
-                                (err-handler (exn-message exn)))])
              (let ([expression-result
                     (parameterize ([current-eval basic-eval])
                       (eval annotated))])
                (add-finished-expr expression-result)
-               (expand-next-expression)))))
+               (expand-next-expression))))
          
          (define (add-finished-expr expression-result)
            (let ([reconstructed (r:reconstruct-completed current-expr expression-result render-settings)])
              (set! finished-exprs (append finished-exprs (list reconstructed)))))
          
-         (define (err-handler message)
+         (define (err-display-handler message exn)
            (if (not (eq? held-expr-list no-sexp))
                   (let*-values
                       ([(before current after) (redivide held-expr-list)])
@@ -229,7 +226,8 @@
                   (receive-result (make-error-result finished-exprs message)))))
       
       (program-expander
-       void ; empty init
+       (lambda () 
+         (error-display-handler err-display-handler))
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)
              (receive-result (make-finished-result finished-exprs))

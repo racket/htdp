@@ -260,6 +260,7 @@
                                                                                                 ; 
 
   (define (unwind stx-list highlights)
+    
     (local
         ((define highlight-queue-src (make-queue))
          (define highlight-queue-dest (make-queue))
@@ -702,17 +703,16 @@
                                      (lambda (names expr)
                                        #`(#,names #,expr))]
                                     [before-bindings
-                                     (apply append
-                                      (map
-                                       (lambda (glump)
-                                         (let* ([rhs-val-set (map (lambda (val)
-                                                                    (let-rhs-recon-value val render-settings)) 
-                                                                  (let-glump-val-set glump))]
-                                                [rhs-name-set (let-glump-name-set glump)])
-                                           (if (= (length rhs-val-set) 1)
-                                               #`(#,rhs-name-set #,@rhs-val-set)
-                                               #`(#,rhs-name-set (values #,rhs-val-set)))))
-                                       done-glumps))]
+                                     (map
+                                      (lambda (glump)
+                                        (let* ([rhs-val-set (map (lambda (val)
+                                                                   (let-rhs-recon-value val render-settings)) 
+                                                                 (let-glump-val-set glump))]
+                                               [rhs-name-set (let-glump-name-set glump)])
+                                          (if (= (length rhs-val-set) 1)
+                                              #`(#,rhs-name-set #,@rhs-val-set)
+                                              #`(#,rhs-name-set (values #,rhs-val-set)))))
+                                      done-glumps)]
                                     [reconstruct-remaining-def
                                      (lambda (glump)
                                        (let ([rhs-source (let-glump-exp glump)]
