@@ -1,0 +1,137 @@
+This file summarizes certain aspects of the operation of the stepper.
+
+The Stepper's use of syntax-property:
+
+In order to make macro-unwinding possible, the stepper adds
+syntax-properties to elaborated code which then informs the
+reconstruction process about how certain macros were originally
+formed.  
+
+In fact, the truth is slightly more complicated, because there are
+two rounds of macro-expansion for a program written in a teaching
+language.  First, the program is expanded according to the 
+macro definitions contained in the "lang" collection.  Then, the
+code is expanded according to the macro definitions built into
+mzscheme.  So, for instance, a beginner 'cond' expands into a
+mzscheme 'cond' which expands into a nested series of 'if's.  
+
+Correspondingly, the stepper's addition of syntax properties is broken
+into two parts; those added for the beginner macros, and those added
+for the mzscheme macros.  However, since it is harder to alter the
+macro expansion which occurs in mzscheme, the latter set are added not
+during the actual macro expansion in mzscheme but as part of a pass
+over the code that occurs in the annotater between expansion and the
+main annotation.  This procedure is called 'top-level-rewrite'.
+
+Therefore, the stepper's syntax-property additions occur in two
+textual locations: collects/lang/private/teach.ss, and
+collects/stepper/private/annotate.ss.
+
+Also, in order to be visible to the reconstructor, these properties
+must be explicitly transferred from the annotated source code syntax
+to the reconstructed syntax. This is accomplished by the 'attach-info'
+procedure in reconstruct.ss
+
+Finally, the astute reader may wonder why I need to add things like
+'comes-from-or, since the expression that results from the expansion
+of 'or' has a corresponding 'or' element in its 'origin field.  The
+reason is that this element appears only on the outermost expression
+in the expansion, and during runtime reconstruction, this outermost
+expression may be gone.
+
+
+Here are the syntax properties added, the values they may be
+associated with, their meanings, whether they're transferred
+by attach-info, and where they're used:
+
+stepper-skip-completely :
+ [ #t ] : this code should not be annotated at all.  In general, this
+ means it therefore be invisible to the reconstructor. (Not
+ transferred.)
+
+ Uses:
+ - applied to the check of the test-variable in the expansion of the
+   'or' macro. 
+ 
+stepper-hint : 
+ this is the most generally applied syntax property.  In general, it
+ informs the reconstructor what macro this source expression came
+ from.  
+
+(Transferred.)
+
+ ['comes-from-or] : this expression came from a use of 'or'. This tag
+ is applied to the let's and also to the if's.
+
+ ['comes-from-and] : similarly, this expression came from a use of
+ 'and'.  This tag is applied to all the if's.
+
+ [ 'comes-from-cond ] : similarly, this expression came from a use
+ of 'cond'. This tag is applied to all the if's, but not to the else
+ clause.
+
+stepper-binding-type : 
+ this is actually unrelated to macro expansion. It differentiates
+ between the various kinds of lexical bindings. (Not transferred.)
+
+ [ 'macro-bound ] : this variable's binding was inserted by a macro
+ [ 'let-bound ] : this variable's binding was in a let/*/rec
+ [ 'lambda-bound ] : this variable's binding was in a lambda
+
+stepper-skipto : 
+ this instructs the annotater to look inside the current expression
+ along a given path for the expression to be annotated.  In
+ particular, the value bound to stepper-skipto must be a list whose
+ elements are car, cdr, or syntax-e. (Not transferred)
+
+stepper-else : 
+ [ #t ] : this expression is the else clause of a cond.  It may be
+ from user code, or it may have been inserted
+ automatically. (Transferred.)
+
+stepper-inserted-else :
+ [ #t ] : this expression was inserted as an else clause for a 'cond'
+ that didn't have one. Why do we need this one and also stepper-else?
+ Because the two are added by totally different code.  This one comes
+ in during expansion of the beginner 'cond', stepper-else comes in
+ during the top-level-rewrite. (Transferred)
+
+stepper-define-hint :
+ What kind of a source expression did this 'define' come from? (Not
+ transferred.)
+
+ [ lambda-define ] : source had form (define id (lambda ...))
+
+ [ non-lambda-define ] : source had form (define id exp) where exp !=
+ (lambda ...)
+
+ [ shortened-proc-define ] : source had form (define (id arg ...) body
+ ...)
+
+stepper-define-struct-hint :
+  this expression came from a define-struct. The value associated with
+  this label is the list of identifiers bound by the define-struct.
+
+
+
+
+STEPPER-HINT COLLISIONS
+
+ The major concern with the stepper-hint is that two of them may
+ collide.  My claim that this never happens is founded on the following
+ reasoning, KNOWN NOT TO BE RIGOROUS.
+
+ 0) Tags are attached only to expressions that are produced fresh as
+ the result of a macro expansion. (For instance, the 'if' that is
+ the result of the expansion of 'and'.)
+
+ 1) except in the circumstances listed below, the expressions with tags 
+ attached to them are not themselves macro invocations.
+
+ Q.E.D.
+
+ exceptions: the beginner cond expands into the mzscheme cond, which is 
+then annotated by the top-level-rewrite. In this case, the expansion
+of the beginner cond does not add any stepper-hint properties, so no
+collision can occur.
+
