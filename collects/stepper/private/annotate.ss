@@ -1,17 +1,12 @@
 (module annotate mzscheme
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
-           (prefix utils: "utils.ss")
            "marks.ss"
-           ;(prefix s: "model.ss")
+           (prefix model: "model.ss")
            "shared.ss"
 	   (lib "list.ss")
            (lib "etc.ss")
            "my-macros.ss")
 
-; for testing:
-  (define (s:check-pre-defined-var x)
-    (eq? (car (symbol->string (syntax-e x))) #\a))
-  
   (provide
    initial-env-package
    annotate)
@@ -431,7 +426,7 @@
          
          (define (non-annotated-proc? varref)
            (let ([name (syntax-e varref)])
-             (or (and (s:check-pre-defined-var name)
+             (or (and (model:check-pre-defined-var name)
                       (not (eq? name 'apply)))
                  (memq name struct-proc-names))))
          
