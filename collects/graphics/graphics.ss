@@ -1,0 +1,57 @@
+
+(require-library "unitsig.ss")
+
+(define-signature graphics^
+  (viewport?
+
+   open-graphics 
+   close-graphics 
+   graphics-open?
+
+   make-posn posn? posn-x posn-y
+
+   get-mouse-click
+   ready-mouse-click
+   ready-mouse-release
+   mouse-click-posn
+   query-mouse-posn
+   viewport-flush-input
+   left-mouse-click?
+   middle-mouse-click?
+   right-mouse-click?
+
+   get-key-press
+   ready-key-press
+   key-value
+
+   make-rgb
+   rgb-blue rgb-red rgb-green
+   change-color 
+   rgb?
+
+   open-viewport 
+   open-pixmap
+   close-viewport    
+
+   clear-viewport draw-viewport flip-viewport
+
+   set-viewport-scale
+
+   draw-line clear-line flip-line 
+   draw-pixel clear-pixel flip-pixel get-pixel 
+
+   draw-rectangle clear-rectangle flip-rectangle 
+   draw-ellipse clear-ellipse flip-ellipse 
+   draw-solid-rectangle clear-solid-rectangle flip-solid-rectangle 
+   draw-solid-ellipse clear-solid-ellipse flip-solid-ellipse 
+
+   get-string-size
+
+   draw-string clear-string flip-string 
+   draw-pixmap clear-pixmap flip-pixmap
+
+   copy-viewport 
+
+   default-display-is-color?
+
+   viewport-DC viewport-buffer-DC))
