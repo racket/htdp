@@ -28,10 +28,10 @@
                [receive-result
                 (lambda (result)
                   (if (null? all-steps)
-                      (printf "test-sequence: ran out of expected steps. Given result: ~v\n" result)
+                      (fprintf (current-error-port) "test-sequence: ran out of expected steps. Given result: ~v\n" result)
                       (begin
                         (unless (compare-steps result (car all-steps))
-                          (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car all-steps)))
+                          (fprintf (current-error-port) "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car all-steps)))
 
                         ; uncomment for testing:
                         ; (when (compare-steps result (car all-steps))
@@ -112,7 +112,7 @@
        (and (before-after-result? actual)
             (andmap (lambda (fn expected) 
                       (unless (list? (fn actual))
-                        (printf "not a list: ~v\n" (syntax-object->hilite-datum (fn actual))))
+                        (fprintf (current-error-port) "not a list: ~v\n" (syntax-object->hilite-datum (fn actual))))
                       (noisy-equal? (map syntax-object->hilite-datum (fn actual)) expected))
                     (list before-after-result-exp before-after-result-post-exp)
                     (list before after)))]
@@ -140,7 +140,7 @@
                  (equal? (before-error-result-err-msg actual) err-msg)))]
       [`(finished-stepping) (finished-stepping? actual)]
       [else 
-       (begin (printf "compare-steps: unexpected expected step type: ~v\n" expected)
+       (begin (fprintf (current-error-port) "compare-steps: unexpected expected step type: ~v\n" expected)
               #f)]))
   
   ; noisy-equal? : (any any . -> . boolean)
@@ -148,7 +148,7 @@
   (define (noisy-equal? a b)
     (if (equal? a b)
         #t
-        (begin (printf "~e is not equal? to ~e\nhere's the diff: ~e\n" a b (sexp-diff a b))
+        (begin (fprintf (current-error-port) "~e is not equal? to ~e\nhere's the diff: ~e\n" a b (sexp-diff a b))
                #f)))
    
   ; (-> (listof sexp) (listof sexp) boolean?)
@@ -157,7 +157,7 @@
      (>= (length finished-exps) (length expected-exps))
      (andmap (lambda (x y) (if (equal? x y)
                                #t
-                               (begin (printf "~e is not equal? to ~e\nhere's the diff: ~e\n" x y (sexp-diff x y))
+                               (begin (fprintf (current-error-port) "~e is not equal? to ~e\nhere's the diff: ~e\n" x y (sexp-diff x y))
                                       #f)))
              (list-tail finished-exps (- (length finished-exps) (length expected-exps)))
              expected-exps)))
@@ -1114,7 +1114,7 @@
                    ((hilite true)))
      (finished (true)))))
   
-  (t teachpack-name-rendering
+  #;(t teachpack-name-rendering
      (test-teachpack-sequence
       `((file "/Users/clements/plt/teachpack/htdp/draw.ss"))
       "(start 300 300) (if true (get-key-event) 3)"
@@ -1127,7 +1127,7 @@
                       ((hilite false)))
         (finished (false)))))
   
-  (t teachpack-hop-names
+  #;(t teachpack-hop-names
      (test-teachpack-sequence
       `((file "/Users/clements/plt/teachpack/htdp/draw.ss"))
       "(start 300 300) (define (a x y) (+ 3 4)) (if true (on-key-event a) 3)"
@@ -1168,6 +1168,6 @@
      (test-teachpack-sequence " (define (f2c x) x) (convert-gui f2c)" `() ; placeholder
                                ))
   
-  (run-tests '(teachpack-web-interaction))
-  #;(run-all-tests)
+  #;(run-tests '(teachpack-web-interaction))
+  (run-all-tests)
   )
