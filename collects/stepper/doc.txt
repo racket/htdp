@@ -53,3 +53,8 @@ the expressions are reduced, please see <A>The Beginner Language
 Semantics</A> which formally specify the set of rules governing
 the language's evaluation.
 
+Please note that the stepper only steps through the expressions
+in the definitions window, and does not allow the user to enter
+additional expressions.  So, for instance, a definitions buffer
+which contains only procedure definitions will not result in
+any reductions.
