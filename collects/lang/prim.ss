@@ -31,7 +31,7 @@
 
   (define-syntax (define-higher-order-primitive stx)
     (define (is-proc-arg? arg)
-      (eq? '_ (syntax-e arg)))
+      (not (eq? '_ (syntax-e arg))))
     (syntax-case stx ()
       [(_ name implementation (arg ...))
        (let* ([args (syntax->list (syntax (arg ...)))]
@@ -57,7 +57,7 @@
                                        (raise-syntax-error
                                         #f
                                         (format
-                                         "primitive operator ~a expects a program name (usually `~a') in this position"
+                                         "primitive operator ~a expects a defined procedure name (usually `~a') in this position"
 					 'name
                                          '#,arg)
                                         s
@@ -65,8 +65,8 @@
                              args new-args)]
                        [(wrapped-arg ...)
                         (map (lambda (arg new-arg)
-                               (if (is-proc-arg? arg)
-                                   new-arg
+                               (if (not (is-proc-arg? arg)) 
+				   new-arg
 				   #`(#%top . #,new-arg)))
                              args new-args)]
                        [num-arguments (length args)])
@@ -79,12 +79,7 @@
                    checks ...
 		   ;; s is a well-formed use of the primitive;
 		   ;; generate the primitive implementation
-                   (let ([k (quote-syntax
-			     (implementation wrapped-arg ...))])
-		     (datum->syntax-object
-		      k
-		      (syntax-e k)
-		      s)))]
+		   (syntax/loc s (implementation wrapped-arg ...)))]
 		[(__ . rest)
                  (raise-syntax-error
                   #f
