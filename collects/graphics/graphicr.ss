@@ -903,7 +903,7 @@
     (lambda (source target)
       (let* ([source-bitmap (viewport-bitmap source)]
 	     [target-dc (viewport-dc target)]
-	     [target-buffer-dc (viewport-dc target)])
+	     [target-buffer-dc (viewport-bitmap target)])
 	(send target-dc draw-bitmap source-bitmap 0 0)
 	(send target-buffer-dc draw-bitmap source-bitmap 0 0))))
   
