@@ -98,7 +98,7 @@
             expr
             (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))]))
   
-  (define (reconstruct all-defs-list current-def expr-list mark-list)
+  (define (reconstruct expr-list mark-list all-defs-list current-def)
     
     (local
         ((define (rectify-source-current-marks expr)
