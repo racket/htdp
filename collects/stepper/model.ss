@@ -184,11 +184,12 @@
 
   (define (check-for-repeated-names expr exn-handler)
     (with-handlers
-        ((exn:user? exn-handler))
+        ([exn:user? exn-handler]
+         [exn:syntax? exn-handler])
       (when (z:define-values-form? expr)
         (for-each (lambda (name) 
                     (when (check-global-defined name)
-                      (e:static-error 'check-for-repeated-names
+                      (e:static-error expr
                              "name is already bound: ~s" name)))
                   (map z:varref-var (z:define-values-form-vars expr))))))
          
