@@ -298,3 +298,28 @@ parsed expression.  The information you need to reconstruct the
 *************
 
 for savings, I could elide the guard-marks on all but the top level.
+
+***********
+
+months later; October 99.
+
+major reorganization, along a model-view-controller philosophy. Here's how it 
+works:
+
+The view and controller (for the regular stepper) are combined in a gui unit.
+This unit takes a text%, handles all gui stuff, and invokes the model unit 
+(one for each stepping).
+
+The model unit is a compound unit.  It consists of the annotater, the
+reconstructor, and the model unit itself.
+
+Gee whiz; there's so much stuff I haven't talked about.  Like for instance the
+fact that the stepper now has before and after steps.  The point of this 
+reorganization is to permit a natural test suite.  Jesus, that's been a long
+time coming. At some point, I'm also hoping to combine the stepper into the 
+main DrScheme frame.
+
+Oh yes, another major change was that evaluation is now strictly on a one-
+expression-at-a-time basis.  The read, parse, and step are now done indiv-
+idually for each expression.  This has the ancillary benefit that there's no
+longer any need to reconstruct _all_ of the old expressions at every step.

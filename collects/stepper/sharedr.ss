@@ -3,6 +3,16 @@
 	  [e : stepper:error^]
           stepper:zodiac-client-procs^)
   
+  ; A step-result is either:
+  ; (make-before-after-result finished-exprs exp redex reduct)
+  ; or (make-before-error-result finished-exprs exp redex err-msg)
+  ; or (make-error-result finished-exprs err-msg)
+  ; or (make-finished-result finished-exprs)
+  (define-struct before-after-result (finished-exprs exp redex reduct))
+  (define-struct before-error-result (finished-exprs exp redex err-msg))
+  (define-struct error-result (finished-exprs err-msg))
+  (define-struct finished-result (finished-exprs))
+  
   (define (read-exprs text)
     (let ([reader (z:read (open-input-string text) 
                           (z:make-location 1 1 0 "stepper-string"))])
@@ -23,8 +33,12 @@
   (define (create-bogus-top-level-varref name)
     (z:make-top-level-varref #f #f #f #f name))
 
-  ; gensyms needed by both the annotater and the reconstructor:
-  
+  ; gensyms needed by many modules:
+
+  ; no-sexp is used to indicate no sexpression for display.
+  ; e.g., on an error message, there's no sexp.
+  (define no-sexp (gensym "no-sexp-"))
+
   ; *unevaluated* is the value assigned to temps before they are evaluated.
   (define *unevaluated* (gensym "unevaluated-"))
  

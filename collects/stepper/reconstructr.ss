@@ -4,7 +4,7 @@
 	  [e : stepper:error^]
           [utils : cogen-utils^]
           [b : userspace:basis^]
-          [s : stepper:settings^]
+          [s : stepper:model^]
 	  stepper:shared^)
 
   (define nothing-so-far (gensym "nothing-so-far-"))
@@ -490,32 +490,32 @@
          
          (define redex #f)
          
-         (define current-def-rectifier
-           (lambda (so-far mark-list first)
-             (if (null? mark-list)
-                 (rectify-top-level expr so-far)
-                 (current-def-rectifier 
-                  (let ([reconstructed (reconstruct-inner mark-list so-far)])
-                    (when first
-                      (set! redex reconstructed))
-                    reconstructed)
+         (define (current-def-rectifier so-far mark-list first)
+           (if (null? mark-list)
+               (rectify-top-level expr so-far)
+               (let ([reconstructed (reconstruct-inner mark-list so-far)])
+                 (current-def-rectifier
+                  (if first
+                      (begin
+                        (set! redex reconstructed)
+                        highlight-placeholder)
+                      so-far)
                   (cdr mark-list)
                   #f))))
          
          
-         (define (confusable-value? val)
-           (not (or (number? val)
-                    (boolean? val)
-                    (string? val)
-                    (symbol? val))))
-
+         ;         (define (confusable-value? val)
+         ;           (not (or (number? val)
+         ;                    (boolean? val)
+         ;                    (string? val)
+         ;                    (symbol? val))))
+         
          (define answer
            (if (eq? break-kind 'result-break)
                (let* ([innermost (if (null? returned-value-list)
                                      (rectify-source-expr (mark-source (car mark-list)) mark-list null)
                                      (rectify-value (car returned-value-list)))]
-                      [so-far (if (confusable-value? innermost) innermost highlight-placeholder)]
-                      [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
+                      [current-def (current-def-rectifier highlight-placeholder (cdr mark-list) #f)])
                  (list current-def innermost))
                (begin
                  (let ([current-def (current-def-rectifier nothing-so-far mark-list #t)])

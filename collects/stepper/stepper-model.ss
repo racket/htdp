@@ -1,19 +1,19 @@
-(unit/sig stepper:settings^
-  (import [z : zodiac:system^]
+(unit/sig stepper:model^
+  (import [i : stepper:model-input^]
+          mred^
+          [z : zodiac:system^]
           [d : drscheme:export^]
           [p : mzlib:print-convert^]
           [e : stepper:error^]
           [a : stepper:annotate^]
           [r : stepper:reconstruct^]
-          stepper:shared^
-          ;;; must also import text and settings)
+          stepper:shared^)
   
-  (define beginner-level-name "Beginning Student")
+  (define image? i:image?)
   
   (define (send-to-other-eventspace eventspace thunk)
     (parameterize ([current-eventspace eventspace])
       (queue-callback thunk)))
-       
 
   (define drscheme-eventspace (current-eventspace))
 
@@ -53,13 +53,9 @@
     (parameterize ([current-namespace user-namespace])
       (global-defined-value identifier)))
     
-  (define (image? val)
-   (is-a? val snip%))
-  
   (define stepper-semaphore (make-semaphore))
 
-
-  (define finished-exprs #f)
+  (define finished-exprs null)
 
   (define current-expr #f)
   (define packaged-envs a:initial-env-package)
@@ -73,13 +69,13 @@
   (define user-vocabulary #f)
          
   (define reader 
-    (z:read (f:gui-utils:read-snips/chars-from-buffer text)
+    (z:read i:text-stream
             (z:make-location 1 1 0 "stepper-text")))
   
   (send-to-user-eventspace 
    (lambda ()
      (set! user-primitive-eval (current-eval))
-     (d:basis:initialize-parameters (make-custodian) settings)
+     (d:basis:initialize-parameters (make-custodian) i:settings)
      (d:rep:invoke-library)
      (set! user-namespace (current-namespace))
      (set! user-pre-defined-vars (map car (make-global-value-list)))
@@ -95,12 +91,12 @@
             (basic-convert v))))
      (semaphore-post stepper-semaphore)))
   
-  (semaphore-wait stepper-semaphore))
+  (semaphore-wait stepper-semaphore)
 
   (define terminate-user-thread-continuation #f)
   (send-to-user-eventspace
    (lambda ()
-     (let/ec k
+     (let/cc k
        (set! terminate-user-thread-continuation k)
        (semaphore-post stepper-semaphore))))
   
@@ -121,36 +117,28 @@
     (send-to-user-eventspace
      (lambda ()
        (let/ec k
-         (let ([inner-handler
-                (lambda (exn)
-                  (send-to-drscheme-eventspace
-                   (lambda ()
-                     (handle-exception exn)))
-                  (k))]
-               [return-handler
-                (lambda (read parsed)
-                  (send-to-drscheme-eventspace
-                   (lambda ()
-                     (continue-next-expr read parsed))))])
+         (let ([exception-handler (make-exception-handler k)])
            (d:interface:set-zodiac-phase 'reader)
            (let* ([new-expr (with-handlers
-                                ((exn:read? inner-handler))
-                              (reader))])
-             (return-handler new-expr
-                             (if (z:eof? new-expr)
+                                ((exn:read? exception-handler))
+                              (reader))]
+                  [new-parsed (if (z:eof? new-expr)
                                  #f
                                  (begin
                                    (d:interface:set-zodiac-phase 'expander)
                                    (with-handlers
-                                       ((exn:syntax? inner-handler))
-                                     (z:scheme-expand new-expr 'previous user-vocabulary)))))))))))
+                                       ((exn:syntax? exception-handler))
+                                     (z:scheme-expand new-expr 'previous user-vocabulary))))])
+             (send-to-drscheme-eventspace
+              (lambda ()
+                (continue-next-expr new-expr new-parsed)))))))))
 
          
   (define (continue-next-expr read parsed)
     (let/ec k
       (let ([exn-handler (make-exception-handler k)])
         (if (z:eof? read)
-            (construct-final-step)
+            (stored-return-thunk (make-finished-result finished-exprs))
             (let*-values ([(annotated-list envs) (a:annotate (list read) (list parsed) packaged-envs break)]
                           [(annotated) (car annotated-list)])
               (set! packaged-envs envs)
@@ -158,7 +146,7 @@
               (check-for-repeated-names parsed exn-handler)
               (send-to-user-eventspace
                (lambda ()
-                 (let/ec k
+                 (let/cc k
                    (current-exception-handler (make-exception-handler k))
                    (user-primitive-eval annotated)
                    (send-to-drscheme-eventspace
@@ -180,23 +168,22 @@
   (define (add-finished-expr)
     (let ([reconstructed (r:reconstruct-completed current-expr)])
       (set! finished-exprs (append finished-exprs (list reconstructed)))))
-         
-  
   
   (define held-expr no-sexp)
   (define held-redex no-sexp)
   (define user-process-held-continuation #f)
   
   (define (suspend-user-computation)
-    (let/cc ;; this one absolutely must be a cc, not an ec.
-        (lambda (k)
-          (set! user-process-held-continuation k)
-          (terminate-user-thread-computation 'ignored))))  ;; this doesn't return
+    (let/cc k;; this one absolutely must be a cc, not an ec.
+      (set! user-process-held-continuation k)
+      (terminate-user-thread-continuation 'ignored)))  ;; this doesn't return
   
   (define (restart-user-computation)
     (send-to-user-eventspace
      (lambda ()
-       (user-process-held-continuation 'also-ignored))))
+       (if user-process-held-continuation
+           (user-process-held-continuation 'also-ignored)
+           (read-next-expr)))))
 
   (define (break mark-list break-kind returned-value-list)
     (let ([reconstruct-helper
@@ -226,73 +213,31 @@
                    (and (not (eq? held-expr no-sexp))
                         (not (r:skip-result-step? mark-list))))
            (reconstruct-helper 
-            (lambda (reconstructed redex)
-              (let ([step-text (make-object stepper-text% 
-                                            held-expr
-                                            held-redex
-                                            reconstructed
-                                            redex
-                                            break-kind
-                                            #f)])
+            (lambda (reconstructed reduct)
+              (let ([result (make-before-after-result finished-exprs
+                                                      reconstructed
+                                                      held-redex
+                                                      reduct)])
                 (set! held-expr no-sexp)
                 (set! held-redex no-sexp)
-                (set! history (append history (list step-text)))
-                (update-view view-currently-updating))))
+                (stored-return-thunk result))))
            (suspend-user-computation))])))
-
-         (define (construct-final-step)
-           (let ([step-text (make-object stepper-text% no-sexp no-sexp no-sexp no-sexp #f #f)])
-             (set! history (append history (list step-text)))
-             (set! final-view view-currently-updating)
-             (update-view view-currently-updating)))
-
-         (define (handle-exception exn)
-           (let ([step-text (if held-expr
-                                (make-object stepper-text% held-expr held-redex no-sexp no-sexp #f (exn-message exn))
-                                (make-object stepper-text% no-sexp no-sexp no-sexp no-sexp #f (exn-message exn)))])
-             (set! history (append history (list step-text)))
-             (set! final-view view-currently-updating)
-             (update-view view-currently-updating)))
-         
-         
-         (define (make-exception-handler k)
-           (lambda (exn)
-             (parameterize ([current-eventspace drscheme-eventspace])
-               (queue-callback
-                (lambda ()
-                  (handle-exception exn))))
-             (k)))
-             
-             
-         (define (update-view/next-step new-view)
-           (set! view-currently-updating new-view)
-           (semaphore-post stepper-semaphore)))
-      
-      (send drscheme-frame stepper-frame s-frame)
-      (setup-print-convert settings)
-      (set! finished-exprs null)
-      (set! view-currently-updating 0)
-      (begin-next-expr)
-      (send button-panel stretchable-width #f)
-      (send button-panel stretchable-height #f)
-      (send canvas stretchable-height #t)
-      (send canvas min-width 500)
-      (send canvas min-height 500)
-      (send previous-button enable #f)
-      (send home-button enable #f)
-      (send next-button enable #f)
-      (send (send s-frame edit-menu:get-undo-item) enable #f)
-      (send (send s-frame edit-menu:get-redo-item) enable #f)
-      (send s-frame show #t)))
   
-  (lambda (frame)
-    (let ([settings (f:preferences:get 'drscheme:settings)])
-      (if (not (string=? (d:basis:setting-name settings) beginner-level-name))
-          (message-box "Stepper" 
-                       (format (string-append "Language level is set to \"~a\".~n"
-                                              "The Foot only works for the \"~a\" language level.~n")
-                               (d:basis:setting-name settings)
-                               beginner-level-name)
-                       #f 
-                       '(ok))
-          (stepper-go frame settings)))))
+  (define (handle-exception exn)
+    (if held-expr
+        (stored-return-thunk (make-before-error-result finished-exprs held-expr held-redex (exn-message exn)))
+        (stored-return-thunk (make-error-result finished-exprs (exn-message exn)))))
+           
+  (define (make-exception-handler k)
+    (lambda (exn)
+      (send-to-drscheme-eventspace
+       (lambda ()
+         (handle-exception exn)))
+      (k)))
+
+  (define stored-return-thunk 'no-thunk-here)
+  
+  ; result of invoking stepper-instance : ((stepper-text-args ->) ->)
+  (lambda (return-thunk)
+    (set! stored-return-thunk return-thunk)
+    (restart-user-computation)))
