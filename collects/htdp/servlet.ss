@@ -50,26 +50,6 @@
                   "(listof (cons sym str))" "4th" head-attributes))
      
      ; : tst -> bool
-     (define (xexpr? x)
-       (or (string? x) (symbol? x) (number? x) (pcdata? x) (comment? x)
-           (and (cons? x) (symbol? (car x))
-                (or (and (cons? (cdr x)) (listof? xexpr-attribute? (cadr x))
-                         (listof? xexpr? (cddr x)))
-                    (listof? xexpr? (cdr x))))))
-     
-     ; : (a -> bool) tst -> bool
-     ; To check if l is a (listof p?)
-     ; Don't use (and (list? l) (andmap p? l)) because l may be improper.
-     (define (listof? p? l)
-       (let listof-p? ([l l])
-         (or (null? l)
-             (and (cons? l) (p? (car l)) (listof-p? (cdr l))))))
-     
-     ; : tst -> bool
-     (define (xexpr-attribute? b)
-       (and (pair? b) (symbol? (car b)) (pair? (cdr b)) (string? (cadr b)) (null? (cddr b))))
-     
-     ; : tst -> bool
      (define (attribute-pair? b)
        (and (pair? b) (symbol? (car b)) (string? (cdr b))))
      )
