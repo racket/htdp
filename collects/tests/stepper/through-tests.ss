@@ -90,6 +90,9 @@
                                                                      test-intermediate-sequence
                                                                      test-intermediate/lambda-sequence)))
   
+  (define test-both-ints (make-multi-level-test-sequence (list test-intermediate-sequence
+                                                               test-intermediate/lambda-sequence)))
+  
   ; mutate these to values you want to examine in the repl:
   (define bell-jar-specimen-1 #f)
   (define bell-jar-specimen-2 #f)
@@ -154,591 +157,589 @@
   
   (define h-p highlight-placeholder)
   
-  (test-mz-sequence "(for-each (lambda (x) x) '(1 2 3))"
-                    `((before-after (,h-p) ((for-each (lambda (x) x) `(1 2 3))) ((... ,h-p ...)) (1))
-                      (before-after (,h-p) (...) ((... ,h-p ...)) (2))
-                      (before-after (,h-p) (...) ((... ,h-p ...)) (3))
-                      (before-after (,h-p) (...) (,h-p) ((void)))
-                      (finished ((void)))))
-  
-  (test-mz-sequence "(+ 3 4)"
-                    `((before-after (,h-p) ((+ 3 4)) (,h-p) (7))
-                      (finished (7))))
-  
-  (test-mz-sequence "((lambda (x) (+ x 3)) 4)"
-                    `((before-after (,h-p) (((lambda (x) (+ x 3)) 4))
-				    (,h-p) ((+ 4 3)))
-                      (before-after (,h-p) ((+ 4 3))
-				    (,h-p) (7))
-		      (finished (7))))
-  
-  (test-mz-sequence "(if 3 4 5)"
-                    `((before-after (,h-p) ((if 3 4 5))
-				    (,h-p) (4))
-		      (finished (4))))
-  
-  (test-upto-int/lam "(if (if true false true) false true)"
-                     `((before-after ((if ,h-p false true)) ((if true false true))
-                                     ((if ,h-p false true)) (false))
-                       (before-after (,h-p) ((if false false true))
-                                     (,h-p) (true))
-                       (finished (true))))
-
-  (test-mz-sequence "((lambda (x) x) 3)"
-                    `((before-after (,h-p) (((lambda (x) x) 3))
-				    (,h-p) (3))
-		      (finished (3))))
-  
-  
-  ;  (test-mz-sequence "((lambda (x) x) (begin (+ 3 4) (+ 4 5)))"
-  ;		    `((before-after ((begin ,h-p (+ 4 5))) ((+ 3 4))
-  ;				    ((begin ,h-p (+ 4 5))) (7))
-  ;		      (before-after (,h-p) ((begin 7 (+ 4 5)))
-  ;				    (,h-p) ((+ 4 5)))
-  ;                      (before-after (,h-p) ((+ 4 5))
-  ;				    (,h-p) (9))
-  ;		      (finished (9))))
-  
-  (test-mz-sequence "((lambda (a) (lambda (b) (+ a b))) 14)"
-                    `((before-after (,h-p) (((lambda (a) (lambda (b) (+ a b))) 14))
-				    (,h-p) ((lambda (b) (+ 14 b))))
-		      (finished ((lambda (b) (+ 14 b))))))
-  
-  (test-mz-sequence "((case-lambda ((a) 3) ((b c) (+ b c))) 5 6)"
-                    `((before-after (,h-p) (((case-lambda ((a) 3) ((b c) (+ b c))) 5 6))
-				    (,h-p) ((+ 5 6)))
-                      (before-after (,h-p) ((+ 5 6))
-				    (,h-p) (11))
-		      (finished (11))))
-  
-  (test-mz-sequence "(if 3 4)"
-                    `((before-after (,h-p) ((if 3 4))
-				    (,h-p) (4))
-		      (finished (4))))
- 
-  ;(test-mz-sequence "((call-with-current-continuation call-with-current-continuation) (call-with-current-continuation call-with-current-continuation))"
-  ;                  `((before-after ((,h-p (call-with-current-continuation call-with-current-continuation))) ((call-with-current-continuation call-with-current-continuation))
-  ;                    ((,h-p (call-with-current-continuation call-with-current-continuation))) ((lambda args ...)))
-  ;                    (before-after (((lambda args ...) ,h-p)) ((call-with-current-continuation call-with-current-continuation))
-  ;                    (((lambda args ...) ,h-p)) ((lambda args ...)))))
-  
-  ;(test-mz-sequence '(begin (define g 3) g)
-  ;                  `((before-after (,h-p) (g)
-  ;                    (,h-p) 3)))
-  
-  ;(syntax-object->datum (cadr (annotate-expr test2 'mzscheme 0 (lambda (x) x))))
-  
-  (test-upto-int/lam "(define a (+ 3 4))"
-                     `((before-after ((define a ,h-p)) ((+ 3 4))
-                                     ((define a ,h-p)) (7))
-                       (finished ((define a 7)))))
-  
-  (test-upto-int/lam "(+ 4 129)" 
-                     `((before-after (,h-p) ((+ 4 129))
-                                     same (133))
-                       (finished (133))))
-  
-  (test-upto-int/lam "(if true 3 4)"
-                     `((before-after (,h-p) ((if true 3 4))
-                                     (,h-p) (3))
-                       (finished (3))))
-  
-  (test-upto-int "(define (a2 x) x) (a2 4)"
-                     `((before-after-finished ((define (a2 x) x)) 
-                                              (,h-p) ((a2 4)) same (4))
-                       (finished (4))))
-  
-  (test-intermediate/lambda-sequence "(define (a2 x) x) (a2 4)"
-                                     `((before-after-finished ((define (a2 x) x))
-                                                              ((,h-p 4)) (a2)
-                                                              same ((lambda (x) x)))
-                                       (before-after (,h-p) (((lambda (x) x) 4))
-                                                     (,h-p) (4))
-                                       (finished (4))))
-  
-  (test-upto-int "(define (a3 x) (if true x x)) (a3 false)"
-                     `((before-after-finished ((define (a3 x) (if true x x)))
-                                              (,h-p) ((a3 false)) same ((if true false false)))
-                       (before-after (,h-p) ((if true false false)) same (false))
-                       (finished (false))))
-  
-  (test-intermediate/lambda-sequence "(define (a3 x) (if true x x)) (a3 false)"
-                                     `((before-after-finished ((define (a3 x) (if true x x)))
-                                                              ((,h-p false)) (a3)
-                                                              same ((lambda (x) (if true x x))))
-                                       (before-after (,h-p) (((lambda (x) (if true x x)) false)) same ((if true false false)))
-                                       (before-after (,h-p) ((if true false false)) same (false))
-                                       (finished (false))))
-  
-  (test-intermediate-sequence "(define (a12 x) (+ x 9)) (define b12 a12) (b12 12)"
-                              `((before-after-finished ((define (a12 x) (+ x 9)) (define b12 a12))
-                                                       ((,h-p 12)) (b12) same (a12))
-                                (before-after (,h-p) ((a12 12)) same ((+ 12 9)))
-                                (before-after (,h-p) ((+ 12 9)) same (21))
-                                (finished (21))))
-  
-  
-
-  ;;;;;;;;;;;;
-  ;;
-  ;;  OR / AND
-  ;;
-  ;;;;;;;;;;;;;.
-  
-  
-  (test-upto-int/lam "(or false true false)"
-                     `((before-after (,h-p) ((or false true false))
-                                     (,h-p) (true))
-                       (finished (true))))
-  
-  (test-upto-int/lam "(and true false true)"
-                     `((before-after (,h-p) ((and true false true))
-                                     (,h-p) (false))
-                       (finished (false))))
-   
-  (test-upto-int/lam "(and true (if true true false))"
-                     `((before-after ((and true ,h-p)) ((if true true false)) same (true))
-                       (before-after (,h-p) ((and true true)) same (true))
-                       (finished (true))))
-  
-  (test-upto-int "(define (b2 x) (and true x)) (b2 false)"
-                     `((before-after-finished ((define (b2 x) (and true x)))
-                                              (,h-p) ((b2 false)) same ((and true false)))
-                       (before-after (,h-p) ((and true false)) same (false))
-                       (finished (false))))
-  
-  (test-intermediate/lambda-sequence "(define (b2 x) (and true x)) (b2 false)"
-                                     `((before-after-finished ((define (b2 x) (and true x)))
-                                                              ((,h-p false)) (b2)
-                                                              same ((lambda (x) (and true x))))
-                                       (before-after (,h-p) (((lambda (x) (and true x)) false)) same ((and true false)))
-                                       (before-after (,h-p) ((and true false)) same (false))
-                                       (finished (false))))
-  
-  (test-upto-int "(define a1 true)(define (b1 x) (and a1 true x)) (b1 false)"
-                 `((before-after-finished ((define a1 true)
-                                           (define (b1 x) (and a1 true x))) 
-                                          (,h-p) ((b1 false)) same ((and a1 true false)))
-                   (before-after ((and ,h-p true false)) (a1) same (true))
-                   (before-after (,h-p) ((and true true false)) same (false))
-                   (finished (false))))
-  
-  (test-intermediate/lambda-sequence "(define a1 true)(define (b1 x) (and a1 true x)) (b1 false)"
-                                     `((before-after-finished ((define a1 true)
-                                                               (define (b1 x) (and a1 true x))) 
-                                                              ((,h-p false)) (b1)
-                                                              same ((lambda (x) (and a1 true x))))
-                                       (before-after (,h-p) (((lambda (x) (and a1 true x)) false)) same ((and a1 true false)))
-                                       (before-after ((and ,h-p true false)) (a1) same (true))
-                                       (before-after (,h-p) ((and true true false)) same (false))
-                                       (finished (false))))
-  
-  (test-upto-int/lam "(and true 1)"
-                     `((before-error (,h-p) ((and true 1)) "and: question result is not true or false: 1")))
-  
-  ;;;;;;;;;;;;;
-  ;;
-  ;;  COND
-  ;;
-  ;;;;;;;;;;;;;
-  
-  
-  (test-upto-int/lam "(cond [false 4] [false 5] [true 3])"
-                     `((before-after (,h-p) ((cond (false 4) (false 5) (true 3)))
-                                     (,h-p) ((cond (false 5) (true 3))))
-                       (before-after (,h-p) ((cond (false 5) (true 3)))
-                                     (,h-p) ((cond (true 3))))
-                       (before-after (,h-p) ((cond (true 3)))
-                                     (,h-p) (3))
-                       (finished (3))))
-  
-  (test-upto-int/lam "(cond [false 4] [else 9])"
-                     `((before-after (,h-p) ((cond [false 4] [else 9]))
-                                     (,h-p) ((cond [else 9])))
-                       (before-after (,h-p) ((cond [else 9]))
-                                     (,h-p) (9))
-                       (finished (9))))
-  
-  (test-upto-int/lam "(cond [true 3] [else (and true true)])"
-                     `((before-after (,h-p) ((cond (true 3) (else (and true true))))
-                                     (,h-p) (3))
-                       (finished (3))))
-  
-  
-  (test-upto-int/lam "(cond)"
-                     `((error "cond: expected a question--answer clause after `cond', but nothing's there")))
-  
-  (test-upto-int/lam "(cond [else 3])"
-                     `((before-after (,h-p) ((cond (else 3)))
-                                     (,h-p) (3))
-                       (finished (3))))
-  
-  (test-upto-int/lam "(cond [else (cond [else 3])])"
-                     `((before-after (,h-p) ((cond (else (cond (else 3)))))
-                                     (,h-p) ((cond (else 3))))
-                       (before-after (,h-p) ((cond (else 3)))
-                                     (,h-p) (3))
-                       (finished (3))))
-  
-  ;  reconstruct can't handle 'begin'
-  ;  (test-mz-sequence "(cond [#f 3 4] [#t (+ 3 4) (+ 4 9)])"
-  ;                    `((before-after (,h-p) ((cond (#f 3 4) (#t (+ 3 4) (+ 4 9))))
-  ;  				    (,h-p) ((cond (#t (+ 3 4) (+ 4 9)))))
-  ;                      (before-after (,h-p) ((cond (#t (+ 3 4) (+ 4 9))))
-  ;  				    (,h-p) (begin (+ 3 4) (+ 4 9)))
-  ;                      (before-after ((begin ,h-p (+ 4 9))) ((+ 3 4))
-  ;  				    ((begin ,h-p (+ 4 9)))  (7))
-  ;                      (before-after (,h-p) ((begin 7 (+ 4 9)))
-  ;  				    (,h-p) ((+ 4 9)))
-  ;                      (before-after (,h-p) ((+ 4 9))
-  ;  				    (,h-p) (13))
-  ;  		      (finished (13))))
-  
-  (test-upto-int/lam "(cond [false 3] [else (cond [true 4])])"
-                     `((before-after (,h-p) ((cond (false 3) (else (cond (true 4)))))
-                                     (,h-p) ((cond (else (cond (true 4))))))
-                       (before-after (,h-p) ((cond (else (cond (true 4)))))
-                                     (,h-p) ((cond (true 4))))
-                       (before-after (,h-p) ((cond (true 4)))
-                                     (,h-p) (4))
-                       (finished (4))))
-  
-  
-  
-  
-  
-  
-  (test-intermediate-sequence "(define a4 +) a4"
-                              `((before-after (,h-p) (a4)
-                                              (,h-p) (+))
-                                (finished (+))))
-  
-  (test-intermediate-sequence "(define (f123 x) (+ x 13)) f123"
-                              `((finished ((define (f123 x) (+ x 13))
-                                           f123))))
-  
-  (test-upto-int "(define (b x) (+ x 13)) (b 9)"
-                     `((before-after-finished ((define (b x) (+ x 13)))
-                                              (,h-p) ((b 9)) same ((+ 9 13)))
-                       (before-after (,h-p) ((+ 9 13)) same (22))
-                       (finished (22))))
-  
-  (test-intermediate/lambda-sequence "(define (b x) (+ x 13)) (b 9)"
-                                     `((before-after-finished ((define (b x) (+ x 13)))
-                                                              ((,h-p 9)) (b)
-                                                               same ((lambda (x) (+ x 13))))
-                                       (before-after (,h-p) (((lambda (x) (+ x 13)) 9)) same ((+ 9 13)))
-                                       (before-after (,h-p) ((+ 9 13)) same (22))
-                                       (finished (22))))
-  
-  
-  (test-upto-int/lam "(define-struct mamba (rhythm tempo)) (mamba-rhythm (make-mamba 24 2))"
-                     `((before-after-finished ((define-struct mamba (rhythm tempo)))
-                                              (,h-p) ((mamba-rhythm (make-mamba 24 2))) same (24))
-                       (finished (24))))
-  
-  (test-upto-int "(define a5 (lambda (a5) (+ a5 13))) (a5 23)"
-                     `((before-after-finished ((define a5 (lambda (a5) (+ a5 13))))
-                                              (,h-p) ((a5 23)) same ((+ 23 13)))
-                       (before-after (,h-p) ((+ 23 13)) same (36))
-                       (finished (36))))
-  
-  (test-intermediate/lambda-sequence "(define a5 (lambda (a5) (+ a5 13))) (a5 23)"
-                                     `((before-after-finished ((define a5 (lambda (a5) (+ a5 13))))
-                                                              ((,h-p 23)) (a5)
-                                                              same ((lambda (a5) (+ a5 13))))
-                                       (before-after (,h-p) (((lambda (a5) (+ a5 13)) 23)) same ((+ 23 13)))
-                                       (before-after (,h-p) ((+ 23 13)) same (36))
-                                       (finished (36))))
-  
-  (test-upto-int "(define c1 false) (define (d2 x) (or c1 false x)) (d2 false)"
-                     `((before-after-finished ((define c1 false)
-                                               (define (d2 x) (or c1 false x)))
-                                              (,h-p) ((d2 false)) same ((or c1 false false)))
-                       (before-after ((or ,h-p false false)) (c1) same (false))
-                       (before-after (,h-p) ((or false false false)) same (false))
-                       (finished (false))))
-  
-  (test-intermediate/lambda-sequence "(define c1 false) (define (d2 x) (or c1 false x)) (d2 false)"
-                                     `((before-after-finished ((define c1 false)
-                                                               (define (d2 x) (or c1 false x)))
-                                                              ((,h-p false)) (d2)
-                                                              same ((lambda (x) (or c1 false x))))
-                                       (before-after (,h-p) (((lambda (x) (or c1 false x)) false)) same ((or c1 false false)))
-                                       (before-after ((or ,h-p false false)) (c1) same (false))
-                                       (before-after (,h-p) ((or false false false)) same (false))
-                                       (finished (false))))
-  
-  (test-upto-int "(define (silly-choice str)
-                        (string-append str (if false str str) str))
-  (silly-choice \"family\")"
-                     `((before-after-finished ((define (silly-choice str)
-                                                 (string-append str (if false str str) str)))
-                                              (,h-p) ((silly-choice "family")) 
-                                              same ((string-append "family" (if false "family" "family") "family")))
-                       (before-after ((string-append "family" ,h-p "family")) ((if false "family" "family"))
-                                     same ("family"))
-                       (before-after (,h-p) ((string-append "family" "family" "family"))
-                                     same ("familyfamilyfamily"))
-                       (finished ("familyfamilyfamily"))))
-  
-  (test-intermediate/lambda-sequence "(define (silly-choice str)
-                                        (string-append str (if false str str) str))
-  (silly-choice \"family\")"
-                                     `((before-after-finished ((define (silly-choice str)
-                                                                 (string-append str (if false str str) str)))
-                                                              ((,h-p "family")) (silly-choice)
-                                                              same ((lambda (str) (string-append str (if false str str) str))))
-                                       (before-after (,h-p) (((lambda (str) (string-append str (if false str str) str)) "family")) 
-                                                     same ((string-append "family" (if false "family" "family") "family")))
-                                       (before-after ((string-append "family" ,h-p "family")) ((if false "family" "family"))
-                                                     same ("family"))
-                                       (before-after (,h-p) ((string-append "family" "family" "family"))
-                                                     same ("familyfamilyfamily"))
-                                       (finished ("familyfamilyfamily"))))
-  
-  (test-upto-int "(define (f x) (+ (g x) 10)) (define (g x) (- x 22)) (f 13)"
-                     `((before-after-finished ((define (f x) (+ (g x) 10)) (define (g x) (- x 22)))
-                                              (,h-p) ((f 13)) same ((+ (g 13) 10)))
-                       (before-after ((+ ,h-p 10)) ((g 13)) same ((- 13 22)))
-                       (before-after ((+ ,h-p 10)) ((- 13 22)) same (-9))
-                       (before-after (,h-p) ((+ -9 10)) same (1))
-                       (finished (1))))
-  
-  (test-intermediate/lambda-sequence "(define (f x) (+ (g x) 10)) (define (g x) (- x 22)) (f 13)"
-                                     `((before-after-finished ((define (f x) (+ (g x) 10)) (define (g x) (- x 22)))
-                                                              ((,h-p 13)) (f)
-                                                              same ((lambda (x) (+ (g x) 10))))
-                                       (before-after (,h-p) (((lambda (x) (+ (g x) 10)) 13)) same ((+ (g 13) 10)))
-                                       (before-after ((+ (,h-p 13) 10)) (g) same ((lambda (x) (- x 22))))
-                                       (before-after ((+ ,h-p 10)) (((lambda (x) (- x 22)) 13)) same ((- 13 22)))
-                                       (before-after ((+ ,h-p 10)) ((- 13 22)) same (-9))
-                                       (before-after (,h-p) ((+ -9 10)) same (1))
-                                       (finished (1))))
-  
-  
-  (test-upto-int/lam "(cons 1 2)" 
-                     `((before-error (,h-p) ((cons 1 2)) "cons: second argument must be of type <list>, given 1 and 2")))
-  
-  (test-beginner-sequence "(cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3)"
-                          `((before-after-finished ((cons 3 (cons 1 empty)))
-                                                   (,h-p) ((list 1 2 3)) same ((cons 1 (cons 2 (cons 3 empty)))))
-                            (finished ((cons 1 (cons 2 (cons 3 empty))) (define-struct aa (b)) (make-aa 3)))))
-  
-  (test-bwla-to-int/lam "(cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3)"
-                        `((before-after ((cons 3 ,h-p)) ((cons 1 empty)) same ((list 1)))
-                          (before-after (,h-p) ((cons 3 (list 1))) same ((list 3 1)))
-                          (finished ((list 3 1) (list 1 2 3) (define-struct aa (b)) (make-aa 3)))))
-  
-  (test-upto-int/lam "(define a11 4)"
-                     `((finished ((define a11 4)))))
-  
-  (test-mz-sequence "(map (lambda (x) x) (list 3 4 5))"
-                    `((before-after ((map (lambda (x) x) ,h-p)) ((list 3 4 5))
-                                    same (`( 3 4 5)))
-                      (before-after (,h-p) ((map (lambda (x) x) `(3 4 5)))
-                                    ((... ,h-p ...)) (3))
-                      (before-after (,h-p) (...)
-                                    ((... ,h-p ...)) (4))
-                      (before-after (,h-p) (...)
-                                    ((... ,h-p ...)) (5))
-                      (before-after (,h-p) (...)
-                                    (,h-p) (`(3 4 5)))
-                      (finished (`(3 4 5)))))
-  
-  (test-beginner-wla-sequence "'(3 4 5)"
-                              `((finished ((list 3 4 5)))))
-  
-  
-  ;;;;;;;;;;;;;
-  ;;
-  ;;  QUASIQUOTE
-  ;;
-  ;;;;;;;;;;;;;.
-  
-  ; note: we currently punt on trying to unwind quasiquote.
-  
-  (test-beginner-wla-sequence "`(3 4 ,(+ 4 5))"
-                              `((before-after ((cons 3 (cons 4 (cons ,h-p empty)))) ((+ 4 5))
-                                              ((cons 3 (cons 4 (cons ,h-p empty)))) (9))
-                                (before-after ((cons 3 (cons 4 ,h-p))) ((cons 9 empty))
-                                              ((cons 3 (cons 4 ,h-p))) ((list 9)))
-                                (before-after ((cons 3 ,h-p)) ((cons 4 (list 9)))
-                                              ((cons 3 ,h-p)) ((list 4 9)))
-                                (before-after (,h-p) ((cons 3 (list 4 9)))
-                                              (,h-p) ((list 3 4 9)))
-                                (finished ((list 3 4 9)))))
-  
-  (test-beginner-wla-sequence "`(3 ,@(list (+ 3 4) 5) 6)"
-                              `((before-after ((cons 3 (append (list ,h-p 5) (cons 6 empty)))) ((+ 3 4)) same (7))
-                                (before-after ((cons 3 (append (list 7 5) ,h-p))) ((cons 6 empty)) same ((list 6)))
-                                (before-after ((cons 3 ,h-p)) ((append (list 7 5) (list 6))) same ((list 7 5 6)))
-                                (before-after (,h-p) ((cons 3 (list 7 5 6))) same ((list 3 7 5 6)))
-                                (finished ((list 3 7 5 6)))))
-  
-  ;;;;;;;;;;;;;
-  ;;
-  ;;  LET
-  ;;
-  ;;;;;;;;;;;;;
-  
-    (test-intermediate-sequence "(let ([a 3]) 4)"
-                      `((before-after (,h-p) ((let ([a 3]) 4))
-                                      same ((define a 3) 4))
-                        (finished ((define a 3) 4)))) 
-    
-    (test-intermediate-sequence "(let ([a (+ 4 5)] [b (+ 9 20)]) (+ a b))"
-                      `((before-after ((let-values ([(a) ,h-p] [(b) (+ 9 20)]) (+ a b))) ((+ 4 5))
-  				    same (9))
-  		      (before-after ((let-values ([(a) 9] [(b) ,h-p]) (+ a b))) ((+ 9 20))
-  				    same (29))
-  		      (before-after (,h-p) ((let-values ([(a) 9] [(b) 29]) (+ a b)))
-  				    same (+ 9 29))
-  		      (before-after (,h-p) ((+ 9 29))
-  				    same (38))
-  		      (finished (38))))
-  
-  
-;    (test-intermediate-sequence "(define a12 3) (define c12 19) (let ([a12 13] [b12 a12]) (+ b12 a12 c12))"
-;                                `((before-after-finished ((define a12 3) (define c12 19))
-;                                                         (,h-p) ((let ([a12 13] [b12 a12]) (+ b12 a12 c12))) 
-;                                                         (,h-p ,h-p ,h-p) ((define a12_0 13) (define b12_1 a12) (+ b12_1 a12_0 c12)))
-;                                  (before-after-finished ((define a12_0 13))
-;                                                         ((define b12_1 ,h-p) (+ b12_1 a12_0 c)) (a12) same (3))
-;                                  (before-after-finished ((define b12_1 3))
-;                                                         ((+ ,h-p a12_0 c12)) (b12_1) same (3))
-;                                  (before-after ((+ 3 ,h-p c12)) (a12_0) same (13))
-;                                  (before-after ((+ 3 13 ,h-p)) (c12) same 19)
-;                                  (before-after (,h-p) ((+ 3 13 19)) same (35))
-;                                  (finished (35))))
+;  (test-mz-sequence "(for-each (lambda (x) x) '(1 2 3))"
+;                    `((before-after (,h-p) ((for-each (lambda (x) x) `(1 2 3))) ((... ,h-p ...)) (1))
+;                      (before-after (,h-p) (...) ((... ,h-p ...)) (2))
+;                      (before-after (,h-p) (...) ((... ,h-p ...)) (3))
+;                      (before-after (,h-p) (...) (,h-p) ((void)))
+;                      (finished ((void)))))
+;  
+;  (test-mz-sequence "(+ 3 4)"
+;                    `((before-after (,h-p) ((+ 3 4)) (,h-p) (7))
+;                      (finished (7))))
+;  
+;  (test-mz-sequence "((lambda (x) (+ x 3)) 4)"
+;                    `((before-after (,h-p) (((lambda (x) (+ x 3)) 4))
+;				    (,h-p) ((+ 4 3)))
+;                      (before-after (,h-p) ((+ 4 3))
+;				    (,h-p) (7))
+;		      (finished (7))))
+;  
+;  (test-mz-sequence "(if 3 4 5)"
+;                    `((before-after (,h-p) ((if 3 4 5))
+;				    (,h-p) (4))
+;		      (finished (4))))
+;  
+;  (test-upto-int/lam "(if (if true false true) false true)"
+;                     `((before-after ((if ,h-p false true)) ((if true false true))
+;                                     ((if ,h-p false true)) (false))
+;                       (before-after (,h-p) ((if false false true))
+;                                     (,h-p) (true))
+;                       (finished (true))))
+;
+;  (test-mz-sequence "((lambda (x) x) 3)"
+;                    `((before-after (,h-p) (((lambda (x) x) 3))
+;				    (,h-p) (3))
+;		      (finished (3))))
+;  
+;  
+;  ;  (test-mz-sequence "((lambda (x) x) (begin (+ 3 4) (+ 4 5)))"
+;  ;		    `((before-after ((begin ,h-p (+ 4 5))) ((+ 3 4))
+;  ;				    ((begin ,h-p (+ 4 5))) (7))
+;  ;		      (before-after (,h-p) ((begin 7 (+ 4 5)))
+;  ;				    (,h-p) ((+ 4 5)))
+;  ;                      (before-after (,h-p) ((+ 4 5))
+;  ;				    (,h-p) (9))
+;  ;		      (finished (9))))
+;  
+;  (test-mz-sequence "((lambda (a) (lambda (b) (+ a b))) 14)"
+;                    `((before-after (,h-p) (((lambda (a) (lambda (b) (+ a b))) 14))
+;				    (,h-p) ((lambda (b) (+ 14 b))))
+;		      (finished ((lambda (b) (+ 14 b))))))
+;  
+;  (test-mz-sequence "((case-lambda ((a) 3) ((b c) (+ b c))) 5 6)"
+;                    `((before-after (,h-p) (((case-lambda ((a) 3) ((b c) (+ b c))) 5 6))
+;				    (,h-p) ((+ 5 6)))
+;                      (before-after (,h-p) ((+ 5 6))
+;				    (,h-p) (11))
+;		      (finished (11))))
+;  
+;  (test-mz-sequence "(if 3 4)"
+;                    `((before-after (,h-p) ((if 3 4))
+;				    (,h-p) (4))
+;		      (finished (4))))
+; 
+;  ;(test-mz-sequence "((call-with-current-continuation call-with-current-continuation) (call-with-current-continuation call-with-current-continuation))"
+;  ;                  `((before-after ((,h-p (call-with-current-continuation call-with-current-continuation))) ((call-with-current-continuation call-with-current-continuation))
+;  ;                    ((,h-p (call-with-current-continuation call-with-current-continuation))) ((lambda args ...)))
+;  ;                    (before-after (((lambda args ...) ,h-p)) ((call-with-current-continuation call-with-current-continuation))
+;  ;                    (((lambda args ...) ,h-p)) ((lambda args ...)))))
+;  
+;  ;(test-mz-sequence '(begin (define g 3) g)
+;  ;                  `((before-after (,h-p) (g)
+;  ;                    (,h-p) 3)))
+;  
+;  ;(syntax-object->datum (cadr (annotate-expr test2 'mzscheme 0 (lambda (x) x))))
+;  
+;  (test-upto-int/lam "(define a (+ 3 4))"
+;                     `((before-after ((define a ,h-p)) ((+ 3 4))
+;                                     ((define a ,h-p)) (7))
+;                       (finished ((define a 7)))))
+;  
+;  (test-upto-int/lam "(+ 4 129)" 
+;                     `((before-after (,h-p) ((+ 4 129))
+;                                     same (133))
+;                       (finished (133))))
+;  
+;  (test-upto-int/lam "(if true 3 4)"
+;                     `((before-after (,h-p) ((if true 3 4))
+;                                     (,h-p) (3))
+;                       (finished (3))))
+;  
+;  (test-upto-int "(define (a2 x) x) (a2 4)"
+;                     `((before-after-finished ((define (a2 x) x)) 
+;                                              (,h-p) ((a2 4)) same (4))
+;                       (finished (4))))
+;  
+;  (test-intermediate/lambda-sequence "(define (a2 x) x) (a2 4)"
+;                                     `((before-after-finished ((define (a2 x) x))
+;                                                              ((,h-p 4)) (a2)
+;                                                              same ((lambda (x) x)))
+;                                       (before-after (,h-p) (((lambda (x) x) 4))
+;                                                     (,h-p) (4))
+;                                       (finished (4))))
+;  
+;  (test-upto-int "(define (a3 x) (if true x x)) (a3 false)"
+;                     `((before-after-finished ((define (a3 x) (if true x x)))
+;                                              (,h-p) ((a3 false)) same ((if true false false)))
+;                       (before-after (,h-p) ((if true false false)) same (false))
+;                       (finished (false))))
+;  
+;  (test-intermediate/lambda-sequence "(define (a3 x) (if true x x)) (a3 false)"
+;                                     `((before-after-finished ((define (a3 x) (if true x x)))
+;                                                              ((,h-p false)) (a3)
+;                                                              same ((lambda (x) (if true x x))))
+;                                       (before-after (,h-p) (((lambda (x) (if true x x)) false)) same ((if true false false)))
+;                                       (before-after (,h-p) ((if true false false)) same (false))
+;                                       (finished (false))))
+;  
+;  (test-intermediate-sequence "(define (a12 x) (+ x 9)) (define b12 a12) (b12 12)"
+;                              `((before-after-finished ((define (a12 x) (+ x 9)) (define b12 a12))
+;                                                       ((,h-p 12)) (b12) same (a12))
+;                                (before-after (,h-p) ((a12 12)) same ((+ 12 9)))
+;                                (before-after (,h-p) ((+ 12 9)) same (21))
+;                                (finished (21))))
+;  
+;  
+;
+;  ;;;;;;;;;;;;
+;  ;;
+;  ;;  OR / AND
+;  ;;
+;  ;;;;;;;;;;;;;.
+;  
+;  
+;  (test-upto-int/lam "(or false true false)"
+;                     `((before-after (,h-p) ((or false true false))
+;                                     (,h-p) (true))
+;                       (finished (true))))
+;  
+;  (test-upto-int/lam "(and true false true)"
+;                     `((before-after (,h-p) ((and true false true))
+;                                     (,h-p) (false))
+;                       (finished (false))))
+;   
+;  (test-upto-int/lam "(and true (if true true false))"
+;                     `((before-after ((and true ,h-p)) ((if true true false)) same (true))
+;                       (before-after (,h-p) ((and true true)) same (true))
+;                       (finished (true))))
+;  
+;  (test-upto-int "(define (b2 x) (and true x)) (b2 false)"
+;                     `((before-after-finished ((define (b2 x) (and true x)))
+;                                              (,h-p) ((b2 false)) same ((and true false)))
+;                       (before-after (,h-p) ((and true false)) same (false))
+;                       (finished (false))))
+;  
+;  (test-intermediate/lambda-sequence "(define (b2 x) (and true x)) (b2 false)"
+;                                     `((before-after-finished ((define (b2 x) (and true x)))
+;                                                              ((,h-p false)) (b2)
+;                                                              same ((lambda (x) (and true x))))
+;                                       (before-after (,h-p) (((lambda (x) (and true x)) false)) same ((and true false)))
+;                                       (before-after (,h-p) ((and true false)) same (false))
+;                                       (finished (false))))
+;  
+;  (test-upto-int "(define a1 true)(define (b1 x) (and a1 true x)) (b1 false)"
+;                 `((before-after-finished ((define a1 true)
+;                                           (define (b1 x) (and a1 true x))) 
+;                                          (,h-p) ((b1 false)) same ((and a1 true false)))
+;                   (before-after ((and ,h-p true false)) (a1) same (true))
+;                   (before-after (,h-p) ((and true true false)) same (false))
+;                   (finished (false))))
+;  
+;  (test-intermediate/lambda-sequence "(define a1 true)(define (b1 x) (and a1 true x)) (b1 false)"
+;                                     `((before-after-finished ((define a1 true)
+;                                                               (define (b1 x) (and a1 true x))) 
+;                                                              ((,h-p false)) (b1)
+;                                                              same ((lambda (x) (and a1 true x))))
+;                                       (before-after (,h-p) (((lambda (x) (and a1 true x)) false)) same ((and a1 true false)))
+;                                       (before-after ((and ,h-p true false)) (a1) same (true))
+;                                       (before-after (,h-p) ((and true true false)) same (false))
+;                                       (finished (false))))
+;  
+;  (test-upto-int/lam "(and true 1)"
+;                     `((before-error (,h-p) ((and true 1)) "and: question result is not true or false: 1")))
+;  
+;  ;;;;;;;;;;;;;
+;  ;;
+;  ;;  COND
+;  ;;
+;  ;;;;;;;;;;;;;
+;  
+;  
+;  (test-upto-int/lam "(cond [false 4] [false 5] [true 3])"
+;                     `((before-after (,h-p) ((cond (false 4) (false 5) (true 3)))
+;                                     (,h-p) ((cond (false 5) (true 3))))
+;                       (before-after (,h-p) ((cond (false 5) (true 3)))
+;                                     (,h-p) ((cond (true 3))))
+;                       (before-after (,h-p) ((cond (true 3)))
+;                                     (,h-p) (3))
+;                       (finished (3))))
+;  
+;  (test-upto-int/lam "(cond [false 4] [else 9])"
+;                     `((before-after (,h-p) ((cond [false 4] [else 9]))
+;                                     (,h-p) ((cond [else 9])))
+;                       (before-after (,h-p) ((cond [else 9]))
+;                                     (,h-p) (9))
+;                       (finished (9))))
+;  
+;  (test-upto-int/lam "(cond [true 3] [else (and true true)])"
+;                     `((before-after (,h-p) ((cond (true 3) (else (and true true))))
+;                                     (,h-p) (3))
+;                       (finished (3))))
+;  
+;  
+;  (test-upto-int/lam "(cond)"
+;                     `((error "cond: expected a question--answer clause after `cond', but nothing's there")))
+;  
+;  (test-upto-int/lam "(cond [else 3])"
+;                     `((before-after (,h-p) ((cond (else 3)))
+;                                     (,h-p) (3))
+;                       (finished (3))))
+;  
+;  (test-upto-int/lam "(cond [else (cond [else 3])])"
+;                     `((before-after (,h-p) ((cond (else (cond (else 3)))))
+;                                     (,h-p) ((cond (else 3))))
+;                       (before-after (,h-p) ((cond (else 3)))
+;                                     (,h-p) (3))
+;                       (finished (3))))
+;  
+;  ;  reconstruct can't handle 'begin'
+;  ;  (test-mz-sequence "(cond [#f 3 4] [#t (+ 3 4) (+ 4 9)])"
+;  ;                    `((before-after (,h-p) ((cond (#f 3 4) (#t (+ 3 4) (+ 4 9))))
+;  ;  				    (,h-p) ((cond (#t (+ 3 4) (+ 4 9)))))
+;  ;                      (before-after (,h-p) ((cond (#t (+ 3 4) (+ 4 9))))
+;  ;  				    (,h-p) (begin (+ 3 4) (+ 4 9)))
+;  ;                      (before-after ((begin ,h-p (+ 4 9))) ((+ 3 4))
+;  ;  				    ((begin ,h-p (+ 4 9)))  (7))
+;  ;                      (before-after (,h-p) ((begin 7 (+ 4 9)))
+;  ;  				    (,h-p) ((+ 4 9)))
+;  ;                      (before-after (,h-p) ((+ 4 9))
+;  ;  				    (,h-p) (13))
+;  ;  		      (finished (13))))
+;  
+;  (test-upto-int/lam "(cond [false 3] [else (cond [true 4])])"
+;                     `((before-after (,h-p) ((cond (false 3) (else (cond (true 4)))))
+;                                     (,h-p) ((cond (else (cond (true 4))))))
+;                       (before-after (,h-p) ((cond (else (cond (true 4)))))
+;                                     (,h-p) ((cond (true 4))))
+;                       (before-after (,h-p) ((cond (true 4)))
+;                                     (,h-p) (4))
+;                       (finished (4))))
+;  
+;  
+;  
+;  
+;  
+;  
+;  (test-intermediate-sequence "(define a4 +) a4"
+;                              `((before-after (,h-p) (a4)
+;                                              (,h-p) (+))
+;                                (finished (+))))
+;  
+;  (test-intermediate-sequence "(define (f123 x) (+ x 13)) f123"
+;                              `((finished ((define (f123 x) (+ x 13))
+;                                           f123))))
+;  
+;  (test-upto-int "(define (b x) (+ x 13)) (b 9)"
+;                     `((before-after-finished ((define (b x) (+ x 13)))
+;                                              (,h-p) ((b 9)) same ((+ 9 13)))
+;                       (before-after (,h-p) ((+ 9 13)) same (22))
+;                       (finished (22))))
+;  
+;  (test-intermediate/lambda-sequence "(define (b x) (+ x 13)) (b 9)"
+;                                     `((before-after-finished ((define (b x) (+ x 13)))
+;                                                              ((,h-p 9)) (b)
+;                                                               same ((lambda (x) (+ x 13))))
+;                                       (before-after (,h-p) (((lambda (x) (+ x 13)) 9)) same ((+ 9 13)))
+;                                       (before-after (,h-p) ((+ 9 13)) same (22))
+;                                       (finished (22))))
+;  
+;  
+;  (test-upto-int/lam "(define-struct mamba (rhythm tempo)) (mamba-rhythm (make-mamba 24 2))"
+;                     `((before-after-finished ((define-struct mamba (rhythm tempo)))
+;                                              (,h-p) ((mamba-rhythm (make-mamba 24 2))) same (24))
+;                       (finished (24))))
+;  
+;  (test-upto-int "(define a5 (lambda (a5) (+ a5 13))) (a5 23)"
+;                     `((before-after-finished ((define a5 (lambda (a5) (+ a5 13))))
+;                                              (,h-p) ((a5 23)) same ((+ 23 13)))
+;                       (before-after (,h-p) ((+ 23 13)) same (36))
+;                       (finished (36))))
+;  
+;  (test-intermediate/lambda-sequence "(define a5 (lambda (a5) (+ a5 13))) (a5 23)"
+;                                     `((before-after-finished ((define a5 (lambda (a5) (+ a5 13))))
+;                                                              ((,h-p 23)) (a5)
+;                                                              same ((lambda (a5) (+ a5 13))))
+;                                       (before-after (,h-p) (((lambda (a5) (+ a5 13)) 23)) same ((+ 23 13)))
+;                                       (before-after (,h-p) ((+ 23 13)) same (36))
+;                                       (finished (36))))
+;  
+;  (test-upto-int "(define c1 false) (define (d2 x) (or c1 false x)) (d2 false)"
+;                     `((before-after-finished ((define c1 false)
+;                                               (define (d2 x) (or c1 false x)))
+;                                              (,h-p) ((d2 false)) same ((or c1 false false)))
+;                       (before-after ((or ,h-p false false)) (c1) same (false))
+;                       (before-after (,h-p) ((or false false false)) same (false))
+;                       (finished (false))))
+;  
+;  (test-intermediate/lambda-sequence "(define c1 false) (define (d2 x) (or c1 false x)) (d2 false)"
+;                                     `((before-after-finished ((define c1 false)
+;                                                               (define (d2 x) (or c1 false x)))
+;                                                              ((,h-p false)) (d2)
+;                                                              same ((lambda (x) (or c1 false x))))
+;                                       (before-after (,h-p) (((lambda (x) (or c1 false x)) false)) same ((or c1 false false)))
+;                                       (before-after ((or ,h-p false false)) (c1) same (false))
+;                                       (before-after (,h-p) ((or false false false)) same (false))
+;                                       (finished (false))))
+;  
+;  (test-upto-int "(define (silly-choice str)
+;                        (string-append str (if false str str) str))
+;  (silly-choice \"family\")"
+;                     `((before-after-finished ((define (silly-choice str)
+;                                                 (string-append str (if false str str) str)))
+;                                              (,h-p) ((silly-choice "family")) 
+;                                              same ((string-append "family" (if false "family" "family") "family")))
+;                       (before-after ((string-append "family" ,h-p "family")) ((if false "family" "family"))
+;                                     same ("family"))
+;                       (before-after (,h-p) ((string-append "family" "family" "family"))
+;                                     same ("familyfamilyfamily"))
+;                       (finished ("familyfamilyfamily"))))
+;  
+;  (test-intermediate/lambda-sequence "(define (silly-choice str)
+;                                        (string-append str (if false str str) str))
+;  (silly-choice \"family\")"
+;                                     `((before-after-finished ((define (silly-choice str)
+;                                                                 (string-append str (if false str str) str)))
+;                                                              ((,h-p "family")) (silly-choice)
+;                                                              same ((lambda (str) (string-append str (if false str str) str))))
+;                                       (before-after (,h-p) (((lambda (str) (string-append str (if false str str) str)) "family")) 
+;                                                     same ((string-append "family" (if false "family" "family") "family")))
+;                                       (before-after ((string-append "family" ,h-p "family")) ((if false "family" "family"))
+;                                                     same ("family"))
+;                                       (before-after (,h-p) ((string-append "family" "family" "family"))
+;                                                     same ("familyfamilyfamily"))
+;                                       (finished ("familyfamilyfamily"))))
+;  
+;  (test-upto-int "(define (f x) (+ (g x) 10)) (define (g x) (- x 22)) (f 13)"
+;                     `((before-after-finished ((define (f x) (+ (g x) 10)) (define (g x) (- x 22)))
+;                                              (,h-p) ((f 13)) same ((+ (g 13) 10)))
+;                       (before-after ((+ ,h-p 10)) ((g 13)) same ((- 13 22)))
+;                       (before-after ((+ ,h-p 10)) ((- 13 22)) same (-9))
+;                       (before-after (,h-p) ((+ -9 10)) same (1))
+;                       (finished (1))))
+;  
+;  (test-intermediate/lambda-sequence "(define (f x) (+ (g x) 10)) (define (g x) (- x 22)) (f 13)"
+;                                     `((before-after-finished ((define (f x) (+ (g x) 10)) (define (g x) (- x 22)))
+;                                                              ((,h-p 13)) (f)
+;                                                              same ((lambda (x) (+ (g x) 10))))
+;                                       (before-after (,h-p) (((lambda (x) (+ (g x) 10)) 13)) same ((+ (g 13) 10)))
+;                                       (before-after ((+ (,h-p 13) 10)) (g) same ((lambda (x) (- x 22))))
+;                                       (before-after ((+ ,h-p 10)) (((lambda (x) (- x 22)) 13)) same ((- 13 22)))
+;                                       (before-after ((+ ,h-p 10)) ((- 13 22)) same (-9))
+;                                       (before-after (,h-p) ((+ -9 10)) same (1))
+;                                       (finished (1))))
+;  
+;  
+;  (test-upto-int/lam "(cons 1 2)" 
+;                     `((before-error (,h-p) ((cons 1 2)) "cons: second argument must be of type <list>, given 1 and 2")))
+;  
+;  (test-beginner-sequence "(cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3)"
+;                          `((before-after-finished ((cons 3 (cons 1 empty)))
+;                                                   (,h-p) ((list 1 2 3)) same ((cons 1 (cons 2 (cons 3 empty)))))
+;                            (finished ((cons 1 (cons 2 (cons 3 empty))) (define-struct aa (b)) (make-aa 3)))))
+;  
+;  (test-bwla-to-int/lam "(cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3)"
+;                        `((before-after ((cons 3 ,h-p)) ((cons 1 empty)) same ((list 1)))
+;                          (before-after (,h-p) ((cons 3 (list 1))) same ((list 3 1)))
+;                          (finished ((list 3 1) (list 1 2 3) (define-struct aa (b)) (make-aa 3)))))
+;  
+;  (test-upto-int/lam "(define a11 4)"
+;                     `((finished ((define a11 4)))))
+;  
+;  (test-mz-sequence "(map (lambda (x) x) (list 3 4 5))"
+;                    `((before-after ((map (lambda (x) x) ,h-p)) ((list 3 4 5))
+;                                    same (`( 3 4 5)))
+;                      (before-after (,h-p) ((map (lambda (x) x) `(3 4 5)))
+;                                    ((... ,h-p ...)) (3))
+;                      (before-after (,h-p) (...)
+;                                    ((... ,h-p ...)) (4))
+;                      (before-after (,h-p) (...)
+;                                    ((... ,h-p ...)) (5))
+;                      (before-after (,h-p) (...)
+;                                    (,h-p) (`(3 4 5)))
+;                      (finished (`(3 4 5)))))
+;  
+;  (test-beginner-wla-sequence "'(3 4 5)"
+;                              `((finished ((list 3 4 5)))))
+;  
+;  
+;  ;;;;;;;;;;;;;
+;  ;;
+;  ;;  QUASIQUOTE
+;  ;;
+;  ;;;;;;;;;;;;;.
+;  
+;  ; note: we currently punt on trying to unwind quasiquote.
+;  
+;  (test-beginner-wla-sequence "`(3 4 ,(+ 4 5))"
+;                              `((before-after ((cons 3 (cons 4 (cons ,h-p empty)))) ((+ 4 5))
+;                                              ((cons 3 (cons 4 (cons ,h-p empty)))) (9))
+;                                (before-after ((cons 3 (cons 4 ,h-p))) ((cons 9 empty))
+;                                              ((cons 3 (cons 4 ,h-p))) ((list 9)))
+;                                (before-after ((cons 3 ,h-p)) ((cons 4 (list 9)))
+;                                              ((cons 3 ,h-p)) ((list 4 9)))
+;                                (before-after (,h-p) ((cons 3 (list 4 9)))
+;                                              (,h-p) ((list 3 4 9)))
+;                                (finished ((list 3 4 9)))))
+;  
+;  (test-beginner-wla-sequence "`(3 ,@(list (+ 3 4) 5) 6)"
+;                              `((before-after ((cons 3 (append (list ,h-p 5) (cons 6 empty)))) ((+ 3 4)) same (7))
+;                                (before-after ((cons 3 (append (list 7 5) ,h-p))) ((cons 6 empty)) same ((list 6)))
+;                                (before-after ((cons 3 ,h-p)) ((append (list 7 5) (list 6))) same ((list 7 5 6)))
+;                                (before-after (,h-p) ((cons 3 (list 7 5 6))) same ((list 3 7 5 6)))
+;                                (finished ((list 3 7 5 6)))))
+;  
+;  ;;;;;;;;;;;;;
+;  ;;
+;  ;;  LET
+;  ;;
+;  ;;;;;;;;;;;;;
+;  
+;    (test-intermediate-sequence "(let ([a 3]) 4)"
+;                      `((before-after (,h-p) ((let ([a 3]) 4))
+;                                      same ((define a 3) 4))
+;                        (finished ((define a 3) 4)))) 
 ;    
-  ;  (test-intermediate-sequence "(let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
-  ;                              `((before-after (,h-p) ((let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
-  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
-  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
-  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
-  ;                                (finished ((define b_1 7) 9))))
-  ;  
-  ;  (test-intermediate-sequence "(define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
-  ;                              `((before-after-finished ((define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
-  ;                                                       ((define gprime ,h-p)) ((f cos))
-  ;                                                       same ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
-  ;                                (before-after ((define gprime ,h-p)) ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
-  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
-  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
-  ;  
-  ;  ;;;;;;;;;;;;;
-  ;  ;;
-  ;  ;;  LET*
-  ;  ;;
-  ;  ;;;;;;;;;;;;;
-  ;  
-  ;  (test-intermediate-sequence "(define a 3) (define c 19) (let* ([a 13] [b a]) (+ b a c))"
-  ;                              `((before-after-finished ((define a 3) (define c 19))
-  ;                                                       (,h-p) ((let* ([a 13] [b a]) (+ b a c))) 
-  ;                                                       (,h-p ,h-p ,h-p) ((define a_0 13) (define b_1 a_0) (+ b_1 a_0 c)))
-  ;                                (before-after-finished ((define a_0 13))
-  ;                                                       ((define b_1 ,h-p) (+ b_1 a_0 c)) (a_0) same (13))
-  ;                                (before-after-finished ((define b_1 13))
-  ;                                                       ((+ ,h-p a_0 c)) (b_1) same (13))
-  ;                                (before-after ((+ 13 ,h-p c)) (a_0) same (13))
-  ;                                (before-after ((+ 13 13 ,h-p)) (c) same 19)
-  ;                                (before-after (,h-p) ((+ 13 13 19)) same (45))
-  ;                                (finished (45))))
-  ;  
-  ;  (test-intermediate-sequence "(let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
-  ;                              `((before-after (,h-p) ((let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
-  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
-  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
-  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
-  ;                                (finished ((define b_1 7) 9))))
-  ;  
-  ;  (test-intermediate-sequence "(define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
-  ;                              `((before-after-finished ((define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
-  ;                                                       ((define gprime ,h-p)) ((f cos))
-  ;                                                       same ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
-  ;                                (before-after ((define gprime ,h-p)) ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
-  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
-  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
-  ;  
-  ;  ;;;;;;;;;;;;;
-  ;  ;;
-  ;  ;;  LETREC
-  ;  ;;
-  ;  ;;;;;;;;;;;;;
-  ;  
-  ;  (test-intermediate-sequence "(define a 3) (define c 19) (letrec ([a 13] [b a]) (+ b a c))"
-  ;                              `((before-after-finished ((define a 3) (define c 19))
-  ;                                                       (,h-p) ((letrec ([a 13] [b a]) (+ b a c))) 
-  ;                                                       (,h-p ,h-p ,h-p) ((define a_0 13) (define b_1 a_0) (+ b_1 a_0 c)))
-  ;                                (before-after-finished ((define a_0 13))
-  ;                                                       ((define b_1 ,h-p) (+ b_1 a_0 c)) (a_0) same (13))
-  ;                                (before-after-finished ((define b_1 13))
-  ;                                                       ((+ ,h-p a_0 c)) (b_1) same (13))
-  ;                                (before-after ((+ 13 ,h-p c)) (a_0) same (13))
-  ;                                (before-after ((+ 13 13 ,h-p)) (c) same 19)
-  ;                                (before-after (,h-p) ((+ 13 13 19)) same (45))
-  ;                                (finished (45))))
-  ;  
-  ;  (test-intermediate-sequence "(letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
-  ;                              `((before-after (,h-p) ((letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
-  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
-  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
-  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
-  ;                                (finished ((define b_1 7) 9))))
-  ;  
-  ;  (test-intermediate-sequence "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
-  ;                              `((before-after-finished ((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
-  ;                                                       ((define gprime ,h-p)) ((f cos))
-  ;                                                       same ((letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
-  ;                                (before-after ((define gprime ,h-p)) ((letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
-  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
-  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
-  ;  ;;;;;;;;;;;;;
-  ;  ;;
-  ;  ;;  RECUR
-  ;  ;;
-  ;  ;;;;;;;;;;;;;
-  ;  
-  ;  (test-intermediate-sequence "(define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))) (countdown 2)"
-  ;                              `((before-after-finished ((define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))))
-  ;                                                       (,h-p) ((countdown 2)) same ((recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1))))))
-  ;                                (before-after (,h-p) ((recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1))))) 
-  ;                                              (,h-p ,h-p) ((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1)))) ((loop_0 2))))
-  ;                                (before-after-finished ((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1)))))
-  ;                                                       (,h-p) ((loop_0 2)) same ((if (= 2 0) 13 (loop_0 (- 2 1)))))
-  ;                                (before-after ((if ,h-p 13 (loop_0 (- 2 1)))) ((= 2 0)) same (false))
-  ;                                (before-after (,h-p) ((if false 13 (loop_0 (- 2 1)))) same ((loop_0 (- 2 1))))
-  ;                                (before-after ((loop_0 ,h-p)) ((- 2 1)) same (1))
-  ;                                (before-after (,h-p) ((loop_0 1)) same ((if (= 1 0) 13 (loop_0 (- 1 1)))))
-  ;                                (before-after ((if ,h-p 13 (loop_0 (- 1 1)))) ((= 1 0)) same (false))
-  ;                                (before-after (,h-p) ((if false 13 (loop_0 (- 1 1)))) same ((loop_0 (- 1 1))))
-  ;                                (before-after ((loop_0 ,h-p)) ((- 1 1)) same (0))
-  ;                                (before-after (,h-p) ((loop_0 0)) same ((if (= 0 0) 13 (loop_0 (- 0 1)))))
-  ;                                (before-after ((if ,h-p 13 (loop_0 (- 0 1)))) ((= 0 0)) same (true))
-  ;                                (before-after (,h-p) ((if true 13 (loop_0 (- 1 1)))) same (13))
-  ;                                (finished (13))))
-  ;
-    ;;;;;;;;;;;;;
-    ;;
-    ;;  LOCAL
-    ;;
-    ;;;;;;;;;;;;;
-    
-  ; NTN x many
+;    (test-intermediate-sequence "(let ([a (+ 4 5)] [b (+ 9 20)]) (+ a b))"
+;                      `((before-after ((let-values ([(a) ,h-p] [(b) (+ 9 20)]) (+ a b))) ((+ 4 5))
+;  				    same (9))
+;  		      (before-after ((let-values ([(a) 9] [(b) ,h-p]) (+ a b))) ((+ 9 20))
+;  				    same (29))
+;  		      (before-after (,h-p) ((let-values ([(a) 9] [(b) 29]) (+ a b)))
+;  				    same (+ 9 29))
+;  		      (before-after (,h-p) ((+ 9 29))
+;  				    same (38))
+;  		      (finished (38))))
+;  
+;  
+;;    (test-intermediate-sequence "(define a12 3) (define c12 19) (let ([a12 13] [b12 a12]) (+ b12 a12 c12))"
+;;                                `((before-after-finished ((define a12 3) (define c12 19))
+;;                                                         (,h-p) ((let ([a12 13] [b12 a12]) (+ b12 a12 c12))) 
+;;                                                         (,h-p ,h-p ,h-p) ((define a12_0 13) (define b12_1 a12) (+ b12_1 a12_0 c12)))
+;;                                  (before-after-finished ((define a12_0 13))
+;;                                                         ((define b12_1 ,h-p) (+ b12_1 a12_0 c)) (a12) same (3))
+;;                                  (before-after-finished ((define b12_1 3))
+;;                                                         ((+ ,h-p a12_0 c12)) (b12_1) same (3))
+;;                                  (before-after ((+ 3 ,h-p c12)) (a12_0) same (13))
+;;                                  (before-after ((+ 3 13 ,h-p)) (c12) same 19)
+;;                                  (before-after (,h-p) ((+ 3 13 19)) same (35))
+;;                                  (finished (35))))
+;;    
+;  ;  (test-intermediate-sequence "(let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+;  ;                              `((before-after (,h-p) ((let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
+;  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
+;  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
+;  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
+;  ;                                (finished ((define b_1 7) 9))))
+;  ;  
+;  ;  (test-intermediate-sequence "(define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
+;  ;                              `((before-after-finished ((define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
+;  ;                                                       ((define gprime ,h-p)) ((f cos))
+;  ;                                                       same ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
+;  ;                                (before-after ((define gprime ,h-p)) ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
+;  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
+;  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
+;  ;  
+;  ;  ;;;;;;;;;;;;;
+;  ;  ;;
+;  ;  ;;  LET*
+;  ;  ;;
+;  ;  ;;;;;;;;;;;;;
+;  ;  
+;  ;  (test-intermediate-sequence "(define a 3) (define c 19) (let* ([a 13] [b a]) (+ b a c))"
+;  ;                              `((before-after-finished ((define a 3) (define c 19))
+;  ;                                                       (,h-p) ((let* ([a 13] [b a]) (+ b a c))) 
+;  ;                                                       (,h-p ,h-p ,h-p) ((define a_0 13) (define b_1 a_0) (+ b_1 a_0 c)))
+;  ;                                (before-after-finished ((define a_0 13))
+;  ;                                                       ((define b_1 ,h-p) (+ b_1 a_0 c)) (a_0) same (13))
+;  ;                                (before-after-finished ((define b_1 13))
+;  ;                                                       ((+ ,h-p a_0 c)) (b_1) same (13))
+;  ;                                (before-after ((+ 13 ,h-p c)) (a_0) same (13))
+;  ;                                (before-after ((+ 13 13 ,h-p)) (c) same 19)
+;  ;                                (before-after (,h-p) ((+ 13 13 19)) same (45))
+;  ;                                (finished (45))))
+;  ;  
+;  ;  (test-intermediate-sequence "(let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+;  ;                              `((before-after (,h-p) ((let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
+;  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
+;  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
+;  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
+;  ;                                (finished ((define b_1 7) 9))))
+;  ;  
+;  ;  (test-intermediate-sequence "(define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
+;  ;                              `((before-after-finished ((define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
+;  ;                                                       ((define gprime ,h-p)) ((f cos))
+;  ;                                                       same ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
+;  ;                                (before-after ((define gprime ,h-p)) ((let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
+;  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
+;  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
+;  ;  
+;  ;  ;;;;;;;;;;;;;
+;  ;  ;;
+;  ;  ;;  LETREC
+;  ;  ;;
+;  ;  ;;;;;;;;;;;;;
+;  ;  
+;  ;  (test-intermediate-sequence "(define a 3) (define c 19) (letrec ([a 13] [b a]) (+ b a c))"
+;  ;                              `((before-after-finished ((define a 3) (define c 19))
+;  ;                                                       (,h-p) ((letrec ([a 13] [b a]) (+ b a c))) 
+;  ;                                                       (,h-p ,h-p ,h-p) ((define a_0 13) (define b_1 a_0) (+ b_1 a_0 c)))
+;  ;                                (before-after-finished ((define a_0 13))
+;  ;                                                       ((define b_1 ,h-p) (+ b_1 a_0 c)) (a_0) same (13))
+;  ;                                (before-after-finished ((define b_1 13))
+;  ;                                                       ((+ ,h-p a_0 c)) (b_1) same (13))
+;  ;                                (before-after ((+ 13 ,h-p c)) (a_0) same (13))
+;  ;                                (before-after ((+ 13 13 ,h-p)) (c) same 19)
+;  ;                                (before-after (,h-p) ((+ 13 13 19)) same (45))
+;  ;                                (finished (45))))
+;  ;  
+;  ;  (test-intermediate-sequence "(letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+;  ;                              `((before-after (,h-p) ((letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
+;  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
+;  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
+;  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
+;  ;                                (finished ((define b_1 7) 9))))
+;  ;  
+;  ;  (test-intermediate-sequence "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
+;  ;                              `((before-after-finished ((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
+;  ;                                                       ((define gprime ,h-p)) ((f cos))
+;  ;                                                       same ((letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
+;  ;                                (before-after ((define gprime ,h-p)) ((letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
+;  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
+;  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
+;  ;  ;;;;;;;;;;;;;
+;  ;  ;;
+;  ;  ;;  RECUR
+;  ;  ;;
+;  ;  ;;;;;;;;;;;;;
+;  ;  
+;  ;  (test-intermediate-sequence "(define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))) (countdown 2)"
+;  ;                              `((before-after-finished ((define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))))
+;  ;                                                       (,h-p) ((countdown 2)) same ((recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1))))))
+;  ;                                (before-after (,h-p) ((recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1))))) 
+;  ;                                              (,h-p ,h-p) ((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1)))) ((loop_0 2))))
+;  ;                                (before-after-finished ((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1)))))
+;  ;                                                       (,h-p) ((loop_0 2)) same ((if (= 2 0) 13 (loop_0 (- 2 1)))))
+;  ;                                (before-after ((if ,h-p 13 (loop_0 (- 2 1)))) ((= 2 0)) same (false))
+;  ;                                (before-after (,h-p) ((if false 13 (loop_0 (- 2 1)))) same ((loop_0 (- 2 1))))
+;  ;                                (before-after ((loop_0 ,h-p)) ((- 2 1)) same (1))
+;  ;                                (before-after (,h-p) ((loop_0 1)) same ((if (= 1 0) 13 (loop_0 (- 1 1)))))
+;  ;                                (before-after ((if ,h-p 13 (loop_0 (- 1 1)))) ((= 1 0)) same (false))
+;  ;                                (before-after (,h-p) ((if false 13 (loop_0 (- 1 1)))) same ((loop_0 (- 1 1))))
+;  ;                                (before-after ((loop_0 ,h-p)) ((- 1 1)) same (0))
+;  ;                                (before-after (,h-p) ((loop_0 0)) same ((if (= 0 0) 13 (loop_0 (- 0 1)))))
+;  ;                                (before-after ((if ,h-p 13 (loop_0 (- 0 1)))) ((= 0 0)) same (true))
+;  ;                                (before-after (,h-p) ((if true 13 (loop_0 (- 1 1)))) same (13))
+;  ;                                (finished (13))))
+;  ;
+;    ;;;;;;;;;;;;;
+;    ;;
+;    ;;  LOCAL
+;    ;;
+;    ;;;;;;;;;;;;;
+;    
   
-    (test-intermediate-sequence "(local () (+ 3 4))"
+  (test-both-ints "(local () (+ 3 4))"
                                 `((before-after (,h-p) ((local () (+ 3 4)))
                                                 (,h-p) ((+ 3 4)))
                                   (before-after (,h-p) ((+ 3 4))
                                                 (,h-p) (7))
                                   (finished (7))))
   
-  
-  (test-intermediate-sequence "(local ((define a 3) (define b 8)) 4)"
+  (test-both-ints "(local ((define a 3) (define b 8)) 4)"
                               `((before-after (,h-p) ((local ((define a 3) (define b 8)) 4))
-                                              (,h-p ,h-p ,h-p) ((define a_0 3) (define b_1 8) 4))
-                                (finished ((define a_0 3) (define b_1 8) 4))))
+                                              (,h-p ,h-p ,h-p) ((define a_0 3) (define b_0 8) 4))
+                                (finished ((define a_0 3) (define b_0 8) 4))))
     
     (test-intermediate-sequence "(local ((define (a x) (+ x 9))) (a 6))"
                                 `((before-after (,h-p) ((local ((define (a x) (+ x 9))) (a 6)))
@@ -747,30 +748,69 @@
                                                          (,h-p) ((a_0 6)) same ((+ 6 9)))
                                   (before-after (,h-p) ((+ 6 9)) same (15))
                                   (finished (15))))
-    
-    (test-intermediate-sequence "(local ((define (a x) (+ x 13))) a)"
-                                `((before-after (,h-p) ((local ((define (a x) (+ x 13))) a))
-                                                (,h-p ,h-p) ((define (a_0 x) (+ x 13)) a_0))
-                                  (finished ((define (a_0 x) (+ x 13)) a_0))))
   
-    (test-intermediate-sequence "(local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1))"
-                                `((before-after (,h-p) ((local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1)))
-                                                (,h-p ,h-p ,h-p ,h-p) ((define (a_0 x) (+ x 9)) (define b_1 a_0) (define p_2 (+ 3 4)) (b_1 1)))
-                                  (before-after-finished-waiting ((define (a_0 x) (+ x 9)) (define b_1 a_0))
-                                                                 ((define p_2 ,h-p)) ((+ 3 4)) same (7) ((b_1 1)))
-                                  (before-after-finished ((define p_2 7))
-                                                         ((,h-p 1)) (b_1) same (a_0))
-                                  (before-after (,h-p) ((a_0 1)) same ((+ 1 9)))
-                                  (before-after (,h-p) ((+ 1 9)) same (10))
-                                  (finished (10))))
+  (test-intermediate/lambda-sequence "(local ((define (a x) (+ x 9))) (a 6))"
+                              `((before-after (,h-p) ((local ((define (a x) (+ x 9))) (a 6)))
+                                              (,h-p ,h-p) ((define (a_0 x) (+ x 9)) (a_0 6)))
+                                (before-after-finished ((define (a_0 x) (+ x 9)))
+                                                       ((,h-p 6)) (a_0) same ((lambda (x) (+ x 9))))
+                                (before-after (,h-p) (((lambda (x) (+ x 9)) 6)) same ((+ 6 9)))
+                                (before-after (,h-p) ((+ 6 9)) same (15))
+                                (finished (15))))
     
-      (test-intermediate-sequence "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
-                                `((before-after-finished ((define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)))
-                                                         ((define gprime ,h-p)) ((f12 cos))
-                                                         same ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp)))
-                                  (before-after ((define gprime ,h-p)) ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp))
-                                                (,h-p (define gprime ,h-p)) ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)) gp_0))
-                                  (finished ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)) (define gprime gp_0)))))
+  (test-intermediate-sequence "(local ((define (a x) (+ x 13))) a)"
+                              `((before-after (,h-p) ((local ((define (a x) (+ x 13))) a))
+                                              (,h-p ,h-p) ((define (a_0 x) (+ x 13)) a_0))
+                                (finished ((define (a_0 x) (+ x 13)) a_0))))
+  
+  (test-intermediate/lambda-sequence "(local ((define (a x) (+ x 13))) a)"
+                                     `((before-after (,h-p) ((local ((define (a x) (+ x 13))) a))
+                                                     (,h-p ,h-p) ((define (a_0 x) (+ x 13)) a_0))
+                                       (before-after (,h-p) (a_0) same ((lambda (x) (+ x 13))))
+                                       (finished ((define (a_0 x) (+ x 13)) (lambda (x) (+ x 13))))))
+  
+  (test-intermediate-sequence "(local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1))"
+                              `((before-after (,h-p) ((local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1)))
+                                              (,h-p ,h-p ,h-p ,h-p) ((define (a_0 x) (+ x 9)) (define b_0 a_0) (define p_0 (+ 3 4)) (b_0 1)))
+                                (before-after-finished-waiting ((define (a_0 x) (+ x 9)) (define b_0 a_0))
+                                                               ((define p_0 ,h-p)) ((+ 3 4)) same (7) ((b_0 1)))
+                                (before-after-finished ((define p_0 7))
+                                                       ((,h-p 1)) (b_0) same (a_0))
+                                (before-after (,h-p) ((a_0 1)) same ((+ 1 9)))
+                                (before-after (,h-p) ((+ 1 9)) same (10))
+                                (finished (10))))
+  
+  (test-intermediate/lambda-sequence "(local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1))"
+                                     `((before-after (,h-p) ((local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1)))
+                                                     (,h-p ,h-p ,h-p ,h-p) ((define (a_0 x) (+ x 9)) (define b_0 a_0) (define p_0 (+ 3 4)) (b_0 1)))
+                                       (before-after-finished-waiting ((define (a_0 x) (+ x 9)))
+                                                                      ((define b_0 ,h-p)) (a_0) same ((lambda (x) (+ x 9))) ((define p_0 (+ 3 4)) (b_0 1)))
+                                       (before-after-finished-waiting ((define b_0 (lambda (x) (+ x 9))))
+                                                                      ((define p_0 ,h-p)) ((+ 3 4)) same (7) ((b_0 1)))
+                                       (before-after-finished ((define p_0 7))
+                                                              ((,h-p 1)) (b_0) same ((lambda (x) (+ x 9))))
+                                       (before-after (,h-p) (((lambda (x) (+ x 9)) 1)) same ((+ 1 9)))
+                                       (before-after (,h-p) ((+ 1 9)) same (10))
+                                       (finished (10))))
+    
+  (test-intermediate-sequence "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
+                              `((before-after-finished ((define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)))
+                                                       ((define gprime ,h-p)) ((f12 cos))
+                                                       same ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp)))
+                                (before-after ((define gprime ,h-p)) ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp))
+                                              (,h-p (define gprime ,h-p)) ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)) gp_0))
+                                (finished ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)) (define gprime gp_0)))))
+  
+  (test-intermediate/lambda-sequence "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
+                                     `((before-after-finished ((define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)))
+                                                              ((define gprime (,h-p cos))) (f12) same ((lambda (g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp))))
+                                       (before-after ((define gprime ,h-p)) (((lambda (g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) cos))
+                                                     same ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp)))
+                                       (before-after ((define gprime ,h-p)) ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp))
+                                                     (,h-p (define gprime ,h-p)) ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)) gp_0))
+                                       (before-after-finished ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)))
+                                                              ((define gprime ,h-p)) (gp_0) same ((lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1))))
+                                       (finished ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)) (define gprime (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)))))))
   
   ; test generativity... that is, multiple evaluations of a local get different lifted names:
   
@@ -788,6 +828,26 @@
                                                        (,h-p) ((a13 maker_1 1)) same ((maker_1 1)))
                                 (before-after (,h-p) ((maker_1 1)) same (4))
                                 (finished (4))))
+  
+  (test-intermediate/lambda-sequence "(define (a13 b13 c13) (b13 c13)) (define (f9 x) (local ((define (maker dc) x)) maker)) (define m1 (f9 3)) (a13 (f9 4) 1)"
+                                     `((before-after-finished ((define (a13 b13 c13) (b13 c13))
+                                                               (define (f9 x) (local ((define (maker dc) x)) maker)))
+                                                              ((define m1 (,h-p 3))) (f9) same ((lambda (x) (local ((define (maker dc) x)) maker))))
+                                       (before-after ((define m1 ,h-p)) (((lambda (x) (local ((define (maker dc) x)) maker)) 3)) 
+                                                     same ((local ((define (maker dc) 3)) maker)))
+                                       (before-after ((define m1 ,h-p)) ((local ((define (maker dc) 3)) maker))
+                                                     (,h-p (define m1 ,h-p)) ((define (maker_0 dc) 3) maker_0))
+                                       (before-after-finished ((define (maker_0 dc) 3) (define m1 maker_0))
+                                                              ((a13 (,h-p 4) 1)) (f9) same ((lambda (x) (local ((define (maker dc) x)) maker))))
+                                       (before-after ((a13 ,h-p 1)) (((lambda (x) (local ((define (maker dc) x)) maker)) 4)) same ((local ((define (maker dc) 4)) maker)))
+                                       (before-after ((a13 ,h-p 1)) ((local ((define (maker dc) 4)) maker))
+                                                     (,h-p (a13 ,h-p 1)) ((define (maker_1 dc) 4) maker_1))
+                                       (before-after-finished ((define (maker_1 dc) 4))
+                                                              ((,h-p maker_1 1)) (a13) same ((lambda (b13 c13) (b13 c13))))
+                                       (before-after (((lambda (b13 c13) (b13 c13)) ,h-p 1)) (maker_1) same ((lambda (dc) 4)))
+                                       (before-after (,h-p) (((lambda (b13 c13) (b13 c13)) (lambda (dc) 4) 1)) same (((lambda (dc) 4) 1)))
+                                       (before-after (,h-p) (((lambda (dc) 4) 1)) same (4))
+                                       (finished (4))))
   
   ;;;;;;;;;;;;;
   ;;

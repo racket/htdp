@@ -393,7 +393,15 @@
                       [(lambda arglist lam-body ...)
                        (case define-type
                          [(shortened-proc-define)
-                          #`(define (#,printed-name . arglist) lam-body ...)]
+                          (begin
+                            (printf "name: ~a\nstepper-proc-define-name: ~a\nmodule-identifier=?: ~a\nbound-identifier=?: ~a\nfree-identifier=?: ~a\n"
+                                    #'name (syntax-property unwound-body 'user-stepper-proc-define-name) 
+                                    (module-identifier=? #'name (syntax-property unwound-body 'user-stepper-proc-define-name))
+                                    (bound-identifier=? #'name (syntax-property unwound-body 'user-stepper-proc-define-name))
+                                    (free-identifier=? #'name (syntax-property unwound-body 'user-stepper-proc-define-name)))
+                          (if (module-identifier=? #'name (syntax-property unwound-body 'user-stepper-proc-define-name))
+                              #`(define (#,printed-name . arglist) lam-body ...)
+                              #`(define #,printed-name #,unwound-body)))]
                          [(lambda-define)
                           #`(define #,printed-name #,unwound-body)]
                          [else (error 'unwind-define "unknown value for syntax property 'user-stepper-define-type: ~e" define-type)])]

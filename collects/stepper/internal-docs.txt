@@ -103,10 +103,15 @@ stepper-define-type:
  Question 3: what if, through reduction, a different expression
   than the original one shows up ... which _does_ have one of the
   two stepper-define-type marks?
- A: not the way the stepper currently works, because procedures are
-    reconstructed as top-level variable references and not as 
-    lambda terms.  However, in a stepper where closures are reconstructed
-    as lambda terms, this will be a problem.
+ A: to prevent this, there's another syntax-property, 
+    'stepper-proc-define-name, which indicates the identifier to which
+    this procedure was originally bound.  In the absence of set!,
+    this solves the problem.
+
+stepper-proc-define-name : stores the name to which a procedure
+   defined with the (define (fn arg ...) body) was bound.
+
+  (Transferred.)
 
 stepper-prim-name: 
  this is attached to the expansion of primitives introduced with the

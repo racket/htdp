@@ -528,10 +528,10 @@
                       ;
                       ;turns into
                       ;
+                      ;(let ([counter (<dynamic-counter-call>)])
                       ;(let-values ([(a b c d e lifter-a-1 lifter-b-2 lifter-c-3 lifter-d-4 lifter-e-5 let-counter)
                       ;              (values *unevaluated* *unevaluated* *unevaluated* *unevaluated* *unevaluated*
-                      ;                      (<dynamic-counter-call>) (<dynamic-counter-call>) (<dynamic-counter-call>) 
-                      ;                      (<dynamic-counter-call>) (<dynamic-counter-call>) 0)])
+                      ;                      counter counter counter counter counter 0)])
                       ;  (with-continuation-mark 
                       ;   key huge-value
                       ;   (begin
@@ -539,7 +539,7 @@
                       ;     (set! let-counter 1)
                       ;     (set!-values (d e) e2)
                       ;     (set! let-counter 2)
-                      ;     e3)))
+                      ;     e3))))
                       ;
                       ; note that this elaboration looks exactly like the one for letrec, and that's
                       ; okay, becuase expand guarantees that reordering them will not cause capture.
@@ -577,11 +577,12 @@
                                                                        free-varref-sets-vals)) 
                                                binding-list)])
                              
-                             (let* ([unevaluated-list (make-init-list binding-list)]
+                             
+                             (let* ([counter-id #`lifting-counter]
+                                    [unevaluated-list (make-init-list binding-list)]
                                     [outer-initialization
                                      #`([(#,@lifted-vars #,@binding-list #,let-counter)
-                                         (values #,@(append (map (lambda (dc_binding)
-                                                                   #`(#,binding-indexer)) 
+                                         (values #,@(append (map (lambda (dc_binding) counter-id)
                                                                  binding-list)
                                                             unevaluated-list
                                                             (list 0)))])]
@@ -606,7 +607,8 @@
                                                                                                     annotated-body))))])
                                (2vals (quasisyntax/loc 
                                        expr 
-                                       (#,output-identifier #,outer-initialization #,wrapped-begin)) 
+                                       (let ([#,counter-id (#,binding-indexer)])
+                                         (#,output-identifier #,outer-initialization #,wrapped-begin))) 
                                       free-varrefs)))))]
                       
                       ; if-abstraction: (-> syntax? syntax? (union false? syntax?) (values syntax? varref-set?))
