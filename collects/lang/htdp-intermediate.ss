@@ -54,7 +54,7 @@
     (andmap ((X -> boolean) (listof X) -> boolean)
 	    "(andmap p (list x-1 ... x-n)) = (and (p x-1) (and ... (p x-n)))")
     (ormap ((X -> boolean) (listof X) -> boolean)
-	   "(ormap p (list x-1 ... x-n)) = (or (p x-1) (and ... (p x-n)))")
+	   "(ormap p (list x-1 ... x-n)) = (or (p x-1) (or ... (p x-n)))")
 
     (memf ((X -> boolean) (listof X) -> (union false (listof X)))
 	  "to determine whether the first argument produces true for some value in the second argument")
