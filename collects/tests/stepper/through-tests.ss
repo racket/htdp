@@ -12,7 +12,6 @@
   (define test-directory (build-path (collection-path "mzlib")  'up 'up))
   
   (define (test-sequence namespace render-settings exp-str expected-steps)
-  
      (let ([filename (build-path test-directory "stepper-test")])
        (call-with-output-file filename
          (lambda (port)
@@ -50,7 +49,7 @@
                            (init)
                            (read-and-deliver)))))])
                (go program-expander receive-result render-settings)
-               (error-display-handler current-error-display-handler))))))))
+               (error-display-handler current-error-display-handler)))))))
   
   (define (lang-level-test-sequence ns rs)
     (lambda args
@@ -280,6 +279,9 @@
 ;                       (before-after (,h-p) ((and true true false)) same ((and true false)))
 ;                       (before-after (,h-p) ((and true false)) same (false))
 ;                       (finished (false))))
+  
+  (test-upto-int/lam "(and true 1)"
+                     `((before-error (,h-p) ((and true 1)) "error: argument `1' to and is not a boolean")))
 ;  
 ;  ;;;;;;;;;;;;;
 ;  ;;
@@ -636,7 +638,7 @@
                                                 (,h-p ,h-p) ((define (a x) (+ x 9)) (a 6)))
                                   (before-after-finished ((define (a_0 x) (+ x 9)))
                                                          (,h-p) ((a_0 6)) same ((+ 6 9)))
-                                  (before-after (,h-p) (+ 6 9) same (15))
+                                  (before-after (,h-p) ((+ 6 9)) same (15))
                                   (finished (15))))
     
   ;  (test-intermediate-sequence "(local ((define (a x) (+ x 13))) a)"

@@ -365,14 +365,9 @@
              [(define-values (name . others) body)
               (unless (null? (syntax-e #'others))
                 (error 'reconstruct "reconstruct fails on multiple-values define: ~v\n" (syntax-object->datum stx)))
-              (let* ([orig-name (or (syntax-property #'name 'stepper-orig-name)
-                                    #'name)]
-                     [lifted-name (if (syntax-property stx 'stepper-lifted-name)
-                                      (begin (printf "lifted name \"~e\" constructed for identifier: ~e\n" 
-                                                     (syntax-object->datum (construct-lifted-name orig-name (syntax-property #'name 'stepper-lifted-name)))
-                                                     (syntax-object->datum orig-name))
-                                        (construct-lifted-name orig-name (syntax-property #'name 'stepper-lifted-name)))
-                                      orig-name)]
+              (let* ([printed-name (or (syntax-property #`name 'stepper-lifted-name)
+                                       (syntax-property #'name 'stepper-orig-name)
+                                       #'name)]
                      [unwound-body (inner #'body)]
                      [define-type (syntax-property unwound-body 'user-stepper-define-type)]) ; see notes in internal-docs.txt
                 (if define-type
@@ -380,10 +375,10 @@
                       [(lambda arglist lam-body ...)
                        (case define-type
                          [(shortened-proc-define)
-                          #`(define (#,lifted-name . arglist) lam-body ...)]
+                          #`(define (#,printed-name . arglist) lam-body ...)]
                          [else (error 'unwind-define "unknown value for syntax property 'user-stepper-define-type: ~e" define-type)])]
                       [else (error 'unwind-define "expr with stepper-define-type is not a lambda: ~e" (syntax-object->datum ))])
-                    #`(define #,lifted-name #,unwound-body)))]
+                    #`(define #,printed-name #,unwound-body)))]
              [else (error 'unwind-define "expression is not a define-values: ~e" (syntax-object->datum stx))]))
          
          (define (unwind-mz-let stx)

@@ -1056,5 +1056,5 @@
          
          ; body of local
          (let* ([annotated-expr (annotate/top-level expr)])
-           ;(fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
+           (fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
            (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index))))))
