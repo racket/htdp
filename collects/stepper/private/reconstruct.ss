@@ -582,7 +582,9 @@
                                               ; #`#,(binding-lifted-name mark-list var))
                                               ((top-level) var)
                                               ((let-bound)
-                                               (error 'recon-source-expr "let-bound-variables not supported"))
+                                               (syntax-property var
+                                                                'stepper-lifted-name
+                                                                (binding-lifted-name mark-list var)))
                                               ((stepper-temp)
                                                (error 'recon-source-expr "stepper-temp showed up in source?!?"))
                                               (else
