@@ -138,7 +138,8 @@
                 (let ([mark (closure-record-mark closure-record)])
                   (recon-source-expr (mark-source mark) (list mark) null))])]
         [else
-         (d->so (model-settings:print-convert val))])))
+         (d->so (model-settings:print-convert val))]))
+    )
   
   (define (let-rhs-recon-value val)
     (recon-value val 'let-rhs))

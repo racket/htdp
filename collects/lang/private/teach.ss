@@ -521,17 +521,20 @@
 						 "expected an expression, but found a structure name"
 						 stx))))])
 	       (let ([defn
-		       (syntax/loc stx
+                      (syntax/loc stx
 			 (begin
 			   (define-syntaxes (name_) compile-info)
 			   (define-values (to-define-name ...)
 			     (let ()
 			       (define-struct name_ (field_ ...) (make-inspector))
 			       (values to-define-name ...)))))])
-		 (check-definitions-new 'define-struct
-					stx 
-					(syntax (name_ to-define-name ...)) 
-					defn)))))]
+                 (syntax-property
+                  (check-definitions-new 'define-struct
+                                         stx 
+                                         (syntax (name_ to-define-name ...)) 
+                                         defn)
+                  'stepper-skip-completely
+                  (syntax->list (syntax (to-define-name ...))))))))]
 	[(_ name_ something . rest)
 	 (teach-syntax-error
 	  'define-struct
@@ -556,9 +559,7 @@
 	[_else (bad-use-error 'define-struct stx)]))
 
     (define (beginner-define-struct/proc stx)
-      (syntax-property (do-define-struct stx #f #f)
-                       'stepper-skip-completely
-                       #t))
+      (do-define-struct stx #f #f))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; application (beginner and intermediate)

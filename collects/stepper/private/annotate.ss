@@ -521,7 +521,9 @@
             (define result-value-break
               (make-break 'result-value-break))
             
-            (define input-struct-proc-names (annotate-environment-struct-proc-names annotate-environment))
+            ; struct-proc-names may be mutated
+            (define struct-proc-names (annotate-environment-struct-proc-names annotate-environment))
+            
             (define input-user-defined-names (annotate-environment-user-defined-names annotate-environment))
             (define binding-index (annotate-environment-binding-index annotate-environment))
             
@@ -584,29 +586,27 @@
                 [else
                  null]))
             
-            (define (struct-procs-defined expr)
-              (let ([origin (syntax-property expr 'origin)])
-                (if (and origin
-                         (ormap (lambda (origin-entry)
-                                  (eq? (syntax-e origin-entry) 'define-struct))
-                                origin))
-                    (defined-names expr)
-                    null)))
-            
-            (define struct-proc-names (append (struct-procs-defined expr)
-                                              input-struct-proc-names))
-            
             (define user-defined-names (append (defined-names expr)
                                                input-user-defined-names))
             
             (define (non-annotated-proc? varref)
+              (printf "non-annotated-proc? ~e\n" (syntax-e varref))
               (kernel:kernel-syntax-case varref ()
                 [(#%top . id)
-                 (memq (syntax-e (syntax id)) beginner-defined:defined-names)]
+                 (begin ; TEMP
+                   (when (eq? (syntax-e 'make-mamba))
+                     (printf "make-mamba in list: ~e?: ~e\n"
+                             (map syntax-e struct-proc-names)
+                             (ormap (lx (module-identifier=? (syntax id) _)) struct-proc-names)))
+                 (or
+                  (memq (syntax-e (syntax id)) beginner-defined:defined-names)
+                  (ormap (lx (module-identifier=? (syntax id) _)) struct-proc-names)))]
                 [id
-                 (and (identifier? (syntax id))
-                      (not (eq? (identifier-binding (syntax id)) 'lexical)))
-                 (memq (syntax-e (syntax id)) beginner-defined:defined-names)]
+                 (identifier? (syntax id))
+                 (case (identifier-binding (syntax id))
+                   [(lexical) #f] ; this only works in beginner
+                   [(#f) (memq (syntax-e (syntax id)) beginner-defined:defined-names)]
+                   [else #t])] ; module-bound vars
                 [else
                  #f]))
             
@@ -667,9 +667,14 @@
                                  free-vars-captured))]
                        
                        [(syntax-property expr 'stepper-skip-completely)
-                        (if top-level?
-                            (2vals expr null)
-                            (2vals (simple-wcm-wrap 13 expr) null))]
+                        (let ([maybe-struct-names (syntax-property expr 'stepper-skip-completely)])
+                          (printf "maybe-struct-names: ~e\n" (map syntax-e maybe-struct-names))
+                          (when (pair? maybe-struct-names)
+                            (set! struct-proc-names
+                                  (append struct-proc-names maybe-struct-names)))
+                          (if top-level?
+                              (2vals expr null)
+                              (2vals (simple-wcm-wrap 13 expr) null)))]
                      
                        [else
                         (let* ([d->so/user (lambda (stx) (datum->syntax-object #'here stx expr))]
@@ -748,10 +753,13 @@
                                       (2vals annotated-lambda free-varrefs)
                                       (let*-2vals
                                        ([closure-info (make-debug-info-app 'all free-varrefs 'none)]
+                                        [closure-name (cond [(symbol? procedure-name-info) procedure-name-info]
+                                                            [(pair? procedure-name-info) (car procedure-name-info)]
+                                                            [else #f])]
                                         [closure-storing-proc
                                          (lambda (closure debug-info . extra)
                                            (closure-table-put! closure (make-closure-record 
-                                                                        #f
+                                                                        closure-name
                                                                         debug-info
                                                                         #f
                                                                         (if (not (null? extra))
@@ -759,14 +767,9 @@
                                                                             #f)))
                                            closure)]
                                         [inferred-name-lambda
-                                         (cond [(symbol? procedure-name-info)
-                                                (printf "inferred name: ~a\n" procedure-name-info)
-                                                (syntax-property annotated-lambda 'inferred-name procedure-name-info)]
-                                               [(pair? procedure-name-info)
-                                                (printf "inferred name: ~a\n" (car procedure-name-info))
-                                                (syntax-property annotated-lambda 'inferred-name (car procedure-name-info))]
-                                               [else
-                                                annotated-lambda])]
+                                         (if closure-name
+                                             (syntax-property annotated-lambda 'inferred-name closure-name)
+                                             annotated-lambda)]
                                         [captured
                                          (if (memq 'no-closure-capturing wrap-opts)
                                              inferred-name-lambda
@@ -1144,18 +1147,18 @@
                                                   [app-term (d->so/user tagged-arg-temps)]
                                                   [final-app (break-wrap (simple-wcm-wrap 
                                                                           app-debug-info
-                                                                          (if (syntax-case (car (syntax->list (syntax terms))) (#%top)
+                                                                          (let ([first-term (car (syntax->list (syntax terms)))])
+                                                                          (if (syntax-case first-term (#%top)
                                                                                 [(#%top . var)
                                                                                  (and foot-wrap? 
-                                                                                      (non-annotated-proc? (syntax var)))]
+                                                                                      (non-annotated-proc? first-term))]
                                                                                 [var
                                                                                  (identifier? (syntax var)) ; guard
-                                                                                 (and (not (eq? (identifier-binding (syntax var)) 'lexical))
-                                                                                      foot-wrap?
-                                                                                      (non-annotated-proc? (syntax var)))]
+                                                                                 (and foot-wrap?
+                                                                                      (non-annotated-proc? first-term))]
                                                                                 [else #f])
                                                                               (return-value-wrap app-term)
-                                                                              app-term)))]
+                                                                              app-term))))]
                                                   [debug-info (make-debug-info-app new-tail-bound
                                                                                    (varref-set-union (list free-varrefs tagged-arg-temps)) ; NB using bindings as vars
                                                                                    'not-yet-called)]
