@@ -854,7 +854,7 @@
                                                vals)
                                        (map mark-never-undefined binding-list)
                                        binding-list))
-                                 (lambda (bindings) (d->so bindings)))]
+                                 (lambda (bindings) (map d->so bindings)))]
                
                [(set! var val)
                 (let*-2vals
