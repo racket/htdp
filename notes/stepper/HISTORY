@@ -7,3 +7,7 @@ all steps scroll to bottom automatically.
 constants like 'pi' are explicitly expanded in a step.
 stepper uses fewer threads internally.
 
+Changes for v102:
+
+Stepper handles intermediate level.
+UI redesigned to use "side-by-side" reduction.
