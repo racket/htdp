@@ -16,11 +16,14 @@
   ; PROVIDE
   (provide/contract
    [annotate
-    (->* (syntax?                    ; syntax to annotate
-          break-contract             ; procedure for runtime break
-          (symbols 'foot-wrap))      ; wrap-kind
-         annotate-opts-list?         ; optional args
-         (syntax?))]                 ; results
+    (->* (syntax?                         ; syntax to annotate
+          (opt->* (continuation-mark-set? 
+                   break-kind?)
+                  (list?)
+                  (any?))                 ; procedure for runtime break
+          (symbols 'foot-wrap))           ; wrap-kind
+         annotate-opts-list?              ; optional args
+         (syntax?))]                      ; results
    [top-level-rewrite (-> syntax? syntax?)])
  
   ;;                                              ;;;;                          ;                     
@@ -328,22 +331,23 @@
                     (set! binding-index (+ binding-index 1))
                     temp))))
             
-            ; potential optimization: remove the var-args where it's not needed:
-            (define (make-break kind)
-              (lambda returned-value-list
-                (break (current-continuation-marks) kind returned-value-list)))
+            (define (normal-break)
+              (break (current-continuation-marks) 'normal-break))
             
-            (define normal-break
-              (make-break 'normal-break))
+            (define (result-exp-break)
+              (break (current-continuation-marks) 'result-exp-break))
             
-            (define result-exp-break
-              (make-break 'result-exp-break))
+            (define (result-value-break vals-list)
+              (break (current-continuation-marks) 'result-value-break vals-list))
             
-            (define result-value-break
-              (make-break 'result-value-break))
+            (define (expr-finished-break vals-list)
+              (break (current-continuation-marks) 'expr-finished-break vals-list))
+
+            (define (double-break)
+              (break (current-continuation-marks) 'double-break))
             
-            (define expr-finished-break
-              (make-break 'expr-finished-break))
+            (define (late-let-break . interlaced-info)
+              (break (current-continuation-marks) 'late-let-break interlaced-info))
             
             ; here are the possible configurations of wcm's, pre-breaks, and breaks (not including late-let & double-breaks):
             
@@ -359,16 +363,18 @@
               #`(begin (#,normal-break) #,expr))
             
             (define (double-break-wrap expr)
-              #`(begin (#,(make-break 'double-break)) #,expr))
+              #`(begin (#,double-break) #,expr))
             
             (define (late-let-break-wrap var-names lifted-gensyms expr)
               (let* ([interlaced (apply append (map list var-names lifted-gensyms))])
-                #`(begin (#,(make-break 'late-let-break) #,@interlaced) #,expr)))
+                #`(begin (#,late-let-break #,@interlaced) #,expr)))
             
             (define (return-value-wrap expr)
-              #`(let* ([result #,expr])
-                  (#,result-value-break result)
-                  result))
+              #`(call-with-values
+                 (lambda () #,expr)
+                 (lambda args
+                   (#,result-value-break args)
+                   (apply values args))))
             
             (define (expr-finished-break-wrap expr)
               #`(call-with-values
@@ -383,11 +389,11 @@
             ;              (,(make-break 'result-break) result-values)
             ;              (#%apply #%values result-values))))
             
-            (define (top-level-annotate/inner expr defined-name)
+            (define (top-level-annotate/inner expr source-expr defined-name)
               (let*-2vals ([(annotated dont-care)
                             (annotate/inner expr 'all #f defined-name)]
                            [top-level-wrapped #`(with-continuation-mark #,debug-key 
-                                                                        #,(make-top-level-mark expr)
+                                                                        #,(make-top-level-mark source-expr)
                                                                         #,(expr-finished-break-wrap annotated))])
                 top-level-wrapped))
             
@@ -902,7 +908,7 @@
                                                    (car name-list)
                                                    #f)])
                           #`(define-values (new-vars ...)
-                              #,(top-level-annotate/inner (top-level-rewrite #`e) defined-name)))]
+                              #,(top-level-annotate/inner (top-level-rewrite #`e) expr defined-name)))]
                          [(define-syntaxes (new-vars ...) e)
                           expr]
                          [(require specs ...)
@@ -914,7 +920,7 @@
                          [(begin .  bodies)
                           #`(begin #,@(map annotate/module-top-level (syntax->list #`bodies)))]
                          [(#%app call-with-values (lambda () body) print-values)
-                          #`(#%app call-with-values (lambda () #,(top-level-annotate/inner (top-level-rewrite #`body) #f)) print-values)]
+                          #`(#%app call-with-values (lambda () #,(top-level-annotate/inner (top-level-rewrite #`body) expr #f)) print-values)]
                          [else
                           (error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax-object->datum expr))])])))
             )

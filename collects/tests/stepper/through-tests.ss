@@ -149,13 +149,13 @@
 ;                    `((before-after (,h-p) ((+ 3 4)) (,h-p) (7))
 ;                      (finished (7))))
 ;  
-;  (test-mz-sequence "((lambda (x) (+ x 3)) 4)"
-;                    `((before-after (,h-p) (((lambda (x) (+ x 3)) 4))
-;				    (,h-p) ((+ 4 3)))
-;                      (before-after (,h-p) ((+ 4 3))
-;				    (,h-p) (7))
-;		      (finished (7))))
-;  
+  (test-mz-sequence "((lambda (x) (+ x 3)) 4)"
+                    `((before-after (,h-p) (((lambda (x) (+ x 3)) 4))
+				    (,h-p) ((+ 4 3)))
+                      (before-after (,h-p) ((+ 4 3))
+				    (,h-p) (7))
+		      (finished (7))))
+  
 ;  (test-mz-sequence "(if 3 4 5)"
 ;                    `((before-after (,h-p) ((if 3 4 5))
 ;				    (,h-p) (4))
@@ -167,7 +167,7 @@
 ;                       (before-after (,h-p) ((if false false true))
 ;                                     (,h-p) (true))
 ;                       (finished (true))))
-;  
+; here 
 ;  (test-mz-sequence "((lambda (x) x) 3)"
 ;                    `((before-after (,h-p) (((lambda (x) x) 3))
 ;				    (,h-p) (3))
@@ -199,7 +199,7 @@
 ;                    `((before-after (,h-p) ((if 3 4))
 ;				    (,h-p) (4))
 ;		      (finished (4))))
-;  
+; aoeu  
 ;  ;(test-mz-sequence "((call-with-current-continuation call-with-current-continuation) (call-with-current-continuation call-with-current-continuation))"
 ;  ;                  `((before-after ((,h-p (call-with-current-continuation call-with-current-continuation))) ((call-with-current-continuation call-with-current-continuation))
 ;  ;                    ((,h-p (call-with-current-continuation call-with-current-continuation))) ((lambda args ...)))
@@ -212,11 +212,11 @@
 ;  
 ;  ;(syntax-object->datum (cadr (annotate-expr test2 'mzscheme 0 (lambda (x) x))))
 ;  
-  (test-upto-int/lam "(define a (+ 3 4))"
-                     `((before-after ((define a ,h-p)) ((+ 3 4))
-                                     ((define a ,h-p)) (7))
-                       (finished ((define a 7)))))
-  
+;  (test-upto-int/lam "(define a (+ 3 4))"
+;                     `((before-after ((define a ,h-p)) ((+ 3 4))
+;                                     ((define a ,h-p)) (7))
+;                       (finished ((define a 7)))))
+;  
 ;  (test-upto-int/lam "(+ 4 129)" 
 ;                     `((before-after (,h-p) ((+ 4 129))
 ;                                     same (133))

@@ -69,7 +69,6 @@
    queue-length ; queue -> num
    rebuild-stx ; datum syntax-object -> syntax-object
    break-kind? ; predicate
-   break-contract ; contract
    varref-set? ; predicate
    binding-set? ; predicate
    ; get-binding-name
@@ -401,10 +400,7 @@
     (datum->syntax-object old new old old))
   
   (define break-kind?
-    (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break))
-    
-  (define break-contract
-    (-> continuation-mark-set? break-kind? list? any?))
+    (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break 'expr-finished-break))
   
   ; BINDING-/VARREF-SET FUNCTIONS
   

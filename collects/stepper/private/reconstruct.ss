@@ -18,7 +18,7 @@
 
   (provide/contract 
    [reconstruct-completed (-> mark-list? (listof any?) render-settings? 
-                              (listof exp-without-holes?))]
+                              exp-without-holes?)]
    [reconstruct-current (-> mark-list? symbol? (listof any?) render-settings?
                             (union (listof exp-without-holes?)
                                    (list/p (listof exp-with-holes?) (listof exp-without-holes?))
@@ -170,7 +170,8 @@
        (or (not (render-settings-lifting? render-settings))
            (eq? (syntax-property (mark-source (car mark-list)) 'stepper-hint) 'comes-from-or))]
       [(late-let-break)
-       (eq? (syntax-property (mark-source (car mark-list)) 'stepper-hint) 'comes-from-or)]))  
+       (eq? (syntax-property (mark-source (car mark-list)) 'stepper-hint) 'comes-from-or)]
+      [(expr-finished-break) #f]))  
   
   (define (skip-redex-step? mark-list render-settings)
     (and (pair? mark-list)
@@ -463,7 +464,7 @@
                                       [(and) #`true]
                                       [(or) #`false])])
                (with-syntax ([clauses
-                              (append (build-list (syntax-property stx 'user-stepper-and/or-clauses-consumed) (lambda (x) clause-padder))
+                              (append (build-list (syntax-property stx 'user-stepper-and/or-clauses-consumed) (lambda (dc) clause-padder))
                                       (let loop ([stx stx])
                                         (if (and (eq? user-source (syntax-property stx 'user-source))
                                                  (eq? user-position (syntax-property stx 'user-position)))
@@ -483,7 +484,7 @@
       
       (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
       (let* ([main (map inner stxs)]
-             [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
+             [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (dc) (queue-pop highlight-queue-dest)))])
         (values main new-highlights))))
   
   
@@ -681,7 +682,7 @@
   ; reconstruct-completed : reconstructs a completed expression or definition.  
   
   (define (reconstruct-completed mark-list vals render-settings)
-    (unless (and (pair? mark-list) (null? (cdr mark-list)) (eq? (mark-label (car mark-list) 'top-level)))
+    (unless (and (pair? mark-list) (null? (cdr mark-list)) (eq? (mark-label (car mark-list)) 'top-level))
       (error `reconstruct-completed "expected mark-list of length one with mark having label 'top-level, got: ~a" mark-list))
     (let skipto-loop ([expr (mark-source (car mark-list))])
       (cond 
@@ -713,21 +714,20 @@
                                   (attach-info (car recon-vals) expr)
                                   (attach-info #`(values #,@recon-vals) expr)))]))))])))
   
-  ; : (-> syntax? syntax? sexp?)
-  (define (reconstruct-define source reconstructed)
+  ; : (-> syntax? syntax? syntax?)
+  (define (reconstruct-top-level source reconstructed)
     (cond 
       [(syntax-property source 'stepper-skipto) =>
        (lambda (skipto)
          (skipto-reconstruct skipto source
                              (lambda (expr)
-                               (reconstruct-define expr reconstructed))))]
+                               (reconstruct-top-level expr reconstructed))))]
       [else
        (kernel:kernel-syntax-case source #f
           [(define-values vars-stx body)
            (attach-info #`(define-values vars-stx #,reconstructed)
                         source)]
           [else
-           ()
            reconstructed])]))
   
                                                                                                                 
@@ -939,12 +939,12 @@
          
          (define (recon so-far mark-list first)
            (cond [(null? mark-list)
-                  so-far]
+                  (error `recon "expcted a top-level mark at the end of the mark list.")]
                  [else
                   (case (mark-label (car mark-list)) 
-                    [(top-level-define)
+                    [(top-level)
                      (if (null? (cdr mark-list))
-                         (reconstruct-define (mark-source (car mark-list)) so-far)
+                         (reconstruct-top-level (mark-source (car mark-list)) so-far)
                          (error 'recon "top-level-define mark found at non-end of mark list"))]
                     [else
                      (let ([reconstructed (recon-inner mark-list so-far)])
@@ -956,6 +956,10 @@
                             reconstructed)
                         (cdr mark-list)
                         #f))])]))
+
+         (define _ (printf "break-kind: ~a\ninnermost source: ~a" break-kind
+                   (and (pair? mark-list)
+                        (syntax-object->datum (mark-source (car mark-list))))))
          
          (define answer
            (map (lambda (x) (map syntax-object->datum x))
