@@ -85,11 +85,15 @@
 			       (if (identifier? id)
 				   id
 				   (stx-car (stx-cdr id))))
-			     (syntax->list (syntax (id ...))))])
+			     (syntax->list (syntax (id ...))))]
+		       [provided-identifiers
+			(datum->syntax-object stx 'provided-identifiers)])
 	   (syntax
 	    (begin
 	      (provide plain-id ...)
-	      (define-syntax-set (id ...) defn ...))))])))
+	      (define-syntax-set (id ...) 
+		(define provided-identifiers (quote-syntax (id ...)))
+		defn ...))))])))
 
   ;; The implementation of form X is defined below as X/proc. The
   ;; reason for this is to allow the implementation of Y to re-use the
@@ -115,6 +119,7 @@
 			      intermediate-recur
 			      intermediate-lambda
 			      intermediate-app
+			      intermediate-quote
 			      intermediate-quasiquote
 			      intermediate-unquote
 			      intermediate-unquote-splicing
@@ -132,7 +137,8 @@
 			      advanced-begin
 			      advanced-begin0
 			      advanced-case
-			      advanced-shared)
+			      advanced-shared
+			      advanced-delay)
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; compile-time helpers
@@ -242,7 +248,24 @@
 			       "for the function body"
 			       enclosing-expr
 			       exprs))
-    
+
+    (define keyword-list
+      (append (syntax->list provided-identifiers)
+	      (syntax->list (quote-syntax 
+			     (#%datum
+			      #%top
+			      empty true false)))))
+
+    (define (identifier/non-kw? stx)
+      (and (identifier? stx)
+	   (not (ormap (lambda (x) (module-identifier=? stx x))
+		       keyword-list))))
+
+    (define (something-else/kw stx)
+      (if (identifier? stx)
+	  "a keyword"
+	  (something-else stx)))
+
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; define (beginner)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -260,7 +283,7 @@
       (syntax-case stx ()
 	;; Constant or lambda def:
 	[(_ name expr)
-	 (identifier? (syntax name))
+	 (identifier/non-kw? (syntax name))
 	 (let ([lam (syntax expr)])
 	   (check-defined-lambda lam)
 	   (syntax-case (syntax expr) (beginner-lambda)
@@ -291,7 +314,7 @@
 	      "expected a function name for a definition, but the name is missing"))
 	   (let loop ([names names][pos 0])
 	     (unless (null? names)
-	       (unless (identifier? (car names))
+	       (unless (identifier/non-kw? (car names))
 		 (teach-syntax-error
 		  'define
 		  stx
@@ -300,7 +323,7 @@
 		  (cond
 		   [(zero? pos) "a function"]
 		   [else (format "the function's ~a argument" (ordinal pos))])
-		  (something-else (car names))))
+		  (something-else/kw (car names))))
 	       (loop (cdr names) (add1 pos))))
 	   (when (null? (cdr names))
 	     (teach-syntax-error
@@ -326,7 +349,7 @@
 	    (syntax/loc stx (define name-seq expr ...))))]
 	;; Constant/lambda with too many or too few parts:
 	[(_ name expr ...)
-	 (identifier? (syntax name))
+	 (identifier/non-kw? (syntax name))
 	 (let ([exprs (syntax->list (syntax (expr ...)))])
 	   (check-single-expression 'define
 				    (format "after the defined name ~a"
@@ -339,9 +362,8 @@
 	  'define
 	  stx
 	  (syntax non-name)
-	  "expected a function name, constant name, or function header for `define', ~
-         but found ~a"
-	  (something-else (syntax non-name)))]
+	  "expected a function name, constant name, or function header for `define', but found ~a"
+	  (something-else/kw (syntax non-name)))]
 	;; Missing name:
 	[(_)
 	 (teach-syntax-error
@@ -375,13 +397,13 @@
 	 (syntax-case (syntax arg-seq) () [(arg ...) #t][_else #f])
 	 (let ([args (syntax->list (syntax arg-seq))])
 	   (for-each (lambda (arg)
-		       (unless (identifier? arg)
+		       (unless (identifier/non-kw? arg)
 			 (teach-syntax-error
 			  'lambda
 			  lam
 			  arg
 			  "expected a name for a function argument, but found ~a"
-			  (something-else arg))))
+			  (something-else/kw arg))))
 		     args)
 	   (when (null? args)
 	     (teach-syntax-error
@@ -435,13 +457,13 @@
       (syntax-case stx ()
 	;; First, check for a struct name:
 	[(_ name . __)
-	 (not (identifier? (syntax name)))
+	 (not (identifier/non-kw? (syntax name)))
 	 (teach-syntax-error
 	  'define-struct
 	  stx
 	  (syntax name)
 	  "expected a structure type name after `define-struct', but found ~a"
-	  (something-else (syntax name)))]
+	  (something-else/kw (syntax name)))]
 	;; Main case (`rest' is for nice error messages):
 	[(_ name_ (field_ ...) . rest)
 	 (let ([name (syntax name_)]
@@ -562,8 +584,7 @@
 			 '|function call|
 			   stx
 			   fun
-			   "expected a ~a after an ~
-                        open parenthesis, but found ~a"
+			   "expected a ~a after an open parenthesis, but found ~a"
 			   (if lex-ok?
 			       "name"
 			       "defined name or a primitive operation name")
@@ -880,7 +901,7 @@
       (syntax-case stx ()
 	[(_ ([name rhs-expr] ...) expr)
 	 (let ([names (syntax->list (syntax (name ...)))])
-	   (and (andmap identifier? names)
+	   (and (andmap identifier/non-kw? names)
 		(not (check-duplicate-identifier names))))
 	 (with-syntax ([(rhs-expr ...) (map allow-local-lambda 
 					    (syntax->list (syntax (rhs-expr ...))))])
@@ -892,7 +913,7 @@
       (syntax-case stx ()
 	[(_ ([name rhs-expr] ...) expr)
 	 (let ([names (syntax->list (syntax (name ...)))])
-	   (and (andmap identifier? names)
+	   (and (andmap identifier/non-kw? names)
 		(not (check-duplicate-identifier names))))
 	 (with-syntax ([(tmp ...)
 			(generate-temporaries (syntax (name ...)))]
@@ -915,7 +936,7 @@
 	 (syntax (let () expr))]
 	[(_ ([name0 rhs-expr0] [name rhs-expr] ...) expr)
 	 (let ([names (syntax->list (syntax (name0 name ...)))])
-	   (andmap identifier? names))
+	   (andmap identifier/non-kw? names))
 	 (with-syntax ([rhs-expr0 (allow-local-lambda (syntax rhs-expr0))])
 	   (syntax/loc stx
 	     (intermediate-let ([name0 rhs-expr0])
@@ -946,15 +967,15 @@
 		       (syntax-case binding ()
 			 [(name expr)
 			  (let ([name (syntax name)])
-			    (unless (identifier? name)
+			    (unless (identifier/non-kw? name)
 			      (teach-syntax-error
 			       who
 			       orig-stx
 			       name
 			       "expected a name for a local binding, but found ~a"
-			       (something-else name))))]
+			       (something-else/kw name))))]
 			 [(name . exprs)
-			  (identifier? (syntax name))
+			  (identifier/non-kw? (syntax name))
 			  (check-single-expression who
 						   (format "after the name `~a'"
 							   (syntax-e (syntax name)))
@@ -965,17 +986,15 @@
 			   who
 			   orig-stx
 			   (syntax something)
-			   "expected a name after the parenthesis for a ~a local definition, ~
-                               but found ~a"
+			   "expected a name after the parenthesis for a ~a local definition, but found ~a"
 			   who
-			   (something-else (syntax something)))]
+			   (something-else/kw (syntax something)))]
 			 [_else
 			  (teach-syntax-error
 			   who
 			   orig-stx
 			   binding
-			   "expected a parenthesized name and expression for a ~a local definition, ~
-                               but found ~a"
+			   "expected a parenthesized name and expression for a ~a local definition, but found ~a"
 			   who
 			   (something-else binding))]))
 		     bindings)
@@ -1027,9 +1046,9 @@
 	       (lambda (stx)
 		 (syntax-case stx ()
 		   [(_ fname ([name rhs-expr] ...) expr)
-		    (and (identifier? (syntax fname))
+		    (and (identifier/non-kw? (syntax fname))
 			 (let ([names (syntax->list (syntax (name ...)))])
-			   (and (andmap identifier? names)
+			   (and (andmap identifier/non-kw? names)
 				(or empty-ok? (pair? names))
 				(not (check-duplicate-identifier names)))))
 		    (syntax/loc stx
@@ -1040,7 +1059,7 @@
 		       rhs-expr ...))]
 		   [(_form fname empty-seq . rest)
 		    (and (not empty-ok?)
-			 (identifier? (syntax fname))
+			 (identifier/non-kw? (syntax fname))
 			 (null? (syntax-e (syntax empty-seq))))
 		    (teach-syntax-error
 		     'recur
@@ -1049,7 +1068,7 @@
 		     "expected a non-empty sequence of bindings after the function name, ~
                     but found an empty sequence")]
 		   [(_form fname . rest)
-		    (identifier? (syntax fname))
+		    (identifier/non-kw? (syntax fname))
 		    (bad-let-form 'recur (syntax (_form . rest)) stx)]
 		   [(_form fname . rest)
 		    (teach-syntax-error
@@ -1057,7 +1076,7 @@
 		     stx
 		     #f
 		     "expected a function name after `recur', but found ~a"
-		     (something-else (syntax fname)))]
+		     (something-else/kw (syntax fname)))]
 		   [(_form)
 		    (teach-syntax-error
 		     'recur
@@ -1078,13 +1097,13 @@
 	 (syntax-case (syntax arg-seq) () [(arg ...) #t][_else #f])
 	 (let ([args (syntax->list (syntax arg-seq))])
 	   (for-each (lambda (arg)
-		       (unless (identifier? arg)
+		       (unless (identifier/non-kw? arg)
 			 (teach-syntax-error
 			  'lambda
 			  stx
 			  arg
 			  "expected a name for a function argument, but found ~a"
-			  (something-else arg))))
+			  (something-else/kw arg))))
 		     args)
 	   (when (null? args)
 	     (teach-syntax-error
@@ -1121,6 +1140,22 @@
 	  "expected a sequence of argument names after `lambda', but nothing's there")]
 	[_else
 	 (bad-use-error 'lambda stx)]))
+
+    ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;; quote (intermediate)
+    ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    (define intermediate-quote/proc
+      (lambda (stx)
+	(syntax-case stx ()
+	  [(_ expr ...)
+	   (begin
+	     (check-single-expression 'quote
+				      "after the `quote' keyword"
+				      stx
+				      (syntax->list (syntax (expr ...))))
+	     (syntax (quote expr ...)))]
+	  [_else (bad-use-error 'quote stx)])))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; quasiquote (intermediate)
@@ -1216,7 +1251,7 @@
       ;; Handle the case that doesn't fit into beginner, then dispatch to beginner
       (syntax-case stx ()
 	[(_ (name) expr)
-	 (and (identifier? (syntax name))
+	 (and (identifier/non-kw? (syntax name))
 	      (ok-definition-context))
 	 (check-definition-new
 	  'define
@@ -1242,13 +1277,13 @@
 	[(_  (name ...) . exprs)
 	 (let ([names (syntax->list (syntax (name ...)))])
 	   (for-each (lambda (name)
-		       (unless (identifier? name)
+		       (unless (identifier/non-kw? name)
 			 (teach-syntax-error
 			  'lambda
 			  stx
 			  name
 			  "expected a name for an argument, but found ~a"
-			  (something-else name))))
+			  (something-else/kw name))))
 		     names)
 	   (let ([dup (check-duplicate-identifier names)])
 	     (when dup
@@ -1394,10 +1429,10 @@
     (define (advanced-let/proc stx)
       (syntax-case stx ()
 	[(_ name ids body)
-	 (identifier? (syntax name))
+	 (identifier/non-kw? (syntax name))
 	 (syntax/loc stx (let name ids body))]
 	[(_ name . rest)
-	 (identifier? (syntax name))
+	 (identifier/non-kw? (syntax name))
 	 (teach-syntax-error
 	  'let
 	  stx
@@ -1544,6 +1579,22 @@
 	[_else (bad-use-error 'case stx)]))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;; delay (advanced)
+    ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    (define advanced-delay/proc
+      (lambda (stx)
+	(syntax-case stx ()
+	  [(_ expr ...)
+	   (begin
+	     (check-single-expression 'delay
+				      "after the `delay' keyword"
+				      stx
+				      (syntax->list (syntax (expr ...))))
+	     (syntax (delay expr ...)))]
+	  [_else (bad-use-error 'delay stx)])))
+
+    ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; shared (advanced)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1571,19 +1622,19 @@
 	      (lambda (binding)
 		(syntax-case binding ()
 		  [(id . exprs)
-		   (identifier? (syntax id))
+		   (identifier/non-kw? (syntax id))
 		   (check-single-expression 'shared
 					    "after the binding name"
 					    binding
 					    (syntax->list (syntax exprs)))]
 		  [(a . rest)
-		   (not (identifier? (syntax a)))
+		   (not (identifier/non-kw? (syntax a)))
 		   (teach-syntax-error
 		    'shared
 		    stx
 		    (syntax a)
 		    "expected a name for the binding, but found ~a"
-		    (something-else (syntax a)))]
+		    (something-else/kw (syntax a)))]
 		  [()
 		   (teach-syntax-error
 		    'shared

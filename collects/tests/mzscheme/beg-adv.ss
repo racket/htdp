@@ -2,6 +2,9 @@
 (syntax-test #'())
 (syntax-test #'#%app)
 
+(syntax-test #'quote)
+(syntax-test #'(quote 1 2))
+
 (syntax-test #'define)
 (syntax-test #'(define))
 (syntax-test #'(define x))
@@ -27,6 +30,21 @@
 (syntax-test #'(define x (lambda (y y) 10)))
 (syntax-test #'(+ (define x 5)))
 
+;; Keywords:
+(syntax-test #'(define (define y) 12))
+(syntax-test #'(define (lambda y) 12))
+(syntax-test #'(define (cond y) 12))
+(syntax-test #'(define (if y) 12))
+(syntax-test #'(define (y define) 12))
+(syntax-test #'(define (y lambda) 12))
+(syntax-test #'(define (y cond) 12))
+(syntax-test #'(define (y if) 12))
+(syntax-test #'(define (y and) 12))
+(syntax-test #'(define (y or) 12))
+(syntax-test #'(define (y true) 12))
+(syntax-test #'(define (y false) 12))
+(syntax-test #'(define (y empty) 12))
+
 (syntax-test #'define-struct)
 (syntax-test #'(define-struct))
 (syntax-test #'(define-struct a))
@@ -38,6 +56,7 @@
 (syntax-test #'(define-struct a (b 10)))
 (syntax-test #'(define-struct (a) (b)))
 (syntax-test #'(define-struct a (b b)))
+(syntax-test #'(define-struct lambda (b)))
 (syntax-test #'(+ 1 (define-struct a (b))))
 
 (define x 5)

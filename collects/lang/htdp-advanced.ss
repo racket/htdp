@@ -22,7 +22,7 @@
 	   (rename beginner-if if)
 	   (rename beginner-and and)
 	   (rename beginner-or or)
-	   (rename quote quote)
+	   (rename intermediate-quote quote)
 	   (rename intermediate-quasiquote quasiquote)
 	   (rename intermediate-unquote unquote)
 	   (rename intermediate-unquote-splicing unquote-splicing)
@@ -34,7 +34,7 @@
 	   (rename advanced-when when)
 	   (rename advanced-unless unless)
 	   (rename advanced-case case)
-	   (rename delay delay)
+	   (rename advanced-delay delay)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum
 	   #%top
