@@ -859,7 +859,7 @@
                   (error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax-object->datum expr))])])))
     
     ; body of local
-    ;(printf "input: ~a\n" (syntax-object->datum expr))
+    ;(printf "input: ~a\n" expr)
     (let* ([annotated-expr (annotate/top-level expr)])
-      ;(printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
+      ;(printf "annotated: \n~a\n" annotated-expr)
       annotated-expr)))

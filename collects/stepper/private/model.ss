@@ -61,6 +61,7 @@
   ; go starts a stepper instance
   ; see provide stmt for contract 
   (define (go program-expander receive-result render-settings track-inferred-names?)
+    
     (local
         
         ((define finished-exprs null)
@@ -85,7 +86,7 @@
                     [split-point-a (- list-length (length (or (memf contains-highlight exprs) null)))]
                     [split-point-b (length (or (memf contains-highlight (reverse exprs)) null))])
                (if (<= split-point-b split-point-a)
-                   (error 'redivide-exprs "s-expressions did not contain the highlight-placeholder: ~v" exprs)
+                   (error 'redivide-exprs "s-expressions did not contain the highlight-placeholder: ~v" (map syntax-object->hilite-datum exprs))
                    (values (sublist 0 split-point-a exprs) ; before
                            (sublist split-point-a split-point-b exprs) ; during
                            (sublist split-point-b list-length exprs)))))) ; after
@@ -110,6 +111,7 @@
          
          (define break 
            (opt-lambda (mark-set break-kind [returned-value-list null])
+             
              (let* ([mark-list (and mark-set (extract-mark-list mark-set))])
 
                (define (double-redivide finished-exprs new-exprs-before new-exprs-after)

@@ -6,10 +6,10 @@
            (lib "sexp-diff.ss" "tests" "utils")
            "module-elaborator.ss"
            ; for xml testing:
-           (lib "class.ss")
-           (all-except (lib "xml-snipclass.ss" "xml") snip-class)
-           (all-except (lib "scheme-snipclass.ss" "xml") snip-class)
-           (lib "mred.ss" "mred"))
+           #;(lib "class.ss")
+           #;(all-except (lib "xml-snipclass.ss" "xml") snip-class)
+           #;(all-except (lib "scheme-snipclass.ss" "xml") snip-class)
+           #;(lib "mred.ss" "mred"))
   
   (call-with-output-file "/Users/clements/test1.txt"
     (lambda (port)
@@ -706,66 +706,72 @@
                        (before-after-finished ((define a_0 9)) ((hilite (let ([b 6]) a_0))) ((hilite (define b_1 6)) (hilite a_0)))
                        (before-after-finished ((define b_1 6)) ((hilite a_0)) ((hilite 9)))
                        (finished (9)))))
-  ;  
-  ;  ;;;;;;;;;;;;;
-  ;  ;;
-  ;  ;;  LETREC
-  ;  ;;
-  ;  ;;;;;;;;;;;;;
-  ;  
-  ;    (test-intermediate-sequence "(define a 3) (define c 19) (letrec ([a 13] [b a]) (+ b a c))"
-  ;                                `((before-after-finished ((define a 3) (define c 19))
-  ;                                                         ((hilite (letrec ([a 13] [b a]) (+ b a c)))) 
-  ;                                                         ((hilite (define a_0 13)) (hilite (define b_1 a_0)) (hilite (+ b_1 a_0 c))))
-  ;                                  (before-after-finished ((define a_0 13))
-  ;                                                         ((define b_1 (hilite a_0)) (+ b_1 a_0 c)) ((define b_1 (hilite 13)) (+ b_1 a_0 c)))
-  ;                                  (before-after-finished ((define b_1 13))
-  ;                                                         ((+ (hilite b_1) a_0 c)) ((+ (hilite 13) a_0 c)))
-  ;                                  (before-after ((+ 13 (hilite a_0) c)) ((+ 13 (hilite 13) c)))
-  ;                                  (before-after ((+ 13 13 (hilite c))) ((+ 13 13 (hilite 19))))
-  ;                                  (before-after ((hilite (+ 13 13 19))) ((hilite 45)))
-  ;                                  (finished (45))))
-  ;    
-  ;    (test-intermediate-sequence "(letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
-  ;                                `((before-after ((hilite (letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9))) 
-  ;                                                ((hilite (define a_0 (lambda (x) (+ x 14)))) (hilite (define b_1 (+ 3 4))) (hilite 9)))
-  ;                                  (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
-  ;                                                         ((define b_1 (hilite (+ 3 4))) 9) ((define b_1 (hilite 7)) 9))
-  ;                                  (finished ((define b_1 7) 9))))
-  ;    
-  ;    (test-intermediate-sequence "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
-  ;                                `((before-after-finished ((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))
-  ;                                                         ((define gprime (hilite (f cos)))) 
-  ;                                                         ((define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))))
-  ;                                  (before-after ((define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))))
-  ;                                                ((hilite (define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001)))) (define gprime (hilite gp_0))))
-  ;				  (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) (define gprime gp_0)))))
-  ;    ;;;;;;;;;;;;;
-  ;    ;;
-  ;    ;;  RECUR
-  ;    ;;
-  ;    ;;;;;;;;;;;;;
-  ;    
-  ;    (test-intermediate-sequence "(define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))) (countdown 2)"
-  ;                                `((before-after-finished ((define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1)))))) 
-  ;							 ((hilite (countdown 2)))
-  ;							 ((hilite (recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1)))))))
-  ;                                  (before-after ((hilite (recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1)))))) 
-  ;						((hilite (define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1))))) (hilite ((loop_0 2)))))
-  ;                                  (before-after-finished ((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1)))))
-  ;                                                         ((hilite (loop_0 2)))
-  ;							 ((hilite (if (= 2 0) 13 (loop_0 (- 2 1))))))
-  ;                                  (before-after ((if (hilite (= 2 0)) 13 (loop_0 (- 2 1)))) ((if (hilite false) 13 (loop_0 (- 2 1)))))
-  ;                                  (before-after ((hilite (if false 13 (loop_0 (- 2 1))))) ((hilite (loop_0 (- 2 1)))))
-  ;                                  (before-after ((loop_0 (hilite (- 2 1)))) ((loop_0 (hilite 1))))
-  ;                                  (before-after ((hilite (loop_0 1))) ((hilite (if (= 1 0) 13 (loop_0 (- 1 1))))))
-  ;                                  (before-after ((if (hilite (= 1 0)) 13 (loop_0 (- 1 1)))) ((if (hilite false) 13 (loop_0 (- 1 1)))))
-  ;                                  (before-after ((hilite (if false 13 (loop_0 (- 1 1))))) ((hilite (loop_0 (- 1 1)))))
-  ;                                  (before-after ((loop_0 (hilite (- 1 1)))) ((loop_0 (hilite 0))))
-  ;                                  (before-after ((hilite (loop_0 0))) ((hilite (if (= 0 0) 13 (loop_0 (- 0 1))))))
-  ;                                  (before-after ((if (hilite (= 0 0)) 13 (loop_0 (- 0 1)))) ((if (hilite true) 13 (loop_0 (- 0 1)))))
-  ;                                  (before-after ((hilite (if true 13 (loop_0 (- 1 1))))) ((hilite 13)))
-  ;				  (finished (13))))
+    
+    ;;;;;;;;;;;;;
+    ;;
+    ;;  LETREC
+    ;;
+    ;;;;;;;;;;;;;
+    
+  (t letrec1
+     (test-intermediate-sequence "(define a 3) (define c 19) (letrec ([a 13] [b a]) (+ b a c))"
+                                 `((before-after-finished ((define a 3) (define c 19))
+                                                          ((hilite (letrec ([a 13] [b a]) (+ b a c)))) 
+                                                          ((hilite (define a_0 13)) (hilite (define b_0 a_0)) (hilite (+ b_0 a_0 c))))
+                                   (before-after-finished-waiting ((define a_0 13))
+                                                          ((define b_0 (hilite a_0))) ((define b_0 (hilite 13)))
+                                                          ( (+ b_0 a_0 c)))
+                                   (before-after-finished ((define b_0 13))
+                                                          ((+ (hilite b_0) a_0 c)) ((+ (hilite 13) a_0 c)))
+                                   (before-after ((+ 13 (hilite a_0) c)) ((+ 13 (hilite 13) c)))
+                                   (before-after ((+ 13 13 (hilite c))) ((+ 13 13 (hilite 19))))
+                                   (before-after ((hilite (+ 13 13 19))) ((hilite 45)))
+                                   (finished (45)))))
+      
+  (t letrec2
+      (test-intermediate-sequence "(letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+                                  `((before-after ((hilite (letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9))) 
+                                                  ((hilite (define a_0 (lambda (x) (+ x 14)))) (hilite (define b_0 (+ 3 4))) (hilite 9)))
+                                    (before-after-finished-waiting ((define a_0 (lambda (x) (+ x 14))))
+                                                                   ((define b_0 (hilite (+ 3 4)))) ((define b_0 (hilite 7)))
+                                                                   (9))
+                                    (finished ((define b_0 7) 9)))))
+      
+  (t letrec3
+     (test-intermediate-sequence "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
+                                 `((before-after-finished ((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))
+                                                          ((define gprime (hilite (f cos)))) 
+                                                          ((define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))))
+                                   (before-after ((define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))))
+                                                 ((hilite (define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001)))) (define gprime (hilite gp_0))))
+                                   (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))) (define gprime gp_0))))))
+      ;;;;;;;;;;;;;
+      ;;
+      ;;  RECUR
+      ;;
+      ;;;;;;;;;;;;;
+ 
+  (t recur
+      (test-intermediate-sequence "(define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))) (countdown 2)"
+                                  `((before-after-finished ((define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1)))))) 
+  							 ((hilite (countdown 2)))
+  							 ((hilite (recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1)))))))
+                                    (before-after ((hilite (recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1)))))) 
+  						((hilite (define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1))))) (hilite ((loop_0 2)))))
+                                    (before-after-finished ((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1)))))
+                                                           ((hilite (loop_0 2)))
+  							 ((hilite (if (= 2 0) 13 (loop_0 (- 2 1))))))
+                                    (before-after ((if (hilite (= 2 0)) 13 (loop_0 (- 2 1)))) ((if (hilite false) 13 (loop_0 (- 2 1)))))
+                                    (before-after ((hilite (if false 13 (loop_0 (- 2 1))))) ((hilite (loop_0 (- 2 1)))))
+                                    (before-after ((loop_0 (hilite (- 2 1)))) ((loop_0 (hilite 1))))
+                                    (before-after ((hilite (loop_0 1))) ((hilite (if (= 1 0) 13 (loop_0 (- 1 1))))))
+                                    (before-after ((if (hilite (= 1 0)) 13 (loop_0 (- 1 1)))) ((if (hilite false) 13 (loop_0 (- 1 1)))))
+                                    (before-after ((hilite (if false 13 (loop_0 (- 1 1))))) ((hilite (loop_0 (- 1 1)))))
+                                    (before-after ((loop_0 (hilite (- 1 1)))) ((loop_0 (hilite 0))))
+                                    (before-after ((hilite (loop_0 0))) ((hilite (if (= 0 0) 13 (loop_0 (- 0 1))))))
+                                    (before-after ((if (hilite (= 0 0)) 13 (loop_0 (- 0 1)))) ((if (hilite true) 13 (loop_0 (- 0 1)))))
+                                    (before-after ((hilite (if true 13 (loop_0 (- 1 1))))) ((hilite 13)))
+  				  (finished (13)))))
   
     ;;;;;;;;;;;;;
     ;;
@@ -941,6 +947,49 @@
   ;;
   ;;;;;;;;;;;;;;;;
     
+  #;(t ddj-screenshot
+     (test-mz-sequence (define-syntax (xml stx)
+                                (letrec ([process-xexpr 
+                                          (lambda (xexpr)
+                                            (syntax-case xexpr (lmx lmx-splice)
+                                              [(lmx-splice unquoted) #`(unquote-splicing unquoted)]
+                                              [(lmx unquoted) #`(unquote unquoted)]
+                                              [(tag ([attr val] ...) . sub-xexprs)
+                                               (identifier? #`tag)
+                                               #`(tag ([attr val] ...) #,@(map process-xexpr (syntax->list #`sub-xexprs)))]
+                                              [(tag . sub-xexprs)
+                                               (identifier? #`tag)
+                                               #`(tag () #,@(map process-xexpr (syntax->list #`sub-xexprs)))]
+                                              [str
+                                               (string? (syntax-e #`str))
+                                               xexpr]))])
+                                  (syntax-case stx ()
+                                    [(_ xexpr) #`(quasiquote #,(process-xexpr #`xexpr))])))
+     (xml (article (header (author "John Clements")
+                           (title (if (< 3 4)
+                                      (xml "No Title Available")
+                                      (get-title))))
+                   (text "More Sample Text")))
+     '((before-after-finished ((define-syntax (xml stx)
+                                 (letrec ([process-xexpr 
+                                           (lambda (xexpr)
+                                             (syntax-case xexpr (lmx lmx-splice)
+                                               [(lmx-splice unquoted) #`(unquote-splicing unquoted)]
+                                               [(lmx unquoted) #`(unquote unquoted)]
+                                               [(tag ([attr val] ...) . sub-xexprs)
+                                                (identifier? #`tag)
+                                                #`(tag ([attr val] ...) #,@(map process-xexpr (syntax->list #`sub-xexprs)))]
+                                               [(tag . sub-xexprs)
+                                                (identifier? #`tag)
+                                                #`(tag () #,@(map process-xexpr (syntax->list #`sub-xexprs)))]
+                                               [str
+                                                (string? (syntax-e #`str))
+                                                xexpr]))])
+                                   (syntax-case stx ()
+                                     [(_ xexpr) #`(quasiquote #,(process-xexpr #`xexpr))]))))
+                              ((xml ))
+                              ((xml (a ([a "x"]) "ab" "hdo" "hon")))))))
+  
   #;(define (test-xml-sequence namespace-spec render-settings track-inferred-names? spec expected-steps)
     (letrec ([port (open-input-text-editor (construct-text spec))])
       (test-sequence-core namespace-spec render-settings track-inferred-names? port expected-steps)))
@@ -1064,6 +1113,6 @@
 ;  (finished (true))))
   
   
-  (run-tests '(let-scoping3))
+  (run-tests '(recur))
   ;(run-all-tests)
   )

@@ -79,6 +79,7 @@ stepper-hint :
 
  [ 'comes-from-let ] : expression was expanded from let
  [ 'comes-from-let* ] : expression was expanded from let*
+ [ 'comes-from-letrec ] : expression was expanded from letrec
  [ 'comes-from-local ] : expression was expanded from local
 
  [ 'from-xml-box ] : expression was expanded from an xml box

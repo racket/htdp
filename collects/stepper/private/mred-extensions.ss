@@ -15,7 +15,8 @@
    separator-snip% ;; these last two aren't required, but are useful 
    vertical-separator-snip% ;; for debugging purposes
    stepper-warning%
-   finished-text)
+   finished-text
+   stepper-text-test)
    
   (define test-dc (make-object bitmap-dc% (make-object bitmap% 1 1)))
   (define reduct-highlight-color (make-object color% 255 255 255))
@@ -58,7 +59,7 @@
       (public reset-width)
       (override write copy get-extent draw)
       
-      (define width 500)
+      (define width 800)
 
       (define (reset-width)
         (let* ([admin (get-admin)]
@@ -224,6 +225,7 @@
       
       (public* [reset-pretty-print-width
                 (lambda (inner-width canvas)
+                  (fprintf (current-error-port) "reformatting\n")
                   (begin-edit-sequence)
                   (let* ([style (send (get-style-list) find-named-style "Standard")]
                          [char-width (send style get-text-width (send canvas get-dc))]
@@ -232,6 +234,8 @@
                     (end-edit-sequence)))])
       
       (define highlight-table (make-hash-table 'weak))
+      
+      (define _1 (fprintf (current-error-port) "1\n"))
       
       (define stripped-exps
         (map (lambda (exp) (strip-to-sexp exp highlight-table)) exps))
@@ -255,6 +259,12 @@
       (inherit get-dc)
       
       (define (format-sexp sexp)
+        (fprintf (current-error-port) "about to format sexp\n")
+        
+        (if (= (length exps) 1)
+            (begin
+              (fprintf (current-error-port) "yes!\n")
+              (insert (syntax-e (car exps))))
         (parameterize ([pretty-print-columns pretty-printed-width]
                        
                        ; the pretty-print-size-hook decides whether this object should be printed by the new pretty-print-hook
@@ -305,7 +315,8 @@
                        ;;  somehow
                        [read-case-sensitive #t])
           (pretty-print sexp)))
-               
+        (fprintf (current-error-port) "finished formatting sexp.\n"))
+             
       (define (format-whole-step)
         (lock #f)
         (begin-edit-sequence)
@@ -322,7 +333,9 @@
         (end-edit-sequence)
         (lock #t))
       
-      (super-instantiate ())))
+      (super-instantiate ())
+      
+      (fprintf (current-error-port) "2\n")))
   
                                                    
                                                                   ;                                                                        ;;    ;
@@ -378,6 +391,7 @@
       (override*
         [on-size 
          (lambda (width height)
+           (fprintf (current-error-port) "on-size\n")
            (super-on-size width height)
            (let ([editor (get-editor)])
              (when editor
@@ -414,6 +428,7 @@
                get-admin get-snip-location get-dc needs-update hide-caret)
       (public* [reset-width 
                 (lambda (canvas)
+                  (fprintf (current-error-port) "starting reset-width\n")
                   (lock #f)
                   (begin-edit-sequence)
                   (let* ([width-box (box 0)]
@@ -428,6 +443,7 @@
                              [vert-separator-width (unbox vert-separator-width-box)]
                              [minus-center-bar (- minus-cursor-margin vert-separator-width)]
                              [l-r-box-widths (floor (/ minus-center-bar 2))])
+                        (fprintf (current-error-port) "about to call set-new-widths\n")
                         (send top-defs-snip set-new-width minus-cursor-margin canvas)
                         (send before-snip set-new-width l-r-box-widths canvas)
                         (send after-snip set-new-width l-r-box-widths canvas)
@@ -598,8 +614,8 @@
     (let* ([new-frame (make-object frame% "test-frame")]
            [new-text (apply make-object stepper-text% args)]
            [new-canvas (make-object stepper-canvas% new-frame new-text)])
-      (send new-canvas min-width 500)
-      (send new-canvas min-height 100)
+      (send new-canvas min-width 800)
+      (send new-canvas min-height 200)
       (send new-frame show #t)
       (send new-text reset-width new-canvas)
       new-canvas))

@@ -122,6 +122,57 @@
       
       (define (view-controller-go drscheme-frame program-expander)
         
+        ;; BOGUS:
+          
+        (define test-dc (make-object bitmap-dc% (make-object bitmap% 1 1)))
+        (define reduct-highlight-color (make-object color% 255 255 255))
+        (define redex-highlight-color (make-object color% 255 255 255))
+        (define _1 (send test-dc try-color (make-object color% 212 159 245) reduct-highlight-color))
+        (define _2 (send test-dc try-color (make-object color% 193 251 181) redex-highlight-color))
+        
+        (define fake-before
+          (let* ([scheme-snip (instantiate scheme-snip% () [splice? #f])]
+                 [scheme-editor (send scheme-snip get-editor)])            
+            (send scheme-editor insert "(if #t\n")
+            (send scheme-editor insert "    (xml \"No Title Available\")\n")
+            (send scheme-editor insert "    (get-title)")
+            (send scheme-editor highlight-range 0 (send scheme-editor last-position) redex-highlight-color)
+            (let* ([xml-snip (instantiate xml-snip% () [eliminate-whitespace-in-empty-tags? #t])]
+                   [xml-editor (send xml-snip get-editor)])
+              (for-each
+               (lambda (x) (send xml-editor insert x))
+               (list "<article><header><author>John Clements</author>\n"
+                     "                 <title>" scheme-snip "</title>\n"
+                     "         </header>\n"
+                     "         <text>More Sample Text</text>\n"
+                     "</article>"))
+              xml-snip)))
+        
+        (define fake-after
+          (let* ([xml-snip (instantiate xml-snip% () [eliminate-whitespace-in-empty-tags? #t])]
+                 [xml-editor (send xml-snip get-editor)])
+            (for-each 
+             (lambda (x) (send xml-editor insert x))
+             (list "<article><header><author>John Clements</author>\n"
+                   "                 <title>"))
+            (let ([highlight-begin (send xml-editor last-position)])
+              (send xml-editor insert "No Title Available")
+              (send xml-editor highlight-range highlight-begin (send xml-editor last-position) reduct-highlight-color)
+              (for-each 
+               (lambda (x) (send xml-editor insert x))
+               (list "</title>\n"
+                     "         </header>\n"
+                     "         <text>More Sample Text</text>\n"
+                     "</article>"))
+              xml-snip)))
+
+	(define _14 (x:stepper-text-test null
+				       (list (datum->syntax-object #f fake-before))
+				       (list (datum->syntax-object #f fake-after))
+				       #f
+				       null))
+        
+        
         (define settings 
           (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol)))
         (define language
