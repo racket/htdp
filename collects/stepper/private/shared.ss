@@ -353,15 +353,19 @@
   
   (define break-kind?
     (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break 'expr-finished-break 'define-struct-break))
-  
+
   ; functional update package
+
+  (define (swap-args 2-arg-fun)
+    (lambda (x y)
+      (2-arg-fun y x)))
   
   (define second-arg (lambda (dc y) y))
   
   (define up-mappings
     `((rebuild ((,car ,(lambda (stx new) (cons new (cdr stx))))
                 (,cdr ,(lambda (stx new) (cons (car stx) new)))
-                (,syntax-e ,rebuild-stx)))
+                (,syntax-e ,(swap-args rebuild-stx))))
       (discard ((,car ,second-arg)
                 (,cdr ,second-arg)
                 (,syntax-e ,second-arg)))))
