@@ -100,6 +100,8 @@
           (flush-output)
           (let* ([ans (read)])
             (cond
+	      [(not (or (number? ans) (and (symbol? ans) (eq? ans 'x))))
+	       (printf "The input must be a number. Given: ~s~n" ans) (repl)]
               [(eq? ans 'x) (void)]
               [(number? ans) 
                (let ([res (f ans)])
@@ -107,7 +109,7 @@
                      (printf "~sF corresponds to ~sC~n" ans res) 
                      (error 'convert OUT-ERROR res))
                  (repl))]
-              [else (printf "The input must be a number. Given: ~e~n" ans) (repl)])))))
+	      [else (error 'convert "can't happen")])))))
     
     ;; ============================================================================
 
@@ -133,7 +135,8 @@
     ;; convert-file : str (num -> num) str -> void
     ;; to read a number from file in, to convert it with f, and to write it to out
     (define (convert-file in f out)
-      (check-arg 'convert-file (and (string? in) (file-exists? in)) "file name" "first" in)
+      (check-arg 'convert-file (string? in) "string" "first" in)
+      (check-arg 'convert-file (file-exists? in) "name of existing file" "first" in)
       (check-proc 'convert-file f 1 "convert-file" "one argument")
       (check-arg 'convert-file (string? out) "string" "third" out)
       (when (file-exists? out)
