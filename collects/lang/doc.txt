@@ -57,7 +57,14 @@ application positions.
   Example: 
    (define-higher-order-primitive convert-gui convert-gui/proc (f2c))
 
+> (provide-higher-order-procedure id (arg ...)) - like above, but the
+  function `id' is exported as the primitive operator named `id'.
+
 > (define-primitive id proc-id) - defines `id' to be a primitive
   operator whose implementation is `proc-id', and which takes no
   procedures as arguments. Normally, `id' is exported from the
   teachpack and `proc-id' is not.
+
+> (provide-primitive id) - like above, but the function `id' is
+  exported as the primitive operator named `id'.
+

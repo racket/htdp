@@ -10,7 +10,9 @@
   (require-for-syntax "private/firstorder.ss")
   
   (provide define-primitive
-	   define-higher-order-primitive)
+	   define-higher-order-primitive
+	   provide-primitive
+	   provide-higher-order-primitive)
 
   (define-syntax (define-primitive stx)
     (syntax-case stx ()
@@ -114,6 +116,22 @@
 
   (define-syntax (fo->ho stx)
     (syntax-case stx ()
-      [(_ id) (first-order->higher-order #'id)])))
+      [(_ id) (first-order->higher-order #'id)]))
+
+  (define-syntax (provide-primitive stx)
+    (syntax-case stx ()
+      [(_ name)
+       (with-syntax ([ex-name ((make-syntax-introducer) #'name)])
+	 #'(begin
+	     (define-primitive ex-name name)
+	     (provide ex-name)))]))
+
+  (define-syntax (provide-higher-order-primitive stx)
+    (syntax-case stx ()
+      [(_ name (arg ...))
+       (with-syntax ([ex-name ((make-syntax-introducer) #'name)])
+	 #'(begin
+	     (define-higher-order-primitive ex-name name (arg ...))
+	     (provide ex-name)))])))
 
 
