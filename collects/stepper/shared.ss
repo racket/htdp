@@ -64,14 +64,14 @@
   ; [*] actually, this is not true if you don't use a one-to-one function as the binding-maker
   ; make-gensym-source : (string -> (key -> binding))
   
-  (define (make-binding-source id-string binding-maker)
+  (define (make-binding-source id-string binding-maker key-displayer)
     (let ([assoc-table (make-hash-table 'weak)])
       (lambda (key)
         (let ([maybe-fetch (hash-table-get assoc-table key (lambda () #f))])
           (or maybe-fetch
               (begin
                 (let* ([new-binding (binding-maker 
-                                     (string-append id-string (format "~a" key) "-"))])
+                                     (string-append id-string (key-displayer key) "-"))])
                   (hash-table-put! assoc-table key new-binding)
                   new-binding)))))))
   
@@ -101,7 +101,7 @@
   ; gensym supplied by get-arg-symbol.
   
 ;  (define get-arg-binding
-;    (make-binding-source "arg" create-bogus-binding))
+;    (make-binding-source "arg" create-bogus-binding number->string))
 ;  
   ; test cases: (returns #t on success)
 ;  (let ([arg3 (get-arg-symbol 3)]
@@ -126,7 +126,7 @@
       (datum->syntax-object #f (string->symbol (string-append str (number->string index))))))
 
   (define get-lifted-var
-    (make-binding-source "lifter-" next-lifted-symbol))
+    (make-binding-source "lifter-" next-lifted-symbol (lambda (stx) (format "~a" (syntax-object->datum stx)))))
 
   
   ; gensyms needed by many modules:
@@ -220,7 +220,11 @@
 ; test cases
 ;(require shared)
 ;
-;(eq? (syntax-object->datum (get-lifted-var 'ab)) 'lifter-ab-0)
-;(eq? (syntax-object->datum (get-lifted-var 'cd)) 'lifter-cd-1)
-;(eq? (syntax-object->datum (get-lifted-var 'ef)) 'lifter-ef-2)
-;(eq? (syntax-object->datum (get-lifted-var 'cd)) 'lifter-cd-1)
+;(define (a sym) 
+;  (syntax-object->datum (get-lifted-var sym)))
+;(define cd-stx 
+;  (datum->syntax-object #f 'cd))
+;(eq? (a (datum->syntax-object #f 'ab)) 'lifter-ab-0)
+;(eq? (a cd-stx) 'lifter-cd-1)
+;(eq? (a (datum->syntax-object #f 'ef)) 'lifter-ef-2)
+;(eq? (a cd-stx) 'lifter-cd-1)
