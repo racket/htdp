@@ -55,6 +55,7 @@
      
      draw-pixmap-posn
      draw-pixmap
+     save-pixmap
      
      copy-viewport 
      

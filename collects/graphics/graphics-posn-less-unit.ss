@@ -1009,7 +1009,7 @@
     (opt-lambda (filename [type 'unknown])
       (check 'draw-pixmap-posn
 	     (andp string? file-exists?) filename "filename"
-	     (lambda (x) (memq x '(gif xbm xpm bmp pict unknown))) type "file type")
+	     (lambda (x) (memq x '(gif xbm xpm bmp pict unknown))) type "file type symbol")
       (let* ([bitmap (make-object mred:bitmap% filename type)])
 	(lambda (viewport)
 	  (check 'draw-pixmap-posn
@@ -1046,7 +1046,18 @@
 	     [target-buffer-dc (viewport-buffer-dc target)])
 	(send target-dc draw-bitmap source-bitmap 0 0)
 	(send target-buffer-dc draw-bitmap source-bitmap 0 0))))
-  
+
+  (define save-pixmap
+    (lambda (viewport)
+      (check 'save-pixmap
+	     viewport? viewport "viewport")
+      (opt-lambda (filename [kind 'xpm])
+	(check 'save-pixmap
+	       (andp string? (orp relative-path? absolute-path?)) filename "filename"
+	       (lambda (x) (memq x '(xpm xbm bmp pict))) kind "file type symbol")
+	(let ([bm (viewport-bitmap viewport)])
+	  (send bm save-file filename kind)))))
+
   (define sixlib-eventspace #f)
   
   (define make-open-viewport
