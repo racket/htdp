@@ -1250,14 +1250,11 @@
                                               (syntax->list (syntax (rhs-expr ...))))])
            (quasisyntax/loc stx
              (let-values ([(tmp-id) rhs-expr] ...)
-               #,(syntax-property
-                  #`(let-syntaxes ([(name) (make-undefined-check
+               (let-syntaxes ([(name) (make-undefined-check
                                             (quote-syntax check-not-undefined)
                                             (quote-syntax tmp-id))]
                                    ...)
-                      expr)
-                  'stepper-skipto
-                  (list syntax-e cdr cdr car)))))]
+                      expr))))]
 	[_else (bad-let-form 'let stx stx)]))
 
     (define (intermediate-let*/proc stx)
