@@ -122,11 +122,10 @@
     (set! the-frame
           (new (class frame%
                  (super-new)
-                 (rename [super-on-close on-close])
-                 (define/override (on-close)        
+                 (define/augment (on-close)        
                    ;; shut down the timer when the window is destroyed
                    (send the-time stop)
-                   (super-on-close)))
+                   (inner (void) on-close)))
                (label "DrScheme")))
     (send 
      (new (class editor-canvas%
