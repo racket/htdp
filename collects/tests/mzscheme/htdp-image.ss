@@ -92,7 +92,8 @@
 
 (define current-htdp-lang '(lib "htdp-beginner.ss" "lang"))
 (load-relative "htdp-test.ss")
-(require (lib "htdp-beginner.ss" "lang"))
+(require (lib "htdp-beginner.ss" "lang")
+         (lib "image.ss" "htdp"))
 
 (htdp-test #t 'image? (image? (rectangle 10 10 'solid 'blue)))
 (htdp-test #f 'image? (image? 5))
@@ -118,6 +119,7 @@
 (htdp-top (define aclr (make-alpha-color 255 0 0 0)))
 
 (htdp-top (define (p00 i) (move-pinhole i (- (pinhole-x i)) (- (pinhole-y i)))))
+(htdp-top (define (ignore x) 'ignore))
 
 (eval `(htdp-top (define image-snip1 ,image-snip1)))
 (eval `(htdp-top (define image-snip2 ,image-snip2)))
@@ -812,5 +814,82 @@ snips as arguments
 (htdp-test 1
            'bs-pinhole-y
            (pinhole-y image-snip2))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; test color arguments
+;;
+
+(htdp-test 'ignore
+           'clr-rectangle-sym
+           (ignore (rectangle 10 10 'solid 'blue)))
+(htdp-test 'ignore
+           'clr-rectangle-str
+           (ignore (rectangle 10 10 'solid "blue")))
+(htdp-test 'ignore
+           'clr-rectangle-clr
+           (ignore (rectangle 10 10 'solid (make-color 0 0 255))))
+
+(htdp-test 'ignore
+           'clr-ellipse-sym
+           (ignore (ellipse 10 10 'solid 'blue)))
+(htdp-test 'ignore
+           'clr-ellipse-str
+           (ignore (ellipse 10 10 'solid "blue")))
+(htdp-test 'ignore
+           'clr-ellipse-clr
+           (ignore (ellipse 10 10 'solid (make-color 0 0 255))))
+
+(htdp-test 'ignore
+           'clr-circle-sym
+           (ignore (circle 10 'solid 'blue)))
+(htdp-test 'ignore
+           'clr-circle-str
+           (ignore (circle 10 'solid "blue")))
+(htdp-test 'ignore
+           'clr-circle-clr
+           (ignore (circle 10 'solid (make-color 0 0 255))))
+
+(htdp-test 'ignore
+           'clr-triangle-sym
+           (ignore (triangle 10 'solid 'blue)))
+(htdp-test 'ignore
+           'clr-triangle-str
+           (ignore (triangle 10 'solid "blue")))
+(htdp-test 'ignore
+           'clr-triangle-clr
+           (ignore (triangle 10 'solid (make-color 0 0 255))))
+
+(htdp-test 'ignore
+           'clr-line-sym
+           (ignore (line 10 10 'blue)))
+(htdp-test 'ignore
+           'clr-line-str
+           (ignore (line 10 10 "blue")))
+(htdp-test 'ignore
+           'clr-line-clr
+           (ignore (line 10 10 (make-color 0 0 255))))
+
+(htdp-test 'ignore
+           'clr-add-line-sym
+           (ignore (add-line (rectangle 1 1 'solid 'blue) 0 0 1 1 'blue)))
+(htdp-test 'ignore
+           'clr-add-line-str
+           (ignore (add-line (rectangle 1 1 'solid 'blue) 0 0 1 1 "blue")))
+(htdp-test 'ignore
+           'clr-add-line-clr
+           (ignore (add-line (rectangle 1 1 'solid 'blue) 0 0 1 1 (make-color 0 0 255))))
+
+(htdp-test 'ignore
+           'clr-text-sym
+           (ignore (text "abc" 12 'blue)))
+(htdp-test 'ignore
+           'clr-text-str
+           (ignore (text "abc" 12 "blue")))
+(htdp-test 'ignore
+           'clr-text-clr
+           (ignore (text "abc" 12 (make-color 0 0 255))))
+
+
 
 (report-errs)
