@@ -14,17 +14,14 @@
            "my-macros.ss"
 	   (lib "contracts.ss"))
 
-  (provide
-   reconstruct-completed ; : reconstruct-completed-contract
-   reconstruct-current ; : syntax (list-of mark) symbol (list-of value) -> (list (listof sexp) (listof sexp))
+  (provide/contract 
+   [reconstruct-completed (-> syntax? any? any)]
+   [reconstruct-current (-> syntax? mark-list? symbol? (listof any?)
+       (vector/p (listof exp-with-holes?) (listof exp-without-holes?)))]
    final-mark-list?
-   skip-step?
-   set-render-settings! ; (-> render-settings-contract any)
+   [skip-step? (-> break-kind? mark-list? boolean?)]
+   [set-render-settings! (-> render-settings-contract any)]
    )
-  
-  (define reconstruct-current-contract
-   (-> syntax? mark-list? symbol? (listof any?)
-       (vector/p (listof exp-with-holes?) (listof exp-without-holes?))))
   
   (define-values (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? render-to-sexp)
     (let ([not-set-yet (lx (error 'reconstruct "render-settings not yet set"))])
@@ -40,8 +37,6 @@
        (set! render-to-sexp (vector-ref render-settings 3)))
      'reconstruct
      'caller))
-  
-  (define reconstruct-completed-contract (-> syntax? any? any))
   
   (define the-undefined-value (letrec ([x x]) x))
   
@@ -183,19 +178,14 @@
                  ;                                                           ;           
                  ;                                                           ;           
                                                                                          
-  (define skip-step?
-    (contract
-     (-> break-kind? mark-list? boolean?)
-     (lambda (break-kind mark-list)
-       (case break-kind
-         ((result-value-break result-exp-break)
-          #f)
-         ((normal-break)
-          (skip-redex-step? mark-list))
-         ((double-break late-let-break)
-          (error 'answer "lifting turned off"))))
-     'reconstruct-module
-     'caller))  
+  (define (skip-step? break-kind mark-list)
+    (case break-kind
+      ((result-value-break result-exp-break)
+       #f)
+      ((normal-break)
+       (skip-redex-step? mark-list))
+      ((double-break late-let-break)
+       (error 'answer "lifting turned off"))))  
   
   (define (skip-redex-step? mark-list)
     (and (pair? mark-list)
@@ -580,51 +570,46 @@
   ; also, the examination of the stepper-define-hint and the consequent restructuring should 
   ; probably be in the unwinder, rather than here.  Ugh.
   
-  (define reconstruct-completed
-    (contract
-     reconstruct-completed-contract
-     (lambda (expr value)
-       (cond 
-         [(syntax-property expr 'stepper-skipto) =>
-          (lambda (skipto)
-            (skipto-reconstruct skipto expr
-                                (lambda (expr)
-                                  (reconstruct-completed expr value))))]
-         [(syntax-property expr 'stepper-define-struct-hint) =>
-          (lambda (define-struct-info)
-            (syntax-object->datum (cadr define-struct-info)))]
-         [else
-          (syntax-object->datum
-           (kernel:kernel-syntax-case expr #f
-             [(define-values vars-stx body)
-              (let* ([vars (syntax->list (syntax vars-stx))]
-                     [values (map global-lookup (map syntax-e vars))]
-                     [recon-vars (map recon-value values)])
-                (unless (= (length vars) 1)
-                  (error 'reconstruct "final reconstruct fails on multiple-values define\n"))
-                (with-syntax ([name (car vars)])
-                   (case (syntax-property expr 'stepper-define-hint)
-                     ((lambda-define) 
-                      (with-syntax ([recon (reconstruct-completed-procedure (car values))])
-                        (syntax (define name recon))))
-                     ((shortened-proc-define) 
-                      (kernel:kernel-syntax-case (reconstruct-completed-procedure (car values)) #f
-                        [(lambda (arg ...) body)
-                         (syntax (define (name arg ...) body))]
-                        [else (error 'reconstruct "non-procedure as result of procedure definition: ~e\n"
-                                     (syntax-object->datum (reconstruct-completed-procedure (car values))))]))
-                     ((non-lambda-define) 
-                      (with-syntax ([source-name (car recon-vars)])
-                        (syntax (define name source-name))))
-                     (else 
-                      (with-syntax ([source-name (car recon-vars)])
-                        (syntax (define name source-name)))
-                      ;(error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property expr 'stepper-define-hint))
-                      ))))]
-             [else
-              (recon-value value)]))]))
-     'reconstruct-completed
-     'caller))
+  (define (reconstruct-completed expr value)
+    (cond 
+      [(syntax-property expr 'stepper-skipto) =>
+       (lambda (skipto)
+         (skipto-reconstruct skipto expr
+                             (lambda (expr)
+                               (reconstruct-completed expr value))))]
+      [(syntax-property expr 'stepper-define-struct-hint) =>
+       (lambda (define-struct-info)
+         (syntax-object->datum (cadr define-struct-info)))]
+      [else
+       (syntax-object->datum
+        (kernel:kernel-syntax-case expr #f
+          [(define-values vars-stx body)
+           (let* ([vars (syntax->list (syntax vars-stx))]
+                  [values (map global-lookup (map syntax-e vars))]
+                  [recon-vars (map recon-value values)])
+             (unless (= (length vars) 1)
+               (error 'reconstruct "final reconstruct fails on multiple-values define\n"))
+             (with-syntax ([name (car vars)])
+               (case (syntax-property expr 'stepper-define-hint)
+                 ((lambda-define) 
+                  (with-syntax ([recon (reconstruct-completed-procedure (car values))])
+                    (syntax (define name recon))))
+                 ((shortened-proc-define) 
+                  (kernel:kernel-syntax-case (reconstruct-completed-procedure (car values)) #f
+                    [(lambda (arg ...) body)
+                     (syntax (define (name arg ...) body))]
+                    [else (error 'reconstruct "non-procedure as result of procedure definition: ~e\n"
+                                 (syntax-object->datum (reconstruct-completed-procedure (car values))))]))
+                 ((non-lambda-define) 
+                  (with-syntax ([source-name (car recon-vars)])
+                    (syntax (define name source-name))))
+                 (else 
+                  (with-syntax ([source-name (car recon-vars)])
+                    (syntax (define name source-name)))
+                  ;(error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property expr 'stepper-define-hint))
+                  ))))]
+          [else
+           (recon-value value)]))]))
   
   ; : (-> syntax? syntax? sexp?)
   ; DESPERATELY SEEKING ABSTRACTION
@@ -691,239 +676,231 @@
   
   ; reconstruct-current : syntax (list-of mark) symbol (list-of value) -> (list (listof sexp) (listof sexp))
 
-  (define reconstruct-current
-    (contract
-     (-> syntax? mark-list? break-kind? list? (listof (listof any?)))
-     (lambda (expr mark-list break-kind returned-value-list)
-       
-       (local
-           (
-            
-            ; ;;  ;;;    ;;;   ;;;   ; ;;          ;  ; ;;   ; ;;    ;;;   ; ;;
-            ;;   ;   ;  ;     ;   ;  ;;  ;         ;  ;;  ;  ;;  ;  ;   ;  ;;  
-            ;    ;   ;  ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;   ;  ;   
-            ;    ;;;;;  ;     ;   ;  ;   ;  ;;;;;  ;  ;   ;  ;   ;  ;;;;;  ;   
-            ;    ;      ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;      ;   
-            ;    ;      ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;      ;   
-            ;     ;;;;   ;;;   ;;;   ;   ;         ;  ;   ;  ;   ;   ;;;;  ;   
-            
-            
-            ; recon-inner ((listof mark) SYNTAX-OBJECT -> (listof SYNTAX-OBJECT) (listof SYNTAX-OBJECT) SYNTAX-OBJECT)
-            
-            (define (recon-inner mark-list so-far)
-              (let* ([recon-source-current-marks 
-                      (lambda (expr)
-                        (recon-source-expr expr mark-list null))]
-                     [top-mark (car mark-list)]
-                     [expr (mark-source top-mark)]
-                     
-                     [recon-let
-                      (lambda ()
-                        (with-syntax ([(label ((vars rhs) ...) . bodies) expr])
-                          (let*-2vals ([binding-sets (map syntax->list (syntax->list (syntax (vars ...))))]
-                                       [binding-list (multi-append binding-sets)]
-                                       [rhs-vals (map (lambda (arg-binding) 
-                                                        (lookup-binding mark-list arg-binding))
-                                                      binding-list)]
-                                       [rhs-val-sets (reshape-list rhs-vals binding-sets)]
-                                       [rhs-name-sets
-                                        (map (lambda (binding-set)
-                                               (map (lambda (binding)
-                                                      (syntax-property binding
-                                                                       'stepper-lifted-name
-                                                                       (binding-lifted-name mark-list binding)))
-                                                    binding-set))
-                                             binding-sets)]
-                                       [glumps (map make-let-glump rhs-name-sets (syntax->list (syntax (rhs ...))) rhs-val-sets)]
-                                       [num-defns-done (lookup-binding mark-list let-counter)]
-                                       [(done-glumps not-done-glumps)
-                                        (n-split-list num-defns-done glumps)]
-                                       [recon-lifted-val
-                                        (lambda (name val)
-                                          (let ([rectified-val (let-rhs-recon-value val)])
-                                            #`(#,name #,rectified-val)))]
-                                       [recon-lifted 
-                                        (lambda (names expr)
-                                          #`(#,names #,expr))]
-                                       [before-bindings
-                                        (multi-append
-                                         (map
-                                          (lambda (glump)
-                                            (let* ([rhs-val-set (let-glump-val-set glump)]
-                                                   [rhs-name-set (let-glump-name-set glump)])
-                                              (map recon-lifted-val rhs-name-set rhs-val-set)))
-                                          done-glumps))]
-                                       [reconstruct-remaining-def
-                                        (lambda (glump)
-                                          (let ([rhs-source (let-glump-exp glump)]
-                                                [rhs-name-set (let-glump-name-set glump)])
-                                            (recon-lifted rhs-name-set
-                                                          (recon-source-current-marks rhs-source))))]
-                                       [after-bindings
-                                        (if (pair? not-done-glumps)
-                                            (if (eq? so-far nothing-so-far)
-                                                (map reconstruct-remaining-def not-done-glumps)
-                                                (cons (recon-lifted (let-glump-name-set (car not-done-glumps)) so-far)
-                                                      (map reconstruct-remaining-def (cdr not-done-glumps))))
-                                            null)]
-                                       [recon-bindings (append before-bindings after-bindings)]
-                                       [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list))
-                                                              (syntax->list (syntax bodies)))])
-                                      (attach-info #`(#,(syntax label) #,recon-bindings #,@rectified-bodies) expr))))])
-                (kernel:kernel-syntax-case expr #f 
-                  ; variable references
-                  [id
-                   (identifier? (syntax id))
-                   (if (eq? so-far nothing-so-far)
-                       (recon-source-current-marks expr)
-                       (error 'recon-inner "variable reference given as context: ~a" expr))]
-                  
-                  [(#%top . id)
-                   (if (eq? so-far nothing-so-far)
-                       (recon-source-current-marks expr)
-                       (error 'recon-inner "variable reference given as context: ~a" expr))]
-                  
-                  ; applications
-                  [(#%app . terms)
-                   (attach-info
-                    (let* ([sub-exprs (syntax->list (syntax terms))]
-                           [arg-temps (build-list (length sub-exprs) get-arg-var)]
-                           [arg-vals (map (lambda (arg-temp) 
-                                            (lookup-binding mark-list arg-temp))
-                                          arg-temps)])
-                      (case (mark-label (car mark-list))
-                        ((not-yet-called)
-                         (let*-2vals ([(evaluated unevaluated) (split-list (lambda (x) (eq? (cadr x) *unevaluated*))
-                                                                           (zip sub-exprs arg-vals))]
-                                      [rectified-evaluated (map recon-value (map cadr evaluated))])
-                                     (if (null? unevaluated)
-                                         #`#,rectified-evaluated
-                                         #`(#,@rectified-evaluated
-                                            #,so-far 
-                                            #,@(map recon-source-current-marks (cdr (map car unevaluated)))))))
-                        ((called)
-                         (if (eq? so-far nothing-so-far)
-                              (datum->syntax-object #'here `(...)) ; in unannotated code
-                              (datum->syntax-object #'here `(... ,so-far ...))))
-                        (else
-                         (error "bad label in application mark in expr: ~a" expr))))
-                    expr)]
-                  
-                  ; define-struct 
-                  ;               
-                  ;               [(z:struct-form? expr)
-                  ;                 (if (comes-from-define-struct? expr)
-                  ;                     so-far
-                  ;                     (let ([super-expr (z:struct-form-super expr)]
-                  ;                           [raw-type (utils:read->raw (z:struct-form-type expr))]
-                  ;                           [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
-                  ;                       (if super-expr
-                  ;                           `(struct (,raw-type ,so-far)
-                  ;                                    ,raw-fields)
-                  ;                           `(struct ,raw-type ,raw-fields))))]
-                  
-                  ; if
-                  [(if test then else)
-                   (attach-info
-                    (let ([test-exp (if (eq? so-far nothing-so-far)
-                                        (recon-value (lookup-binding mark-list if-temp))
-                                        so-far)])
-                      #`(if #,test-exp 
-                                   #,(recon-source-current-marks (syntax then))
-                                   #,(recon-source-current-marks (syntax else))))
-                    expr)]
-                  
-                  ; quote : there is no break on a quote.
-                  
-                  ; begin : may not occur directly, but will occur in the expansion of cond, now that I'm no longer
-                  ; masking that out with stepper-skipto. Furthermore, exactly one expression can occur inside it.
-                  
-                  [(begin clause)
-                   (attach-info
-                    (if (eq? so-far nothing-so-far)
-                        #`(begin #,(recon-source-current-marks (syntax clause)))
-                        (error 
-                         'recon-inner
-                         "stepper:reconstruct: one-clause begin appeared as context: ~a" (syntax-object->datum expr)))
-                    expr)]
-                   
-                  ; begin0 : may not occur directly except in advanced
-                  
-                  ; let-values
-                  
-                  [(let-values . rest) (recon-let)]
-                  
-                  [(letrec-values . rest) (recon-let)]
-                  
-                  ; define-values : define's don't get marks, so they can't occur here
-                  
-                  ; lambda : there is no break on a lambda
-                  
-                  [else
-                   (error
-                    'recon-inner
-                    "stepper:reconstruct: unknown object to reconstruct: ~a" (syntax-object->datum expr))])))
-            
-            
-            (define redex #f)
-            
-            ; the main recursive reconstruction loop is in recon:
-            ; recon : (syntax-object mark-list boolean -> syntax-object)
-            
-            (define (recon so-far mark-list first)
-              (if (null? mark-list)
-                  (reconstruct-top-level expr so-far)
-                  (let ([reconstructed (recon-inner mark-list so-far)])
-                    (recon
-                     (if first
-                         (begin
-                           (set! redex reconstructed)
-                           highlight-placeholder-stx)
-                         reconstructed)
-                     (cdr mark-list)
-                     #f))))
-            
-            ; we're turning off lifting, for the moment:
-            
-            ;         (define (rectify-let-values-step)
-            ;           (let*-values ([(redex) (recon-source-expr (mark-source (car mark-list)) mark-list)]
-            ;                         [(before-step) (recon null highlight-placeholder-stx (cdr mark-list) #f)]
-            ;                         [(r-before r-after reduct) (recon-inner mark-list nothing-so-far)]
-            ;                         [(new-defs) (append r-before r-after)]
-            ;                         [(after-step) (recon (build-list (length new-defs) 
-            ;                                                          (lambda (x) highlight-placeholder-stx))
-            ;                                              highlight-placeholder-stx
-            ;                                              (cdr mark-list) 
-            ;                                              #f)])
-            ;             (append (unwind before-step (list redex))
-            ;                     (unwind after-step (append new-defs (list reduct))))))
-            
-            (define answer
-              (map (lambda (x) (map syntax-object->datum x))
-                   (case break-kind
-                     ((result-value-break result-exp-break)
-                      (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
-                                            (recon-source-expr (mark-source (car mark-list)) mark-list null)
-                                            (recon-value (car returned-value-list)))]
-                             [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
-                        (unwind (list recon-expr) (list innermost))))
-                     ((normal-break)
-                      (let ([recon-expr (recon nothing-so-far mark-list #t)])
-                        (unwind (list recon-expr) (list redex))))
-                     ((double-break late-let-break)
-                      (error 'answer "lifting turned off"))
-                     ;                  ((double-break)
-                     ;                   (rectify-let-values-step))
-                     ;                  ((late-let-break)
-                     ;                   (let-values ([(before after junk) (recon-inner mark-list nothing-so-far)])
-                     ;                     (unless (null? after)
-                     ;                       (error 'answer "non-empty 'after' defs in late-let-break: ~a" (map syntax-object->datum after)))
-                     ;                     (list before)))
-                     (else
-                      (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
-            
-            )
+  (define (reconstruct-current expr mark-list break-kind returned-value-list)
+    (local
+        (
          
-         answer))
-     'reconstruct-module
-     'caller)))
+         ; ;;  ;;;    ;;;   ;;;   ; ;;          ;  ; ;;   ; ;;    ;;;   ; ;;
+         ;;   ;   ;  ;     ;   ;  ;;  ;         ;  ;;  ;  ;;  ;  ;   ;  ;;  
+         ;    ;   ;  ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;   ;  ;   
+         ;    ;;;;;  ;     ;   ;  ;   ;  ;;;;;  ;  ;   ;  ;   ;  ;;;;;  ;   
+         ;    ;      ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;      ;   
+         ;    ;      ;     ;   ;  ;   ;         ;  ;   ;  ;   ;  ;      ;   
+         ;     ;;;;   ;;;   ;;;   ;   ;         ;  ;   ;  ;   ;   ;;;;  ;   
+         
+         
+         (define (recon-inner mark-list so-far)
+           (let* ([recon-source-current-marks 
+                   (lambda (expr)
+                     (recon-source-expr expr mark-list null))]
+                  [top-mark (car mark-list)]
+                  [expr (mark-source top-mark)]
+                  
+                  [recon-let
+                   (lambda ()
+                     (with-syntax ([(label ((vars rhs) ...) . bodies) expr])
+                       (let*-2vals ([binding-sets (map syntax->list (syntax->list (syntax (vars ...))))]
+                                    [binding-list (multi-append binding-sets)]
+                                    [rhs-vals (map (lambda (arg-binding) 
+                                                     (lookup-binding mark-list arg-binding))
+                                                   binding-list)]
+                                    [rhs-val-sets (reshape-list rhs-vals binding-sets)]
+                                    [rhs-name-sets
+                                     (map (lambda (binding-set)
+                                            (map (lambda (binding)
+                                                   (syntax-property binding
+                                                                    'stepper-lifted-name
+                                                                    (binding-lifted-name mark-list binding)))
+                                                 binding-set))
+                                          binding-sets)]
+                                    [glumps (map make-let-glump rhs-name-sets (syntax->list (syntax (rhs ...))) rhs-val-sets)]
+                                    [num-defns-done (lookup-binding mark-list let-counter)]
+                                    [(done-glumps not-done-glumps)
+                                     (n-split-list num-defns-done glumps)]
+                                    [recon-lifted-val
+                                     (lambda (name val)
+                                       (let ([rectified-val (let-rhs-recon-value val)])
+                                         #`(#,name #,rectified-val)))]
+                                    [recon-lifted 
+                                     (lambda (names expr)
+                                       #`(#,names #,expr))]
+                                    [before-bindings
+                                     (multi-append
+                                      (map
+                                       (lambda (glump)
+                                         (let* ([rhs-val-set (let-glump-val-set glump)]
+                                                [rhs-name-set (let-glump-name-set glump)])
+                                           (map recon-lifted-val rhs-name-set rhs-val-set)))
+                                       done-glumps))]
+                                    [reconstruct-remaining-def
+                                     (lambda (glump)
+                                       (let ([rhs-source (let-glump-exp glump)]
+                                             [rhs-name-set (let-glump-name-set glump)])
+                                         (recon-lifted rhs-name-set
+                                                       (recon-source-current-marks rhs-source))))]
+                                    [after-bindings
+                                     (if (pair? not-done-glumps)
+                                         (if (eq? so-far nothing-so-far)
+                                             (map reconstruct-remaining-def not-done-glumps)
+                                             (cons (recon-lifted (let-glump-name-set (car not-done-glumps)) so-far)
+                                                   (map reconstruct-remaining-def (cdr not-done-glumps))))
+                                         null)]
+                                    [recon-bindings (append before-bindings after-bindings)]
+                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list))
+                                                           (syntax->list (syntax bodies)))])
+                         (attach-info #`(#,(syntax label) #,recon-bindings #,@rectified-bodies) expr))))])
+             (kernel:kernel-syntax-case expr #f 
+               ; variable references
+               [id
+                (identifier? (syntax id))
+                (if (eq? so-far nothing-so-far)
+                    (recon-source-current-marks expr)
+                    (error 'recon-inner "variable reference given as context: ~a" expr))]
+               
+               [(#%top . id)
+                (if (eq? so-far nothing-so-far)
+                    (recon-source-current-marks expr)
+                    (error 'recon-inner "variable reference given as context: ~a" expr))]
+               
+               ; applications
+               [(#%app . terms)
+                (attach-info
+                 (let* ([sub-exprs (syntax->list (syntax terms))]
+                        [arg-temps (build-list (length sub-exprs) get-arg-var)]
+                        [arg-vals (map (lambda (arg-temp) 
+                                         (lookup-binding mark-list arg-temp))
+                                       arg-temps)])
+                   (case (mark-label (car mark-list))
+                     ((not-yet-called)
+                      (let*-2vals ([(evaluated unevaluated) (split-list (lambda (x) (eq? (cadr x) *unevaluated*))
+                                                                        (zip sub-exprs arg-vals))]
+                                   [rectified-evaluated (map recon-value (map cadr evaluated))])
+                        (if (null? unevaluated)
+                            #`#,rectified-evaluated
+                            #`(#,@rectified-evaluated
+                               #,so-far 
+                               #,@(map recon-source-current-marks (cdr (map car unevaluated)))))))
+                     ((called)
+                      (if (eq? so-far nothing-so-far)
+                          (datum->syntax-object #'here `(...)) ; in unannotated code
+                          (datum->syntax-object #'here `(... ,so-far ...))))
+                     (else
+                      (error "bad label in application mark in expr: ~a" expr))))
+                 expr)]
+               
+               ; define-struct 
+               ;               
+               ;               [(z:struct-form? expr)
+               ;                 (if (comes-from-define-struct? expr)
+               ;                     so-far
+               ;                     (let ([super-expr (z:struct-form-super expr)]
+               ;                           [raw-type (utils:read->raw (z:struct-form-type expr))]
+               ;                           [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
+               ;                       (if super-expr
+               ;                           `(struct (,raw-type ,so-far)
+               ;                                    ,raw-fields)
+               ;                           `(struct ,raw-type ,raw-fields))))]
+               
+               ; if
+               [(if test then else)
+                (attach-info
+                 (let ([test-exp (if (eq? so-far nothing-so-far)
+                                     (recon-value (lookup-binding mark-list if-temp))
+                                     so-far)])
+                   #`(if #,test-exp 
+                         #,(recon-source-current-marks (syntax then))
+                         #,(recon-source-current-marks (syntax else))))
+                 expr)]
+               
+               ; quote : there is no break on a quote.
+               
+               ; begin : may not occur directly, but will occur in the expansion of cond, now that I'm no longer
+               ; masking that out with stepper-skipto. Furthermore, exactly one expression can occur inside it.
+               
+               [(begin clause)
+                (attach-info
+                 (if (eq? so-far nothing-so-far)
+                     #`(begin #,(recon-source-current-marks (syntax clause)))
+                     (error 
+                      'recon-inner
+                      "stepper:reconstruct: one-clause begin appeared as context: ~a" (syntax-object->datum expr)))
+                 expr)]
+               
+               ; begin0 : may not occur directly except in advanced
+               
+               ; let-values
+               
+               [(let-values . rest) (recon-let)]
+               
+               [(letrec-values . rest) (recon-let)]
+               
+               ; define-values : define's don't get marks, so they can't occur here
+               
+               ; lambda : there is no break on a lambda
+               
+               [else
+                (error
+                 'recon-inner
+                 "stepper:reconstruct: unknown object to reconstruct: ~a" (syntax-object->datum expr))])))
+         
+         
+         (define redex #f)
+         
+         ; the main recursive reconstruction loop is in recon:
+         ; recon : (syntax-object mark-list boolean -> syntax-object)
+         
+         (define (recon so-far mark-list first)
+           (if (null? mark-list)
+               (reconstruct-top-level expr so-far)
+               (let ([reconstructed (recon-inner mark-list so-far)])
+                 (recon
+                  (if first
+                      (begin
+                        (set! redex reconstructed)
+                        highlight-placeholder-stx)
+                      reconstructed)
+                  (cdr mark-list)
+                  #f))))
+         
+         ; we're turning off lifting, for the moment:
+         
+         ;         (define (rectify-let-values-step)
+         ;           (let*-values ([(redex) (recon-source-expr (mark-source (car mark-list)) mark-list)]
+         ;                         [(before-step) (recon null highlight-placeholder-stx (cdr mark-list) #f)]
+         ;                         [(r-before r-after reduct) (recon-inner mark-list nothing-so-far)]
+         ;                         [(new-defs) (append r-before r-after)]
+         ;                         [(after-step) (recon (build-list (length new-defs) 
+         ;                                                          (lambda (x) highlight-placeholder-stx))
+         ;                                              highlight-placeholder-stx
+         ;                                              (cdr mark-list) 
+         ;                                              #f)])
+         ;             (append (unwind before-step (list redex))
+         ;                     (unwind after-step (append new-defs (list reduct))))))
+         
+         (define answer
+           (map (lambda (x) (map syntax-object->datum x))
+                (case break-kind
+                  ((result-value-break result-exp-break)
+                   (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
+                                         (recon-source-expr (mark-source (car mark-list)) mark-list null)
+                                         (recon-value (car returned-value-list)))]
+                          [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
+                     (unwind (list recon-expr) (list innermost))))
+                  ((normal-break)
+                   (let ([recon-expr (recon nothing-so-far mark-list #t)])
+                     (unwind (list recon-expr) (list redex))))
+                  ((double-break late-let-break)
+                   (error 'answer "lifting turned off"))
+                  ;                  ((double-break)
+                  ;                   (rectify-let-values-step))
+                  ;                  ((late-let-break)
+                  ;                   (let-values ([(before after junk) (recon-inner mark-list nothing-so-far)])
+                  ;                     (unless (null? after)
+                  ;                       (error 'answer "non-empty 'after' defs in late-let-break: ~a" (map syntax-object->datum after)))
+                  ;                     (list before)))
+                  (else
+                   (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
+         
+         )
+      
+      answer)))

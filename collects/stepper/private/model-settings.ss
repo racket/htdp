@@ -17,30 +17,28 @@
   ; everything else wants to be a unit too. For instance, ta make sure that 
   ; the reconstructor gets the right invocation of the unit, it needs to be a 
   ; unit as well.  Pretty soon, everything is units.
-  
-  (provide
 
-   ; namespace queries
-   check-global-defined ; : (symbol -> boolean)
-   global-lookup
-   
-   get-render-settings ; (-> render-settings?)
-   fake-beginner-render-settings ; render-settings?
-   fake-beginner-wla-render-settings ; render-settings? ("beginner-with-list-abbreviations")
-   fake-mz-render-settings ; render-settings?
-   
-   render-settings? ; predicate
-   
-   set-render-to-string! ; (-> (-> any? string?) void?)
-   set-render-to-sexp! ; (-> (-> (-> any) any) void?)
-   )
-  
   ; contracts for procedures in the settings unit:
   ; true-false-printed? ; : ( -> boolean)
   ; constructor-style-printing? ; : ( -> boolean)
   ; abbreviate-cons-as-list? ; : ( -> boolean)
   ; render-to-sexp ; (TST -> TST)
   (define render-settings? (vector/p procedure? procedure? procedure? procedure?))
+
+  (provide/contract [check-global-defined (-> symbol? boolean?)]
+                    [global-lookup (-> any? any)]
+
+                    [render-settings? contract?]
+                    [get-render-settings (-> render-settings?)]
+                    [set-render-to-string! (-> (-> any? string?) void?)]
+                    [set-render-to-sexp! (-> (-> (-> any) any) void?)]
+                    
+                    [fake-beginner-render-settings render-settings?]
+                    [fake-beginner-wla-render-settings render-settings?]
+                    [fake-intermediate-render-settings render-settings?]
+                    [fake-intermediate/lambda-render-settings render-settings?]
+                    [fake-mz-render-settings render-settings?])
+  
 
   (define (render-to-string val)
     (error 'model-settings "render not set yet"))
@@ -72,65 +70,46 @@
                  (object-name val))
             (print-convert val)))))
     
-  (define fake-beginner-render-settings
-    (contract
-     render-settings?
-     (vector (lambda () #t) (lambda () #t) (lambda () #f) (make-fake-render-to-sexp #t #t #f))
-     'model-settings
-     'caller))
+  (define (lt) #t)
+  (define (lf) #f)
   
-    (define fake-beginner-wla-render-settings
-    (contract
-     render-settings?
-     (vector (lambda () #t) (lambda () #t) (lambda () #t) (make-fake-render-to-sexp #t #t #t))
-     'model-settings
-     'caller))
+  (define fake-beginner-render-settings
+    (vector lt lt lf (make-fake-render-to-sexp #t #t #f)))
+  
+  (define fake-beginner-wla-render-settings
+    (vector lt lt lt (make-fake-render-to-sexp #t #t #t)))
+  
+  (define fake-intermediate-render-settings
+    fake-beginner-wla-render-settings)
+  
+  (define fake-intermediate/lambda-render-settings
+    fake-beginner-wla-render-settings)
   
   (define fake-mz-render-settings
-    (contract
-     render-settings?
-     (vector booleans-as-true/false constructor-style-printing abbreviate-cons-as-list print-convert)
-     'model-settings
-     'caller))
+    (vector booleans-as-true/false constructor-style-printing abbreviate-cons-as-list print-convert))
   
   (define-struct test-struct () (make-inspector))
   
-  (define get-render-settings
-    (contract
-     (-> render-settings?)
-     (lambda ()
-       (let* ([true-false-printed/bool (string=? (render-to-string #t) "true")]
-              [constructor-style-printing/bool (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
-              [rendered-list (render-to-string '(3))]
-              [rendered-list-substring (substring rendered-list 
-                                                  0 
-                                                  (min 5 (string-length rendered-list)))]
-              [abbreviate-cons-as-list/bool (and constructor-style-printing/bool
-                                                 (string=? rendered-list-substring "(list"))])
-         (vector
-          (lambda () true-false-printed/bool)
-          (lambda () constructor-style-printing/bool)
-          (lambda () abbreviate-cons-as-list/bool)
-          render-to-sexp)))
-     'model-settings
-     'caller))
+  (define (get-render-settings)
+    (let* ([true-false-printed/bool (string=? (render-to-string #t) "true")]
+           [constructor-style-printing/bool (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
+           [rendered-list (render-to-string '(3))]
+           [rendered-list-substring (substring rendered-list 
+                                               0 
+                                               (min 5 (string-length rendered-list)))]
+           [abbreviate-cons-as-list/bool (and constructor-style-printing/bool
+                                              (string=? rendered-list-substring "(list"))])
+      (vector
+       (lambda () true-false-printed/bool)
+       (lambda () constructor-style-printing/bool)
+       (lambda () abbreviate-cons-as-list/bool)
+       render-to-sexp)))
   
-  (define check-global-defined
-    (contract
-     (-> symbol? boolean?)
-     (lambda (identifier)
-       (with-handlers
-           ([exn:variable? (lambda args #f)])
-         (global-lookup identifier)
-         #t))
-     'model-settings
-     'caller))
+  (define (check-global-defined identifier)
+    (with-handlers
+        ([exn:variable? (lambda args #f)])
+      (global-lookup identifier)
+      #t))
   
-  (define global-lookup
-    (contract
-     (-> symbol? any)
-     (lambda (identifier)
-       (namespace-variable-value identifier))
-     'model-settings
-     'caller))
-  )
+  (define (global-lookup identifier)
+    (namespace-variable-value identifier)))
