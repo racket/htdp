@@ -29,6 +29,7 @@
 		      (lib "kerncase.ss" "syntax")
 		      (lib "stx.ss" "syntax")
 		      (lib "struct.ss" "syntax")
+		      (lib "context.ss" "syntax")
 		      (lib "include.ss"))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -244,13 +245,12 @@
     
     ;; Check context for a `define' before even trying to
     ;; expand
+    (define-struct expanding-for-intermediate-local ())
     (define (ok-definition-context)
-      (or (memq (syntax-local-context) '(top-level module))
-	  (and (eq? (syntax-local-context) 'internal-define)
-	       ;; See `intermediate-local/proc'. 
-	       ;; Is there a better strategy?
-	       (expanding-for-intermediate-local))))
-    (define expanding-for-intermediate-local (make-parameter #f))
+      (let ([ctx (syntax-local-context)])
+	(or (memq ctx '(top-level module))
+	    (and (pair? ctx)
+		 (expanding-for-intermediate-local? (car ctx))))))
 
     ;; Use to generate nicer error messages than direct pattern
     ;; matching. The `where' argument is an English description
@@ -870,17 +870,17 @@
     (define (intermediate-local/proc stx)
       (syntax-case stx ()
 	[(_ (definition ...) . exprs)
-	 (let ([defns (syntax->list (syntax (definition ...)))])
+	 (let ([defns (syntax->list (syntax (definition ...)))]
+	       ;; The following context value lets teaching-language definition
+	       ;;  forms know that it's ok to expand in this internal
+	       ;;  definition context.
+	       [int-def-ctx (build-expand-context (make-expanding-for-intermediate-local))])
 	   (let* ([partly-expanded-defns 
 		   (map (lambda (d)
-			  ;; The following parameter lets teaching-language definition
-			  ;;  forms know that it's ok to expand in this internal
-			  ;;  definition context.
-			  (parameterize ([expanding-for-intermediate-local #t])
-			    (local-expand
-			     d
-			     'internal-define
-			     (kernel-form-identifier-list (quote-syntax here)))))
+			  (local-expand
+			   d
+			   int-def-ctx
+			   (kernel-form-identifier-list (quote-syntax here))))
 			defns)]
 		  [flattened-defns
 		   (let loop ([l partly-expanded-defns][origs defns])
