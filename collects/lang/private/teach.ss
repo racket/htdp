@@ -454,7 +454,7 @@
 	   (teach-syntax-error
 	    'quote
 	    stx
-	    "expected a name after a ', found ~a"
+	    "expected a tag after a ', found ~a"
 	    (something-else sym)))
 	 (syntax (quote expr)))]
       [_else (bad-use-error 'quote stx)]))

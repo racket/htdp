@@ -31,9 +31,6 @@
   ;; procedures:
   (provide-and-document
    procedures
-   
-   ("Reading and Printing"
-    (read (-> sexp) "to read input from the user"))
 
    ("Numbers: Integers, Rationals, Reals, Complex, Exacts, Inexacts"
     (number? (any -> boolean)
@@ -197,9 +194,6 @@
     (pi real
 	"the ratio of a circle's circumference to its diameter"))
    
-   ;;    (random-seed (int ->)
-   ;;	  "to reset the random-number generator to a particluar state")
-   
    ("Booleans" 
     (boolean? (any -> boolean)
 	      "to determine whether some value is a boolean")
@@ -287,7 +281,13 @@
 	  "in a list of pairs")
     (equal? (list list -> boolean)
 	    "to determine whether two lists are equal"))
-   
+
+   ("Posns"
+    (make-posn (number number -> posn) "to construct a posn")
+    (posn? (anything -> boolean) "to determine if its input is a posn")
+    (posn-x (posn -> number) "to extract the x component of a posn")
+    (posn-y (posn -> number) "to extract the y component of a posn"))
+
    ("Characters"
     (char? (any -> boolean)
 	   " ")
@@ -402,18 +402,15 @@
 
     (format (string any ... -> string)
 	    "to format a string, possibly embedding values"))
+
+   ("Reading and Printing"
+    (read (-> sexp) "to read input from the user"))
    
    ("Misc"
     ((beginner-error error) (symbol string -> void) "to signal an error")
     (struct? (any -> boolean) "to determine whether some value is a structure")
     (eq? (any any -> boolean) "to compare two values based on when they were created")
-    (exit ( -> void) "to exit the running program"))
-   
-   ("Posns"
-    (make-posn (number number -> posn) "to construct a posn")
-    (posn? (anything -> boolean) "to determine if its input is a posn")
-    (posn-x (posn -> number) "to extract the x component of a posn")
-    (posn-y (posn -> number) "to extract the y component of a posn"))))
+    (exit ( -> void) "to exit the running program"))))
 
 
 
