@@ -315,26 +315,16 @@
                            (recur-on-pieces #'(exp ...))]
                           [(#%datum . datum)
                            #'datum]
-                          [(#%let-values . rest)
+                          [(let-values . rest)
                            (unwind-mz-let stx)]
-                          [(#%letrec-values . rest)
+                          [(letrec-values . rest)
                            (unwind-mz-let stx)]
                           [else
                            (recur-on-pieces stx)]))])
                (if (syntax-property stx 'user-stepper-hint)
                    (case (syntax-property stx 'user-stepper-hint)
-                     [(lambda-define lifted-define non-lambda-define)
-                      (kernel:kernel-syntax-case stx #f
-                        [(define-values (name . others) body)
-                         (let ([lifted-name (if (eq? (syntax-property stx 'user-stepper-hint) 'lifted-define)
-                                                (construct-lifted-name #'name (syntax-property #'name 'stepper-lifted-name))
-                                                #'name)])
-                           (unless (null? (syntax-e #'others))
-                             (error 'reconstruct "reconstruct fails on multiple-values define\n"))
-                           #`(define #,lifted-name #,(inner #'body)))]
-                        [else (error 'macro-unwind "unexpected shape for expression: ~v with hint ~v" 
-                                     (syntax-object->datum stx) 
-                                     (syntax-property stx 'user-stepper-hint))])]
+                     [(lambda-define non-lambda-define)
+                      (unwind-define stx)]
                      
                      [(shortened-proc-define)
                       (kernel:kernel-syntax-case stx #f
@@ -365,20 +355,39 @@
                       (unwind-local stx)]
                      
                      [(comes-from-let)
-                      (with-syntax ([(let ([tmp rhs] ...) (local ((define var dc) ...) body)) (unwind-mz-let stx)])
-                        #`(let ([var rhs] ...) body))]
+                      (kernel:kernel-syntax-case stx #f
+                        [(define-values . rest) 
+                         (unwind-define stx)]
+                        [(let-values . rest)
+                         (with-syntax ([(let ([tmp rhs] ...) (local ((define var dc) ...) body)) (unwind-mz-let stx)])
+                           #`(let ([var rhs] ...) body))]
+                        [else (error 'unwind-macro "unexpected form for comes-from-let: ~v\n" (syntax-object->datum stx))])]
                      
                      ((quasiquote-the-cons-application) (unwind-quasiquote-the-cons-application stx))
                      
                      (else (fall-through)))
                    (fall-through)))))
          
+         (define (unwind-define stx)
+           (kernel:kernel-syntax-case stx #f
+             [(define-values (name . others) body)
+              (unless (null? (syntax-e #'others))
+                (error 'reconstruct "reconstruct fails on multiple-values define: ~v\n" (syntax-object->datum stx)))
+              (let* ([orig-name (or (syntax-property #'name 'stepper-orig-name)
+                                    #'name)]
+                     [lifted-name (if (syntax-property stx 'stepper-lifted-name)
+                                      (construct-lifted-name orig-name (syntax-property #'name 'stepper-lifted-name))
+                                      orig-name)])
+                #`(define #,lifted-name #,(inner #'body)))]
+             [else (error 'macro-unwind "unexpected shape for expression: ~v with hint ~v" 
+                          (syntax-object->datum stx) 
+                          (syntax-property stx 'user-stepper-hint))]))
          (define (unwind-mz-let stx)
            (with-syntax ([(label ([(var) rhs] ...) . bodies) stx])
              (with-syntax ([(rhs2 ...) (map inner (syntax->list #'(rhs ...)))]
                            [new-label (case (syntax-e #'label)
-                                        [(#%let-values) #'let]
-                                        [(#%letrec-values) #'letrec])])
+                                        [(let-values) #'let]
+                                        [(letrec-values) #'letrec])])
                #`(let ([var rhs2] ...) . #,(map inner (syntax->list #'bodies))))))
          
          (define (unwind-local stx)

@@ -246,7 +246,7 @@
             (lambda ()
               (kernel:kernel-syntax-case stx #f
                 [(tag ([(var ...) rhs] ...) body ...)
-                 (let* ([defns (map (lambda (defn-stx) (syntax-property (transfer-info defn-stx stx) 'stepper-hint 'lifted-define))
+                 (let* ([defns (map (lambda (defn-stx) (transfer-info defn-stx stx))
                                     (syntax->list #'((define-values (var ...) rhs) ...)))]
                         [bodies-list (syntax->list #'(body ...))]
                         [body (if (= (length bodies-list) 1) ; as far as I can tell, this source info is comprehensively lost.
