@@ -14,9 +14,9 @@
   (define (send-to-other-eventspace eventspace thunk)
     (parameterize ([current-eventspace eventspace])
       (queue-callback thunk)))
-
+  
   (define drscheme-eventspace (current-eventspace))
-
+  
   (define (send-to-drscheme-eventspace thunk)
     (send-to-other-eventspace drscheme-eventspace thunk))
   
@@ -42,7 +42,7 @@
     (memq identifier user-pre-defined-vars))
   
   (define user-namespace #f)
-
+  
   (define (check-global-defined identifier)
     (with-handlers
         ([exn:variable? (lambda args #f)])
@@ -52,14 +52,14 @@
   (define (global-lookup identifier)
     (parameterize ([current-namespace user-namespace])
       (global-defined-value identifier)))
-    
+  
   (define finished-exprs null)
-
+  
   (define current-expr #f)
   (define packaged-envs a:initial-env-package)
-         
+  
   (define user-eventspace (make-eventspace))
-         
+  
   ;; user eventspace management
   
   ; here's how this stuff works.  To prevent the processing of any old events
@@ -92,8 +92,8 @@
          (local-awaken-arg)
          (set! eval-depth (- eval-depth 1))
          (suspend-user-computation)]
-        [else (e:internal-error "unknown value in stepper-awaken-arg.")])))
-
+        [else (error "unknown value in stepper-awaken-arg.")])))
+  
   (define (continue-user-computation)
     (semaphore-wait stepper-command-waiting-semaphore)
     (set! stepper-awaken-arg 'step)
@@ -108,10 +108,10 @@
   (send-to-other-eventspace
    user-eventspace
    suspend-user-computation)
-
+  
   (define user-primitive-eval #f)
   (define user-vocabulary #f)
-         
+  
   (define reader 
     (z:read i:text-stream
             (z:make-location 1 1 0 "stepper-text")))
@@ -180,7 +180,7 @@
                         (lambda ()
                           (add-finished-expr expression-result)
                           (read-next-expr)))))))))))))
-
+  
   (define (check-for-repeated-names expr exn-handler)
     (with-handlers
         ([exn:user? exn-handler]
@@ -189,15 +189,17 @@
         (for-each (lambda (name) 
                     (when (check-global-defined name)
                       (e:static-error expr
-                             "name is already bound: ~s" name)))
+                                      "name is already bound: ~s" name)))
                   (map z:varref-var (z:define-values-form-vars expr))))))
-         
+  
   (define (add-finished-expr expression-result)
     (let ([reconstructed (r:reconstruct-completed current-expr expression-result)])
       (set! finished-exprs (append finished-exprs (list reconstructed)))))
   
   (define held-expr no-sexp)
   (define held-redex no-sexp)
+  
+  ; if there's a sexp which _doesnt_ contain a highlight in between two that do, we're in trouble.
   
   (define (redivide exprs)
     (letrec ([contains-highlight-placeholder
@@ -206,13 +208,23 @@
                     (or (contains-highlight-placeholder (car expr))
                         (contains-highlight-placeholder (cdr expr)))
                     (eq? expr highlight-placeholder)))])
-      (let loop ([exprs exprs] [before-accum (lambda (x) x)])
-        (cond [(null? exprs) 
-               (e:internal-error 'redivide "no sexp contained the highlight-placeholder.")]
-              [(contains-highlight-placeholder (car exprs))
-               (values (before-accum null) (car exprs) (cdr exprs))]
-              [else
-               (loop (cdr exprs) (lambda (x) (before-accum (cons (car exprs) x))))]))))
+      (let loop ([exprs exprs] [mode 'before] [before-accum (lambda (x) x)]
+                 [during-accum (lambda (x) x)] [after-accum (lambda (x) x)])
+        (let ([increase-thunk 
+               (lambda (thunk)
+                 (lambda (x) (thunk (cons (car exprs) x))))])
+          (cond [(null? exprs) 
+                 (if (eq? mode 'before)
+                     (error 'redivide "no sexp contained the highlight-placeholder.")
+                     (values (before-accum null) (during-accum null) (after-accum null)))]
+                [(contains-highlight-placeholder (car exprs))
+                 (if (eq? mode 'after)
+                     (error 'redivide "highlighted sexp when already in after mode")
+                     (loop (cdr exprs) 'during before-accum (increase-thunk during-accum) after-accum))]
+                [else
+                 (case mode
+                   ((before) (loop (cdr exprs) 'before (increase-thunk before-accum) during-accum after-accum))
+                   ((during after) (loop (cdr exprs) mode before-accum during-accum (increase-thunk after-accum))))]))))) 
   
   (define (break mark-list break-kind returned-value-list)
     (let ([double-redivide
@@ -221,24 +233,26 @@
                            [(before-2 current-2 after-2) (redivide new-exprs-after)]
                            [(_) (unless (and (equal? before before-2)
                                              (equal? after after-2))
-                            (e:internal-error 'break "reconstructed before or after defs are not equal."))])
+                                  (printf "before: ~a~nbefore-2: ~a~nafter: ~a~nafter-2: ~a~n"
+                                          before before-2 after after-2)
+                                  (error 'break "reconstructed before or after defs are not equal."))])
                (values (append finished-exprs before) current current-2 after)))]
-           [reconstruct-helper
+          [reconstruct-helper
            (lambda (finish-thunk)
              (send-to-drscheme-eventspace
               (lambda ()
                 (let* ([reconstruct-pair
                         (r:reconstruct-current current-expr mark-list break-kind returned-value-list)]
                        [reconstructed (car reconstruct-pair)]
-                       [redex (cadr reconstruct-pair)])
-                  (finish-thunk reconstructed redex)))))])
+                       [redex-list (cadr reconstruct-pair)])
+                  (finish-thunk reconstructed redex-list)))))])
       (case break-kind
         [(normal-break)
          (when (not (r:skip-redex-step? mark-list))
            (reconstruct-helper 
-            (lambda (reconstructed redex)
+            (lambda (reconstructed redex-list)
               (set! held-expr reconstructed)
-              (set! held-redex redex)
+              (set! held-redex-list redex-list)
               (continue-user-computation)))
            (suspend-user-computation))]
         [(result-break)
@@ -246,27 +260,27 @@
                         (and (null? returned-value-list)
                              (eq? held-expr no-sexp))))
            (reconstruct-helper 
-            (lambda (reconstructed reduct)
-;              ; this invariant (contexts should be the same)
-;              ; fails in the presence of unannotated code.  For instance,
-;              ; currently (map my-proc (cons 3 empty)) goes to
-;              ; (... <body-of-my-proc> ...), where the context of the first one is
-;              ; empty and the context of the second one is (... ...).
-;              ; so, I'll just disable this invariant test.
-;              (when (not (equal? reconstructed held-expr))
-;                (e:internal-error 'reconstruct-helper
-;                                  "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
-;                                  held-expr reconstructed))
+            (lambda (reconstructed reduct-list)
+              ;              ; this invariant (contexts should be the same)
+              ;              ; fails in the presence of unannotated code.  For instance,
+              ;              ; currently (map my-proc (cons 3 empty)) goes to
+              ;              ; (... <body-of-my-proc> ...), where the context of the first one is
+              ;              ; empty and the context of the second one is (... ...).
+              ;              ; so, I'll just disable this invariant test.
+              ;              (when (not (equal? reconstructed held-expr))
+              ;                (error 'reconstruct-helper
+              ;                                  "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
+              ;                                  held-expr reconstructed))
               (let*-values 
                   ([(new-finished current-pre current-post after) (double-redivide finished-exprs held-expr reconstructed)]
                    [(result) (make-before-after-result new-finished
-                                                     current-pre
-                                                     held-redex
-                                                     current-post
-                                                     reduct
-                                                     after)])
+                                                       current-pre
+                                                       held-redex-list
+                                                       current-post
+                                                       reduct-list
+                                                       after)])
                 (set! held-expr no-sexp)
-                (set! held-redex no-sexp)
+                (set! held-redex-list no-sexp)
                 (i:receive-result result))))
            (suspend-user-computation))]
         [(double-break)
@@ -277,17 +291,18 @@
             (let* ([reconstruct-quadruple
                     (r:reconstruct-current current-expr mark-list break-kind returned-value-list)])
               (when (not (eq? held-expr no-sexp))
-                (e:internal-error 'break-reconstruction
-                                  "held-expr not empty when a double-break occurred"))
+                (error 'break-reconstruction
+                       "held-expr not empty when a double-break occurred"))
               (let*-values 
-                  ([(new-finished current-pre current-post after) (double-redivide finished-exprs (list-ref reconstruct-quadruple 0) 
-                  (list-ref reconstruct-quadruple 2))])
+                  ([(new-finished current-pre current-post after) (double-redivide finished-exprs 
+                                                                                   (list-ref reconstruct-quadruple 0) 
+                                                                                   (list-ref reconstruct-quadruple 2))])
                 (unless (eq? current-post highlight-placeholder)
-                  (e:internal-error 'break "current-post should have been highlight-placeholder"))
+                  (error 'break "current-post should have been highlight-placeholder"))
                 (i:receive-result (make-before-after-result new-finished
                                                             current-pre
                                                             (list-ref reconstruct-quadruple 1)
-                                                            multiple-highlight
+                                                            current-post
                                                             (list-ref reconstruct-quadruple 3)
                                                             after))))))
          (suspend-user-computation)]
@@ -298,7 +313,7 @@
               (set! finished-exprs (append finished-exprs new-finished))
               (continue-user-computation))))
          (suspend-user-computation)]
-        [else (e:internal-error 'break "unknown label on break")])))
+        [else (error 'break "unknown label on break")])))
   
   (define (handle-exception exn)
     (if (not (eq? held-expr no-sexp))
@@ -308,7 +323,7 @@
                                                       held-expr held-redex (exn-message exn) after)))
         (begin
           (i:receive-result (make-error-result finished-exprs (exn-message exn))))))
-           
+  
   (define (make-exception-handler k)
     (lambda (exn)
       (send-to-drscheme-eventspace
@@ -322,6 +337,6 @@
      (suspend-user-computation)
      (send-to-drscheme-eventspace
       read-next-expr)))
-
+  
   ; result of invoking stepper-instance : (->)
   continue-user-computation)

@@ -29,10 +29,13 @@
   
   (define (create-bogus-binding name)
     (let* ([gensymed-name (gensym name)]
-           [binding (z:make-lexical-binding #f #f #f (z:make-empty-back-box) 
+           [binding (z:make-lexical-binding 'bogus #f #f (z:make-empty-back-box) 
                                             gensymed-name name)])
       (set-new-binding-name! binding gensymed-name)
       binding))
+  
+  (define (bogus-binding? binding)
+    (eq? (z:zodiac-origin binding) 'bogus))
 
   ; make-binding-source creates a pool of bindings, indexed by arbitrary keys. These bindings
   ; not eq? to any other bindings, but a client can always get the same binding by
@@ -41,16 +44,16 @@
   ; name; this makes debugging easier.
   ; make-gensym-source : (string -> (key -> binding))
   
-  (define (make-binding-source id-string)
+  (define (make-binding-source id-string binding-maker)
     (let ([assoc-table (make-hash-table-weak)])
       (lambda (key)
         (let ([maybe-fetch (hash-table-get assoc-table key (lambda () #f))])
           (or maybe-fetch
-             (begin
-               (let* ([new-binding (create-bogus-binding 
-                                    (string-append id-string (format "~a" key) "-"))])
-                 (hash-table-put! assoc-table key new-binding)
-                 new-binding)))))))
+              (begin
+                (let* ([new-binding (binding-maker 
+                                     (string-append id-string (format "~a" key) "-"))])
+                  (hash-table-put! assoc-table key new-binding)
+                  new-binding)))))))
   
   
   ; get-binding-name extracts the S-expression name for a binding. Zodiac
@@ -78,7 +81,7 @@
   ; gensym supplied by get-arg-symbol.
   
   (define get-arg-binding
-    (make-binding-source "arg"))
+    (make-binding-source "arg" create-bogus-binding))
   
   ; test cases: (returns #t on success)
   #| (let ([arg3 (get-arg-symbol 3)]
@@ -97,7 +100,7 @@
   ; which is used to capture its index at runtime.
   
   (define get-lifted-gensym
-    (make-binding-source "lifter"))
+    (make-binding-source "lifter" gensym))
   
   ; gensyms needed by many modules:
 
