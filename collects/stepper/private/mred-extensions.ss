@@ -11,7 +11,7 @@
   (provide
    stepper-canvas%
    stepper-text%
-   image?
+   snip?
    separator-snip% ;; these last two aren't required, but are useful 
    vertical-separator-snip% ;; for debugging purposes
    stepper-warning%
@@ -501,14 +501,8 @@
                    (insert "evaluation of program is complete.")) ()))
   
   
-  (define (image? val)
+  (define (snip? val)
     (is-a? val snip%))
-  
-  (define (confusable-value? val)
-    (or (number? val)
-        (boolean? val)
-        (string? val)
-        (symbol? val)))
   
   (define warning-color "yellow")
   (define warning-font (send the-font-list find-or-create-font 18 'decorative 'normal 'bold #f))

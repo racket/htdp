@@ -234,9 +234,6 @@
   ; struct-flag : uninterned symbol
   (define struct-flag (gensym "struct-flag-"))
   
-  ; unit-result-values-list
-  (define unit-result-values-list (gensym "unit-result-vaues-list"))
-  
   ; list-partition takes a list and a number, and returns a 2vals containing 2 lists; the first one contains the
   ; first n elements of the list, and the second contains the remainder.  If n is greater than
   ; the length of the list, the exn:application:mismatch exception is raised.
@@ -248,9 +245,6 @@
             (list-ref lst 0) ; cheap way to generate exception
             (let*-2vals ([(first rest) (list-partition (cdr lst) (- n 1))])
               (2vals (cons (car lst) first) rest)))))
-
-  ; to perform source correlation, we use the 'register-client' ability of zodiac to
-  ; add fields to parsed structures at runtime.
   
 ;  (define expr-read read-getter)
 ;  (define set-expr-read! read-setter)
@@ -400,12 +394,6 @@
   (define (reset-profiling-table)
     (set! profiling-table (make-hash-table 'equal)))
   
-  (define (profiling-table-incr a-length b-length)
-    (let ([pair (cons a-length b-length)])
-      (let ([cell (hash-table-get profiling-table pair (lambda () #f))])
-        (if cell
-            (set-box! cell (+ (unbox cell) 1))
-            (hash-table-put! profiling-table pair (box 1))))))
   
   (define (get-set-pair-union-stats) (hash-table-map profiling-table (lambda (k v) (list k (unbox v)))))
   

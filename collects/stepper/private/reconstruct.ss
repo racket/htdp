@@ -24,8 +24,6 @@
    [skip-step? (-> break-kind? (union mark-list? false?) render-settings? boolean?)]
    [step-was-app? (-> mark-list? boolean?)])
   
-  (define the-undefined-value (letrec ([x x]) x))
-  
   (define nothing-so-far (gensym "nothing-so-far-"))
 
   ; the let-glump is a structure that contains the reconstruct-time data about
@@ -33,15 +31,6 @@
   ; the right-hand side, and the values computed.
   
   (define-struct let-glump (name-set exp val-set))
-                                                                                                                
-
-  ; loloval? : TST -> boolean
-  ; loloval? returns true if given a list of lists of values
-  
-  (define (loloval? val)
-    (and (list? val)
-         (andmap list? val)))
-                        
 
   ; split-list : ('a -> boolean) (listof 'a) -> (2vals (listof 'a) (listof 'a))
   ; split-list splits a list into two lists at the first element s.t. (fn element) => true).
@@ -76,24 +65,6 @@
   
   ; test cases
   ; (test (2vals '(a b c) '(d e f)) n-split-list 3 '(a b c d e f))
-
-  ; reshape-list : ('a list) ('b sexp) -> ('a tree)
-  ; reshape-list produces a new sexp with the shape of <template> whose in-order leaf traversal
-  ; is <source>.
-  
-  (define (reshape-list source template)
-    (let loop ([template template])
-      (cond [(or (pair? template)
-                 (null? template))
-             (map loop template)]
-            (else
-             (let ([first (car source)])
-               (set! source (cdr source))
-               first)))))
-  
-  ; test cases
-  ; (test '((1 2 3) (4 5 6)) reshape-list '(1 2 3 4 5 6) '((a b c) (d e f)))
-  ; (test '(() () 1 (2 3) ()) reshape-list '(1 2 3) '(() () a (b c) ()))
   
   
   (define (mark-as-highlight stx)
@@ -211,22 +182,6 @@
                                    (eq? (cdr (syntax->list (syntax terms))) null))
                               (struct-constructor-procedure? fun-val))))]
                  [else #f])))))
-  
-  ; has-right-name : (syntax? procedure? . -> . boolean?)
-  ; has-right-name takes an identifier and a procedure value and returns true if the 
-  ; identifier would be rendered identically to the procedure value.
-  (define (has-right-name id val)
-    (let ([closure-record (closure-table-lookup val (lambda () #f))])     
-                    (if closure-record
-                        (let* ([base-name (closure-record-name closure-record)])
-                          (if base-name
-                              (let* ([lifted-index (closure-record-lifted-index closure-record)]
-                                     [name (if lifted-index
-                                               (construct-lifted-name base-name lifted-index)
-                                               base-name)])
-                                (eq? (syntax-e id) (syntax-e name)))
-                              #f))
-                        #f)))
   
   (define (find-special-value name valid-args)
     (let ([expanded (kernel:kernel-syntax-case (expand (cons name valid-args)) #f

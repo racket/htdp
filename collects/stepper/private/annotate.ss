@@ -10,9 +10,7 @@
            (prefix beginner-defined: "beginner-defined.ss"))
 
   ; CONTRACTS
-  
-  (define annotate-opts-list?
-    (and/c (listof (listof symbol?)) (lx (<= (length _) 1))))
+
   
   ; PROVIDE
   (provide/contract
@@ -37,51 +35,6 @@
   ;;    ;; ;  ; ;;;   ; ;;;    ;;;   ;     ;;     ;      ;; ;  ;   ;   ;;;   ;; ;   ;;;   ;   ;  ;;;  
               ;       ;                                                                               
               ;       ;                                                                               
-                                                                                                      
-  ;; mapmap : maps the fn across the sub-lists
-  (define (mapmap fn lolst)
-    (map (lx (map fn _)) lolst))
-  
-  ;; this looks wrong...
-  (define (internal-error . x)
-    (error 'annotater-internal-error "~s" x))
-
-  ; gensyms for annotation:
-  
-  ; the mutator-gensym is used in building the mutators that go into certain marks.
-  ; (define mutator-gensym (gensym "mutator-"))
-  
-  ; the `closure-temp' symbol is used for the let which wraps created closures, so
-  ; that we can stuff them into the hash table.
-  
-  ; closure-temp: uninterned-symbol
-  
-  (define closure-temp (gensym "closure-temp-"))
-    
-  ; triple-map (('a -> (values 'b 'c 'd)) ('a list)) -> (values ('b list) ('c list) ('d list))
-  
-  (define (triple-map f . lsts)
-    (letrec ([inr (lambda lsts
-                    (if (null? (car lsts))
-                        (values null null null)
-                        (let*-values
-                            ([(a b c) (apply f (map car lsts))]
-                             [(a-rest b-rest c-rest) (apply inr (map cdr lsts))])
-                          (values (cons a a-rest) (cons b b-rest) (cons c c-rest)))))])
-      (apply inr lsts)))
-
-      
-  (define (interlace a b)
-    (foldr (lambda (a b built)
-             (cons a (cons b built)))
-           null
-           a
-           b))
-        
-  (define (closure-key-maker closure)
-    closure)
-  
-
   
   ; wrap-struct-form 
   
@@ -101,14 +54,7 @@
 ;                         closure-records)]
 ;           [full-body (append setters (list `(values ,@arg-temp-syms)))])
 ;      `(#%let-values ((,arg-temp-syms ,annotated)) ,@full-body)))
-  
-  
-  (define (term-is-reduced stx)
-    (syntax-case stx (quote quote-syntax #%top)
-      [(quote _) #t]
-      [(quote-syntax _) #t]
-      [(#%top . _) #t]
-      [else (symbol? (syntax-e stx))]))
+
   
   ;;;;;;;;;;
   ;;

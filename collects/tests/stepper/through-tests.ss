@@ -19,14 +19,8 @@
           (iter eof void)
           (iter (expand (car expr-list)) (stream-ify (cdr expr-list) iter)))))
   
-  (define (test-sequence namespace-spec render-settings track-inferred-names? exp-str expected-steps)
-    (let ([filename (build-path test-directory "stepper-test")])
-      (call-with-output-file filename
-        (lambda (port)
-          (fprintf port "~a" exp-str))
-        'truncate)
-      (printf "testing string: ~v\n" exp-str)
-      (let* ([current-error-display-handler (error-display-handler)]) 
+  (define (test-sequence-core namespace-spec render-settings track-inferred-names? reader expected-steps)
+    (let* ([current-error-display-handler (error-display-handler)]) 
         (let* ([all-steps
                 (append expected-steps 
                         '((finished-stepping)))]
@@ -58,7 +52,25 @@
           (let/ec escape
             (parameterize ([error-escape-handler (lambda () (escape (void)))])
               (go program-expander receive-result render-settings track-inferred-names?)))
-          (error-display-handler current-error-display-handler)))))
+          (error-display-handler current-error-display-handler))))
+  
+  (define (test-sequence namespace-spec render-settings track-inferred-names? exp-str expected-steps)
+    (let ([filename (build-path test-directory "stepper-test")])
+      (call-with-output-file filename
+        (lambda (port)
+          (fprintf port "~a" exp-str))
+        'truncate)
+      (printf "testing string: ~v\n" exp-str)
+      (letrec ([port (open-input-file filename)]
+               [reader (lambda (iter)
+                         (lambda ()
+                         (let ([r (read-syntax filename port)])
+                           (if (eof-object? r)
+                               (begin
+                                 (close-input-port port)
+                                 (iter eof void))
+                               (iter (expand r) (reader iter))))))])
+        (test-sequence-core namespace-spec render-settings track-inferred-names reader expected-steps))))
   
   (define (lang-level-test-sequence namespace-spec rs track-inferred-names?)
     (lambda args
@@ -127,9 +139,8 @@
             (equal? err-msg (error-result-err-msg actual)))]
       [`(before-error ,before ,err-msg)
        (and (before-error-result? actual)
-            (andmap (lambda (fn expected) (noisy-equal? (syntax-object->hilite-datum (fn actual)) expected))
-                    (list before-error-result-exp before-error-result-err-msg)
-                    (list before err-msg)))]
+            (and (noisy-equal? (map syntax-object->hilite-datum (before-error-result-exp actual)) before)
+                 (equal? (before-error-result-err-msg actual) err-msg)))]
       [`(finished-stepping) (finished-stepping? actual)]
       [else 
        (begin (printf "compare-steps: unexpected expected step type: ~v\n" expected)
@@ -921,6 +932,12 @@
                                           (before-after ((hilite ((lambda (x) x) (lambda (x) x)))) ((hilite (lambda (x) x))))
                                           (finished ((define f (lambda (x) x)) (lambda (x) x))))))
   
+  
+  (t xml-box1
+     (let ([xml-box (make-xml-box "<abba>3<abba>")])
+       (test-xml-sequence (list xml-box)
+                          `((finished ((xml-box (cons abba (cons empty (cons 3 empty))))))))))
+  
   ;  
   ;  ;;;;;;;;;;;;;
   ;  ;;
@@ -1016,6 +1033,6 @@
 ;  (finished (true))))
   
   
-  (run-tests '(prims qq-splice))
+  (run-tests '(int/lam2))
   ;(run-all-tests)
   )
