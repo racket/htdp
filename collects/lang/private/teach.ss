@@ -322,7 +322,6 @@
       (lambda (id)
 	(datum->syntax-object id 
 			      (string->uninterned-symbol (symbol->string (syntax-e id)))
-			      id 
 			      id)))
 
     (define (wrap-func-definitions first-order? kinds names argcs k)

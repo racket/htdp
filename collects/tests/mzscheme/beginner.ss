@@ -16,6 +16,31 @@
 
 (load-relative "loadtest.ss")
 
+;; Check that expansion doesn't introduce non-equal ids that
+;;  claim to be "original" at the same place
+(let loop ([x (expand #'(module m (lib "htdp-beginner.ss" "lang")
+			  (define (f x) x)))])
+  (let ([orig-ids (let loop ([x x])
+		    (cond
+		     [(identifier? x)
+		      (if (syntax-original? x)
+			  (list x)
+			  null)]
+		     [(null? x) null]
+		     [(pair? x) (append (loop (car x))
+					(loop (cdr x)))]
+		     [(syntax? x) (loop (syntax-e x))]
+		     [else null]))])
+    (for-each (lambda (id1)
+		(for-each (lambda (id2)
+			    (if (and (= (syntax-position id1)
+					(syntax-position id2))
+				     (not (module-identifier=? id1 id2)))
+				(error 'original "mismatch: ~e ~e"
+				       id1 id2)))
+			  orig-ids))
+	      orig-ids)))
+    
 ;; Don't need these:
 (define no-extra-if-tests? #t)
 
@@ -38,5 +63,6 @@
 (htdp-syntax-test #''"hello")
 (htdp-syntax-test #''(1 2))
 (htdp-syntax-test #'''a)
+
 
 (report-errs)
