@@ -9,7 +9,7 @@
    (struct finished-result (finished-exprs))
    list-take
    list-partition
-   (struct closure-record (name mark constructor? lifted-name))
+   (struct closure-record (name mark constructor? lifted-name)) ; name field may be removed? depends on structs.
    *unevaluated* 
    no-sexp
    struct-flag
