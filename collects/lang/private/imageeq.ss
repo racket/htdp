@@ -106,7 +106,7 @@
            [height h]
            [dc-proc
             (lambda (dc dx dy)
-              (send dc draw-bitmap color 0 0 'solid 
+              (send dc draw-bitmap color dx dy 'solid 
                     (send the-color-database find-color "black")
                     mask))]
            [argb-proc

@@ -664,11 +664,16 @@
 (check-on-bitmap 'outline-triangle (triangle 10 'outline 'red))
 (check-on-bitmap 'line (line 10 7 'red))
 (check-on-bitmap 'text (text "XX" 12 'red))
-(check-on-bitmap 'overlay (overlay (p00 (rectangle 1 4 'solid 'blue))
+(check-on-bitmap 'overlay1 (overlay (p00 (rectangle 1 4 'solid 'blue))
                                    (p00 (rectangle 4 1 'solid 'green))))
-(check-on-bitmap 'overlay (overlay/xy (p00 (rectangle 4 4 'solid 'blue))
+(check-on-bitmap 'overlay2 (overlay/xy (p00 (rectangle 4 4 'solid 'blue))
                                       2 2
                                       (p00 (rectangle 4 4 'solid 'green))))
+(check-on-bitmap 'overlay3 (overlay image-snip1
+                                    (rectangle (image-width image-snip1) 
+                                               (image-height image-snip1)
+                                               'outline
+                                               'red)))
 (check-on-bitmap 'alpha-color-list
                  (overlay
                   (p00 (rectangle 3 3 'solid 'blue))
