@@ -375,7 +375,7 @@
 	   (for-each (lambda (arg)
 		       (unless (identifier? arg)
 			 (teach-syntax-error
-			  #f
+			  'lambda
 			  lam
 			  arg
 			  "expected a name for a function argument, but found ~a"
@@ -383,14 +383,14 @@
 		     args)
 	   (when (null? args)
 	     (teach-syntax-error
-	      #f
+	      'lambda
 	      lam
 	      (syntax arg-seq)
 	      "expected at least one argument name in the sequence after `lambda', but found none"))
 	   (let ([dup (check-duplicate-identifier args)])
 	     (when dup
 	       (teach-syntax-error
-		#f
+		'lambda
 		lam
 		dup
 		"found an argument name that was used more than once: ~a"
@@ -402,7 +402,7 @@
 	;; Bad lambda because bad args:
 	[(beginner-lambda args . _)
 	 (teach-syntax-error
-	  #f
+	  'lambda
 	  lam
 	  (syntax args)
 	  "expected a sequence of function arguments after `lambda', but found ~a"
@@ -410,7 +410,7 @@
 	;; Bad lambda, no args:
 	[(beginner-lambda)
 	 (teach-syntax-error
-	  #f
+	  'lambda
 	  lam
 	  (syntax args)
 	  "expected a sequence of function arguments after `lambda', but nothing's there")]
@@ -496,7 +496,7 @@
 			   (define-syntaxes (name_) compile-info)
 			   (define-values (to-define-name ...)
 			     (let ()
-			       (define-struct name_ (field_ ...))
+			       (define-struct name_ (field_ ...) (make-inspector))
 			       (values to-define-name ...)))))])
 		 (check-definitions-new 'define-struct
 					stx 
