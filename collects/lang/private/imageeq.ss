@@ -38,12 +38,12 @@
       (or (zero? i)
           (let ([a1 (vector-ref v1 (- i 4))]
                 [a2 (vector-ref v2 (- i 4))])
-            (or (= a1 a2 255)
-                (and (= a1 a2)
-                     (= (vector-ref v1 (- i 3)) (vector-ref v2 (- i 3)))
-                     (= (vector-ref v1 (- i 2)) (vector-ref v2 (- i 2)))
-                     (= (vector-ref v1 (- i 1)) (vector-ref v2 (- i 1)))
-                     (loop (- i 4))))))))
+            (and (or (= a1 a2 255)
+                     (and (= a1 a2)
+                          (= (vector-ref v1 (- i 3)) (vector-ref v2 (- i 3)))
+                          (= (vector-ref v1 (- i 2)) (vector-ref v2 (- i 2)))
+                          (= (vector-ref v1 (- i 1)) (vector-ref v2 (- i 1)))))
+                 (loop (- i 4)))))))
   
     ;; coerce-to-cache-image-snip : image -> (is-a?/c cache-image-snip%)
   (define (coerce-to-cache-image-snip snp)
