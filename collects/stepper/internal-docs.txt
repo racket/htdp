@@ -81,6 +81,12 @@ stepper-hint :
  [ 'comes-from-let* ] : expression was expanded from let*
  [ 'comes-from-local ] : expression was expanded from local
 
+ [ 'from-xml-box ] : expression was expanded from an xml box
+ [ 'from-scheme-box ] : expression was expanded from a scheme box
+                        (inside an xml box)
+ [ 'from-splice-box ] : expression was expanded from a scheme splice
+		        box (inside an xml box)
+
 stepper-define-type: 
  this is attached to the right-hand sides of defines to indicate what
  kind of define they came from. 
@@ -169,9 +175,6 @@ stepper-else :
 stepper-define-struct-hint :
   this expression came from a define-struct. The value associated with
   this label is the list of identifiers bound by the define-struct.
-
-
-
 
 STEPPER-HINT COLLISIONS
 

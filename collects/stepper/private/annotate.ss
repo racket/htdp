@@ -247,6 +247,13 @@
                           [else
                            'lambda-bound])
                     'non-lexical))]
+              
+              ; xml boxes
+              [(#%app . rest)
+               (eq? (syntax-property stx 'stepper-hint 'from-xml-box))
+               (let loop ([stx stx])
+                 (case (syntax-property stx 'stepper-hint)
+                   [(stepper-scheme-box stepper-splice-box) (recur-regular stx)]))]
               [stx
                (let ([content (syntax-e (syntax stx))])
                  (if (pair? content)
