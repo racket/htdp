@@ -106,9 +106,6 @@
                   (fprintf (current-error-port) "finished with normal-break~n")]
                  
                  [(result-break)
-                  (fprintf (current-error-port) "returned-value-list: ~a~nskip-redex-step: ~a~n"
-                           returned-value-list
-                           (r:skip-redex-step? mark-list))
                   (when (if (not (null? returned-value-list))
                             (not (r:skip-redex-step? mark-list))
                             (and (not (eq? held-expr-list no-sexp))
@@ -165,7 +162,7 @@
                                          user-computation-semaphore)))
                       (semaphore-wait user-computation-semaphore)))]
                  [(late-let-break)
-                  (let ([new-finished (r:reconstruct-current current-expr mark-list break-kind returned-value-list)])
+                  (let ([new-finished (car (r:reconstruct-current current-expr mark-list break-kind returned-value-list))])
                     (set! finished-exprs (append finished-exprs new-finished)))]
                  [else (error 'break "unknown label on break")]))))
          

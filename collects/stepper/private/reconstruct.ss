@@ -457,70 +457,70 @@
                           (cons (syntax args) bodies))))]
                    [recon (kernel:kernel-syntax-case expr #f
                                                      
-                                                     ; lambda
-                                                     [(lambda . clause-stx)
-                                                      (let* ([clause (recon-lambda-clause (syntax clause-stx))])
-                                                        (d->so `(lambda ,@clause)))]
-                                                     
-                                                     ; case-lambda
-                                                     [(case-lambda . clauses-stx)
-                                                      (let* ([clauses (map recon-lambda-clause (syntax->list (syntax clauses-stx)))])
-                                                        (d->so `(case-lambda ,@clauses)))]
-                                                     
-                                                     ; if, begin, begin0
-                                                     [(if test then else) (recon-basic)]
-                                                     [(if test then) (recon-basic)]
-                                                     [(begin . bodies) (recon-basic)]
-                                                     [(begin0 . bodies) (recon-basic)]
-                                                     
-                                                     ; let-values, letrec-values
-                                                     [(let-values . rest) (recon-let/rec)]
-                                                     [(letrec-values . rest) (recon-let/rec)]
-                                                     
-                                                     ; set! : set! doesn't fit into this scheme. It would be a mistake to allow it to proceed.
-                                                     
-                                                     ; quote 
-                                                     [(quote body) (recon-value (syntax-e (syntax body)))]
-                                                     
-                                                     ; quote-syntax : like set!, the current stepper cannot handle quote-syntax
-                                                     
-                                                     ; with-continuation-mark
-                                                     [(with-continuation-mark . rest) (recon-basic)]
-                                                     
-                                                     ; application
-                                                     [(#%app . terms) (d->so (map recur (syntax->list (syntax terms))))]
-                                                     
-                                                     ; #%datum
-                                                     [(#%datum . datum) (recon-value (syntax-e (syntax datum)))]
-                                                     
-                                                     ; varref                        
-                                                     [var-stx
-                                                      (identifier? expr)
-                                                      (let* ([var (syntax var-stx)])
-                                                        (cond [(eq? (identifier-binding var) 'lexical)
-                                                               ; has this varref's binding not been evaluated yet?
-                                                               (if (ormap (lambda (binding)
-                                                                            (bound-identifier=? binding var))
-                                                                          lexically-bound-bindings)
-                                                                   var
-                                                                   (case (syntax-property var 'stepper-binding-type)
-                                                                     ((lambda-bound) 
-                                                                      (recon-value (mark-binding-value (lookup-binding mark-list var))))
-                                                                     ((let-bound)
-                                                                      (d->so (binding-lifted-name mark-list var)))
-                                                                     ((top-level) var)
-                                                                     ((stepper-temp)
-                                                                      (error 'recon-source-expr "stepper-temp showed up in source?!?"))
-                                                                     (else
-                                                                      (error 'recon-source-expr "unknown 'stepper-binding-type property: ~a" 
-                                                                             (syntax-property var 'stepper-binding-type)))))]
-                                                              [else ; top-level-varref
-                                                               var]))]
-                                                     [(#%top . var)
-                                                      (syntax var)]
-                                                     
-                                                     [else
-                                                      (error 'recon-source "no matching clause for syntax: ~a" expr)])])
+                             ; lambda
+                             [(lambda . clause-stx)
+                              (let* ([clause (recon-lambda-clause (syntax clause-stx))])
+                                (d->so `(lambda ,@clause)))]
+                             
+                             ; case-lambda
+                             [(case-lambda . clauses-stx)
+                              (let* ([clauses (map recon-lambda-clause (syntax->list (syntax clauses-stx)))])
+                                (d->so `(case-lambda ,@clauses)))]
+                             
+                             ; if, begin, begin0
+                             [(if test then else) (recon-basic)]
+                             [(if test then) (recon-basic)]
+                             [(begin . bodies) (recon-basic)]
+                             [(begin0 . bodies) (recon-basic)]
+                             
+                             ; let-values, letrec-values
+                             [(let-values . rest) (recon-let/rec)]
+                             [(letrec-values . rest) (recon-let/rec)]
+                             
+                             ; set! : set! doesn't fit into this scheme. It would be a mistake to allow it to proceed.
+                             
+                             ; quote 
+                             [(quote body) (recon-value (syntax-e (syntax body)))]
+                             
+                             ; quote-syntax : like set!, the current stepper cannot handle quote-syntax
+                             
+                             ; with-continuation-mark
+                             [(with-continuation-mark . rest) (recon-basic)]
+                             
+                             ; application
+                             [(#%app . terms) (d->so (map recur (syntax->list (syntax terms))))]
+                             
+                             ; #%datum
+                             [(#%datum . datum) (recon-value (syntax-e (syntax datum)))]
+                             
+                             ; varref                        
+                             [var-stx
+                              (identifier? expr)
+                              (let* ([var (syntax var-stx)])
+                                (cond [(eq? (identifier-binding var) 'lexical)
+                                       ; has this varref's binding not been evaluated yet?
+                                       (if (ormap (lambda (binding)
+                                                    (bound-identifier=? binding var))
+                                                  lexically-bound-bindings)
+                                           var
+                                           (case (syntax-property var 'stepper-binding-type)
+                                             ((lambda-bound) 
+                                              (recon-value (mark-binding-value (lookup-binding mark-list var))))
+                                             ((let-bound)
+                                              (d->so (binding-lifted-name mark-list var)))
+                                             ((top-level) var)
+                                             ((stepper-temp)
+                                              (error 'recon-source-expr "stepper-temp showed up in source?!?"))
+                                             (else
+                                              (error 'recon-source-expr "unknown 'stepper-binding-type property: ~a" 
+                                                     (syntax-property var 'stepper-binding-type)))))]
+                                      [else ; top-level-varref
+                                       var]))]
+                             [(#%top . var)
+                              (syntax var)]
+                             
+                             [else
+                              (error 'recon-source "no matching clause for syntax: ~a" expr)])])
               (attach-info recon expr)))])
         (inner expr mark-list null)))
  
@@ -616,9 +616,6 @@
                      (recon-source-expr expr mark-list))]
                   [top-mark (car mark-list)]
                   [expr (mark-source top-mark)]
-       
-
-  
 
                   [recon-let
                    (lambda ()
@@ -664,7 +661,7 @@
                                      (if (pair? not-done-defs)
                                          (if (eq? so-far nothing-so-far)
                                              (map reconstruct-remaining-def not-done-defs)
-                                             (cons (recon-lifted (car rhs-lifted-name-sets) so-far)
+                                             (cons (recon-lifted (caddr (car not-done-defs)) so-far)
                                                    (map reconstruct-remaining-def (cdr not-done-defs))))
                                          null)]
                                     [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list))
@@ -802,8 +799,10 @@
                   ((late-let-break)
                    (let-values ([(before after junk) (recon-inner mark-list nothing-so-far)])
                      (unless (null? after)
-                       (error 'answer "non-empty 'after' defs in late-let-break"))
-                     before))
+                       (error 'answer "non-empty 'after' defs in late-let-break: ~a" (map syntax-object->datum after)))
+                     (list before)))
+                  ((var-break)
+                   (let ([current-defs (recon null nothing-so-far mark-list #t)];;; RIGHT HERE
                   (else
                    (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
 

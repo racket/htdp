@@ -437,6 +437,11 @@
                (datum->syntax-object expr `(begin (,(make-break 'normal-break)) ,expr))
                expr))
          
+         (define (var-break-wrap expr)
+           (if break
+               (datum->syntax-object expr `(begin (,(make-break 'var-break)) ,expr))
+               expr))
+         
          (define (double-break-wrap expr)
            (if break
                (datum->syntax-object expr `(begin (,(make-break 'double-break)) ,expr))
@@ -760,15 +765,15 @@
                                       [counter-clauses (build-list 
                                                         (length binding-sets)
                                                         (lambda (num)
-                                                          (d->so `(set! ,let-counter ,num))))]
+                                                          (d->so `(set! ,let-counter ,(+ num 1)))))]
                                       [set!-clauses
                                        (map (lambda (binding-set val)
                                               (d->so `(set!-values ,binding-set ,val)))
                                             binding-sets
                                             annotated-vals)]
                                       [interlaced-clauses
-                                       (cdr (foldl (lambda (a b) (append b a)) null 
-                                                   (zip counter-clauses set!-clauses)))] 
+                                       (foldl (lambda (a b) (append b a)) null 
+                                              (zip set!-clauses counter-clauses))] 
                                       ; time to work from the inside out again
                                       ; without renaming, this would all be much much simpler.
                                       [middle-begin
@@ -1070,8 +1075,8 @@
                    (ccond [(or cheap-wrap? ankle-wrap?)
                            (appropriate-wrap var free-varrefs)]
                           [foot-wrap?
-                           (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                           (return-value-wrap var))])
+                           (wcm-wrap (make-debug-info-normal free-varrefs)
+                                     (var-break-wrap var))])
                    free-varrefs))]
                
                [var-stx
@@ -1084,9 +1089,9 @@
                           [foot-wrap? 
                            (case (syntax-property var 'stepper-binding-type)
                              ((lambda-bound) (wcm-wrap (make-debug-info-normal free-varrefs) var))
-                             ((let-bound) (wcm-break-wrap (make-debug-info-normal free-varrefs) var))
-                             ((non-lexical) (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                                            (return-value-wrap var))))])
+                             ((let-bound) (wcm-wrap (make-debug-info-normal free-varrefs) (var-break-wrap var)))
+                             ((non-lexical) (wcm-wrap (make-debug-info-normal free-varrefs)
+                                                            (var-break-wrap var))))])
                    free-varrefs))]
                
                [else ; require, require-for-syntax, define-syntaxes, module, provide
