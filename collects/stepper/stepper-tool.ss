@@ -352,7 +352,7 @@
           (send previous-button enable can-go-back?)
           (send previous-application-button enable can-go-back?)
           (send home-button enable can-go-back?)
-          (send next-button enable (not (and (= view (- (length view-history) 1)) stepper-is-waiting?)))
+          (send next-button enable (not (and (>= view (- (length view-history) 1)) stepper-is-waiting?)))
           (send next-application-button enable (or (find-later-application-step view) (not stepper-is-waiting?)))))
         
         (define (print-current-view item evt)
