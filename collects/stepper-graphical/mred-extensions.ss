@@ -105,7 +105,6 @@
          [read (lambda (s) 
                  (let ([size-box (box 0)])
                    (send s get size-box)
-                   (printf "size-box contents: ~a~n" (unbox size-box))
                    (make-object vertical-separator-snip% 100)))]))))
   
   (send* separator-snipclass

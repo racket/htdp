@@ -66,6 +66,10 @@
   (define comes-from-local?
     (make-check-raw-first-symbol 'local))
 
+  ; rectify-value print-converts a value.  If the value is a closure, rectify-value
+  ; prints the name attached to the procedure, unless we're on the right-hand-side
+  ; of a let, or unless there _is_ no name.
+  
   (define (rectify-value val . hint-list)
     (let ([hint (if (pair? hint-list) (car hint-list))]
           [closure-record (closure-table-lookup val (lambda () #f))])
@@ -73,10 +77,11 @@
         [closure-record
          (cond [(and (not (eq? hint 'let-rhs))
                      (closure-record-name closure-record)) =>
-                (lambda (name-info)
-                  (cond [(symbol? name-info) name-info]
-                        [(pair? name-info) (apply construct-lifted-name name-info)]
-                        [else (error 'rectify-value "bizarre info in closure-record name field: ~s~n" name-info)]))]
+                (lambda (name)
+                  (cond [(closure-record-lifted-name closure-record) =>
+                         (lambda (lifted-name)
+                           (construct-lifted-name name lifted-name))]
+                        [else name]))]
                [else
                 (let ([mark (closure-record-mark closure-record)])
                   (o-form-case-lambda->lambda 
@@ -146,12 +151,12 @@
                             (length (z:app-args expr)))
                            (or (and (s:constructor-style-printing?)
                                     (if (s:abbreviate-cons-as-list?)
-                                        (or (s:user-list? fun-val)
-                                            (and (s:user-cons? fun-val)
+                                        (or (s:special-function? 'list fun-val)
+                                            (and (s:special-function? 'cons fun-val)
                                                  (second-arg-is-list? mark-list)))    
-                                        (and (s:user-cons? fun-val)
+                                        (and (s:special-function? 'cons fun-val)
                                              (second-arg-is-list? mark-list))))
-                               (s:user-vector? fun-val)
+                               ;(s:special-function? 'vector fun-val)
                                (and (eq? fun-val void)
                                     (eq? (z:app-args expr) null))
                                (struct-constructor-procedure? fun-val)

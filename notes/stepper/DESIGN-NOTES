@@ -596,6 +596,8 @@ list from bindings to values.  Note, however, that every let-type binding now ha
 _two_ entries in this list.  The first one supplies the binding's value, and the
 second one supplies the lifted name's index.
 
+[ed note.: see note for 2000-09-26]
+
 2000-06-06
 
 ***********
@@ -622,3 +624,16 @@ really an issue anymore.
 
 2000-09-09
 
+***********
+
+To handle units, marks must now contain "top-level" (actually, unit-bound) variables.
+For this reason, the datatype for a full mark must change.  a full mark is now:
+
+(make-full-mark location label bindings)
+
+where location is a zodiac:location
+      label    is a symbol,
+  and bindings is an association list containing <bindings> and values 
+  
+a <binding> is either a zodiac:binding (for bound vars), or a slot (for
+unit-bound vars in the zodiac:top-level-varref/bind/unit struct).

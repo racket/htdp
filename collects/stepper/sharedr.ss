@@ -23,7 +23,7 @@
 
   ; the closure record is placed in the closure table
 
-  (define-struct closure-record (name mark constructor?))
+  (define-struct closure-record (name mark constructor? lifted-name))
 
   ; bogus-binding is used so that we can create legal zodiac bindings for temporary variables
   
