@@ -84,17 +84,17 @@
     (make-binding-source "arg" create-bogus-binding))
   
   ; test cases: (returns #t on success)
-  #| (let ([arg3 (get-arg-symbol 3)]
-        [arg2 (get-arg-symbol 2)]
-        [arg1 (get-arg-symbol 1)]
-        [arg2p (get-arg-symbol 2)])
-    (and (not (eq? arg3 arg2))
-         (not (eq? arg3 arg1))
-         (not (eq? arg3 arg2p))
-         (not (eq? arg2 arg1))
-         (eq? arg2 arg2p)
-         (not (eq? arg1 arg2p))))
-  |#
+;  (let ([arg3 (get-arg-symbol 3)]
+;        [arg2 (get-arg-symbol 2)]
+;        [arg1 (get-arg-symbol 1)]
+;        [arg2p (get-arg-symbol 2)])
+;    (and (not (eq? arg3 arg2))
+;	 (not (eq? arg3 arg1))
+;	 (not (eq? arg3 arg2p))
+;         (not (eq? arg2 arg1))
+;         (eq? arg2 arg2p)
+;         (not (eq? arg1 arg2p)))
+
   
   ; get-lifted-gensym maintains the mapping between let-bindings and the gensym
   ; which is used to capture its index at runtime.
@@ -153,10 +153,11 @@
     (let ([closure-table (make-hash-table-weak)])
       (values
        (lambda (key value)
-	 (hash-table-put! closure-table key value))
+	 (hash-table-put! closure-table key value)
+	 key)                                  ; this return allows a run-time-optimization
        (lambda args ; key or key & failure-thunk
          (apply hash-table-get closure-table args)))))
-  
+ 
   ; insert-highlighted-value : sexp sexp -> sexp
   ; replaces highlight-placeholder in the first sexp with the second sexp
   
