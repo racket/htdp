@@ -95,12 +95,12 @@
       
       (define constant-snip%
         (class* renderable-editor-snip% (drscheme:snip:special<%>) 
-          (init family)
           (inherit get-editor)
-          
-          (define/public (expand file line col pos)
+          (inherit-field family)
+          (define/public (read-special file line col pos)
             (with-syntax ([snip (make-object editor-snip% (send (get-editor) copy-self))]
                           [family family]
+                          [replace-in-template replace-in-template]
                           [(snips ...)
                            (let loop ([snip (send (get-editor) find-first-snip)])
                              (cond
@@ -108,7 +108,7 @@
                                [(transformable? snip)
                                 (cons snip (loop (send snip next)))]
                                [else (loop (send snip next))]))])
-              (syntax (replace-in-template 'family snip snips ...))))
+              (values (syntax (replace-in-template 'family snip snips ...)) 1)))
           
           (define/public (get-family) family)
           
@@ -119,10 +119,8 @@
             (make-object constant-snip% family))
           
           (inherit show-border set-snipclass)
-          (super-instantiate 
-           ()
-           (family family)
-           (color "BLUE"))
+          (super-instantiate ()
+            (color "BLUE"))
           (show-border #t)
           (set-snipclass constant-snipclass)))
       
@@ -130,7 +128,7 @@
         (class snip-class%
           (define/override (read stream-in)
             (let* ([family (string->symbol (send stream-in get-string))]
-                   [snip (make-object constant-snip% (if (member family '(roman modern))
+                   [snip (make-object constant-snip% (if (member family '(symbol roman modern))
                                                          family
                                                          'modern))])
               (send (send snip get-editor) read-from-file stream-in)
@@ -142,50 +140,40 @@
       (send (get-the-snip-class-list) add constant-snipclass)
       
       (define evaluated-snip%
-        (class* renderable-editor-snip% (zodiac:expands<%>) ()
+        (class* renderable-editor-snip% (drscheme:snip:special<%>)
           (inherit get-editor)
           
-          (public
-            [expand
-             (lambda (obj)
-               (let ([text (get-editor)])
-                 (let* ([loc (zodiac:make-location 0 0 0 text)]
-                        [read
-                         (zodiac:read
-                          (gui-utils:read-snips/chars-from-text text 0 (send text last-position))
-                          loc
-                          #t 1)])
-                   (zodiac:structurize-syntax
-                    `(,snipize ,(read))
-                    (zodiac:make-zodiac #f loc loc)))))])
+          (define/public (read-special file line col pos)
+            (let ([text (get-editor)])
+              (values
+               (read-syntax
+                text
+                (gui-utils:read-snips/chars-from-text text 0 (send text last-position)))
+               1)))
           
           
           ;; MATTHEW
           ;; cannot do this because the styles information in the saved texts screws up.
-          (override
-            [make-editor
-             (lambda ()
-               (make-object (drscheme:unit:program-editor-mixin (scheme:text-mixin text:basic%))))])
+          (define/override (make-editor)
+            (make-object (drscheme:unit:program-editor-mixin (scheme:text-mixin (editor:keymap-mixin text:basic%)))))
           
-          (override
-            [make-snip (lambda () (make-object evaluated-snip%))])
+          (define/override (make-snip) (make-object evaluated-snip%))
           
           (inherit show-border set-snipclass)
-          (sequence
-            (super-init 'modern "RED")
-            (show-border #t)
-            (set-snipclass evaluated-snipclass))))
+          (super-instantiate () 
+            (family 'modern)
+            (color "RED"))
+          (show-border #t)
+          (set-snipclass evaluated-snipclass)))
       
       (define evaluated-snipclass%
-        (class snip-class% ()
-          (override
-            [read
-             (lambda (stream-in)
-               (let* ([snip (make-object evaluated-snip%)]
-                      [editor (send snip get-editor)])
-                 (send editor read-from-file stream-in)
-                 snip))])
-          (sequence (super-init))))
+        (class snip-class%
+          (define/override (read stream-in)
+            (let* ([snip (make-object evaluated-snip%)]
+                   [editor (send snip get-editor)])
+              (send editor read-from-file stream-in)
+              snip))
+          (super-instantiate ())))
       
       (define evaluated-snipclass (make-object evaluated-snipclass%))
       (send evaluated-snipclass set-version 1)
@@ -193,7 +181,8 @@
       (send (get-the-snip-class-list) add evaluated-snipclass)
       
       (define plain-text%
-        (class text:keymap% ([delta (make-object style-delta%)])
+        (class text:keymap% 
+          (init-field [delta (make-object style-delta%)])
           (inherit change-style copy-self-to)
           (rename [super-after-insert after-insert]
                   [super-on-insert on-insert])
@@ -205,7 +194,7 @@
           (define/override (on-insert x y)
             (super-on-insert x y)
             (begin-edit-sequence))
-          (define (after-insert x y)
+          (define/override (after-insert x y)
             (super-after-insert x y)
             (change-style delta x (+ x y))
             (end-edit-sequence))
@@ -274,58 +263,60 @@
             snip)))
       
       (define (typeset-frame-extension super%)
-        (class/d super% args
-                 ((inherit get-editor get-menu-bar get-edit-target-object))
-                 
-                 (apply super-init args)
-                 
-                 (let* ([mb (get-menu-bar)]
-                        [menu (make-object menu% "Typeset" mb)]
-                        [insert-snip
-                         (lambda (make-obj)
-                           (let ([editor (get-edit-target-object)])
-                             (when editor
-                               (let loop ([editor editor])
-                                 (let ([focused (send editor get-focus-snip)])
-                                   (if (and focused
-                                            (is-a? focused editor-snip%))
-                                       (loop (send focused get-editor))
-                                       (let ([snip (make-obj)])
-                                         (send editor insert snip)
-                                         (send editor set-caret-owner snip 'display))))))))])
-                   (make-object menu:can-restore-menu-item% "Modern Constant Snip" menu
-                     (lambda (menu evt)
-                       (insert-snip
-                        (lambda () (make-object constant-snip% 'modern))))
-                     #\m)
-                   (make-object menu:can-restore-menu-item% "Roman Constant Snip" menu
-                     (lambda (menu evt)
-                       (insert-snip 
-                        (lambda () (make-object constant-snip% 'roman))))
-                     #\r)
-                   (make-object menu:can-restore-menu-item% "Evaluated Snip" menu
-                     (lambda (menu evt)
-                       (insert-snip 
-                        (lambda () (make-object evaluated-snip%))))))
-                 
-                 (frame:reorder-menus this)))
-      
-      (define utils (invoke-unit/sig (require-library "utils.ss" "typeset")
-                                     mred^ framework^
-                                     typeset:utils-input^))
+        (class super%
+          (inherit get-editor get-menu-bar get-edit-target-object)
+          
+          (super-instantiate ())
+          
+          (let* ([mb (get-menu-bar)]
+                 [menu (make-object menu% "Typeset" mb)]
+                 [insert-snip
+                  (lambda (make-obj)
+                    (let ([editor (get-edit-target-object)])
+                      (when editor
+                        (let loop ([editor editor])
+                          (let ([focused (send editor get-focus-snip)])
+                            (if (and focused
+                                     (is-a? focused editor-snip%))
+                                (loop (send focused get-editor))
+                                (let ([snip (make-obj)])
+                                  (send editor insert snip)
+                                  (send editor set-caret-owner snip 'display))))))))])
+            (make-object menu:can-restore-menu-item% "Modern Constant Snip" menu
+              (lambda (menu evt)
+                (insert-snip
+                 (lambda () (make-object constant-snip% 'modern))))
+              #\m)
+            (make-object menu:can-restore-menu-item% "Roman Constant Snip" menu
+              (lambda (menu evt)
+                (insert-snip 
+                 (lambda () (make-object constant-snip% 'roman))))
+              #\r)
+            (make-object menu:can-restore-menu-item% "Symbol Constant Snip" menu
+              (lambda (menu evt)
+                (insert-snip 
+                 (lambda () (make-object constant-snip% 'symbol))))
+              #\r)
+            (make-object menu:can-restore-menu-item% "Evaluated Snip" menu
+              (lambda (menu evt)
+                (insert-snip 
+                 (lambda () (make-object evaluated-snip%))))))
+          
+          (frame:reorder-menus this)))
       
       (define (typeset-rep-extension super-text%)
-        (class/d super-text% args
-                 ((override reset-console)
-                  (rename [super-reset-console reset-console])
-                  (inherit user-namespace))
-                 
-                 (define (reset-console)
-                   (super-reset-console)
-                   (parameterize ([current-namespace user-namespace])
-                     (global-define-values/invoke-unit/sig typeset:utils^ utils)))
-                 
-                 (apply super-init args)))
+        (class super-text%
+          (rename [super-reset-console reset-console])
+          (inherit get-user-namespace)
+          
+          (define/override (reset-console)
+            (super-reset-console)
+            (parameterize ([current-namespace (get-user-namespace)])
+              (namespace-variable-binding 'single-bracket 'single-bracket)
+              (namespace-variable-binding 'double-bracket 'double-bracket)
+              ))
+          
+          (super-instantiate ())))
       
       (drscheme:get/extend:extend-unit-frame typeset-frame-extension)
       (drscheme:get/extend:extend-interactions-text typeset-rep-extension))))
