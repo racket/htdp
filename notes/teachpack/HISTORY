@@ -1,0 +1,63 @@
+Version 101:
+
+  We decided to eliminate the terminology "teaching library",
+  because it is easily confused with a plain library. As of release 101, we
+  refer to one of these objects as a
+
+    teachpack
+
+  The teachpacks are found at 
+
+    $PLTHOME/teachpack/
+    PLTHOME is the location of the PLT software
+
+  This directory contains only those files that matter to students. All
+  others are now placed in a collection (regular library). 
+
+  Inside of DrScheme, the menu choice called "Language|Set library to..."
+  is now called "Language|Set teachpack to...". 
+
+  * CHANGES in individual files: The most important and most visible change
+  in the teachpack support concerns the
+
+    hangman.ss for implementing hangman 
+
+  teachpack. It provides two interfaces: _hangman_ for three-letter words
+  and _hangman-list_ for words of arbitrary length. In both cases, the
+  teachpack now implements the player who picks a word that the other,
+  human player needs to guess. Students implement the procedures for making
+  words, comparing words, and drawing the hangman figure.
+
+  The teachpack 
+
+    master.ss for implementing a simple version of MasterMind 
+
+  now exports the procedure _master_, which is exactly like the procedure
+  _repl_ in the old master-lib.ss library. 
+
+  No other interface has been changed. The corresponding exercises in How
+  to Design Programs have been rewritten and will be posted on the HtDP 
+  Web site. 
+
+  Also see the documentation of the teachpacks in HelpDesk. Just type in 
+  the name of the teachpack or follow the links from the HelpDesk top-level 
+  page. 
+
+  INTERFACE: The interface to teachpacks is the same as that to libraries: 
+  
+    plt:userspace^
+
+  If, in the past, you wrote your own teaching libraries, they should work 
+  without any problem. We recommend you put them in a directory parallel to 
+  teachpack/htdp/. 
+
+  REMINDER: The purpose of teachpacks is to supplement student programs
+  with code that is beyond the teaching languages (Beginner, Intermediate,
+  Advanced). For example, to enable students to play hangman, we supply a
+  teachpack that 
+    - implements the random choosing of a word 
+    - maintains the state variable of how many guesses have gone wrong 
+    - manages the GUI. 
+  All these tasks are beyond students in the third week and/or impose
+  nothing memorization of currently useless knowledge on students. 
+
