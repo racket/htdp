@@ -15,16 +15,12 @@
            (lib "specs.ss" "framework"))
 
   (provide
-   reconstruct-completed
+   reconstruct-completed ; : reconstruct-completed-contract
    reconstruct-current ; : syntax (list-of mark) symbol (list-of value) -> (list (listof sexp) (listof sexp))
    final-mark-list?
    skip-step?)
   
-  (make-contract-checker STRING string?)
-
-  (make-contract-checker MARK-LIST 
-                         (lambda (arg) 
-                           (andmap procedure? arg))) 
+  (define reconstruct-completed-contract (-> syntax? any? any))
   
   (define the-undefined-value (letrec ([x x]) x))
   
@@ -527,24 +523,92 @@
   ; reconstruct-completed : reconstructs a completed expression or definition.  This now
   ; relies upon the model-settings:global-lookup procedure to find values in the user-namespace.
   
+  ; I'm unhappy about the copied code and lack of generality in this procedure (2002-05-08)
+  ; also, the examination of the stepper-define-hint and the consequent restructuring should 
+  ; probably be in the unwinder, rather than here.  Ugh.
+  
   (define reconstruct-completed
     (contract
-     (-> syntax? (lambda (x) #t) (lambda (x) #t))
+     reconstruct-completed-contract
      (lambda (expr value)
-       ; unwinding will go here?
-       (syntax-object->datum
-        (kernel:kernel-syntax-case expr #f
-          [(define-values vars-stx body)
-           (let* ([vars (syntax->list (syntax vars-stx))]
-                  [values (map model-settings:global-lookup (map syntax-e vars))]
-                  [recon-vars (map recon-value values)])
-             (attach-info (d->so `(define-values ,(syntax vars-stx) (values ,@recon-vars))) expr))]
-          [else
-           (recon-value value)])))
+       (cond 
+         [(syntax-property expr 'stepper-skipto) =>
+          (lambda (skipto)
+            (skipto-reconstruct skipto expr
+                                (lambda (expr)
+                                  (reconstruct-completed expr value))))]
+         [else
+          (syntax-object->datum
+           (kernel:kernel-syntax-case expr #f
+             [(define-values vars-stx body)
+              (let* ([vars (syntax->list (syntax vars-stx))]
+                     [values (map model-settings:global-lookup (map syntax-e vars))]
+                     [recon-vars (map recon-value values)])
+                (unless (= (length vars) 1)
+                  (error 'reconstruct "final reconstruct fails on multiple-values define\n"))
+                (with-syntax ([name (car vars)])
+                   (case (syntax-property expr 'stepper-define-hint)
+                     ((lambda-define) 
+                      (with-syntax ([recon (reconstruct-completed-procedure (car values))])
+                        (syntax (define name recon))))
+                     ((shortened-proc-define) 
+                      (kernel:kernel-syntax-case (reconstruct-completed-procedure (car values)) #f
+                        [(lambda (arg ...) body)
+                         (syntax (define (name arg ...) body))]
+                        [else (error 'reconstruct "non-procedure as result of procedure definition")]))
+                     ((non-lambda-define) 
+                      (with-syntax ([source-name (car recon-vars)])
+                        (syntax (define name source-name))))
+                     (else (error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property expr 'stepper-define-hint))))))]
+             [else
+              (recon-value value)]))]))
      'reconstruct-completed
      'caller))
   
+  ; : (-> syntax? syntax? sexp?)
+  ; DESPERATELY SEEKING ABSTRACTION
+  (define (reconstruct-top-level source reconstructed)
+    (fprintf (current-error-port) "entering reconstruct-top-level with args: ~e\n" (map syntax-object->datum (list source reconstructed)))
+    (cond 
+      [(syntax-property source 'stepper-skipto) =>
+       (lambda (skipto)
+         (skipto-reconstruct skipto source
+                             (lambda (expr)
+                               (reconstruct-top-level expr reconstructed))))]
+      [else
+       (kernel:kernel-syntax-case source #f
+          [(define-values vars-stx body)
+           (let* ([vars (syntax->list (syntax vars-stx))])
+             (unless (= (length vars) 1)
+               (error 'reconstruct "reconstruct fails on multiple-values define\n"))
+             (with-syntax ([name (car vars)])
+               (case (syntax-property source 'stepper-define-hint)
+                 ((lambda-define) 
+                  (with-syntax ([recon reconstructed])
+                    (syntax (define name recon))))
+                 ((shortened-proc-define) 
+                  (kernel:kernel-syntax-case reconstructed #f
+                    [(lambda (arg ...) body)
+                     (syntax (define (name arg ...) body))]
+                    [else ; (e.g., highlight-placeholder)
+                     (with-syntax ([recon reconstructed])
+                       (syntax (define name recon)))]))
+                 ((non-lambda-define) 
+                  (with-syntax ([recon reconstructed])
+                    (syntax (define name recon))))
+                 (else (error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property source 'stepper-define-hint))))))]
+          [else
+           reconstructed])]))
   
+  ; : (-> procedure? syntax?)
+  ; constructs the lambda expression for a closure
+  (define (reconstruct-completed-procedure val)
+    (let* ([closure-record (closure-table-lookup val 
+                                                 (lambda () 
+                                                   (error 'reconstruct-completed "can't find user-defined proc in closure table: ~e\n" val)))]
+           [mark (closure-record-mark closure-record)])
+      (recon-source-expr (mark-source mark) (list mark) null)))
+
                                                                                                                 
                                                                                                                 
                                                                                                                 
@@ -573,15 +637,7 @@
      (lambda (expr mark-list break-kind returned-value-list)
        
        (local
-           ((define (recon-top-level expr so-far)
-              (kernel:kernel-syntax-case expr #f
-                [(define-values vars-stx body)
-                 (let* ([vars (syntax->list (syntax vars-stx))])
-                   (attach-info (d->so `(define-values ,(syntax vars-stx) 
-                                          ,so-far))
-                                expr))]
-                [else
-                 so-far]))
+           (
             
             ; ;;  ;;;    ;;;   ;;;   ; ;;          ;  ; ;;   ; ;;    ;;;   ; ;;
             ;;   ;   ;  ;     ;   ;  ;;  ;         ;  ;;  ;  ;;  ;  ;   ;  ;;  
@@ -746,7 +802,7 @@
             
             (define (recon so-far mark-list first)
               (if (null? mark-list)
-                  (recon-top-level expr so-far)
+                  (reconstruct-top-level expr so-far)
                   (let ([reconstructed (recon-inner mark-list so-far)])
                     (recon
                      (if first

@@ -289,11 +289,17 @@
 	   (syntax-case (syntax expr) (beginner-lambda)
 	     ;; Well-formed lambda def:
 	     [(beginner-lambda arg-seq lexpr ...)
-	      (check-definition-new
-	       'define
-	       stx
-	       (syntax name)
-	       (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...)))]
+              (syntax-property
+               (check-definition-new
+                'define
+                stx
+                (syntax name)
+                (syntax-property
+                 (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...))
+                 'stepper-define-hint
+                 'lambda-define))
+               'stepper-skipto
+               (list syntax-e cdr syntax-e cdr car))]
 	     ;; Constant def
 	     [_else
               (syntax-property
@@ -301,7 +307,10 @@
                 'define
                 stx
                 (syntax name)
-                (syntax/loc stx (define name expr)))
+                (syntax-property
+                 (syntax/loc stx (define name expr))
+                 'stepper-define-hint
+                 'non-lambda-define))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]))]
 	;; Function definition:
@@ -350,7 +359,10 @@
              'define
              stx
              (car names)
-             (syntax/loc stx (define name-seq expr ...)))
+             (syntax-property
+              (syntax/loc stx (define name-seq expr ...))
+              'stepper-define-hint
+              'shortened-proc-define))
             'stepper-skipto
             (list syntax-e cdr syntax-e cdr car)))]
 	;; Constant/lambda with too many or too few parts:
