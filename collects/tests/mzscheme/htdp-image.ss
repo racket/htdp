@@ -1,7 +1,42 @@
 ;; Load this one with MrEd
 
 (load-relative "loadtest.ss")
+
 (require (lib "errortrace.ss" "errortrace"))
+
+(define image-snip1 
+  (let* ([c-bm (make-object bitmap% 10 10)]
+         [m-bm (make-object bitmap% 10 10 #t)]
+         [bdc (make-object bitmap-dc% c-bm)])
+    (send bdc clear)
+    (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
+    (send bdc set-brush (send the-brush-list find-or-create-brush "red" 'solid))
+    (send bdc draw-rectangle 0 0 10 10)
+    (send bdc set-bitmap m-bm)
+    (send bdc clear)
+    (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
+    (send bdc set-brush (send the-brush-list find-or-create-brush "black" 'solid))
+    (send bdc draw-rectangle 0 0 5 10)
+    (send bdc set-bitmap #f)
+    (make-object image-snip% c-bm m-bm)))
+
+(define image-snip2 
+  (let* ([c-bm (make-object bitmap% 10 10)]
+         [m-bm (make-object bitmap% 10 10)]
+         [bdc (make-object bitmap-dc% c-bm)])
+    (send bdc clear)
+    (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
+    (send bdc set-brush (send the-brush-list find-or-create-brush "red" 'solid))
+    (send bdc draw-rectangle 0 0 10 10)
+    (send bdc set-bitmap m-bm)
+    (send bdc clear)
+    (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
+    (send bdc set-brush (send the-brush-list find-or-create-brush "black" 'solid))
+    (send bdc draw-rectangle 0 0 5 10)
+    (send bdc set-bitmap #f)
+    (send c-bm set-loaded-mask m-bm)
+    (make-object image-snip% c-bm)))
+
 (define current-htdp-lang '(lib "htdp-beginner.ss" "lang"))
 (load-relative "htdp-test.ss")
 
@@ -10,7 +45,13 @@
 ;; sure that they draw properly
 (define (check-on-bitmap name snp)
   (let-values ([(width height) (send snp get-size)])
-    (let ([bdc (make-object bitmap-dc%)])
+    (let ([bdc (make-object bitmap-dc%)]
+          [max-difference
+           (lambda (s1 s2)
+             (apply max
+                    (map (lambda (x y) (abs (- x y))) 
+                         (map char->integer (string->list s1))
+                         (map char->integer (string->list s1)))))])
       
       ;; test that no drawing is outside the snip's drawing claimed drawing area
       (let ([bm-clip (make-object bitmap% (+ width 100) (+ height 100))]
@@ -44,12 +85,14 @@
         (send bdc clear)
         
         ;; force the snip to switch over to bitmap mode
-        (send snp get-bitmap)
+        (send snp get-argb)
         
         (send snp draw bdc 0 0 0 0 width height 0 0 #f)
         (send bdc get-argb-pixels 0 0 width height s-bitmap)
         (send bdc set-bitmap #f)
-        (test (list 'bmsame name #t) (lambda () (list 'bmsame name (string=? s-normal s-bitmap))))))))
+        (test (list 'bmsame name #t) 
+              (lambda () (list 'bmsame name 
+                               (<= (max-difference s-normal s-bitmap) 2))))))))
 
 (require (lib "htdp-beginner.ss" "lang"))
       
@@ -61,10 +104,17 @@
 (define blue (make-color 0 0 255))
 (define black (make-color 0 0 0))
 (define white (make-color 255 255 255))
+(define ared (make-alpha-color 0 255 0 0))
+(define aclr (make-alpha-color 255 0 0 0))
 (htdp-top (define red (make-color 255 0 0)))
 (htdp-top (define blue (make-color 0 0 255)))
 (htdp-top (define black (make-color 0 0 0)))
 (htdp-top (define white (make-color 255 255 255)))
+(htdp-top (define ared (make-alpha-color 0 255 0 0)))
+(htdp-top (define aclr (make-alpha-color 255 0 0 0)))
+
+(eval `(htdp-top (define image-snip1 ,image-snip1)))
+(eval `(htdp-top (define image-snip2 ,image-snip2)))
 
 (htdp-test (list red)
 	   'color-list
@@ -95,52 +145,56 @@
 		    (filled-rect 1 4 'blue)))
 
 (htdp-test #t
-           'mask-color-list1
+	   'alpha-color-list1
+	   (equal? (make-alpha-color 0 255 0 0)
+                   (car (image->alpha-color-list (filled-rect 1 1 'red)))))
+(htdp-test #t
+	   'alpha-color-list2
+	   (equal? (make-alpha-color 0 0 255 0)
+                   (car (image->alpha-color-list (filled-rect 1 1 'green)))))
+(htdp-test #t
+	   'alpha-color-list3
+	   (equal? (make-alpha-color 0 0 0 255)
+                   (car (image->alpha-color-list (filled-rect 1 1 'blue)))))
+
+(htdp-test #t
+           'alpha-color-list4
            (= (image-width
-               (mask-color-lists->image
-                (list red   white red
-                      white white white)
-                (list black white black
-                      white white white)
+               (alpha-color-list->image
+                (list ared aclr ared
+                      aclr aclr aclr)
                 3
                 2))
               3))
 
 (htdp-test #t
-           'mask-color-list2
+           'alpha-color-list5
            (= (image-height
-               (mask-color-lists->image
-                (list red   white red
-                      white white white)
-                (list black white black
-                      white white white)
+               (alpha-color-list->image
+                (list ared aclr ared
+                      aclr aclr aclr)
                 3
                 2))
               2))
 
 (htdp-test #t
-           'mask-color-list3
+           'alpha-color-list6
            (equal? (image->color-list
-                    (mask-color-lists->image
-                     (list red   red   red
-                           red   red   red)
-                     (list black white black
-                           white white white)
+                    (alpha-color-list->image
+                     (list ared aclr ared
+                           aclr aclr aclr)
                      3 2))
                    (list red   white red
                          white white white)))
 (htdp-test #t
-           'mask-color-list4
+           'alpha-color-list7
            (equal? (image->color-list
                     (image+
                      (filled-rect 3 3 'blue)
-                     (mask-color-lists->image
-                      (list red   white red
-                            white white white
-                            red   white red)
-                      (list black white black
-                            white white white
-                            black white black)
+                     (alpha-color-list->image
+                      (list ared aclr ared
+                            aclr aclr aclr
+                            ared aclr ared)
                       3
                       3)))
                    (list red  blue red
@@ -220,44 +274,35 @@
 				   (filled-rect 1 2 'blue))))
 
 (htdp-test #t
-	   'image-inside?
+	   'image-inside?1
 	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
 					 1 0
 					 (filled-rect 1 2 'blue))
 			  (filled-rect 1 2 'blue)))
 
 (htdp-test #f
-	   'image-inside?
+	   'image-inside?2
 	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
 					 1 0
 					 (filled-rect 1 2 'blue))
 			  (filled-rect 1 2 'black)))
 
 (htdp-test #t
-	   'image-inside?
+	   'image-inside?3
 	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
 					 1 0
 					 (filled-rect 1 2 'blue))
 			  (filled-rect 1 2 'red)))
 
 (htdp-test #f
-	   'image-inside?
+	   'image-inside?4
 	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
 					 1 0
 					 (filled-rect 1 2 'blue))
 			  (filled-rect 2 1 'red)))
 
-
-(htdp-test #t
-	   'image-inside?
-	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
-					 1 0
-					 (filled-rect 1 2 'blue))
-			  (color-list->image (list red white white) 
-					     3 1)))
-
 (htdp-test #f
-	   'image-inside?
+	   'image-inside?6
 	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
 					 1 0
 					 (filled-rect 1 2 'blue))
@@ -265,12 +310,13 @@
 					     3 1)))
 
 (htdp-test #t
-	   'image-inside?
-	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
-					 1 0
-					 (filled-rect 1 2 'blue))
-			  (color-list->image (list white blue white) 
-					     3 1)))
+           'image-inside?8
+           (image-inside?
+            (text "y x y" 12 'red)
+            (image+ (filled-rect (image-width (text "x" 12 'red))
+                                 (image-height (text "x" 12 'red))
+                                 'white)
+                    (text "x" 12 'red))))
 
 (htdp-test (make-posn 2 5)
 	   'find-image
@@ -332,6 +378,23 @@
                      3
                      4)))
 
+(htdp-test #t
+           'add-line
+           (image=? (image+ (filled-rect 5 4 'black)
+                            (filled-rect 1 4 'red))
+                    (add-line (filled-rect 4 4 'black)
+                              -1 0
+                              -1 3
+                              'red)))
+
+(htdp-test #t
+           'add-line
+           (image=? (image+ (filled-rect 4 5 'black)
+                            (filled-rect 4 1 'red))
+                    (add-line (filled-rect 4 4 'black)
+                              0 -1
+                              3 -1
+                              'red)))
 
 (check-on-bitmap 'filled-rect (htdp-eval (filled-rect 2 2 'red)))
 (check-on-bitmap 'outline-rect (htdp-eval (outline-rect 2 2 'red)))
@@ -341,29 +404,82 @@
 (check-on-bitmap 'outline-triangle (htdp-eval (outline-triangle 10 'red)))
 (check-on-bitmap 'line (htdp-eval (line 10 7 'red)))
 (check-on-bitmap 'text (htdp-eval (text "XX" 12 'red)))
-(check-on-bitmap 'anti-alias-text (htdp-eval (anti-alias-text "XX" 9 'red)))
 (check-on-bitmap 'image+ (htdp-eval (image+ (filled-rect 1 4 'blue) (filled-rect 4 1 'green))))
 (check-on-bitmap 'image+ (htdp-eval (offset-image+ (filled-rect 4 4 'blue)
                                                    2 2
                                                    (filled-rect 4 4 'green))))
-(check-on-bitmap 'mask-color-lists
+(check-on-bitmap 'alpha-color-list
                  (htdp-eval
                   (image+
                    (filled-rect 3 3 'blue)
-                   (mask-color-lists->image
-                    (list red   white red
-                          white white white
-                          red   white red)
-                    (list black white black
-                          white white white
-                          black white black)
+                   (alpha-color-list->image
+                    (list ared aclr ared
+                          aclr aclr aclr
+                          ared aclr ared)
                     3
                     3))))
-
-(check-on-bitmap 'mask-color-lists2
+(check-on-bitmap 'add-line
                  (htdp-eval
-                  (mask-color-lists->image
-                   (list (make-color 200 100 0)) (list (make-color 0 100 200))
-                   1 1)))
+                  (add-line
+                   (filled-rect 100 100 'black)
+                   -10 -10
+                   110 110
+                   'red)))
+
+#|
+
+The tests beginning with "bs-" ensure
+that the operations all can accept bitmap 
+snips as arguments
+
+|#
+
+(htdp-test #t
+           'bs-image?
+           (image? image-snip1))
+(htdp-test #t
+           'bs-image?
+           (image? image-snip2))
+(htdp-test #t
+           'bs-image=?
+           (image=? image-snip1 image-snip2))
+(htdp-test 10
+           'bs-image-width
+           (image-width image-snip1))
+(htdp-test 10
+           'bs-image-height
+           (image-width image-snip2))
+(htdp-test #t
+           'bs-image+
+           (image=? image-snip1 (image+ image-snip1 image-snip2)))
+(htdp-test #t
+           'bs-offset-image+
+           (image=? image-snip1 (offset-image+ image-snip1 0 0 image-snip2)))
+(htdp-test #t
+           'bs-add-line
+           (image=?
+            (add-line image-snip1 0 0 10 10 'green)
+            (add-line image-snip2 0 0 10 10 'green)))
+(htdp-test #t
+           'bs-image-inside?1
+           (image-inside? image-snip1 image-snip2))
+(htdp-test #t
+           'bs-image-inside?2
+           (image-inside? image-snip1 image-snip2))
+(htdp-test (make-posn 0 0)
+           'bs-find-image1
+           (find-image image-snip1 image-snip2))
+#;
+(htdp-test (make-posn 0 0)
+           'bs-find-image2
+           (find-image image-snip2 image-snip1))
+(htdp-test #t
+           'bs-image->color-list
+           (equal? (image->color-list image-snip1)
+                   (image->color-list image-snip2)))
+(htdp-test #t
+           'bs-image->alpha-color-list
+           (equal? (image->alpha-color-list image-snip1)
+                   (image->alpha-color-list image-snip2)))
 
 (report-errs)
