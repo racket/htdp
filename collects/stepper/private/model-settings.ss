@@ -31,7 +31,7 @@
                     [render-settings? contract?]
                     [get-render-settings (-> render-settings?)]
                     [set-render-to-string! (-> (-> any? string?) void?)]
-                    [set-render-to-sexp! (-> (-> (-> any) any) void?)]
+                    [set-render-to-sexp! (-> (-> any? any) void?)]
                     
                     [fake-beginner-render-settings render-settings?]
                     [fake-beginner-wla-render-settings render-settings?]
