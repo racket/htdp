@@ -12,18 +12,15 @@
   
   (define annotate-opts-list?
     (and/c (listof (listof symbol?)) (lx (<= (length _) 1))))
-  (define-struct annotate-environment (struct-proc-names pre-defined-names binding-index))
   
   ; PROVIDE
   (provide/contract
-   [make-initial-env-package (-> annotate-environment?)]
    [annotate
-    (->* (syntax?                               ; syntax to annotate
-          annotate-environment?                 ; environment
-          break-contract                        ; procedure for runtime break
-          (symbols 'foot-wrap))                 ; wrap-kind
-         annotate-opts-list?                    ; optional args
-         (syntax? annotate-environment?))]      ; results
+    (->* (syntax?                    ; syntax to annotate
+          break-contract             ; procedure for runtime break
+          (symbols 'foot-wrap))      ; wrap-kind
+         annotate-opts-list?         ; optional args
+         (syntax?))]                 ; results
    [top-level-rewrite (-> syntax? syntax?)])
  
   ;;                                              ;;;;                          ;                     
@@ -101,8 +98,6 @@
 ;                         closure-records)]
 ;           [full-body (append setters (list `(values ,@arg-temp-syms)))])
 ;      `(#%let-values ((,arg-temp-syms ,annotated)) ,@full-body)))
-  
-  (define (make-initial-env-package) (make-annotate-environment null (namespace-mapped-symbols) 0))
   
   
   (define (term-is-reduced stx)
@@ -314,7 +309,7 @@
   ;    only of varrefs.  This one might go away later, or be toggled into a "no-opt" flag.
   ;
   
-  (define (annotate expr annotate-environment break wrap-style . wrap-opts-list)
+  (define (annotate expr break wrap-style . wrap-opts-list)
        (local
            ((define foot-wrap? (eq? wrap-style 'foot-wrap))
             (define wrap-opts (cond [(null? wrap-opts-list) null]
@@ -325,6 +320,13 @@
                                      (error 'annotate "wrap-opts-list argument must be a list of symbols. Given: ~a~n"
                                             (car wrap-opts-list))]
                                     [else (car wrap-opts-list)]))
+            
+            (define binding-indexer
+              (let ([binding-index 0])
+                (lambda ()
+                  (let ([temp binding-index])
+                    (set! binding-index (+ binding-index 1))
+                    temp))))
             
             ; potential optimization: remove the var-args where it's not needed:
             (define (make-break kind)
@@ -340,17 +342,8 @@
             (define result-value-break
               (make-break 'result-value-break))
             
-            ; struct-proc-names may be mutated
-            (define struct-proc-names (annotate-environment-struct-proc-names annotate-environment))
-            
-            (define pre-defined-names (annotate-environment-pre-defined-names annotate-environment))
-            
-            (define binding-index (annotate-environment-binding-index annotate-environment))
-            
-            (define (binding-indexer)
-              (let ([index binding-index])
-                (set! binding-index (+ binding-index 1))
-                index))
+            (define expr-finished-break
+              (make-break 'expr-finished-break))
             
             ; here are the possible configurations of wcm's, pre-breaks, and breaks (not including late-let & double-breaks):
             
@@ -372,11 +365,15 @@
               (let* ([interlaced (apply append (map list var-names lifted-gensyms))])
                 #`(begin (#,(make-break 'late-let-break) #,@interlaced) #,expr)))
             
-            
             (define (return-value-wrap expr)
               #`(let* ([result #,expr])
                   (#,result-value-break result)
                   result))
+            
+            (define (expr-finished-break-wrap expr)
+              #`(call-with-values
+                 (lambda () #,expr)
+                 (lambda args (#,expr-finished-break args) (apply values args))))
             
             ;  For Multiple Values:         
             ;           `(#%call-with-values
@@ -386,11 +383,13 @@
             ;              (,(make-break 'result-break) result-values)
             ;              (#%apply #%values result-values))))
             
- 
             (define (top-level-annotate/inner expr defined-name)
               (let*-2vals ([(annotated dont-care)
-                            (annotate/inner expr 'all #f defined-name)])
-                annotated))
+                            (annotate/inner expr 'all #f defined-name)]
+                           [top-level-wrapped #`(with-continuation-mark #,debug-key 
+                                                                        #,(make-top-level-mark expr)
+                                                                        #,(expr-finished-break-wrap annotated))])
+                top-level-wrapped))
             
             
 
@@ -429,12 +428,7 @@
             (define annotate/inner
                ;(-> syntax? binding-set? boolean? (union false? syntax? (list/p syntax? syntax?)) (vector/p syntax? binding-set?))
                (lambda (expr tail-bound pre-break? procedure-name-info)
-                 
-                 (when (syntax-property expr 'stepper-define-struct-hint)
-                   (let ([struct-names (car (syntax-property expr 'stepper-define-struct-hint))])
-                     (set! struct-proc-names
-                           (append struct-proc-names struct-names))))
-                 
+
                  (cond [(syntax-property expr 'stepper-skipto)
                         (let* ([free-vars-captured #f] ; this will be set!'ed
                                ;[dont-care (printf "expr: ~a\nskipto: ~a\n" expr (syntax-property expr 'stepper-skipto))]
@@ -846,8 +840,7 @@
                              (let*-2vals ([var (syntax var-stx)]
                                           [free-varrefs null])
                                          (2vals 
-                                          (if (and (memq (syntax-e var) pre-defined-names)
-                                                   (not (memq (syntax-e var) beginner-defined:must-reduce)))
+                                          (if (not (memq (syntax-e var) beginner-defined:must-reduce))
                                               (wcm-wrap (make-debug-info-normal free-varrefs) expr)
                                               (wcm-break-wrap (make-debug-info-normal free-varrefs)
                                                               (return-value-wrap expr)))
@@ -923,10 +916,11 @@
                          [(#%app call-with-values (lambda () body) print-values)
                           #`(#%app call-with-values (lambda () #,(top-level-annotate/inner (top-level-rewrite #`body) #f)) print-values)]
                          [else
-                          (error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax-object->datum expr))])]))))
+                          (error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax-object->datum expr))])])))
+            )
          
          ; body of local
-         (printf "input: ~a\n" (syntax-object->datum expr))
+         ;(printf "input: ~a\n" (syntax-object->datum expr))
          (let* ([annotated-expr (annotate/top-level expr)])
-           (fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
-           (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index))))))
+           (printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
+           annotated-expr))))

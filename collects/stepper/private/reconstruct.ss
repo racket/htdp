@@ -17,8 +17,9 @@
            "lifting.ss")
 
   (provide/contract 
-   [reconstruct-completed (-> syntax? any? render-settings? any)]
-   [reconstruct-current (-> syntax? mark-list? symbol? (listof any?) render-settings?
+   [reconstruct-completed (-> mark-list? (listof any?) render-settings? 
+                              (listof exp-without-holes?))]
+   [reconstruct-current (-> mark-list? symbol? (listof any?) render-settings?
                             (union (listof exp-without-holes?)
                                    (list/p (listof exp-with-holes?) (listof exp-without-holes?))
                                    (list/p (listof exp-with-holes?) (listof exp-without-holes?) 
@@ -677,35 +678,40 @@
                                                                                                 ;                                   
                                                                                                                                     
 
-  ; reconstruct-completed : reconstructs a completed expression or definition.  This now
-  ; relies upon the model-settings:global-lookup procedure to find values in the user-namespace.
+  ; reconstruct-completed : reconstructs a completed expression or definition.  
   
-  (define (reconstruct-completed expr value render-settings)
-    (cond 
-      [(syntax-property expr 'stepper-skipto) =>
-       (lambda (skipto)
-         (skipto-reconstruct skipto expr
-                             (lambda (expr)
-                               (reconstruct-completed expr value render-settings))))]
-      [(syntax-property expr 'stepper-define-struct-hint) =>
-       (lambda (define-struct-info)
-         (syntax-object->datum (cadr define-struct-info)))]
-      [else
-       (syntax-object->datum
-        (first-of-one (unwind-no-highlight
-                       (kernel:kernel-syntax-case expr #f
-                         [(define-values vars-stx body)
-                          (let* ([vars (syntax->list #'vars-stx)]
-                                 [values (map global-lookup (map syntax-e vars))]
-                                 [recon-vals (map (lambda (val var) 
-                                                    (recon-value val render-settings (or (syntax-property var 'stepper-lifted-name) var))) 
-                                                  values
-                                                  vars)])
-                            (if (= (length recon-vals) 1)
-                                (attach-info #`(define-values vars-stx #,(car recon-vals)) expr)
-                                (attach-info #'(define-values vars-stx (values #,@recon-vals)) expr)))]
-                         [else
-                          (recon-value value render-settings)]))))]))
+  (define (reconstruct-completed mark-list vals render-settings)
+    (unless (and (pair? mark-list) (null? (cdr mark-list)) (eq? (mark-label (car mark-list) 'top-level)))
+      (error `reconstruct-completed "expected mark-list of length one with mark having label 'top-level, got: ~a" mark-list))
+    (let skipto-loop ([expr (mark-source (car mark-list))])
+      (cond 
+        [(syntax-property expr 'stepper-skipto) =>
+         (lambda (skipto)
+           (skipto-reconstruct skipto expr
+                               skipto-loop))]
+        [(syntax-property expr 'stepper-define-struct-hint) =>
+         (lambda (define-struct-info)
+           (syntax-object->datum (cadr define-struct-info)))]
+        [else
+         (syntax-object->datum
+          (first-of-one (unwind-no-highlight
+                         (kernel:kernel-syntax-case expr #f
+                           [(define-values vars-stx body)
+                            (let* ([vars (syntax->list #'vars-stx)]
+                                   [recon-vals (map (lambda (val var) 
+                                                      (recon-value val render-settings (or (syntax-property var 'stepper-lifted-name) var))) 
+                                                    vals
+                                                    vars)])
+                              (if (= (length recon-vals) 1)
+                                  (attach-info #`(define-values vars-stx #,(car recon-vals)) expr)
+                                  (attach-info #'(define-values vars-stx (values #,@recon-vals)) expr)))]
+                           [else
+                            (let* ([recon-vals (map (lambda (val)
+                                                      (recon-value val render-settings))
+                                                    vals)])
+                              (if (= (length recon-vals) 1)
+                                  (attach-info (car recon-vals) expr)
+                                  (attach-info #`(values #,@recon-vals) expr)))]))))])))
   
   ; : (-> syntax? syntax? sexp?)
   (define (reconstruct-define source reconstructed)
@@ -739,7 +745,7 @@
                                                                                                                 
                                                                                                                 
   
-  ; reconstruct-current : takes a parsed expression, a list of marks, the kind of break, and
+  ; reconstruct-current : takes a list of marks, the kind of break, and
   ; any values that may have been returned at the break point. It produces a list of sexps
   ; (the result of reconstruction) --- which may contain holes, indicated by the 
   ; highlight-placeholder --- and a list of sexps which go in the holes
@@ -939,7 +945,7 @@
                     [(top-level-define)
                      (if (null? (cdr mark-list))
                          (reconstruct-define (mark-source (car mark-list)) so-far)
-                         (error 'recon "top-level-define mark found not at end of mark list"))]
+                         (error 'recon "top-level-define mark found at non-end of mark list"))]
                     [else
                      (let ([reconstructed (recon-inner mark-list so-far)])
                        (recon

@@ -69,10 +69,6 @@
         
         ((define finished-exprs null)
          
-         (define current-expr #f)
-         
-         (define packaged-envs (a:make-initial-env-package))
-         
          (define held-expr-list no-sexp)
          (define held-redex-list no-sexp)
          
@@ -128,7 +124,7 @@
                    [reconstruct-helper
                     (lambda ()
                       (let* ([reconstruct-pair
-                              (r:reconstruct-current current-expr mark-list break-kind returned-value-list render-settings)]
+                              (r:reconstruct-current mark-list break-kind returned-value-list render-settings)]
                              [reconstructed (car reconstruct-pair)]
                              [redex-list (cadr reconstruct-pair)])
                         (2vals reconstructed redex-list)))])
@@ -177,7 +173,7 @@
                      [(double-break)
                       ; a double-break occurs at the beginning of a let's evaluation.
                       (let* ([reconstruct-quadruple
-                              (r:reconstruct-current current-expr mark-list break-kind returned-value-list render-settings)])
+                              (r:reconstruct-current mark-list break-kind returned-value-list render-settings)])
                         (when (not (eq? held-expr-list no-sexp))
                           (error 'break-reconstruction
                                  "held-expr-list not empty when a double-break occurred"))
@@ -193,24 +189,20 @@
                                                                        (list-ref reconstruct-quadruple 3)
                                                                        after))))]
                      [(late-let-break)
-                      (let ([new-finished (car (r:reconstruct-current current-expr mark-list break-kind returned-value-list render-settings))])
+                      (let ([new-finished (car (r:reconstruct-current mark-list break-kind returned-value-list render-settings))])
                         (set! finished-exprs (append finished-exprs new-finished)))]
+                     
+                     [(expr-finished-break)
+                      (let ([reconstructed (r:reconstruct-completed mark-list returned-value-list render-settings)])
+                        (set! finished-exprs (append finished-exprs (list reconstructed))))]
+                     
                      [else (error 'break "unknown label on break")])))))
          
          (define (step-through-expression expanded expand-next-expression)
-           (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
-                                                       'foot-wrap)])
-             (set! packaged-envs envs)
-             (set! current-expr expanded)
-             (let ([expression-result
-                    (parameterize ([current-eval basic-eval])
-                      (eval annotated))])
-               (add-finished-expr expression-result)
-               (expand-next-expression))))
-         
-         (define (add-finished-expr expression-result)
-           (let ([reconstructed (r:reconstruct-completed current-expr expression-result render-settings)])
-             (set! finished-exprs (append finished-exprs (list reconstructed)))))
+           (let* ([annotated (a:annotate expanded break 'foot-wrap)])
+             (parameterize ([current-eval basic-eval])
+               (eval annotated))
+             (expand-next-expression)))
          
          (define (err-display-handler message exn)
            (if (not (eq? held-expr-list no-sexp))
