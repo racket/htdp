@@ -18,7 +18,7 @@
   
   (define-values (FRAME-W-DELTA FRAME-H-DELTA CANVAS-W-DELTA CANVAS-H-DELTA)
     (values 0 0 0 0))
-    
+  
   (define sixlib-canvas%
     (class-asi mred:canvas% 
       (inherit get-parent
@@ -76,7 +76,7 @@
 		 (send buffer-DC set-font f)))
 	     (send buffer-DC clear)
 	     (send DC clear)))]
-
+	
 	[event-sema #f])
       
       
@@ -96,41 +96,41 @@
 	[get-current-brush (lambda () current-brush)]
 	[remember-pen (lambda (pen) (set! current-pen pen))]
 	[remember-brush (lambda (brush) (set! current-brush brush))])
-	
+      
       (override
-	[on-paint
-	 (lambda ()
-	   (send DC draw-bitmap (send buffer-DC get-bitmap) 0 0))]
-	
-	[on-event 
-	 (lambda (mouse-event)
-	   (let* ([x (send mouse-event get-x)]
-		  [y (send mouse-event get-y)]
-		  [left? (send mouse-event button-down? 'left)]
-		  [middle? (send mouse-event button-down? 'middle)]
-		  [right? (send mouse-event button-down? 'right)]
-		  [sixm (make-sixmouse x y left? middle? right?)])
-	     (set! current-mouse-posn (make-posn x y))
-	     (cond
-	       [(send mouse-event button-down?)
-		(send click-queue add sixm)]
-	       [(send mouse-event button-up?)
-		(send release-queue add sixm)]
-	       [else (void)])
-	     (when event-sema
-	       (semaphore-post event-sema))))]
-	
-	[on-char
-	 (lambda (key-event)
-	   (send press-queue add (make-sixkey (send key-event key-code)))
-	   (when event-sema 
-		 (semaphore-post event-sema)))])
-	
+       [on-paint
+	(lambda ()
+	  (send DC draw-bitmap (send buffer-DC get-bitmap) 0 0))]
+       
+       [on-event 
+	(lambda (mouse-event)
+	  (let* ([x (send mouse-event get-x)]
+		 [y (send mouse-event get-y)]
+		 [left? (send mouse-event button-down? 'left)]
+		 [middle? (send mouse-event button-down? 'middle)]
+		 [right? (send mouse-event button-down? 'right)]
+		 [sixm (make-sixmouse x y left? middle? right?)])
+	    (set! current-mouse-posn (make-posn x y))
+	    (cond
+	      [(send mouse-event button-down?)
+	       (send click-queue add sixm)]
+	      [(send mouse-event button-up?)
+	       (send release-queue add sixm)]
+	      [else (void)])
+	    (when event-sema
+	      (semaphore-post event-sema))))]
+       
+       [on-char
+	(lambda (key-event)
+	  (send press-queue add (make-sixkey (send key-event key-code)))
+	  (when event-sema 
+	    (semaphore-post event-sema)))])
+      
       (public
 	[get-click
 	 (lambda ()
 	   (send click-queue remove))]
-
+	
 	[get-release
 	 (lambda ()
 	   (send release-queue remove))]
@@ -138,7 +138,7 @@
 	[get-press
 	 (lambda ()
 	   (send press-queue remove))]
-
+	
 	[wait-event
 	 (lambda ()
 	   (set! event-sema (make-semaphore))
@@ -182,10 +182,10 @@
 	[canvas #f]
 	[set-canvas (lambda (x) (set! canvas x))])
       (override
-	[on-close
-	 (lambda ()
-	   (close-viewport (ivar canvas viewport))
-	   (super-on-close))])))
+       [on-close
+	(lambda ()
+	  (close-viewport (ivar canvas viewport))
+	  (super-on-close))])))
   
   (define repaint
     (lambda (viewport)
@@ -219,15 +219,15 @@
     (let* ([status (ready-mouse-click viewport)]
 	   [icon-change (send (viewport-canvas viewport) set-cursor arrow-cursor)])
       (cond
-       [status status]
-       [else (send (viewport-canvas viewport) wait-event) (get-mouse-click viewport)])))
+	[status status]
+	[else (send (viewport-canvas viewport) wait-event) (get-mouse-click viewport)])))
   
   
   (define (get-key-press viewport) 
     (let* ([status (ready-key-press viewport)])
       (cond
-       [status status]
-       [else (send (viewport-canvas viewport) wait-event) (get-key-press viewport)])))
+	[status status]
+	[else (send (viewport-canvas viewport) wait-event) (get-key-press viewport)])))
   
   (define ready-mouse-click
     (lambda (viewport)
@@ -418,7 +418,7 @@
   (define custom-roman
     (lambda (size)
       (make-object mred:font%
-	size 'roman 'normal 'normal)))
+		   size 'roman 'normal 'normal)))
   
   (define custom-deco
     (lambda (size)
@@ -488,7 +488,7 @@
   
   (define invisi-pen (send mred:the-pen-list find-or-create-pen "WHITE" 0 'transparent))
   (define invisi-brush (send mred:the-brush-list find-or-create-brush "WHITE" 'transparent))
-
+  
   (define xor-pen (send mred:the-pen-list find-or-create-pen "BLACK" 1 'xor))
   (define xor-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'xor))
   
@@ -759,7 +759,7 @@
   (define draw-string (string-functions 'draw))
   (define clear-string (string-functions 'clear))
   (define flip-string (string-functions 'flip))
-
+  
   (define get-string-size
     (case-lambda
      [(viewport) (get-string-size viewport DEFAULT-FONT)]
@@ -799,7 +799,7 @@
 		  [y (posn-y posn)])
 	      (send (viewport-DC viewport) draw-bitmap bitmap x y)
 	      (send (viewport-buffer-DC viewport) draw-bitmap bitmap x y)))))))
-
+  
   (define draw-pixmap
     (lambda (pixmap)
       (opt-lambda (filename p [color #f])
@@ -815,7 +815,7 @@
 	(send target-DC draw-bitmap (send source-DC get-bitmap) 0 0))))
   
   (define sixlib-eventspace #f)
-
+  
   (define make-open-viewport
     (lambda (name show?)
       (unless sixlib-eventspace
@@ -836,9 +836,9 @@
 			 ([frame
 			   (parameterize ([mred:current-eventspace sixlib-eventspace])
 			     (make-object sixlib-frame%
-			       label #f
-			       (inexact->exact (floor (* scale width)))
-			       (inexact->exact (floor (* scale height)))))]
+					  label #f
+					  (inexact->exact (floor (* scale width)))
+					  (inexact->exact (floor (* scale height)))))]
 			  [panel (make-object mred:vertical-panel% frame)]
 			  [canvas (make-object sixlib-canvas% panel)]
 			  [_ (begin
@@ -854,8 +854,8 @@
 		       (send canvas set-buffer-DC buffer-DC)
 		       (send canvas set-geometry width height scale)
 		       (when show? 
-			     (send frame show #t)
-			     (send canvas focus))
+			 (send frame show #t)
+			 (send canvas focus))
 		       (set-text-foreground viewport black)
 		       (set-text-background viewport white)
 		       (set-viewport-background viewport white)
