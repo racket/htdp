@@ -198,7 +198,6 @@
                      [else (error 'break "unknown label on break")])))))
          
          (define (step-through-expression expanded expand-next-expression)
-           ; (fprintf (current-error-port) "expanded: ~a\n" (syntax-object->datum expanded))
            (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
                                                        'foot-wrap)])
              (set! packaged-envs envs)

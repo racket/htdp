@@ -67,7 +67,7 @@
                   (expr-iterator stx context-so-far)])))
            
            (define (expr-iterator stx context-so-far)
-             (when (eq? (syntax-e stx) highlight-placeholder)
+             (when (eq? stx highlight-placeholder-stx)
                (success-escape context-so-far))
              (let* ([try (make-try-all-subexprs stx 'expr context-so-far)]
                     [try-exprs (lambda (index-mangler exprs) (try index-mangler (map (lambda (expr) `(,expr-iterator ,expr)) (syntax->list exprs))))]
@@ -113,20 +113,16 @@
                  [(with-continuation-mark key mark body)
                   (try-exprs-offset 1 #'(key mark body))]
                  [(#%app . exprs)
-                  (try-exprs-offset 0 #'exprs)]
+                  (try-exprs-offset 1 #'exprs)]
                  [(#%datum . _)
                   (void)]
                  [(#%top . var)
                   (void)]
-                 [(a b c) ; extension to handle unknown contexts:
-                  (and (eq? (syntax-e #'a) '...)
-                       (eq? (syntax-e #'c) '...))
-                  (try-exprs-offset 1 #'(b))]
                  [else
                   (error 'expr-iterator "unknown expr: ~a" 
                          (syntax-object->datum stx))]))))
         
-        (if (eq? stx highlight-placeholder)
+        (if (eq? stx highlight-placeholder-stx)
             null
             (begin (top-level-expr-iterator stx null)
                    (error 'find-highlight "couldn't find highlight-placeholder in expression: ~v" (syntax-object->datum stx)))))))
@@ -140,13 +136,13 @@
        #'(void) ; non-testing version
        ]))
   
-  (test-begin
-   ; TEST OF FIND-HIGHLIGHT
-   (define (datum-ize-context-record cr)
+  (define (datum-ize-context-record cr)
      (list (syntax-object->datum (context-record-stx cr))
                           (context-record-index cr)
                           (context-record-kind cr)))
-   
+
+  (test-begin
+   ; TEST OF FIND-HIGHLIGHT
    
    (define (sexp-shared a b)
      (if (equal? a b)
@@ -162,7 +158,7 @@
                                  (lambda (x)
                                    (let-values ()
                                      (letrec-values (((a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))) 
-                                                     ((b) (lambda (x) (#%app #,highlight-placeholder x)))) (let-values () (#%app a x)))))))
+                                                     ((b) (lambda (x) (#%app #,highlight-placeholder-stx x)))) (let-values () (#%app a x)))))))
 
    (define actual (map datum-ize-context-record
                        (find-highlight test-datum)))
@@ -179,7 +175,7 @@
    ;(printf "shared: ~v\n" (sexp-shared actual expected))
    
    (local
-       ((define actual (find-highlight #`#,highlight-placeholder)))
+       ((define actual (find-highlight highlight-placeholder-stx)))
      
      (printf "equal?: ~v\n" (null? actual))))
   
@@ -230,7 +226,7 @@
     (let-values ([(highlighted-defs highlighted-body) (if lift-in-highlighted?
                                                           (lift-helper highlighted #f null)
                                                           (values null highlighted))])
-      (let loop ([ctx-list ctx-list] [so-far-defs (map (lambda (x) #`#,highlight-placeholder) highlighted-defs)] [body #`#,highlight-placeholder])
+      (let loop ([ctx-list ctx-list] [so-far-defs (map (lambda (x) highlight-placeholder-stx) highlighted-defs)] [body highlight-placeholder-stx])
         (if (null? ctx-list)
             (values (append so-far-defs (list body)) (append highlighted-defs (list highlighted-body)))
             (let*-values ([(ctx) (car ctx-list)]
@@ -266,6 +262,7 @@
                 [else (error 'lift-helper "let or letrec does not have expected shape: ~v\n" (syntax-object->datum stx))]))])
     (kernel:kernel-syntax-case stx #f
       [(let-values . dc)
+       (not (eq? (syntax-property stx 'user-stepper-hint) 'comes-from-or))
        (lift)]
       [(letrec-values . dc)
        (lift)]

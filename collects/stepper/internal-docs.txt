@@ -70,6 +70,9 @@ stepper-hint :
  of 'cond'. This tag is applied to all the if's, but not to the else
  clause.
 
+ [ 'comes-from-let ] : expression was expanded from let
+ [ 'comes-from-local ] : expression was expanded from local
+
  [ lambda-define ] : source had form (define id (lambda ...))
 
  [ non-lambda-define ] : source had form (define id exp) where exp !=

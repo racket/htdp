@@ -190,16 +190,16 @@
                  [do-let/rec
                   (lambda (stx rec?)
                     (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
-                      (let* ([vars-list (foldl (lambda (a b) (append b a)) null (map syntax->list (syntax->list (syntax (vars ...)))))]
-                             [labelled-vars-list (map (lambda (var-list) (map (lambda (exp) (recur-with-bindings exp (syntax->list var-list)))
-                                                                              vars-list))
+                      (let* ([vars-list (apply append (map syntax->list (syntax->list (syntax (vars ...)))))]
+                             [labelled-vars-list (map (lambda (var-list) (map (lambda (exp) (recur-with-bindings exp vars-list))
+                                                                              (syntax->list var-list)))
                                                       (syntax->list (syntax (vars ...))))]
                              [rhs-list (if rec?
-                                           (recur-with-bindings vars-list (syntax->list (syntax (rhs ...))))
-                                           (map recur-regular (syntax->list (syntax (rhs ...)))))]
-                             [new-bodies (map (lambda (exp) (recur-with-bindings exp vars-list)) (syntax->list (syntax bodies)))]
+                                           (map (lambda (exp) (recur-with-bindings exp vars-list)) (syntax->list #'(rhs ...)))
+                                           (map recur-regular (syntax->list #'(rhs ...))))]
+                             [new-bodies (map (lambda (exp) (recur-with-bindings exp vars-list)) (syntax->list #'bodies))]
                              [new-bindings (map list labelled-vars-list rhs-list)])
-                        (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies) stx stx))))]
+                        (datum->syntax-object stx `(,#'label ,new-bindings ,@new-bodies) stx stx))))]
                  [do-or
                   ; NOTE: I maintain my invariants in this section through foreknowledge of the shape of 
                   ; the or macro. Therefore, this code is fragile.
@@ -719,13 +719,12 @@
                                
                                [let-abstraction
                                 (lambda (stx output-identifier make-init-list)
-                                  (with-syntax ([(_ ([var val] ...) . bodies) stx]
-                                                [(_a (binding ...) . _b) stx])
+                                  (with-syntax ([(_ ([(var ...) val] ...) . bodies) stx])
                                     (let*-2vals
-                                     ([binding-sets (map syntax->list (syntax->list (syntax (var ...))))]
+                                     ([binding-sets (map syntax->list (syntax->list #'((var ...) ...)))]
                                       [binding-name-sets (mapmap syntax-e binding-sets)]
-                                      [binding-list (foldl append null binding-sets)]
-                                      [vals (syntax->list (syntax (val ...)))]
+                                      [binding-list (apply append binding-sets)]
+                                      [vals (syntax->list #'(val ...))]
                                       [lifted-var-sets (map (lx (map get-lifted-var _)) binding-sets)]
                                       [lifted-vars (apply append lifted-var-sets)]
                                       [(annotated-vals free-varref-sets-vals)
@@ -743,7 +742,7 @@
                                      
                                       (let* ([unevaluated-list (make-init-list binding-list)]
                                              [outer-initialization
-                                              #`([#,(append lifted-vars binding-list (list let-counter))
+                                              #`([(#,@lifted-vars #,@binding-list #,let-counter)
                                                    (values #,@(append (map (lambda (binding)
                                                                              #`(#,binding-indexer)) 
                                                                            binding-list)
@@ -877,7 +876,7 @@
                             [(letrec-values . _)
                              (let-abstraction expr 
                                               'letrec-values
-                                              (lambda (bindings) (map (lambda (b) #'#,b) bindings)))]
+                                              (lambda (bindings) (map (lambda (b) #`#,b) bindings)))]
                             
                             [(set! var val)
                              (let*-2vals
