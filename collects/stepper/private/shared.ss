@@ -41,7 +41,7 @@
    queue-pop ; queue -> val
    queue-length ; queue -> num
    rebuild-stx ; datum syntax-object -> syntax-object
-   break-kind-contract ; contract
+   break-kind? ; predicate
    break-contract ; contract
    ; get-binding-name
    ; bogus-binding?
@@ -59,6 +59,7 @@
   ; a BINDING-SET is (union 'all (listof BINDING))
   ; a VARREF-SET is (listof VARREF)
   
+  (define binding-set-contract
   (make-contract-checker BINDING-SET
                          (lambda (arg)
                            (or (eq? arg 'all)
@@ -402,11 +403,11 @@
   (define (rebuild-stx new old)
     (datum->syntax-object old new old old))
   
-  (define break-kind-contract
-    (symbols 'result-exp-break 'result-value-break 'double-break 'late-let-break))
+  (define break-kind?
+    (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break))
     
   (define break-contract
-    (-> continuation-mark-set? any? break-kind-contract list?))
+    (-> continuation-mark-set? any? break-kind-contract list? any?))
   )
 
 ; test cases

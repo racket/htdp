@@ -168,7 +168,7 @@
                                                                                          
   (define skip-step?
     (contract
-     (-> break-kind? mark-list? boolean?)
+     (-> break-kind-contract mark-list? boolean?)
      (lambda (break-kind mark-list)
        (case break-kind
          ((result-value-break)
@@ -183,10 +183,12 @@
   (define (skip-redex-step? mark-list)
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
+           (printf "source: ~a\n" (syntax-object->datum expr)) ; TEMP
            (or (kernel:kernel-syntax-case expr #f
                   [id
                    (identifier? expr)
                    (or (and (model-settings:true-false-printed?) ; if our language prints #t as true, then ...
+                            (cons? (identifier-binding (syntax id)))      ; for module-bound identifiers,
                             (or (eq? (syntax-e (syntax id)) 'true)        ; don't halt for true or false
                                 (eq? (syntax-e (syntax id)) 'false)))
                        (eq? (syntax-property expr 'stepper-binding-type) 'lambda-bound) ; don't halt for lambda-bound vars
@@ -556,7 +558,7 @@
 
   (define reconstruct-current
     (contract
-     (-> syntax? mark-list? break-kind? list? loloval?)
+     (-> syntax? mark-list? break-kind-contract list? (listof (listof any?)))
      (lambda (expr mark-list break-kind returned-value-list)
        
        (local
