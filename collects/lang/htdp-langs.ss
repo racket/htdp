@@ -553,7 +553,6 @@ tracing todo:
                         ((exn:srclocs-accessor exn) exn)]
                        [(exn? exn) 
                         (let ([cms (continuation-mark-set->list (exn-continuation-marks exn) cm-key)])
-                          (oprintf "cms ~s\n" cms)
                           (if cms
                               (let loop ([cms cms])
                                 (cond
@@ -562,7 +561,6 @@ tracing todo:
                                                [source (car cms)]
                                                [pos (cadr cms)]
                                                [span (cddr cms)])
-                                          (oprintf "source ~s\n" source)
                                           (if (is-a? source text%)
                                               (list (make-srcloc source #f #f pos span))
                                               (loop (cdr cms))))]))
