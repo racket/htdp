@@ -368,8 +368,8 @@
 	"to extract the i-the character from a string")
     
       (substring (string nat nat -> string)
-	"to extract the substring starting at a 0-based index,"
-	" consisting of a given number of characters")
+	"to extract the substring starting at a 0-based index"
+	" up to the second 0-based index (exclusive)")
       (string-copy (string -> string)
 	"to copy a string")
       (string-append (string ... -> string)
