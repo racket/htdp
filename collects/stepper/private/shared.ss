@@ -400,7 +400,7 @@
     (datum->syntax-object old new old old))
   
   (define break-kind?
-    (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break 'expr-finished-break))
+    (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break 'expr-finished-break 'define-struct-break))
   
   ; BINDING-/VARREF-SET FUNCTIONS
   

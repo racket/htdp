@@ -37,7 +37,6 @@
   (require (lib "contract.ss")
            (lib "etc.ss")
            (lib "list.ss")
-           (lib "mred.ss" "mred")
            "my-macros.ss"
            (prefix a: "annotate.ss")
            (prefix r: "reconstruct.ss")
@@ -58,10 +57,6 @@
                             (union render-settings? false?) ; render-settings
                             void?)])
   
-  (define (send-to-eventspace eventspace thunk)
-    (parameterize ([current-eventspace eventspace])
-      (queue-callback thunk)))
-
   ; go starts a stepper instance
   ; see provide stmt for contract 
   (define (go program-expander receive-result render-settings)
@@ -114,91 +109,96 @@
          
          (define break 
            (opt-lambda (mark-set break-kind [returned-value-list null])
-             (let* ([mark-list (extract-mark-list mark-set)])
-               (let ([double-redivide
-                      (lambda (finished-exprs new-exprs-before new-exprs-after)
-                        (let*-values ([(before current after) (redivide new-exprs-before)]
-                                      [(before-2 current-2 after-2) (redivide new-exprs-after)]
-                                      [(_) (unless (and (equal? before before-2)
-                                                        (equal? after after-2))
-                                             (error 'break "reconstructed before or after defs are not equal."))])
-                          (values (append finished-exprs before) current current-2 after)))]
-                     [reconstruct-helper
-                      (lambda ()
-                        (let* ([reconstruct-pair
-                                (r:reconstruct-current mark-list break-kind returned-value-list render-settings)]
-                               [reconstructed (car reconstruct-pair)]
-                               [redex-list (cadr reconstruct-pair)])
-                          (2vals reconstructed redex-list)))])
-                 (if (r:skip-step? break-kind mark-list render-settings)
-                     (when (eq? break-kind 'normal-break)
-                       (set! held-expr-list skipped-step))
-                     (case break-kind
-                       [(normal-break)
-                        (let*-2vals ([(reconstructed redex-list) (reconstruct-helper)])
-                          (set! held-expr-list reconstructed)
-                          (set! held-redex-list redex-list))]
-                       
-                       [(result-exp-break result-value-break)
-                        (if (eq? held-expr-list skipped-step)
-                            (begin 
+             (let* ([mark-list (and mark-set (extract-mark-list mark-set))])
+
+               (define (double-redivide finished-exprs new-exprs-before new-exprs-after)
+                 (let*-values ([(before current after) (redivide new-exprs-before)]
+                               [(before-2 current-2 after-2) (redivide new-exprs-after)]
+                               [(_) (unless (and (equal? before before-2)
+                                                 (equal? after after-2))
+                                      (error 'break "reconstructed before or after defs are not equal."))])
+                   (values (append finished-exprs before) current current-2 after)))
+               
+               (define (reconstruct-helper)
+                 (let* ([reconstruct-pair
+                         (r:reconstruct-current mark-list break-kind returned-value-list render-settings)]
+                        [reconstructed (car reconstruct-pair)]
+                        [redex-list (cadr reconstruct-pair)])
+                   (2vals reconstructed redex-list)))
+               
+               (if (r:skip-step? break-kind mark-list render-settings)
+                   (when (eq? break-kind 'normal-break)
+                     (set! held-expr-list skipped-step))
+                   (case break-kind
+                     [(normal-break)
+                      (let*-2vals ([(reconstructed redex-list) (reconstruct-helper)])
+                        (set! held-expr-list reconstructed)
+                        (set! held-redex-list redex-list))]
+                     
+                     [(result-exp-break result-value-break)
+                      (if (eq? held-expr-list skipped-step)
+                          (begin 
+                            (set! held-expr-list no-sexp)
+                            (set! held-redex-list no-sexp))
+                          (let*-2vals ([(reconstructed reduct-list) (reconstruct-helper)])
+                            ; this invariant (contexts should be the same)
+                            ; fails in the presence of unannotated code.  For instance,
+                            ; currently (map my-proc (cons 3 empty)) goes to
+                            ; (... <body-of-my-proc> ...), where the context of the first one is
+                            ; empty and the context of the second one is (... ...).
+                            ; so, I'll just disable this invariant test.
+                            ;
+                            ; in fact, this also fails for let/let*/etc., where a single expression
+                            ; reduces to multiple top-level-expressions.
+                            ;
+                            ;(when (not (equal? reconstructed held-expr-list))
+                            ;  (error 'reconstruct-helper
+                            ;         "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
+                            ;         held-expr-list reconstructed))
+                            (let ([result
+                                   (if (not (eq? held-expr-list no-sexp))
+                                       (let*-values 
+                                           ([(new-finished current-pre current-post after) 
+                                             (double-redivide finished-exprs held-expr-list reconstructed)])
+                                         (make-before-after-result new-finished current-pre held-redex-list current-post reduct-list after))
+                                       (let*-values
+                                           ([(before current after) (redivide reconstructed)])
+                                         (make-before-after-result (append finished-exprs before) `(,highlight-placeholder) `(...)
+                                                                   current reduct-list after)))])
                               (set! held-expr-list no-sexp)
-                              (set! held-redex-list no-sexp))
-                            (let*-2vals ([(reconstructed reduct-list) (reconstruct-helper)])
-                              ; this invariant (contexts should be the same)
-                              ; fails in the presence of unannotated code.  For instance,
-                              ; currently (map my-proc (cons 3 empty)) goes to
-                              ; (... <body-of-my-proc> ...), where the context of the first one is
-                              ; empty and the context of the second one is (... ...).
-                              ; so, I'll just disable this invariant test.
-                              ;
-                              ; in fact, this also fails for let/let*/etc., where a single expression
-                              ; reduces to multiple top-level-expressions.
-                              ;
-                              ;(when (not (equal? reconstructed held-expr-list))
-                              ;  (error 'reconstruct-helper
-                              ;         "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
-                              ;         held-expr-list reconstructed))
-                              (let ([result
-                                     (if (not (eq? held-expr-list no-sexp))
-                                         (let*-values 
-                                             ([(new-finished current-pre current-post after) 
-                                               (double-redivide finished-exprs held-expr-list reconstructed)])
-                                           (make-before-after-result new-finished current-pre held-redex-list current-post reduct-list after))
-                                         (let*-values
-                                             ([(before current after) (redivide reconstructed)])
-                                           (make-before-after-result (append finished-exprs before) `(,highlight-placeholder) `(...)
-                                                                     current reduct-list after)))])
-                                (set! held-expr-list no-sexp)
-                                (set! held-redex-list no-sexp)
-                                (receive-result result))))]
-                       [(double-break)
-                        ; a double-break occurs at the beginning of a let's evaluation.
-                        (let* ([reconstruct-quadruple
-                                (r:reconstruct-current mark-list break-kind returned-value-list render-settings)])
-                          (when (not (eq? held-expr-list no-sexp))
-                            (error 'break-reconstruction
-                                   "held-expr-list not empty when a double-break occurred"))
-                          (let*-values 
-                              ([(new-finished current-pre current-post after) 
-                                (double-redivide finished-exprs 
-                                                 (list-ref reconstruct-quadruple 0) 
-                                                 (list-ref reconstruct-quadruple 2))])
-                            (receive-result (make-before-after-result new-finished
-                                                                      current-pre
-                                                                      (list-ref reconstruct-quadruple 1)
-                                                                      current-post
-                                                                      (list-ref reconstruct-quadruple 3)
-                                                                      after))))]
-                       [(late-let-break)
-                        (let ([new-finished (car (r:reconstruct-current mark-list break-kind returned-value-list render-settings))])
-                          (set! finished-exprs (append finished-exprs new-finished)))]
-                       
-                       [(expr-finished-break)
-                        (let ([reconstructed (r:reconstruct-completed mark-list returned-value-list render-settings)])
-                          (set! finished-exprs (append finished-exprs (list reconstructed))))]
-                       
-                       [else (error 'break "unknown label on break")]))))))
+                              (set! held-redex-list no-sexp)
+                              (receive-result result))))]
+                     [(double-break)
+                      ; a double-break occurs at the beginning of a let's evaluation.
+                      (let* ([reconstruct-quadruple
+                              (r:reconstruct-current mark-list break-kind returned-value-list render-settings)])
+                        (when (not (eq? held-expr-list no-sexp))
+                          (error 'break-reconstruction
+                                 "held-expr-list not empty when a double-break occurred"))
+                        (let*-values 
+                            ([(new-finished current-pre current-post after) 
+                              (double-redivide finished-exprs 
+                                               (list-ref reconstruct-quadruple 0) 
+                                               (list-ref reconstruct-quadruple 2))])
+                          (receive-result (make-before-after-result new-finished
+                                                                    current-pre
+                                                                    (list-ref reconstruct-quadruple 1)
+                                                                    current-post
+                                                                    (list-ref reconstruct-quadruple 3)
+                                                                    after))))]
+                     [(late-let-break)
+                      (let ([new-finished (car (r:reconstruct-current mark-list break-kind returned-value-list render-settings))])
+                        (set! finished-exprs (append finished-exprs new-finished)))]
+                     
+                     [(expr-finished-break)
+                      (let ([reconstructed (r:reconstruct-completed mark-list returned-value-list render-settings)])
+                        (set! finished-exprs (append finished-exprs (list reconstructed))))]
+                     
+                     [(define-struct-break)
+                      (set! finished-exprs (append finished-exprs
+                                                   (list (syntax-object->datum (car returned-value-list)))))]
+                     
+                     [else (error 'break "unknown label on break")])))))
          
          (define (step-through-expression expanded expand-next-expression)
            (let* ([annotated (a:annotate expanded break 'foot-wrap)])
@@ -217,8 +217,8 @@
       (program-expander
        (lambda () 
          ; swap these to allow errors to escape (e.g., when debugging)
-         ;(error-display-handler err-display-handler)
-         (void)
+         (error-display-handler err-display-handler)
+         ;(void)
          )
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)

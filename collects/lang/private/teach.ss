@@ -233,10 +233,13 @@
 				    (syntax/loc stx
 				      (check-top-level-not-defined 'who #'name))))
 				(stx->list names))])
-	      (syntax/loc stx
-		(begin
-		  check ...
-		  defn))))
+	      (syntax-property
+               (syntax/loc stx
+                 (begin
+                   check ...
+                   defn))
+               'stepper-skipto
+               (list syntax-e cdr syntax-e cdr car))))
 	  defn))
 
     ;; Same as above, but for one name
@@ -324,30 +327,21 @@
 	   (syntax-case (syntax expr) (beginner-lambda)
 	     ;; Well-formed lambda def:
 	     [(beginner-lambda arg-seq lexpr ...)
-              (syntax-property
-               (check-definition-new
-                'define
-                stx
-                (syntax name)
-                (quasisyntax/loc stx (define name #,(syntax-property
-                                                     #`(lambda arg-seq #,(syntax-property #`make-lambda-generative 'stepper-skip-completely #t) lexpr ...)
-                                                     'stepper-define-type
-                                                     'lambda-define))))
-               'stepper-skipto
-               (list syntax-e cdr syntax-e cdr car))]
+              (check-definition-new
+               'define
+               stx
+               (syntax name)
+               (quasisyntax/loc stx (define name #,(syntax-property
+                                                    #`(lambda arg-seq #,(syntax-property #`make-lambda-generative 'stepper-skip-completely #t) lexpr ...)
+                                                    'stepper-define-type
+                                                    'lambda-define))))]
 	     ;; Constant def
 	     [_else
-              (syntax-property
-               (check-definition-new
+              (check-definition-new
                 'define
                 stx
                 (syntax name)
-		(syntax-property
-                 (syntax/loc stx (define name expr))
-                 'stepper-hint
-                 'non-lambda-define))
-               'stepper-skipto
-               (list syntax-e cdr syntax-e cdr car))]))]
+                (quasisyntax/loc stx (define name expr)))]))]
 	;; Function definition:
 	[(_ name-seq expr ...)
 	 (syntax-case (syntax name-seq) () [(name ...) #t][_else #f])
@@ -390,17 +384,16 @@
 				     #f
 				     stx)
 	   
-           (syntax-property
-            (check-definition-new 
-             'define
-             stx
-             (car names)
-             (syntax-property
-              (syntax/loc stx (define name-seq expr ...))
-              'stepper-hint
-              'shortened-proc-define))
-            'stepper-skipto
-            (list syntax-e cdr syntax-e cdr car)))]
+           (check-definition-new 
+            'define
+            stx
+            (car names)
+            (with-syntax ([fn (car (syntax-e #'name-seq))] 
+                          [args (cdr (syntax-e #'name-seq))])
+              (quasisyntax/loc stx (define fn #,(syntax-property
+                                                 #`(lambda args expr ...)
+                                                 'stepper-define-type
+                                                 'shortened-proc-define))))))]
 	;; Constant/lambda with too many or too few parts:
 	[(_ name expr ...)
 	 (identifier/non-kw? (syntax name))
@@ -569,25 +562,21 @@
 						 "expected an expression, but found a structure name"
 						 stx))))])
 	       (let ([defn
-                      (syntax/loc stx
+                      (quasisyntax/loc stx
 			 (begin
-			   (define-syntaxes (name_) compile-info)
-			   (define-values (to-define-name ...)
-			     (let ()
-			       (define-struct name_ (field_ ...) (make-inspector))
-			       (values to-define-name ...)))))])
-                 (syntax-property
-                  (syntax-property
-                   (check-definitions-new 'define-struct
-                                          stx 
-                                          (syntax (name_ to-define-name ...)) 
-                                          defn)
-                   'stepper-skip-completely 
-                   #t)
-                  'stepper-define-struct-hint
-                  (list
-                   (syntax->list (syntax (to-define-name ...)))
-                   stx))))))]
+                           #,(syntax-property #`(define-syntaxes (name_) compile-info)
+                                              'stepper-skip-completely
+                                              #t)
+			   #,(syntax-property #`(define-values (to-define-name ...)
+                                                  (let ()
+                                                    (define-struct name_ (field_ ...) (make-inspector))
+                                                    (values to-define-name ...)))
+                                              'stepper-define-struct-hint
+                                              stx)))])
+                 (check-definitions-new 'define-struct
+                                        stx 
+                                        (syntax (name_ to-define-name ...)) 
+                                        defn)))))]
 	[(_ name_ something . rest)
 	 (teach-syntax-error
 	  'define-struct
@@ -700,10 +689,16 @@
     (define (beginner-top/proc stx)
       (syntax-case stx ()
         [(_ . id)
-         (syntax-property
-          (syntax/loc stx (check-not-a-function 'id (#%top . id)))
-          'stepper-skipto
-          (list syntax-e cdr syntax-e cdr cdr car))]))
+         (if (syntax-property #`id 'stepper-dont-check-for-function)
+             ;(syntax-property
+             ; (quasisyntax/loc stx (check-not-a-function 'id (#%top . id)))
+             ; 'stepper-skipto
+             ; (list syntax-e cdr syntax-e cdr cdr car))
+             (syntax/loc stx (#%top . id))
+             (syntax-property
+              (syntax/loc stx (check-not-a-function 'id (#%top . id)))
+              'stepper-skipto
+              (list syntax-e cdr syntax-e cdr cdr car)))]))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; cond

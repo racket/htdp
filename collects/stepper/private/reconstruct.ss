@@ -12,20 +12,18 @@
            "model-settings.ss"
            "shared.ss"
            "highlight-placeholder.ss"
-           "display-exp-interface.ss"
            "my-macros.ss"
            "lifting.ss")
 
   (provide/contract 
    [reconstruct-completed (-> mark-list? (listof any?) render-settings? 
-                              exp-without-holes?)]
+                              any?)]
    [reconstruct-current (-> mark-list? symbol? (listof any?) render-settings?
-                            (union (listof exp-without-holes?)
-                                   (list/p (listof exp-with-holes?) (listof exp-without-holes?))
-                                   (list/p (listof exp-with-holes?) (listof exp-without-holes?) 
-                                           (listof exp-with-holes?) (listof exp-without-holes?))))]
+                            (union (listof any?)
+                                   (list/p any? any?)
+                                   (list/p any? any? any? any?)))]
    [final-mark-list? (-> mark-list? boolean?)]
-   [skip-step? (-> break-kind? mark-list? render-settings? boolean?)])
+   [skip-step? (-> break-kind? (union mark-list? false?) render-settings? boolean?)])
   
   (define the-undefined-value (letrec ([x x]) x))
   
@@ -134,13 +132,7 @@
     
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
- 
-  (define continuation? 
-    (let ([r (regexp "#<continuation>")])
-      (lambda (k)
-        (let ([p (open-output-string)])
-          (display k p)
-          (not (not (regexp-match r (get-output-string p))))))))
+
                                                                                          
                                                                                          
        ;      ;                                                                     ;;;  
@@ -167,15 +159,13 @@
       [(normal-break)
        (skip-redex-step? mark-list render-settings)]
       [(double-break)
-       (or (not (render-settings-lifting? render-settings))
-           (eq? (syntax-property (mark-source (car mark-list)) 'stepper-hint) 'comes-from-or))]
-      [(late-let-break)
-       (eq? (syntax-property (mark-source (car mark-list)) 'stepper-hint) 'comes-from-or)]
-      [(expr-finished-break) #f]))  
+       (not (render-settings-lifting? render-settings))]
+      [(expr-finished-break define-struct-break late-let-break) #f]))
   
   (define (skip-redex-step? mark-list render-settings)
     
     (define (varref-skip-step? id varref)
+      (with-handlers ([exn:variable? (lambda (exn) #f)])
       (let ([val (lookup-binding mark-list varref)])
         (equal? (syntax-object->datum (recon-value val render-settings))
                 (syntax-object->datum (case (syntax-property varref 'stepper-binding-type)
@@ -186,11 +176,7 @@
                                         (else
                                          (error 'varref-skip-step? "unexpected value for stepper-binding-type: ~e for variable: ~e\n"
                                                 (syntax-property varref 'stepper-binding-type)
-                                                varref)))))
-        ;(and (procedure? val)               ; don't halt for varrefs ...
-        ;     (not (continuation? val))      ; ... bound to non-continuation procedures ...
-        ;     (has-right-name id val))
-        ))
+                                                varref))))))))
     
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
@@ -215,7 +201,7 @@
                           (or (and (render-settings-constructor-style-printing? render-settings)
                                    (if (render-settings-abbreviate-cons-as-list? render-settings)
                                        (eq? fun-val (find-special-value 'list '(3)))    
-                                       (and (eq? fun-val (find-special-value 'cons '(3 null)))
+                                       (and (eq? fun-val (find-special-value 'cons '(3 empty)))
                                             (second-arg-is-list? mark-list))))
                               ;(model-settings:special-function? 'vector fun-val)
                               (and (eq? fun-val void)
@@ -239,12 +225,11 @@
                               #f))
                         #f)))
   
-  
-  
   (define (find-special-value name valid-args)
-    (let ([expanded (car (syntax-e (cdr (syntax-e (expand (cons name valid-args))))))])
-      ;(fprintf (current-error-port) "identifier-binding: ~e\n" 
-      ;	(identifier-binding expanded))
+    (let ([expanded (kernel:kernel-syntax-case (expand (cons name valid-args)) #f
+                      [(#%app fn . rest)
+                       #`fn]
+                      [else (error 'find-special-name "couldn't find expanded name for ~a" name)])])
       (eval expanded)))
   
   (define (second-arg-is-list? mark-list)
@@ -991,6 +976,8 @@
                           [innermost-before (recon-source-expr source-expr mark-list null null render-settings)]
                           [newly-lifted-bindings (syntax-case source-expr (letrec-values)
                                                    [(letrec-values ([vars . rest] ...) . bodies)
+                                                    (apply append (map syntax->list (syntax->list #`(vars ...))))]
+                                                   [(let-values ([vars . rest] ...) . bodies)
                                                     (apply append (map syntax->list (syntax->list #`(vars ...))))]
                                                    [else (error 'reconstruct "expected a let-values as source for a double-break, got: ~e"
                                                                 (syntax-object->datum source-expr))])]
