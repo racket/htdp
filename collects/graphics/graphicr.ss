@@ -851,14 +851,26 @@
 	  (let-values ([(w h d a) (get-extent text font)])
 	    (list w h))))]))
   
-  (define get-pixel 
+  (define get-color-pixel 
     (lambda (viewport)
-      (let ([get-pixel (ivar (viewport-dc viewport) get-pixel)])
+      (let ([get-pixel (ivar (viewport-buffer-dc viewport) get-pixel)])
 	(lambda (posn)
 	  (let ([c (make-object mred:color%)]
 		[x (posn-x posn)]
 		[y (posn-y posn)])
-	    (get-pixel x y c)
+	    (unless (get-pixel x y c)
+	      (error 'get-color-pixel "specified point is out-of-range"))
+	    c)))))
+  
+  (define get-pixel 
+    (lambda (viewport)
+      (let ([get-pixel (ivar (viewport-buffer-dc viewport) get-pixel)])
+	(lambda (posn)
+	  (let ([c (make-object mred:color%)]
+		[x (posn-x posn)]
+		[y (posn-y posn)])
+	    (unless (get-pixel x y c)
+	      (error 'get-pixel "specified point is out-of-range"))
 	    (if (or (< (send c blue) 255)
 		    (< (send c red) 255)
 		    (< (send c green) 255))
