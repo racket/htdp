@@ -1,4 +1,4 @@
-(module find-highlight mzscheme
+(module lifting mzscheme
   (require "highlight-placeholder.ss"
            (lib "etc.ss")
            (lib "contracts.ss")
@@ -8,6 +8,9 @@
 
   (provide/contract [find-highlight (-> syntax? (listof context-record?))])
   
+  ; the success of this approach is predicated on the fact that all of the primitive forms of mzscheme are
+  ; proper syntax-lists.  That is, none of them are improper lists. Consider myself warned.
+  
   (define (find-highlight stx)
     (let/ec success-escape
       (local
@@ -15,18 +18,13 @@
              (lambda (index-mangler list-of-subtries)
                (let loop ([index 0] [remaining list-of-subtries])
                  (unless (null? remaining)
-                   (fprintf (current-output-port) "~v\n" (syntax-object->datum stx))
-                   (if (kernel:kernel-syntax-case stx #f 
-                         [(#%top . var)
-                          (eq? (syntax-e #'var) highlight-placeholder)
-                          #t]
-                         [else #f]) ;(eq? stx highlight-placeholder)
-                       (begin
-                         (fprintf (current-error-port) "success!\n")
-                       (success-escape context-so-far))
-                       (begin
-                         ((caar remaining) (cadar remaining) (cons (make-context-record stx (index-mangler index) kind) context-so-far))
-                         (loop (+ index 1) (cdr remaining))))))))
+                   (let* ([subexpr (cadar remaining)]
+                          [new-contexts (cons (make-context-record stx (index-mangler index) kind) context-so-far)])
+                     (if (eq? (syntax-e subexpr) highlight-placeholder)
+                         (success-escape new-contexts)
+                         (begin
+                           ((caar remaining) subexpr new-contexts)
+                           (loop (+ index 1) (cdr remaining)))))))))
            
            (define try->offset-try
              (lambda (try)
@@ -111,9 +109,7 @@
                  [(with-continuation-mark key mark body)
                   (try-exprs-offset 1 #'(key mark body))]
                  [(#%app . exprs)
-                  (begin
-                    (fprintf (current-error-port) "application sub-exprs: ~v\n" (map syntax-object->datum (syntax->list #'exprs)))
-                  (try-exprs-offset 0 #'exprs))]
+                  (try-exprs-offset 0 #'exprs)]
                  [(#%datum . _)
                   (void)]
                  [(#%top . var)
@@ -124,22 +120,93 @@
         
         (if (eq? stx highlight-placeholder)
             null
-            (top-level-expr-iterator stx null)))))
+            (begin (top-level-expr-iterator stx null)
+                   (error 'find-highlight "couldn't find highlight-placeholder in expression: ~v" (syntax-object->datum stx)))))))
+
+  ; TESTING:
+  
+  (define-syntax (test-begin stx)
+    (syntax-case stx ()
+      [(_ expr ...)
+       #'(begin expr ...) ; testing version
+       ;#'(void) ; non-testing version
+       ]))
+  
+  (test-begin
+   ; TEST OF FIND-HIGHLIGHT
+   (define (datum-ize-context-record cr)
+     (list (syntax-object->datum (context-record-stx cr))
+                          (context-record-index cr)
+                          (context-record-kind cr)))
+   
+   
+   (define (sexp-shared a b)
+     (if (equal? a b)
+         a
+         (if (and (pair? a) (pair? b))
+             (cons
+              (sexp-shared (car a) (car b))
+              (sexp-shared (cdr a) (cdr b)))
+             'DIFFERENT)))
+   
+   (define test-datum #`(define-values
+                                 (f)
+                                 (lambda (x)
+                                   (let-values ()
+                                     (letrec-values (((a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))) 
+                                                     ((b) (lambda (x) (#%app #,highlight-placeholder x)))) (let-values () (#%app a x)))))))
+
+   (define actual (map datum-ize-context-record
+                       (find-highlight test-datum)))
+   
+   (define expected (list (list `(#%app ,highlight-placeholder x) '(0) 'expr)
+                          (list `(lambda (x) (#%app ,highlight-placeholder x)) '(2) 'expr)
+                          (list `(letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))) '(1 1 1) 'expr)
+                          (list `(let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))) '(2) 'expr)
+                          (list `(lambda (x) (let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))))) '(2) 'expr)                 
+                          (list `(define-values (f) (lambda (x) (let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))))) '(2)
+                                               'general-top-level)))
+   
+   (printf "equal? ~v\n" (equal? actual expected))
+   ;(printf "shared: ~v\n" (sexp-shared actual expected))
+   )
+  
+  ; substitute-in-syntax takes a syntax expression (which must be a proper syntax list) and a path
+  ; (represented by a list of numbers) and a syntax-expression to insert.  If the path is null, the
+  ; 'to-insert' expression is returned.  Otherwise, the nth element of the syntax-list is replaced
+  ; by the recursive call with the nth element, the rest of the path, and the to-insert, where n is
+  ; the first number in the list.
+
+  (define (substitute-in-syntax src path to-insert)
+    (if (null? path)
+        to-insert
+        (let* ([opened (syntax->list src)]
+               [n (car path)])
+          (when (>= n (length opened))
+            (error 'substitute-in-syntax "given an n (~v) which is larger than the length of the source sytax ~v" n (syntax-object->datum src)))
+          (datum->syntax-object
+           src
+           (let loop ([n n] [left opened])
+            (if (= n 0) 
+                (cons (substitute-in-syntax (car left) (cdr path) to-insert)
+                      (cdr left))
+                (cons (car left) 
+                      (loop (- n 1) (cdr left)))))
+           src
+           src))))
+  
+  (define (n-times n fn arg)
+    (if (= n 0)
+        arg
+        (fn (n-times (- n 1) fn arg))))
+  
+  (test-begin
+   
+   (local
+       ((define expected '(let-values ([(a) (lambda (x) 'bar)]) (a)))
+        (define actual (syntax-object->datum (substitute-in-syntax #'(let-values ([(a) (lambda (x) 'foo)]) (a)) '(1 0 1 2 1) #'bar))))
+     (printf "equal? ~v\n" (equal? expected actual))))
   
   )
 
-(require find-highlight
-         "highlight-placeholder.ss"
-         (lib "kerncase.ss" "syntax"))
 
-(define (datum-ize-context-record cr)
-  (make-context-record (syntax-object->datum (context-record-stx cr))
-                       (context-record-index cr)
-                       (context-recond-kind cr)))
-
-(map datum-ize-context-record
-  (find-highlight (expand #`(define (f x) (local ((define (a x) (b (- x 1))) (define (b x) (#,highlight-placeholder x))) (a x))))))
-
-(list (make-context-record `(,highlight-placeholder x) 'expr '(0)) 
-      (make-context-record `(letrec ([a (lambda (x) (b (- x 1)))] [b (lambda (x) (,highlight-placeholder x))]) (a x)) '(1 1 1) 'expr)
-      (make-context-record `(define-values (f x) (letrec ([a (lambda (x) (b (- x 1)))] [b (lambda (x) (,highlight-placeholder x))]) (a x))) '(2) 'general-top-level-expr))
