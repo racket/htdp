@@ -83,6 +83,8 @@
 	     (stretchable-width #f)
 	     (stretchable-height #f)
 	     (set! bitmap (make-object mred:bitmap% width height))
+	     (unless (send bitmap ok?)
+	       (error "cannot allocate viewport"))
 	     (send buffer-dc set-bitmap bitmap)
 	     (send buffer-dc set-brush (send dc get-brush))
 	     (send buffer-dc set-pen (send dc get-pen))
@@ -113,7 +115,8 @@
       (override
        [on-paint
 	(lambda ()
-	  (send dc draw-bitmap (send buffer-dc get-bitmap) 0 0))]
+	  (let ([bm (send buffer-dc get-bitmap)])
+	    (send dc draw-bitmap bm 0 0)))]
        
        [on-event 
 	(lambda (mouse-event)
