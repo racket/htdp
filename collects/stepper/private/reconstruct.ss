@@ -68,6 +68,8 @@
   ; first n elements of A, and C contains the rest.
 
   (define (n-split-list num lst)
+    (when (> num (length lst))
+      (error 'n-split-list "can't split list ~a after ~ath element; not long enough" lst num))
     (let loop ([count num] [remaining lst] [so-far null])
       (if (= count 0)
           (2vals (reverse so-far) remaining)
@@ -364,14 +366,14 @@
                      [(comes-from-local)
                       (unwind-local stx)]
                      
-                     [(comes-from-let)
-                      (kernel:kernel-syntax-case stx #f
-                        [(define-values . rest) 
-                         (unwind-define stx)]
-                        [(let-values . rest)
-                         (with-syntax ([(let ([tmp rhs] ...) (local ((define var dc) ...) body)) (unwind-mz-let stx)])
-                           #`(let ([var rhs] ...) body))]
-                        [else (error 'unwind-macro "unexpected form for comes-from-let: ~v\n" (syntax-object->datum stx))])]
+;                     [(comes-from-let)
+;                      (kernel:kernel-syntax-case stx #f
+;                        [(define-values . rest) 
+;                         (unwind-define stx)]
+;                        [(let-values . rest)
+;                         (with-syntax ([(let ([tmp rhs] ...) (local ((define var dc) ...) body)) (unwind-mz-let stx)])
+;                           #`(let ([var rhs] ...) body))]
+;                        [else (error 'unwind-macro "unexpected form for comes-from-let: ~v\n" (syntax-object->datum stx))])]
                      
                      ((quasiquote-the-cons-application) (unwind-quasiquote-the-cons-application stx))
                      

@@ -698,15 +698,14 @@
                                      (quasisyntax/loc expr (begin0 #,annotated-first #,@annotated-bodies))))]
                    
                    [(let-values . _)
-                    (let*-2vals ([collapsed (collapse-let-values expr)])
-                      (let-abstraction collapsed 
-                                       'let*-values
-                                       (lambda (bindings)
-                                         (map (lambda (_) *unevaluated*) bindings))))]
+                    (let-abstraction expr 
+                                     #`let-values
+                                     (lambda (bindings)
+                                       (map (lambda (_) *unevaluated*) bindings)))]
                    
                    [(letrec-values . _)
                     (let-abstraction expr 
-                                     'letrec-values
+                                     #`letrec-values
                                      (lambda (bindings) (map (lambda (b) #`#,b) bindings)))]
                    
                    [(set! var val)
