@@ -284,7 +284,7 @@
   
   (test-upto-int/lam "(not 5)"
                      `((before-error (,h-p) ((not 5))
-                                    "not: expects boolean, given 5")))
+                                    "not: expected either true or false; given 5")))
   
   ;;;;;;;;;;;;;
   ;;
