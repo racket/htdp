@@ -1,3 +1,6 @@
+[Ed. Note.: Much of this refers to the Zodiac version of the stepper, which
+I am busily replacing at this very moment.  jbc, 2001-12-04]
+
 variable references: there are three kinds of variable references:
 1) bound variable refs
 2) unit-bound variable refs
@@ -81,6 +84,9 @@ location.
 Later: this is now obsolete: I'm just storing the parsed zodiac 
 expressions.  Forget all of this source correlation crap. Zodiac does it 
 for me.
+
+[Ed. Note: this observation turned out to be completely wrong. cf. later
+notes.]
 
 *********
 
@@ -638,3 +644,29 @@ where location is a zodiac:location
 a <binding> is either a zodiac:binding (for bound vars), or a slot (for
 unit-bound vars in the zodiac:top-level-varref/bind/unit struct).
 
+***********
+
+Ooookay.  We're in Boston now, and I'm rewriting the stepper
+completely to work with version 200.  In other words, we're scrapping
+Zodiac completely.  This is an interesting SE task, because from a
+data-driven design standpoint, the code is starting from zero again;
+all of my data have different shapes now.
+
+Another change is that with the demise of DrScheme Jr and the
+institution of the static-compilation module mechanism, there's no
+longer a need for two separate collections.  I've therefore scrapped
+stepper-graphical, and moved everything back into stepper.
+
+Also, the stepper no longer needs to be tightly integrated with
+DrScheme itself; it can now be simply a tool.  I've already done the
+front-end work to tie in to the new tool interface; I think this stuff
+is all done.
+
+So, here's the plan.  The major pain is in the annotater, and that's 
+what I'm tackling now.  I'm proceeding along an iterative refinement
+path;  first, I want to get a bare-bones annotation working, without
+any macro-reversal (hence source-correlation) stuff.
+
+Bindings.  What's a binding?  It looks to me like the syntax object
+representing the binding occurrence of the variable should serve 
+admirably as a 'binding' for our purposes.
