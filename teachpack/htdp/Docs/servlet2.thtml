@@ -1,32 +1,32 @@
-<< (define LIBNAME "Simplified Scheme Web Servlets")
-   (define FILENAME "servlet2.ss")
-   (include "head.tinc") >>
+{ (define LIBNAME "Simplified Scheme Web Servlets")
+  (define FILENAME "servlet2.ss")
+  (include "head.tinc") }
 
 <p>This teachpack provides a simplified API for PLT Scheme servlets. The
 teachpack does not require any understanding of HTML and higher-order
 functions. It uses structures and lists, and is therefore well-suited for
-use with an HtDP course. 
+use with an HtDP course.
 
 <hr>
 <h3>Interface</h3>
 
 <pre>
    ; Data Constructors  -------------------------------------------------------
-   make-password ; asking for a password
-   make-number   ; asking for a number 
-   make-yes-no   ; asking for a Yes-No style answer
-   make-boolean  ; asking for a true-false style answer
-   make-radio    ; requesting one choice from some mutually exclusive choices 
-   
+   {(idx make-password)} ; asking for a password
+   {(idx make-number)}   ; asking for a number
+   {(idx make-yes-no)}   ; asking for a Yes-No style answer
+   {(idx make-boolean)}  ; asking for a true-false style answer
+   {(idx make-radio)}    ; requesting one choice from some mutually exclusive choices
+
    #| Data Definitions --------------------------------------------------------
 
    Forms ----------------------------------------------------------------------
    Query    = (union String
-		(make-password String)
-		(make-number   String)
-		(make-boolean  String)
-		(make-yes-no   String String String)
-		(make-radio    String (cons String (listof String)))) 
+                (make-password String)
+                (make-number   String)
+                (make-boolean  String)
+                (make-yes-no   String String String)
+                (make-radio    String (cons String (listof String))))
    FormItem = (list Symbol Query)
    Form     = (cons FormItem (listof FormItem))
 
@@ -34,65 +34,65 @@ use with an HtDP course.
    Response = (union String Number Boolean)
    Table    = (listof (list Symbol Response))
    |#
-  
-   ; Functions ---------------------------------------------------------------- 
 
-   form?               ; TST -> Boolean 
+   ; Functions ----------------------------------------------------------------
+
+   {(idx form?)}               ; TST -> Boolean
    ; checking the structure of forms
 
-   form-element?       ; TST -> Boolean 
+   {(idx form-element?)}       ; TST -> Boolean
    ; checking the structure of form-elements
 
-   single-query        ; Query -> Response
-   ; posing a single question 
+   {(idx single-query)}        ; Query -> Response
+   ; posing a single question
 
-   queries             ; (listof Query) -> (listof Response)
-   ; posing a list of questions 
+   {(idx queries)}             ; (listof Query) -> (listof Response)
+   ; posing a list of questions
 
-   echo-answers        ; (listof Response) -> true
+   {(idx echo-answers)}        ; (listof Response) -> true
    ; echoing the answers from a list of questions to a Web page (development)
 
-   form-query          ; Form -> Table
-   ; posing a list of questions with tag 
+   {(idx form-query)}          ; Form -> Table
+   ; posing a list of questions with tag
 
-   extract/single      ; Symbol Table -> Response
+   {(idx extract/single)}      ; Symbol Table -> Response
    ; extracting the answer for a given tag from a response; the tag must
-   ; occur exactly once. 
+   ; occur exactly once.
 
-   extract             ; Symbol Table -> (listof Response)
+   {(idx extract)}             ; Symbol Table -> (listof Response)
    ; extracting all the answers for a given tag from a response; the list
-   ; is empty if there is no such tag. 
+   ; is empty if there is no such tag.
 
-   echo-response       ; Table -> true
+   {(idx echo-response)}       ; Table -> true
    ; echoing the response from a form to a Web page (development)
-   
-   inform              ; String String *-> true 
+
+   {(idx inform)}              ; String String *-> true
    ; posting some information on a Web page, wait for continue signal
 
-   final-page          ; String String *-> true
-   ; posting some information on a Web page, 
-   ; killing the script and all associated backtrack/clone points 
+   {(idx final-page)}          ; String String *-> true
+   ; posting some information on a Web page,
+   ; killing the script and all associated backtrack/clone points
 
 </pre>
 <hr>
 <h3>Pragmatics</h3>
 
 <p>The following table specifies what kind of answer each form of query
-produces: 
+produces:
 
 <pre>
   Query                                      GUI Item         Response
 ________________________________________________________________________________
-  String				     text field       String 
-  (make-password String)                     password field   String 
+  String                                     text field       String
+  (make-password String)                     password field   String
   (make-number   String)                     text field       Number
-  (make-boolean  String)                     check box        Boolean 
+  (make-boolean  String)                     check box        Boolean
   (make-yes-no   String String1 String2)     2-pronged radio  String1 or String2
   (make-radio    String loString)            radio button     one of loString
   (make-button   String0)                    submit button    String0
 </pre>
 
-<p>The functions play the following role: 
+<p>The functions play the following role:
 <ul>
 <li>
    <code>form?</code> and <code>form-element?</code> enable programmers to
@@ -109,24 +109,24 @@ ________________________________________________________________________________
 
 <li>
    <code>echo-answers</code> echoes a list of answers to a Web page; this
-   function is useful for testing Web form designs. 
+   function is useful for testing Web form designs.
 
 <li>
    <code>form-query</code> poses a form with queries and waits for the
-   submission of answers; it produces a list of tagged or labeled answers 
+   submission of answers; it produces a list of tagged or labeled answers
    that is as long as the list of given questions.
-   
+
 <li>
-   <code>echo-response</code> echoes a response to a Web page as a table. 
-   
+   <code>echo-response</code> echoes a response to a Web page as a table.
+
 <li>
    <code>inform</code> posts some information on a Web page and wait for a
    continue signal (a link) from the consumer; the first string plays the
-   role of a title and the rest form a paragraph. 
+   role of a title and the rest form a paragraph.
 
 <li>
-   <code>final-page</code> posts some information on a Web page and 
-   shuts down the script and all associated backtrack/clone points. 
+   <code>final-page</code> posts some information on a Web page and
+   shuts down the script and all associated backtrack/clone points.
 </ul>
 
 
@@ -136,32 +136,32 @@ ________________________________________________________________________________
 interact with the consumer. In particular, note the properly recursive
 calls to <code>login</code> in <code>inform-error</code>. Also note how the
 primitives <code>make-password</code> and <code>make-number</code> deliver
-strings and numbers, respectively. 
+strings and numbers, respectively.
 
 <pre>
 #| Login Site -----------------------------------------------------------------
    Author: Matthias Felleisen
-   Language: Intermediate 
-   Teachpack: servlet2.ss 
+   Language: Intermediate
+   Teachpack: servlet2.ss
 
-   Login Web Site: 
-   
-   A login site consists of three pages: 
+   Login Web Site:
+
+   A login site consists of three pages:
     1. login: request user information: name, password, year-of-birth
        - if correct, respond with greeting for name
-       - if incorrect, go to error page 
+       - if incorrect, go to error page
     2. error: inform user of error, continue goes back to login page
     3. greetings: say hello to name
-   The second and third are generated from user input, the first is 
-   generated by the program alone. 
-   
-|# 
+   The second and third are generated from user input, the first is
+   generated by the program alone.
+
+|#
 
 ;; Login Page -----------------------------------------------------------------
 
-; ask three questions: one plain, one password, one numeric 
+; ask three questions: one plain, one password, one numeric
 (define login-page
-  (list 
+  (list
    (list 'name "User Name")
    (list 'pass (make-password "Password"))
    (list 'yofb (make-number "Year-of-birth"))))
@@ -190,27 +190,26 @@ strings and numbers, respectively.
           [define r (assf x=? DB)])
     (if (boolean? r) false (third r))))
 
-(define DB 
+(define DB
   '(("matthias" "okay" 1958)))
 
 ;; Error Page -----------------------------------------------------------------
 
 ; String -> true
-; consume error message, print and enable return to login page 
+; consume error message, print and enable return to login page
 (define (inform-error s)
   (let ([_ (inform "Error" s)])
     (login (form-query login-page))))
 
 ;; Greetings Page -------------------------------------------------------------
 
-; String -> true 
-; consume name and display good bye message 
+; String -> true
+; consume name and display good bye message
 (define (greetings name)
   (inform "Welcome" "Welcome " name " and good bye."))
 
 ;; RUN ------------------------------------------------------------------------
 (login (form-query login-page))
-
 </pre>
 
-<<(include "foot.tinc")>>
+{(include "foot.tinc")}
