@@ -419,16 +419,47 @@
                 (matching-xml x))))
       (send xml-keymap map-function ">" "matching-xml")
       
-      (define xml-keymap-mixin
-        (mixin (editor:keymap<%>) ()
+      ;; The Scheme style list's Standard size changes
+      ;; according to the font size preference. So,
+      ;; we create an XML style based on that stule
+      ;; for the XML boxes, so they change size too.
+      (let* ([style-list (scheme:get-style-list)]
+             [style (send style-list find-named-style "XML")]) 
+        (unless style
+          (let ([xml-delta (make-object style-delta% 'change-family 'default)])
+            (send style-list new-named-style "XML" 
+                  (send style-list find-or-create-style 
+                        (send style-list find-named-style "Standard")
+                        xml-delta)))))
+
+      (define xml-text-mixin
+        (mixin (editor:keymap<%> (class->interface text%)) ()
           (rename [super-get-keymaps get-keymaps])
           (define/override (get-keymaps)
             (cons xml-keymap (super-get-keymaps)))
-          (super-instantiate ())))
+          
+          (rename [super-after-insert after-insert]
+                  [super-on-insert on-insert])
+          (inherit begin-edit-sequence end-edit-sequence
+                   change-style get-style-list)
+          (define/override (on-insert start rng)
+            (super-on-insert start rng)
+            (begin-edit-sequence))
+          (define/override (after-insert start rng)
+            (super-after-insert start rng)
+            (change-style (send (get-style-list) find-named-style "XML")
+                          start 
+                          (+ start rng))
+            (end-edit-sequence))
+          
+          (super-instantiate ())
+          
+          (inherit set-style-list)
+          (set-style-list (scheme:get-style-list))))
       
       (define xml-text%
         (drscheme:unit:program-editor-mixin 
-         (xml-keymap-mixin
+         (xml-text-mixin
           plain-text%)))
 
       ;; matching-xml : (is-a?/c text) -> void
