@@ -504,13 +504,13 @@
                                         "\" through the \"" (car (reverse stepper-works-for)) "\" language levels."))))))))
           
           
-          (define/override (enable-evaluation)
+          (define/augment (enable-evaluation)
             (send stepper-button enable #t)
-            (super enable-evaluation))
+            (inner (void) enable-evaluation))
           
-          (define/override (disable-evaluation)
+          (define/augment (disable-evaluation)
             (send stepper-button enable #f)
-            (super disable-evaluation))
+            (inner (void) disable-evaluation))
           
           (define/augment (on-close)
             (when stepper-frame
