@@ -96,7 +96,7 @@
       (check-proc 'convert-repl f 1 "convert-repl" "one argument")
       (let repl ()
         (begin
-          (printf "Enter Fahrenheint temperature and press <enter> [to exit, type x]: ")
+          (printf "Enter Fahrenheit temperature and press <enter> [to exit, type x]: ")
           (flush-output)
           (let* ([ans (read)])
             (cond
