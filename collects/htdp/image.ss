@@ -12,7 +12,8 @@ plt/collects/tests/mzscheme/image-test.ss
            (lib "cache-image-snip.ss" "mrlib")
            (lib "math.ss")
 	   (lib "posn.ss" "lang")
-           (lib "imageeq.ss" "lang" "private"))
+           (lib "imageeq.ss" "lang" "private")
+           "error.ss")
 
   (provide image-width
 	   image-height
@@ -40,6 +41,7 @@ plt/collects/tests/mzscheme/image-test.ss
            image->alpha-color-list
            alpha-color-list->image
            
+           image-color?
            make-color
            color-red
            color-green
@@ -50,9 +52,7 @@ plt/collects/tests/mzscheme/image-test.ss
            alpha-color-red
            alpha-color-green
            alpha-color-blue
-           alpha-color?
-           color-list?
-           alpha-color-list?)
+           alpha-color?)
 
   ;; ----------------------------------------
            
@@ -66,37 +66,76 @@ plt/collects/tests/mzscheme/image-test.ss
 
   ;; ----------------------------------------
 
-  (define (check name p? v desc)
-    (unless (p? v)
-      (raise-type-error
-       name
-       desc
-       v)))
+  (define (check name p? v desc arg-posn) (check-arg name (p? v) desc arg-posn v))
 
+  (define (check-coordinate name val arg-posn) (check name number? val "number" arg-posn))
+  (define (check-size name val arg-posn) (check name posi? val "positive exact integer" arg-posn))
+  (define (check-image name val arg-posn) (check name image? val "image" arg-posn))
+  (define (check-color name val arg-posn) (check name image-color? val "color" arg-posn))
+  (define (check-mode name val arg-posn) (check name mode? val mode-str arg-posn))
+  
+  (define (check-sizes who w h)
+    (unless (and (< 0 w 10000) (< 0 h 10000))
+      (error (format "cannot make ~a x ~a image" w h))))
+  
+  (define (mode? x)
+    (or (eq? x 'solid)
+        (eq? x 'outline)))
+  
+  (define mode-str "'solid or 'outline")
+  
+  (define (mode->brush-symbol m)
+    (case m
+      [(solid) 'solid]
+      [(outline) 'transparent]))
+  
+  (define (mode->pen-symbol m)
+    (case m
+      [(solid) 'transparent]
+      [(outline) 'solid]))
+  
+  
+  (define (make-color% c)
+    (cond
+      [(string? c) (send the-color-database find-color c)]
+      [(symbol? c) (send the-color-database find-color (symbol->string c))]
+      [(color? c) (make-object color%
+                    (color-red c)
+                    (color-green c)
+                    (color-blue c))]
+      [else #f]))
+  
+  (define (image-color? c) 
+    (cond
+      [(color? c) #t]
+      [(string? c) (and (send the-color-database find-color c) #t)]
+      [(symbol? c) (and (send the-color-database find-color (symbol->string c)) #t)]
+      [else #f]))
+  
   (define (image-width a)
-    (check 'image-width image? a "image")
+    (check-image 'image-width a "first")
     (let-values ([(w h) (snip-size a)])
       (inexact->exact (ceiling w))))
 
   (define (image-height a)
-    (check 'image-height image? a "image")
+    (check-image 'image-height a "first")
     (let-values ([(w h) (snip-size a)])
       (inexact->exact (ceiling h))))
   
   (define (pinhole-x a)
-    (check 'pinhole-x image? a "image")
+    (check-image 'pinhole-x a "first")
     (let-values ([(x y) (send (coerce-to-cache-image-snip a) get-pinhole)])
       x))
   
   (define (pinhole-y a)
-    (check 'pinhole-y image? a "image")
+    (check-image 'pinhole-y a "first")
     (let-values ([(x y) (send (coerce-to-cache-image-snip a) get-pinhole)])
       y))
   
   (define (move-pinhole raw-i dx dy)
-    (check 'move-pinhole image? raw-i "image")
-    (check 'move-pinhole number? dx "number")
-    (check 'move-pinhole number? dy "number")
+    (check-image 'move-pinhole raw-i "first")
+    (check-coordinate 'move-pinhole dx "second")
+    (check-coordinate 'move-pinhole dy "third")
     (let ([i (coerce-to-cache-image-snip raw-i)])
       (let-values ([(px py) (send i get-pinhole)]
                    [(w h) (send i get-size)])
@@ -110,8 +149,12 @@ plt/collects/tests/mzscheme/image-test.ss
              (py (+ py dy))))))
         
   (define (overlay a b . cs)
-    (check 'overlay image? a "image")
-    (check 'overlay image? b "image")
+    (check-image 'overlay a "first")
+    (check-image 'overlay b "second")
+    (let loop ([cs cs]
+               [i 3])
+      (unless (null? cs)
+        (check-image 'overlay (car cs) (number->ord i))))
     (let ([all-imgs (reverse (list* a b cs))])
       (let loop ([imgs (cdr all-imgs)]
                  [acc (car all-imgs)])
@@ -121,10 +164,10 @@ plt/collects/tests/mzscheme/image-test.ss
                       (real-overlay/xy 'overlay (car imgs) 0 0 acc))]))))
 
   (define (overlay/xy a dx dy b)
-    (check 'overlay/xy image? a "image")
-    (check 'overlay/xy real? dx "real number")
-    (check 'overlay/xy real? dy "real number")
-    (check 'overlay/xy image? b "image")
+    (check-image 'overlay/xy a "first")
+    (check-coordinate 'overlay/xy dx "second")
+    (check-coordinate 'overlay/xy dy "third")
+    (check-image 'overlay/xy b "fourth")
     (real-overlay/xy 'overlay/xy a dx dy b))
 
   (define (real-overlay/xy name raw-a raw-delta-x raw-delta-y raw-b)
@@ -167,25 +210,29 @@ plt/collects/tests/mzscheme/image-test.ss
   ;; ------------------------------------------------------------
 
   (define (line x y color)
+    (check-coordinate 'line x "first")
+    (check-coordinate 'line y "second")
+    (check-color 'line color "third")
     (check-sizes 'line (+ x 1) (+ y 1))
-    (let ([draw-proc (make-color-wrapper/check
-                      'line color 'transparent 'solid
+    (let ([draw-proc (make-color-wrapper
+                      color 'transparent 'solid
                       (lambda (dc dx dy)
                         (send dc draw-line dx dy (+ dx x) (+ dy y))))]
           [mask-proc
-           (make-color-wrapper/check
-            'line 'black 'transparent 'solid
+           (make-color-wrapper
+            'black 'transparent 'solid
             (lambda (dc dx dy)
               (send dc draw-line dx dy (+ dx x) (+ dy y))))])
       (make-simple-cache-image-snip (+ x 1) (+ y 1) 0 0 draw-proc mask-proc)))
   
   ;; test what happens when the line moves out of the box.
   (define (add-line raw-i pre-x1 pre-y1 pre-x2 pre-y2 color-in)
-    (check 'add-line image? raw-i "image")
-    (check 'add-line number? pre-x1 "number")
-    (check 'add-line number? pre-y1 "number")
-    (check 'add-line number? pre-x2 "number")
-    (check 'add-line number? pre-y2 "number")
+    (check-image 'add-line raw-i "first")
+    (check-coordinate 'add-line pre-x1 "second")
+    (check-coordinate 'add-line pre-y1 "third")
+    (check-coordinate 'add-line pre-x2 "fourth")
+    (check-coordinate 'add-line pre-y2 "fifth")
+    (check-color 'add-line color-in "sixth")
     (let ([i (coerce-to-cache-image-snip raw-i)])
       (let-values ([(px py) (send i get-pinhole)]
                    [(iw ih) (send i get-size)]
@@ -204,9 +251,9 @@ plt/collects/tests/mzscheme/image-test.ss
                               (+ dx (- x2 x1))
                               (+ dy (- y2 y1))))]
                      [draw-proc 
-                      (make-color-wrapper/check 'add-line color-in 'transparent 'solid do-draw)]
+                      (make-color-wrapper color-in 'transparent 'solid do-draw)]
                      [mask-proc
-                      (make-color-wrapper/check 'add-line 'black 'transparent 'solid do-draw)]
+                      (make-color-wrapper 'black 'transparent 'solid do-draw)]
                      [line
                       (make-simple-cache-image-snip line-w line-h px py draw-proc mask-proc)])
                 (real-overlay/xy 'add-line i (+ px x1) (+ py y1) line))
@@ -218,19 +265,18 @@ plt/collects/tests/mzscheme/image-test.ss
                               (+ dx (- line-w 1))
                               dy))]
                      [draw-proc 
-                      (make-color-wrapper/check 'add-line color-in 'transparent 'solid do-draw)]
+                      (make-color-wrapper color-in 'transparent 'solid do-draw)]
                      [mask-proc
-                      (make-color-wrapper/check 'add-line 'black 'transparent 'solid do-draw)]
+                      (make-color-wrapper 'black 'transparent 'solid do-draw)]
                      [line
                       (make-simple-cache-image-snip line-w line-h px py draw-proc mask-proc)])
                 (real-overlay/xy 'add-line i (+ px x1) (+ py y2) line)))))))
 
   (define (text str size color-in)
-    (check 'text string? str "string")
-    (check 'text (lambda (x) (and (integer? x) (<= 1 x 255))) size "integer between 1 and 255")
+    (check 'text string? str "string" "first")
+    (check 'text (lambda (x) (and (integer? x) (<= 1 x 255))) size "integer between 1 and 255" "second")
+    (check-color 'text color-in "third")
     (let ([color (make-color% color-in)])
-      (unless color
-        (error 'text "expected a color symbol as second argument, given: ~e" color))
       (let-values ([(tw th) (get-text-size size str)])
         (let ([draw-proc
                (lambda (txt-color mode dc dx dy)
@@ -286,24 +332,32 @@ plt/collects/tests/mzscheme/image-test.ss
 
   (define (a-rect/circ who do-draw w h color brush pen)
     (check-sizes who w h)
-    (let* ([dc-proc (make-color-wrapper/check who color brush pen do-draw)]
-           [mask-proc (make-color-wrapper/check who 'black brush pen do-draw)])
+    (let* ([dc-proc (make-color-wrapper color brush pen do-draw)]
+           [mask-proc (make-color-wrapper 'black brush pen do-draw)])
       (make-simple-cache-image-snip w h (floor (/ w 2)) (floor (/ h 2)) dc-proc mask-proc)))
   
   (define (rectangle w h mode color)
-    (check 'rectangle mode? mode mode-str)
+    (check-size 'rectangle w "first")
+    (check-size 'rectangle h "second")
+    (check-mode 'rectangle mode "third")
+    (check-color 'rectangle color "fourth")
     (a-rect/circ 'rectangle
                  (lambda (dc dx dy) (send dc draw-rectangle dx dy w h))
                  w h color (mode->brush-symbol mode) (mode->pen-symbol mode)))
   
   (define (ellipse w h mode color)
-    (check 'ellipse mode? mode mode-str)
+    (check-size 'ellipse w "first")
+    (check-size 'ellipse h "second")
+    (check-mode 'ellipse mode "third")
+    (check-color 'ellipse color "fourth")
     (a-rect/circ 'ellipse
                  (lambda (dc dx dy) (send dc draw-ellipse dx dy w h))
                  w h color (mode->brush-symbol mode) (mode->pen-symbol mode)))
   
   (define (circle r mode color)
-    (check 'ellipse mode? mode mode-str)
+    (check-size 'circle r "first")
+    (check-mode 'circle mode "second")
+    (check-color 'circle color "third")
     (a-rect/circ 'circle
                  (lambda (dc dx dy) (send dc draw-ellipse dx dy (* 2 r) (* 2 r)))
                  (* 2 r) (* 2 r) color (mode->brush-symbol mode) (mode->pen-symbol mode)))
@@ -312,19 +366,21 @@ plt/collects/tests/mzscheme/image-test.ss
     (check 'triangle
            (lambda (x) (and (real? x) (< 2 x 10000)))
            size 
-           "positive integer bigger than 2")
-    (check 'triangle mode? mode mode-str)
+           "positive real number bigger than 2"
+           "first")
+    (check-mode 'triangle mode "second")
+    (check-color 'triangle color "third")
     (let* ([right (- size 1)]
            [bottom (inexact->exact (ceiling (* size (sin (* 2/3 pi)))))]
            [points (list (make-object point% 0 bottom)
                          (make-object point% right bottom)
                          (make-object point% (/ size 2) 0))])
-      (let ([draw (make-color-wrapper/check 
-                   'triangle color (mode->brush-symbol mode) 'solid
+      (let ([draw (make-color-wrapper
+                   color (mode->brush-symbol mode) 'solid
                    (lambda (dc dx dy)
                      (send dc draw-polygon points dx dy)))]
-            [mask-draw (make-color-wrapper/check 
-                        'triangle 'black (mode->brush-symbol mode) 'solid
+            [mask-draw (make-color-wrapper
+                        'black (mode->brush-symbol mode) 'solid
                         (lambda (dc dx dy)
                           (send dc draw-polygon points dx dy)))]
             [w size]
@@ -345,26 +401,8 @@ plt/collects/tests/mzscheme/image-test.ss
            [px px]
            [py py])))
   
-  (define (mode? x)
-    (or (eq? x 'solid)
-        (eq? x 'outline)))
-  
-  (define mode-str "'solid or 'outline")
-  
-  (define (mode->brush-symbol m)
-    (case m
-      [(solid) 'solid]
-      [(outline) 'transparent]))
-  
-  (define (mode->pen-symbol m)
-    (case m
-      [(solid) 'transparent]
-      [(outline) 'solid]))
-  
-  (define (make-color-wrapper/check who color-in brush pen rest)
+  (define (make-color-wrapper color-in brush pen rest)
     (let ([color (make-color% color-in)])
-      (unless color
-        (error who "expected color, given: ~e" color-in))
       (lambda (dc dx dy)
         (let ([old-brush (send dc get-brush)]
               [old-pen (send dc get-pen)])
@@ -374,22 +412,6 @@ plt/collects/tests/mzscheme/image-test.ss
           (send dc set-pen old-pen)
           (send dc set-brush old-brush)))))
   
-  (define (make-color% c)
-    (cond
-      [(string? c) (send the-color-database find-color c)]
-      [(symbol? c) (send the-color-database find-color (symbol->string c))]
-      [(color? c) (make-object color%
-                    (color-red c)
-                    (color-green c)
-                    (color-blue c))]
-      [else #f]))
-      
-  (define (check-sizes who w h)
-    (check who real? w "positive integer")
-    (check who real? h "positive integer")
-    (unless (and (< 0 w 10000) (< 0 h 10000))
-      (error (format "cannot make ~a x ~a image" w h))))
-      
   ;; ------------------------------------------------------------
 
   (define (image-inside? i a)
@@ -406,8 +428,8 @@ plt/collects/tests/mzscheme/image-test.ss
 	       "the second image does not appear within the first image")))
   
   (define (locate-image who i a)
-    (check who image? i "image")
-    (check who image? a "image")
+    (check-image who i "first")
+    (check-image who a "second")
     (let-values ([(iw ih) (snip-size i)]
                  [(aw ah) (snip-size a)])
       (and (iw . >= . aw)
@@ -593,21 +615,21 @@ converting from the computer's coordinates, we get:
 		[b (- i 1)])
             (let* ([m2 (vector-ref av a)]
                    [m3 (vector-ref iv (+ xd a))]
-                   [check
+                   [test
                     (lambda (b2 b3)
                       (<= (+ b2 (* m2 b2 -1/255))
                           (+ m3 b3 (* m3 b3 -1/255))
                           (+ m2 b2 (* m2 b2 -1/255))))])
               (and (<= 0 m3 m2)
-                   (check (vector-ref av r) (vector-ref iv (+ xd r)))
-                   (check (vector-ref av g) (vector-ref iv (+ xd g)))
-                   (check (vector-ref av b) (vector-ref iv (+ xd b)))
+                   (test (vector-ref av r) (vector-ref iv (+ xd r)))
+                   (test (vector-ref av g) (vector-ref iv (+ xd g)))
+                   (test (vector-ref av b) (vector-ref iv (+ xd b)))
                    (loop (- i 4))))))))
 
   ;; ----------------------------------------
 
   (define (image->color-list i-raw)
-    (check 'image->color-list image? i-raw "image")
+    (check-image 'image->color-list i-raw "first")
     (let* ([cis (coerce-to-cache-image-snip i-raw)]
            [i (send cis get-bitmap)]
            [iw (send i get-width)]
@@ -636,7 +658,7 @@ converting from the computer's coordinates, we get:
         (vector->list cols))))
   
   (define (image->alpha-color-list i)
-    (check 'image->alpha-color-list image? i "image")
+    (check-image 'image->alpha-color-list i "first")
     (let* ([argb (cond
                    [(is-a? i image-snip%) 
                     (send (coerce-to-cache-image-snip i) get-argb)]
@@ -658,9 +680,11 @@ converting from the computer's coordinates, we get:
     (and (number? i) (integer? i) (positive? i) (exact? i)))
 
   (define (color-list->image cl w h px py)
-    (check 'color-list->image color-list? cl "list-of-colors")
-    (check 'color-list->image posi? w "positive exact integer")
-    (check 'color-list->image posi? h "positive exact integer")
+    (check 'color-list->image color-list? cl "list-of-colors" "first")
+    (check-size 'color-list->image w "second")
+    (check-size 'color-list->image h "third")
+    (check-coordinate 'color-list->image px "fourth")
+    (check-coordinate 'color-list->image py "fifth")
     (unless (and (< 0 w 10000) (< 0 h 10000))
       (error (format "cannot make ~a x ~a image" w h)))
     (unless (= (* w h) (length cl))
@@ -701,9 +725,11 @@ converting from the computer's coordinates, we get:
   (define (pk sel col) (integer->char (min 255 (max 0 (sel col)))))
   
   (define (alpha-color-list->image cl w h px py)
-    (check 'alpha-color-list->image alpha-color-list? cl "list-of-alpha-colors")
-    (check 'alpha-color-list->image posi? w "positive exact integer")
-    (check 'alpha-color-list->image posi? h "positive exact integer")
+    (check 'alpha-color-list->image alpha-color-list? cl "list-of-alpha-colors" "first")
+    (check-size 'alpha-color-list->image w "second")
+    (check-size 'alpha-color-list->image h "third")
+    (check-coordinate 'alpha-color-list->image px "fourth")
+    (check-coordinate 'alpha-color-list->image py "fifth")
     (unless (and (< 0 w 10000) (< 0 h 10000))
       (error (format "cannot make ~a x ~a image" w h)))
     (unless (= (* w h) (length cl))
