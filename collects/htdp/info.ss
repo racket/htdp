@@ -1,2 +1,2 @@
 (module info (lib "infotab.ss" "setup")
-  (define name "HtDP TeachPacks"))
+  (define name "HtDP Teachpacks"))
