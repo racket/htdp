@@ -175,7 +175,6 @@
    (define expected (list (list `(#%app ,highlight-placeholder x) '(1) 'expr)
                           (list `(lambda (x) (#%app ,highlight-placeholder x)) '(2) 'expr)
                           (list `(letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))) '(1 1 1) 'expr)
-                          ;(list `(let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))) '(2) 'expr)
                           (list `(lambda (x) (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))) '(2) 'expr)                 
                           (list `(define-values (f) (lambda (x) (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))))) '(2)
                                                'general-top-level)))
@@ -252,8 +251,7 @@
             (lambda ()
               (kernel:kernel-syntax-case stx #f
                 [(tag ([(var ...) rhs] ...) body ...)
-                 (let* ([defns (map (lambda (defn-stx) (transfer-info defn-stx stx))
-                                    (syntax->list #'((define-values (var ...) rhs) ...)))]
+                 (let* ([defns (syntax->list #'((define-values (var ...) rhs) ...))]
                         [bodies-list (syntax->list #'(body ...))]
                         [body (if (= (length bodies-list) 1) ; as far as I can tell, this source info is comprehensively lost.
                                   (car bodies-list)

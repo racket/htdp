@@ -329,13 +329,10 @@
                 'define
                 stx
                 (syntax name)
-                (syntax-property
-                 (quasisyntax/loc stx (define name #,(syntax-property
+                (quasisyntax/loc stx (define name #,(syntax-property
                                                       #`(lambda arg-seq make-lambda-generative lexpr ...)
-                                                      'stepper-hint
-                                                      'lambda-define-lam)))
-                 'stepper-hint
-                 'lambda-define))
+                                                      'stepper-define-type
+                                                      'lambda-define))))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]
 	     ;; Constant def
@@ -345,13 +342,7 @@
                 'define
                 stx
                 (syntax name)
-                (syntax-property
-                 (quasisyntax/loc stx (define name #,(syntax-property 
-                                                      #'expr
-                                                      'stepper-hint
-                                                      'non-lambda-define-expr)))
-                 'stepper-hint
-                 'non-lambda-define))
+                (quasisyntax/loc stx (define name expr)))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]))]
 	;; Function definition:
@@ -400,16 +391,12 @@
              'define
              stx
              (car names)
-             (syntax-property
-              (with-syntax ([fn (car (syntax-e #'name-seq))] 
+             (with-syntax ([fn (car (syntax-e #'name-seq))] 
                             [args (cdr (syntax-e #'name-seq))])
                 (quasisyntax/loc stx (define fn #,(syntax-property
                                                    #`(lambda args expr ...)
-                                                   'stepper-hint
-                                                   'shortened-proc-define-lam))))
-              
-              'stepper-hint
-              'shortened-proc-define))
+                                                   'stepper-define-type
+                                                   'shortened-proc-define)))))
             'stepper-skipto
             (list syntax-e cdr syntax-e cdr car)))]
 	;; Constant/lambda with too many or too few parts:

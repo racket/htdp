@@ -31,7 +31,9 @@ in collects/lang/private/teachhelp.ss).
 Also, in order to be visible to the reconstructor, these properties
 must be explicitly transferred from the annotated source code syntax
 to the reconstructed syntax. This is accomplished by the 'attach-info'
-procedure in reconstruct.ss
+procedure in reconstruct.ss.  Note that in the process, these properties
+are given names that have "user-" prepended to them.  This now seems 
+like a strange decision.
 
 Finally, the astute reader may wonder why I need to add things like
 'comes-from-or, since the expression that results from the expansion
@@ -78,18 +80,33 @@ stepper-hint :
  [ 'comes-from-let ] : expression was expanded from let
  [ 'comes-from-local ] : expression was expanded from local
 
- [ lambda-define ] : source had form (define id (lambda ...)).
-    NOTE: this tag is applied to _both_ the define and the enclosed
-    lambda.  This is because in the case of a local, the defines
-    themselves are swallowed up by the expansion of internal defines.
+stepper-define-type: 
+ this is attached to the right-hand sides of defines to indicate what
+ kind of define they came from. 
 
- [ non-lambda-define ] : source had form (define id exp) where exp !=
- (lambda ...)
-   NOTE: see prior note.
+ [ 'shortened-proc-define ] : this lambda arose from the expansion
+    of (define (id arg ...) body)
 
- [ shortened-proc-define ] : source had form (define (id arg ...) body
- ...)
-   NOTE: see prior note.
+  (Transferred.)
+
+ Question 1: why the right-hand side?  Why not on the define itself?
+ A: because for certain kinds of define (namely those in a local),
+    the define itself evaporates into an internal define which is then
+    expanded in a mzscheme-native expansion into a letrec.
+
+ Question 2: won't the right-hand side change, losing the mark?  
+ A: yes it will, but not for definitions of lambdas.  Since there
+    are three cases we need to distinguish, and two of them are
+    definitions of lambdas, we can distinguish the third case
+    by its lack of a stepper-define-type mark.
+
+ Question 3: what if, through reduction, a different expression
+  than the original one shows up ... which _does_ have one of the
+  two stepper-define-type marks?
+ A: not the way the stepper currently works, because procedures are
+    reconstructed as top-level variable references and not as 
+    lambda terms.  However, in a stepper where closures are reconstructed
+    as lambda terms, this will be a problem.
 
 stepper-prim-name: 
  this is attached to the expansion of primitives introduced with the

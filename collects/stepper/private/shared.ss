@@ -515,6 +515,7 @@
     (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
            [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
            [it (syntax-property it 'user-stepper-else (syntax-property expr 'stepper-else))]
+           [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'stepper-define-type))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))
@@ -523,6 +524,7 @@
     (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'user-origin))]
            [it (syntax-property it 'user-stepper-hint (syntax-property expr 'user-stepper-hint))]
            [it (syntax-property it 'user-stepper-else (syntax-property expr 'user-stepper-else))]
+           [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'user-stepper-define-type))]
            [it (syntax-property it 'user-source (syntax-property expr 'user-source))]
            [it (syntax-property it 'user-position (syntax-property expr 'user-position))])
       it))

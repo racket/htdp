@@ -312,6 +312,8 @@
                (let ([fall-through
                       (lambda ()
                         (kernel:kernel-syntax-case stx #f
+                          [(define-values dc ...)
+                           (unwind-define stx)]
                           [(#%app exp ...)
                            (recur-on-pieces #'(exp ...))]
                           [(#%datum . datum)
@@ -324,19 +326,7 @@
                            (recur-on-pieces stx)]))])
                (if (syntax-property stx 'user-stepper-hint)
                    (case (syntax-property stx 'user-stepper-hint)
-                     [(lambda-define non-lambda-define)
-                      (unwind-define stx)]
                      
-                     [(shortened-proc-define)
-                      (kernel:kernel-syntax-case stx #f
-                        [(define-values (name . others) 
-                           (lambda arglist body ...))
-                         (unless (null? (syntax-e #'others))
-                           (error 'reconstruct "reconstruct fails on multiple-values define\n"))
-                         #`(define (name . arglist) body ...)]
-                        [else (error 'macro-unwind "unexpected shape for expression: ~v with hint ~v" 
-                                     (syntax-object->datum stx) 
-                                     (syntax-property stx 'user-stepper-hint))])]
                      
                      [(comes-from-cond) (unwind-cond stx 
                                                      (syntax-property stx 'user-source)
@@ -378,11 +368,19 @@
                                     #'name)]
                      [lifted-name (if (syntax-property stx 'stepper-lifted-name)
                                       (construct-lifted-name orig-name (syntax-property #'name 'stepper-lifted-name))
-                                      orig-name)])
-                #`(define #,lifted-name #,(inner #'body)))]
-             [else (error 'macro-unwind "unexpected shape for expression: ~v with hint ~v" 
-                          (syntax-object->datum stx) 
-                          (syntax-property stx 'user-stepper-hint))]))
+                                      orig-name)]
+                     [unwound-body (inner #'body)]
+                     [define-type (syntax-property unwound-body 'user-stepper-define-type)]) ; see notes in internal-docs.txt
+                (if define-type
+                    (kernel:kernel-syntax-case unwound-body #f
+                      [(lambda arglist lam-body ...)
+                       (case define-type
+                         [(shortened-proc-define)
+                          #`(define (#,lifted-name . arglist) lam-body ...)]
+                         [else (error 'unwind-define "unknown value for syntax property 'user-stepper-define-type: ~e" define-type)])]
+                      [else (error 'unwind-define "expr with stepper-define-type is not a lambda: ~e" (syntax-object->datum ))])
+                    #`(define #,lifted-name #,unwound-body)))]
+             [else (error 'unwind-define "expression is not a define-values: ~e" (syntax-object->datum stx))]))
          
          (define (unwind-mz-let stx)
            (with-syntax ([(label ([(var) rhs] ...) . bodies) stx])
@@ -394,11 +392,10 @@
          
          (define (unwind-local stx)
            (kernel:kernel-syntax-case stx #f
-             [(letrec-values ([(var) exp] ...) body) ; at least through intermediate, define-values may not occur in local.
-              (with-syntax ([(exp2 ...) (map inner (syntax->list #'(exp ...)))])
-                #`(local ((define var exp2) ...) #,(inner #'body)))]
-             [(define-values (var) body)
-              (unwind-define stx)]))
+             [(letrec-values ([vars exp] ...) body) ; at least through intermediate, define-values may not occur in local.
+              (with-syntax ([defns (map inner (syntax->list #`((define-values vars exp) ...)))])
+                #`(local defns #,(inner #'body)))]
+             [else (error 'unwind-local "expected a letrec-values, given: ~e" (syntax-object->datum stx))]))
          
          (define (unwind-quasiquote-the-cons-application stx)
            (syntax-case (recur-on-pieces stx) ()
