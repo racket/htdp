@@ -1,8 +1,9 @@
-
 (require-library "turtles.ss" "graphics")
 (require-library "functiou.ss")
+(require-library "invoke.ss")
 
-(invoke-open-unit/sig 
+(define-values/invoke-unit/sig
+  turtle^
  (compound-unit/sig
   (import)
   (link [t : turtle^ ((require-library "turtler.ss" "graphics") f)]
