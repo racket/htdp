@@ -393,9 +393,9 @@
          
          (define (unwind-local stx)
            (kernel:kernel-syntax-case stx #f
-             [(let-values () (letrec-values ([(var ...) (#%app values exp ...)]) body))
+             [(let-values () (letrec-values ([(var) exp] ...) body)) ; through intermediate, define-values may not occur in local.
               (with-syntax ([(exp2 ...) (map inner (syntax->list #'(exp ...)))])
-                #`(local ((define var exp2) ...) #,(inner #'body)))]))
+                #`(local ((define var exp2) ...) #,(inner #'body)))]))        
          
          (define (unwind-quasiquote-the-cons-application stx)
            (syntax-case (recur-on-pieces stx) ()
