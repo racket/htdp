@@ -122,6 +122,20 @@
 	  (if (symbol? sym) 'string 'symbol))))
       (error sym "~a" str)))
 
+  (define-teach beginner struct?
+    (lambda (x)
+      (not (or (number? x)
+	       (boolean? x)
+	       (pair? x)
+	       (symbol? x)
+	       (string? x)
+	       (procedure? x)
+	       (vector? x)
+	       (char? x)
+	       (port? x)
+	       (eof-object? x)
+	       (void? x)))))
+
   (define-teach beginner exit
     (lambda () (exit)))
 
@@ -162,6 +176,7 @@
 	   beginner-list*
 	   beginner-append
 	   beginner-error
+	   beginner-struct?
 	   beginner-exit
 	   advanced-cons
 	   advanced-set-cdr!
