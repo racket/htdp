@@ -2,7 +2,8 @@
   
   (require "my-macros.ss"
 	   (lib "contract.ss")
-           (lib "list.ss"))
+           (lib "list.ss")
+           (lib "etc.ss"))
 
   ; CONTRACTS
   
@@ -77,7 +78,8 @@
    a...b ; a list of numbers from a to b
    reset-profiling-table ; profiling info
    get-set-pair-union-stats ; profiling info
-   re-intern-identifier)
+   re-intern-identifier
+   finished-xml-box-table)
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
@@ -474,7 +476,7 @@
            [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'stepper-define-type))]
            [it (syntax-property it 'user-stepper-proc-define-name (syntax-property expr 'stepper-proc-define-name))]
            [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'stepper-and/or-clauses-consumed))]
-           [it (syntax-property it 'user-stepper-xml-hint (syntax-property expr 'stepper-xml-hint))]
+           [it (syntax-property it 'stepper-xml-hint (syntax-property expr 'stepper-xml-hint))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))
@@ -486,7 +488,7 @@
            [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'user-stepper-define-type))]
            [it (syntax-property it 'user-stepper-proc-define-name (syntax-property expr 'user-stepper-proc-define-name))]
            [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'user-stepper-and/or-clauses-consumed))]
-           [it (syntax-property it 'user-stepper-xml-hint (syntax-property expr 'user-stepper-xml-hint))]
+           [it (syntax-property it 'stepper-xml-hint (syntax-property expr 'stepper-xml-hint))]
            [it (syntax-property it 'user-source (syntax-property expr 'user-source))]
            [it (syntax-property it 'user-position (syntax-property expr 'user-position))]
            [it (syntax-property it 'stepper-highlight (syntax-property expr 'stepper-highlight))])
@@ -511,45 +513,49 @@
     #`#,(string->symbol (symbol->string (syntax-e identifier))))
   
   
-  (provide/contract [syntax-object->hilite-datum (syntax? ; input
-                                                  . -> .
-                                                  any)]) ; sexp with 'hilite'
+  (provide/contract [syntax-object->hilite-datum ((syntax?) ; input
+                                                  (boolean?) ; ignore-highlight?
+                                                  . opt-> .
+                                                  any?)]) ; sexp with explicit tags
   
   ;; syntax-object->hilite-datum : takes a syntax object with zero or more
-  ;; subexpressions tagged with the 'stepper-highlight', 'stepper-xml-box', 'stepper-xml-unquote', and 'stepper-xml-splice' syntax-properties
+  ;; subexpressions tagged with the 'stepper-highlight', 'stepper-xml-hint', and 'stepper-xml-value-hint' syntax-properties
   ;; and turns it into a datum, where expressions with the named
-  ;; properties result in (hilite <datum>), (xml-box <datum>), (xml-unquote <datum>) and (xml-splice <datum>) rather than <datum>. It also
+  ;; properties result in (hilite <datum>), (xml-box <datum>), (scheme-box <datum>) and (splice-box <datum>) rather than <datum>. It also
   ;; re-interns all identifiers.  In cases where a given expression has more than one of these, they appear in the order
   ;; listed.  That is, an expression with both highlight and xml-box annotations will result it (hilite (xml-box <datum>))
   ;; 
   ;; this procedure is useful in checking the output of the stepper.
   
-  (define (syntax-object->hilite-datum stx)
-    (let ([datum (syntax-case stx ()
-                   [(a . rest) (cons (syntax-object->hilite-datum #`a) (syntax-object->hilite-datum #`rest))]
-                   [id
-                    (identifier? stx)
-                    (string->symbol (symbol->string (syntax-e stx)))]
-                   [else (if (syntax? stx)
-                             (syntax-object->datum stx)
-                             stx)])])
-      (let property-checker-loop ([properties (list 'stepper-highlight
-                                                    'from-xml-box
-                                                    'from-scheme-box
-                                                    'from-splice-box)]
-                                  [tags (list 'hilite
-                                              'xml-box
-                                              'xml-unquote
-                                              'xml-splice)]
-                                  [datum datum])
-        (if (null? properties)
-            datum
-            (property-checker-loop
-             (cdr properties)
-             (cdr tags)
-             (if (syntax-property stx (car properties))
-                 (list (car tags) datum)
-                 datum))))))
+  (define syntax-object->hilite-datum
+    (opt-lambda (stx [ignore-highlight? #f])
+      (let ([datum (syntax-case stx ()
+                     [(a . rest) (cons (syntax-object->hilite-datum #`a) (syntax-object->hilite-datum #`rest))]
+                     [id
+                      (identifier? stx)
+                      (string->symbol (symbol->string (syntax-e stx)))]
+                     [else (if (syntax? stx)
+                               (syntax-object->datum stx)
+                               stx)])])
+        (let* ([it (case (syntax-property stx 'stepper-xml-hint)
+                     [(from-xml-box) `(xml-box ,datum)]
+                     [(from-scheme-box) `(scheme-box ,datum)]
+                     [(from-splice-box) `(splice-box ,datum)]
+                     [else datum])]
+               [it (case (syntax-property stx 'stepper-xml-value-hint)
+                     [(from-xml-box) `(xml-box-value ,it)]
+                     [else it])]
+               [it (if (and (not ignore-highlight?)
+                            (syntax-property stx 'stepper-highlight))
+                       `(hilite ,it)
+                       it)])
+          it))))
+  
+  ;; finished-xml-box-table : this table tracks values that are the result
+  ;; of evaluating xml boxes.  These values should be rendered as xml boxes,
+  ;; and not as simple lists.
+  
+  (define finished-xml-box-table (make-hash-table 'weak))
   
   (provide/contract [syntax-object->interned-datum (syntax? ; input
                                                     . -> .

@@ -99,10 +99,13 @@
                         (recon-source-expr (mark-source mark) (list mark) null null render-settings)
                         #`#,name))
                   (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
-            (let ([rendered ((render-settings-render-to-sexp render-settings) val)])
+            (let* ([rendered ((render-settings-render-to-sexp render-settings) val)]
+                   [it (if (hash-table-get finished-xml-box-table val)
+                           (syntax-property #`#,rendered 'stepper-xml-value-hint 'from-xml-box)
+                           #`#,rendered)])
               (if (symbol? rendered)
-                  #`#,rendered
-                  #`(#%datum . #,rendered)))))))
+                  #`#,it
+                  #`(#%datum . #,it)))))))
     
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
@@ -336,8 +339,6 @@
                   
                   [(comes-from-local)
                    (unwind-local stx)]
-                  
-                  ;[(from-xml-box)]
                   
                   (else (fall-through)))
                 (fall-through))

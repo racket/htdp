@@ -178,6 +178,9 @@
                      
                      [(expr-finished-break)
                       (let ([reconstructed (r:reconstruct-completed mark-list returned-value-list render-settings)])
+                        (printf "stepper-xml-hint: ~v\nof reconstructed: ~v\n" 
+                                (syntax-property reconstructed 'stepper-xml-hint)
+                                reconstructed)
                         (set! finished-exprs (append finished-exprs (list reconstructed))))]
                      
                      [(define-struct-break)
@@ -202,8 +205,8 @@
       (program-expander
        (lambda () 
          ; swap these to allow errors to escape (e.g., when debugging)
-         (error-display-handler err-display-handler)
-         ;(void)
+         ;(error-display-handler err-display-handler)
+         (void)
          )
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)

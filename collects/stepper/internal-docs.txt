@@ -127,6 +127,20 @@ xml-box.  The protocol is as follows:
  [ 'from-splice-box ] : attached to the (qq-append ...) that wraps
    the result of expanding a splice-box
 
+  (Transferred.)
+
+stepper-xml-value-hint : like the stepper-xml-hint, used to indicate
+   values that are the result of evaluating xml boxes.  The reason
+   this cannot be the same as the stepper-xml-hint property is that
+   the stepper-xml-hint property is one of the "attached" ones which
+   follows the source syntax around.  This means that instances of this
+   property used to signal values that are the result of xml-box
+   evaluation get stomped by the stepper-xml-hint values attached to the
+   source.
+
+ [ 'from-xml-box ] : this value is the result of evaluating an xml 
+   box.
+
 stepper-proc-define-name : stores the name to which a procedure
    defined with the (define (fn arg ...) body) was bound.
 
