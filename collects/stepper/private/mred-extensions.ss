@@ -493,10 +493,7 @@
           (let ([w-box (box 0)]
                 [h-box (box 0)])
             (send vert-separator get-extent #f 0 0 w-box h-box #f #f #f #f)
-            (needs-update vert-separator 0 0 (unbox w-box) (unbox h-box))
-            ;(send horiz-separator-2 get-extent #f 0 0 w-box h-box #f #f #f #f)
-            ;(needs-update horiz-separator-2 0 0 (unbox w-box) (unbox h-box))
-            )))
+            (send (send vert-separator get-admin) resized vert-separator #t))))
       
       
 
