@@ -300,7 +300,7 @@
     (let loop ([ilist arglist])
       (cond [(identifier? ilist)
              (cons ilist null)]
-            [(null? ilist)
+            [(or (null? ilist) (and (syntax? ilist) (null? (syntax-e ilist))))
              null]
             [(pair? ilist)
              (cons (car ilist) (loop (cdr ilist)))]
