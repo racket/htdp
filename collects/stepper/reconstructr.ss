@@ -288,7 +288,7 @@
   (define (reconstruct expr-list mark-list all-defs-list current-def-num)
     
     (local
-        ((define (rectify-source-current-marks expr)
+        ((define (rectify-source-top-marks expr)
            (rectify-source-expr expr mark-list null))
          
 
@@ -306,7 +306,7 @@
                             ,(if super-expr
                                  (list raw-type (if current-expr?
                                                     so-far
-                                                    (rectify-source-current-marks super-expr)))
+                                                    (rectify-source-top-marks super-expr)))
                                  raw-type)
                             ,raw-fields))]
                        [(or (comes-from-define-procedure? expr)
@@ -318,7 +318,7 @@
                                            (car (z:define-values-form-vars expr)))]
                                [o-form-proc (if current-expr?
                                                 so-far
-                                                (rectify-source-current-marks 
+                                                (rectify-source-top-marks 
                                                  (z:define-values-form-val expr)))])
                           (o-form-lambda->define o-form-proc proc-name))]
                                               
@@ -327,15 +327,15 @@
                            ,(z:varref-var (car vars))
                            ,(if current-expr?
                                 so-far
-                                (rectify-source-current-marks val)))]
+                                (rectify-source-top-marks val)))]
                        
                        [else
                         `(define-values 
                            ,(map read->raw vars)
-                           ,(rectify-source-current-marks val))]))
+                           ,(rectify-source-top-marks val))]))
                (if current-expr?
                    so-far
-                   (rectify-source-current-marks expr))))
+                   (rectify-source-top-marks expr))))
          
          (define (rectify-old-var var)
            (let ([val (mark-binding-value (find-var-binding mark-list var))])
@@ -365,104 +365,110 @@
                     (rectify-old-var (top-level-exp-gensym-source expr))])))
 
          (define (reconstruct-inner mark-list so-far)
-           (if (null? mark-list)
-               so-far
-               (let* ([top-mark (car mark-list)]
-                      [expr (mark-source top-mark)])
-                 (cond 
-                   ; variable references
-                   [(z:varref? expr)
-                    (if (not (eq? nothing-so-far so-far))
-                        (e:dynamic-error expr 
-                                         "variable reference given as context")
-                        (rectify-source-current-marks expr))]
-                   
-                   ; applications
-                   
-                   [(z:app? expr)
-                    (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
-                           [arg-temps (build-list (length sub-exprs) get-arg-symbol)]
-                           [arg-temp-syms (map z:varref-var arg-temps)]
-                           [arg-vals (map (lambda (arg-sym) 
-                                            (mark-binding-value (find-var-binding mark-list arg-sym)))
-                                          arg-temp-syms)])
-                      (case (mark-label (car mark-list))
-                        ((not-yet-called)
-                         (letrec
-                             ([split-lists
-                               (lambda (exprs vals)
-                                 (if (or (null? vals)
-                                         (eq? (car vals) *unevaluated*))
-                                     (values null exprs)
-                                     (let-values ([(small-vals small-exprs)
-                                                   (split-lists (cdr exprs) (cdr vals))])
-                                       (values (cons (car vals) small-vals) small-exprs))))])
-                           (let-values ([(evaluated unevaluated) (split-lists sub-exprs arg-vals)])
-                             (let* ([eval-exprs (list-take (length evaluated) sub-exprs)]
-                                    [rectified-evaluated (map rectify-value evaluated)])
-                               (if (null? unevaluated)
-                                   rectified-evaluated
-                                   (append rectified-evaluated
-                                           (cons so-far
-                                                 (map rectify-source-current-marks (cdr unevaluated)))))))))
-                        ((called)
-                         (if (eq? so-far nothing-so-far)
-                             `(...) ; in unannotated code
-                             `(... ,so-far ...)))
-                        (else
-                         (e:static-error expr "bad label in application mark"))))]
-                   
-                   ; define-struct 
-                   
-                   [(z:struct-form? expr)
-                    (if (comes-from-define-struct? expr)
-                        so-far
-                        (let ([super-expr (z:struct-form-super expr)]
-                              [raw-type (read->raw (z:struct-form-type expr))]
-                              [raw-fields (map read->raw (z:struct-form-fields expr))])
-                          (if super-expr
-                              `(struct (,raw-type ,so-far)
-                                       ,raw-fields)
-                              `(struct ,raw-type ,raw-fields))))]
-                   
-                   ; if
-                   
-                   [(z:if-form? expr)
-                    (let ([test-exp (if (eq? so-far nothing-so-far)
-                                        (rectify-source-current-marks 
-                                         (create-bogus-bound-varref if-temp))
-                                        so-far)])
-                      (cond [(comes-from-cond? expr)
-                             (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
-                                    [cond-source (z:zodiac-start expr)]
-                                    [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list null)])
-                               `(cond ,clause ,@rest-clauses))]
-                            [(comes-from-and? expr)
-                             `(and ,test-exp ,@(rectify-and-clauses (z:zodiac-start expr)
-                                                                    (z:if-form-then expr)
+           (let ([rectify-source-current-marks 
+                  (lambda (expr)
+                    (rectify-source-expr expr mark-list null))])
+             (if (null? mark-list)
+                 so-far
+                 (let* ([top-mark (car mark-list)]
+                        [expr (mark-source top-mark)])
+                   (cond 
+                     ; variable references
+                     [(z:varref? expr)
+                      (if (not (eq? nothing-so-far so-far))
+                          (e:dynamic-error expr 
+                                           "variable reference given as context")
+                          (rectify-source-current-marks expr))]
+                     
+                     ; applications
+                     
+                     [(z:app? expr)
+                      (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
+                             [arg-temps (build-list (length sub-exprs) get-arg-symbol)]
+                             [arg-temp-syms (map z:varref-var arg-temps)]
+                             [arg-vals (map (lambda (arg-sym) 
+                                              (mark-binding-value (find-var-binding mark-list arg-sym)))
+                                            arg-temp-syms)])
+                        (case (mark-label (car mark-list))
+                          ((not-yet-called)
+                           ;                         (printf "length of mark-list: ~s~n" (length mark-list))
+                           ;                         (printf "mark has binding for third arg: ~s~n" 
+                           ;                                 (find-var-binding (list (car mark-list)) (z:varref:var 
+                           (letrec
+                               ([split-lists
+                                 (lambda (exprs vals)
+                                   (if (or (null? vals)
+                                           (eq? (car vals) *unevaluated*))
+                                       (values null exprs)
+                                       (let-values ([(small-vals small-exprs)
+                                                     (split-lists (cdr exprs) (cdr vals))])
+                                         (values (cons (car vals) small-vals) small-exprs))))])
+                             (let-values ([(evaluated unevaluated) (split-lists sub-exprs arg-vals)])
+                               (let* ([eval-exprs (list-take (length evaluated) sub-exprs)]
+                                      [rectified-evaluated (map rectify-value evaluated)])
+                                 (if (null? unevaluated)
+                                     rectified-evaluated
+                                     (append rectified-evaluated
+                                             (cons so-far
+                                                   (map rectify-source-current-marks (cdr unevaluated)))))))))
+                          ((called)
+                           (if (eq? so-far nothing-so-far)
+                               `(...) ; in unannotated code
+                               `(... ,so-far ...)))
+                          (else
+                           (e:static-error expr "bad label in application mark"))))]
+                     
+                     ; define-struct 
+                     
+                     [(z:struct-form? expr)
+                      (if (comes-from-define-struct? expr)
+                          so-far
+                          (let ([super-expr (z:struct-form-super expr)]
+                                [raw-type (read->raw (z:struct-form-type expr))]
+                                [raw-fields (map read->raw (z:struct-form-fields expr))])
+                            (if super-expr
+                                `(struct (,raw-type ,so-far)
+                                         ,raw-fields)
+                                `(struct ,raw-type ,raw-fields))))]
+                     
+                     ; if
+                     
+                     [(z:if-form? expr)
+                      (let ([test-exp (if (eq? so-far nothing-so-far)
+                                          (rectify-source-current-marks 
+                                           (create-bogus-bound-varref if-temp))
+                                          so-far)])
+                        (cond [(comes-from-cond? expr)
+                               (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
+                                      [cond-source (z:zodiac-start expr)]
+                                      [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list null)])
+                                 `(cond ,clause ,@rest-clauses))]
+                              [(comes-from-and? expr)
+                               `(and ,test-exp ,@(rectify-and-clauses (z:zodiac-start expr)
+                                                                      (z:if-form-then expr)
+                                                                      mark-list
+                                                                      null))]
+                              [(comes-from-or? expr)
+                               `(or ,test-exp ,@(rectify-or-clauses (z:zodiac-start expr)
+                                                                    (z:if-form-else expr)
                                                                     mark-list
                                                                     null))]
-                            [(comes-from-or? expr)
-                             `(or ,test-exp ,@(rectify-or-clauses (z:zodiac-start expr)
-                                                                  (z:if-form-else expr)
-                                                                  mark-list
-                                                                  null))]
-                            [else
-                             `(if ,test-exp 
-                                  ,(rectify-source-current-marks (z:if-form-then expr))
-                                  ,(rectify-source-current-marks (z:if-form-else expr)))]))]
-                   
-                   ; quote : there is no mark or break on a quote.
-                   
-                   ; define-values : define's don't get marks, so they can't occur here
-                   
-                   ; lambda : there is no mark or break on a quote
-
-                   [else
-                    (print-struct #t)
-                    (e:dynamic-error
-                     expr
-                     (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))]))))
+                              [else
+                               `(if ,test-exp 
+                                    ,(rectify-source-current-marks (z:if-form-then expr))
+                                    ,(rectify-source-current-marks (z:if-form-else expr)))]))]
+                     
+                     ; quote : there is no mark or break on a quote.
+                     
+                     ; define-values : define's don't get marks, so they can't occur here
+                     
+                     ; lambda : there is no mark or break on a quote
+                     
+                     [else
+                      (print-struct #t)
+                      (e:dynamic-error
+                       expr
+                       (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))])))))
          
          
          (define old-defs
