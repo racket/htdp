@@ -19,7 +19,7 @@
 (htdp-syntax-test #'(local [(define x 1) (define x 2)] 1))
 (htdp-syntax-test #'(local [(define (x a) 12) (+ 1 2)] 1))
 
-(htdp-err/rt-test (local [(define x y) (define y 5)] 10) exn:variable?)
+(htdp-err/rt-test (local [(define x y) (define y 5)] 10) exn:fail:contract:variable?)
 
 (htdp-test 1 'local (local () 1))
 (htdp-test 5 'local (local [(define y 5) (define x y)] x))
@@ -43,7 +43,7 @@
 (htdp-syntax-test #'(letrec ([x 5]) 1 2))
 (htdp-syntax-test #'(letrec ([x 5][x 6]) 1))
 
-(htdp-err/rt-test (letrec ([x y] [y 5]) 10) exn:variable?)
+(htdp-err/rt-test (letrec ([x y] [y 5]) 10) exn:fail:contract:variable?)
 
 (htdp-test 1 'letrec (letrec () 1))
 (htdp-test 5 'letrec (letrec ([y 5][x y]) x))

@@ -169,7 +169,7 @@
 (htdp-test #t (lambda (l) (eq? l (cadr l))) (shared ([x (list x x)]) x))
 (htdp-err/rt-test (shared ([x (cons 1 y)][y 5]) x))
 
-(load "shared-tests.ss")
+(load (build-path (collection-path "tests" "mzscheme") "shared-tests.ss"))
 
 (htdp-test #t 'equal? (equal? (vector (list 10) 'apple) (vector (list 10) 'apple)))
 (htdp-test #t 'equal~? (equal~? (vector (list 10) 'apple) (vector (list 10) 'apple) 0.1))

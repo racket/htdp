@@ -52,7 +52,8 @@
     (if (eq? val undefined)
 	(raise
 	 (make-exn:fail:contract:variable
-	  (format "local variable used before its definition: ~a" name)
+	  (string->immutable-string
+	   (format "local variable used before its definition: ~a" name))
 	  (current-continuation-marks)
 	  name))
 	val))

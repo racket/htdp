@@ -15,9 +15,8 @@
 ;; Don't need these:
 (define no-extra-if-tests? #t)
 
-(require (rename mzscheme exn:user? exn:user?)
-	 (rename mzscheme exn:application:type? exn:application:type?)
-	 (rename mzscheme exn:application:arity? exn:application:arity?))
+(require (rename mzscheme exn:fail? exn:fail?)
+	 (rename mzscheme exn:fail:contract? exn:fail:contract?))
 
 (define current-htdp-lang '(lib "htdp-beginner-abbr.ss" "lang"))
 (load-relative "htdp-test.ss")

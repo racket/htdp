@@ -92,7 +92,7 @@
 (htdp-test 19 'cond (cond [(zero? 10) 0] [#t 19]))
 (htdp-test 19 'cond (cond [(zero? 10) 0] [else 19]))
 
-(htdp-err/rt-test (cond [#f 10]) exn:user?) ;; Should it be a different exception?
+(htdp-err/rt-test (cond [#f 10]) exn:fail?) ;; Should it be a different exception?
 (htdp-err/rt-test (cond [1 10]))
 
 (htdp-syntax-test #'if)
