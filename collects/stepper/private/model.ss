@@ -222,8 +222,7 @@
       
       (program-expander
        (lambda () 
-         ;(error-display-handler err-display-handler)
-         (void))
+         (error-display-handler err-display-handler))
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)
              (receive-result (make-finished-result finished-exprs))

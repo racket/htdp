@@ -956,10 +956,10 @@
 				;;  ids, for the purposes of error reporting, etc.:
 				(map (lambda (def-ids)
 				       (map (lambda (def-id)
-					      (datum->syntax-object
-					       #f
-					       (string->uninterned-symbol
-						(symbol->string (syntax-e def-id)))))
+                                              (datum->syntax-object
+                                               #f
+                                               (string->uninterned-symbol
+                                                (symbol->string (syntax-e def-id)))))
 					    (syntax->list def-ids)))
 				     (syntax->list (syntax ((def-id ...) ...))))])
 		   (with-syntax ([(mapping ...)
@@ -969,20 +969,23 @@
 				    syntax->list
 				    (syntax->list
 				     (syntax
-				      (((define-syntaxes (def-id) 
-					  (make-undefined-check
+				      (((define-syntaxes (def-id)
+                                          (make-undefined-check
 					   (quote-syntax def-id)
 					   (quote-syntax check-not-undefined)
 					   (quote-syntax tmp-id)))
 					...)
 				       ...)))))])
-		     (syntax/loc stx
-		       (let ()
-			 mapping ...
-			 stx-def ...
-			 (define-values (tmp-id ...) def-expr)
-			 ...
-			 . exprs))))))))]
+                     (syntax-property
+                      (syntax/loc stx
+                        (let ()
+                          mapping ...
+                          stx-def ...
+                          (define-values (tmp-id ...) def-expr)
+                          ...
+                          . exprs))
+                      'stepper-hint
+                      'comes-from-local)))))))]
 	[(_ def-non-seq . __)
 	 (teach-syntax-error
 	  'local
@@ -1024,18 +1027,29 @@
 	   (and (andmap identifier/non-kw? names)
 		(not (check-duplicate-identifier names))))
 	 (with-syntax ([(tmp ...)
-			(generate-temporaries (syntax (name ...)))]
+                        (map (lambda (tmp orig) (syntax-property tmp 'stepper-orig-name orig))
+                             (generate-temporaries #'(name ...))
+                             (syntax->list #'(name ...)))]
 		       [(rhs-expr ...) (map allow-local-lambda 
 					    (syntax->list (syntax (rhs-expr ...))))])
-	   (syntax/loc stx
-	     (let ([tmp 
-		    ;; Use `name' to preserve inferred names:
-		    (let ([name rhs-expr])
-		      name)]
-		   ...)
-	       ;; Use `local' to tell `#%app' about the bindings:
-	       (intermediate-local [(define-values (name ...) (values tmp ...))]
-		    expr))))]
+           (with-syntax ([(rhs-expr2 ...) (map
+                                           (lambda (stx) 
+                                             (syntax-property stx 'stepper-skipto 
+                                                              (list syntax-e cdr car syntax-e car syntax-e cdr car)))
+                                           (syntax->list 
+                                           #'((let ([name rhs-expr])
+                                                name) ...)))])
+             (syntax-property
+              (syntax/loc stx
+                (let ([tmp 
+                       ;; Use `name' to preserve inferred names:
+                       rhs-expr2]
+                      ...)
+                  ;; Use `local' to tell `#%app' about the bindings:
+                  (intermediate-local [(define-values (name ...) (values tmp ...))]
+                                      expr)))
+              'stepper-hint
+              'comes-from-let)))]
 	[_else (bad-let-form 'let stx stx)]))
 
     (define (intermediate-let*/proc stx)

@@ -30,15 +30,18 @@
 		    (syntax id))
 		   orig-id))]
 	   [id
-	    (syntax-property
-	     (datum->syntax-object
-	      check-proc
-	      (list check-proc 
-		    (list 'quote (syntax id))
-		    tmp-id))
-	     'bound-in-source
-	     (cons (syntax-local-introduce
-		    (syntax id))
-		   orig-id))]))))))
+            (syntax-property
+             (syntax-property
+              (datum->syntax-object
+               check-proc
+               (list check-proc 
+                     (list 'quote (syntax id))
+                     tmp-id))
+              'bound-in-source
+              (cons (syntax-local-introduce
+                     (syntax id))
+                    orig-id))
+             'stepper-skipto
+             (list syntax-e cdr syntax-e cdr cdr car))])))))) ; this may make other stepper-skipto annotations obsolete.
 
 
