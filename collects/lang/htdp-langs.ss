@@ -611,12 +611,12 @@ tracing todo:
       ;;
       
       (define test-coverage-enabled (make-parameter #t))
-      (define current-test-coverage-info (make-parameter #f))
+      (define current-test-coverage-info (make-thread-cell #f))
       
       (define (initialize-test-coverage-point key expr)
-        (unless (current-test-coverage-info)
+        (unless (thread-cell-ref current-test-coverage-info)
           (let ([ht (make-hash-table)])
-            (current-test-coverage-info ht)
+            (thread-cell-set! current-test-coverage-info ht)
             (let ([rep (drscheme:rep:current-rep)])
               (when rep
                 (send rep set-test-coverage-info
@@ -628,12 +628,12 @@ tracing todo:
                         (send s set-delta-foreground "firebrick")
                         s)
                       #f)))))
-        (hash-table-put! (current-test-coverage-info)
+        (hash-table-put! (thread-cell-ref current-test-coverage-info)
                          key
                          (list #f expr)))
       
       (define (test-covered key)
-        (let ([v (hash-table-get (current-test-coverage-info) key)])
+        (let ([v (hash-table-get (thread-cell-ref current-test-coverage-info) key)])
           (set-car! v #t)))
       
       (define-values/invoke-unit/sig et:stacktrace^ et:stacktrace@ et et:stacktrace-imports^)
