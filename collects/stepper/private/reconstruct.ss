@@ -189,8 +189,8 @@
                          ([exn:variable? (lambda args #f)])
                        (let ([val (model-settings:global-lookup id)])
                          (or (and (model-settings:true-false-printed?)
-                                  (or (eq? id 'true)
-                                      (eq? id 'false)))
+                                  (or (eq? (syntax-e id) 'true)
+                                      (eq? (syntax-e id) 'false)))
                              (and (procedure? val)
                                   (or (not (closure-table-lookup val (lambda () #f))) ; not user-defined
                                       (and (not (continuation? val))
