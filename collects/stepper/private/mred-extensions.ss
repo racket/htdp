@@ -143,8 +143,7 @@
       (public set-height!)
       (override write copy get-extent draw)
       
-      (init height-init)
-      (define height height-init)
+      (init-field height)
       
 
       (define bitmap-width 15.0)
@@ -210,13 +209,7 @@
   (define stepper-sub-text%
     (class f:text:basic% ()
       
-      (init exps-init)
-      (init highlights-init)
-      (init highlight-color-init)
-      
-      (field [exps exps-init]
-             [highlights highlights-init]
-             [highlight-color highlight-color-init])
+      (init-field exps highlights highlight-color)
 
       (inherit insert get-style-list set-style-list change-style highlight-range last-position lock erase
                begin-edit-sequence end-edit-sequence get-start-position select-all clear)
@@ -358,9 +351,8 @@
                                                                                                                                                   
   (define stepper-sub-error-text%
     (class f:text:basic% ()
-      (init error-msg-init)
-      
-      (field [error-msg error-msg-init])
+  
+      (init-field error-msg)
       
       (inherit get-style-list last-position set-style-list insert change-style auto-wrap
                set-max-width)
@@ -421,15 +413,8 @@
   
   (define stepper-text%
     (class f:text:basic% ()
-      (init finished-exprs-init exps-init redex-list-init post-exps-init reduct-list-init error-msg-init
-            after-exprs-init)
-      (field [finished-exprs finished-exprs-init]
-             [exps exps-init]
-             [redex-list redex-list-init]
-             [post-exps post-exps-init]
-             [reduct-list reduct-list-init]
-             [error-msg error-msg-init]
-             [after-exprs after-exprs-init])
+      
+      (init-field finished-exprs exps redex-list post-exps reduct-list error-msg after-exprs)
 
       (inherit find-snip insert change-style highlight-range last-position lock erase auto-wrap
                begin-edit-sequence end-edit-sequence get-start-position get-style-list set-style-list

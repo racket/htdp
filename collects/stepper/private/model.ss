@@ -8,32 +8,13 @@
            "shared.ss")
  
   
-  (provide
-   ; model interface
-   go)
-  
-;  (import [i : stepper:model-input^]
-;          mred^
-;          [z : zodiac:system^]
-;          [d : drscheme:export^]
-;          [p : mzlib:print-convert^]
-;          [e : zodiac:interface^]
-;          [a : stepper:annotate^]
-;          [r : stepper:reconstruct^]
-;          stepper:shared^)
-  
-  ; my-assq is like assq but it only returns the second element of the list. This
-  ; is the way it should be, I think.
-  (define (my-assq assoc-list value)
-    (cond [(null? assoc-list) #f]
-          [(eq? (caar assoc-list) value) (cadar assoc-list)]
-          [else (my-assq (cdr assoc-list) value)]))
+  (provide go)
   
   (define (send-to-eventspace eventspace thunk)
     (parameterize ([current-eventspace eventspace])
       (queue-callback thunk)))
 
-  (define (go interactions-text defns-text receive-result)
+  (define (go program-expander receive-result)
     (local
   
         ((define finished-exprs null)
@@ -48,24 +29,6 @@
            (send-to-eventspace drscheme-eventspace thunk))
          
          (define user-computation-semaphore (make-semaphore))
-         
-         (define (step-through-expression expanded expand-next-expression)
-           ; is there an eof test?
-           ; if so, here's the old thing to to do:
-           ; (receive-result (make-finished-result finished-exprs))
-           (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
-                                                       'foot-wrap)])
-             (set! packaged-envs envs)
-             (set! current-expr expanded)
-             (let ([expression-result
-                    (parameterize ([current-exception-handler exception-handler])
-                      (user-primitive-eval annotated))])
-               (add-finished-expr expression-result)
-               (send-to-drscheme-eventspace expand-next-expression))))
-         
-         (define (add-finished-expr expression-result)
-           (let ([reconstructed (r:reconstruct-completed current-expr expression-result)])
-             (set! finished-exprs (append finished-exprs (list reconstructed)))))
 
          (define held-expr-list no-sexp)
          (define held-redex-list no-sexp)
@@ -116,6 +79,7 @@
          
   
          (define (break mark-set key break-kind returned-value-list)
+           (fprintf (current-error-port) "entering (break) with break-kind: ~a~n" break-kind)
            (let* ([mark-list (continuation-mark-set->list mark-set key)])
              (let ([double-redivide
                     (lambda (finished-exprs new-exprs-before new-exprs-after)
@@ -137,13 +101,18 @@
                   (when (not (r:skip-redex-step? mark-list))
                     (let*-2vals ([(reconstructed redex-list) (reconstruct-helper)])
                       (set! held-expr-list reconstructed)
-                      (set! held-redex-list redex-list)))]
+                      (set! held-redex-list redex-list)))
+                  (fprintf (current-error-port) "finished with normal-break~n")]
+                 
                  [(result-break)
+                  (fprintf (current-error-port) "returned-value-list: ~a~nskip-redex-step: ~a~n"
+                           returned-value-list
+                           (r:skip-redex-step? mark-list))
                   (when (if (not (null? returned-value-list))
                             (not (r:skip-redex-step? mark-list))
                             (and (not (eq? held-expr-list no-sexp))
                                  (not (r:skip-result-step? mark-list))))
-                    (let*-2vals ([(reconstructed redex-list) (reconstruct-helper)])
+                    (let*-2vals ([(reconstructed reduct-list) (reconstruct-helper)])
                       ;              ; this invariant (contexts should be the same)
                       ;              ; fails in the presence of unannotated code.  For instance,
                       ;              ; currently (map my-proc (cons 3 empty)) goes to
@@ -166,9 +135,11 @@
                                                              current reduct-list after)))])
                         (set! held-expr-list no-sexp)
                         (set! held-redex-list no-sexp)
+                        (fprintf (current-error-port) "finished reconstructing result-break~n")
                         (send-to-drscheme-eventspace
                          (lambda ()
-                           (receive-result result user-semaphore))))))]
+                           (receive-result result user-computation-semaphore)))
+                        (semaphore-wait user-computation-semaphore))))]
                  [(double-break)
                   ; a double-break occurs at the beginning of a let's evaluation.
                   (let* ([reconstruct-quadruple
@@ -181,18 +152,41 @@
                           (double-redivide finished-exprs 
                                            (list-ref reconstruct-quadruple 0) 
                                            (list-ref reconstruct-quadruple 2))])
-                      (receive-result (make-before-after-result new-finished
-                                                                  current-pre
-                                                                  (list-ref reconstruct-quadruple 1)
-                                                                  current-post
-                                                                  (list-ref reconstruct-quadruple 3)
-                                                                  after)
-                                        user-semaphore)))]
+                      (fprintf (current-error-port) "finished reconstructing double-break~n")
+                      (send-to-drscheme-eventspace
+                       (lambda () 
+                         (receive-result (make-before-after-result new-finished
+                                                                   current-pre
+                                                                   (list-ref reconstruct-quadruple 1)
+                                                                   current-post
+                                                                   (list-ref reconstruct-quadruple 3)
+                                                                   after)
+                                         user-computation-semaphore)))
+                      (semaphore-wait user-computation-semaphore)))]
                  [(late-let-break)
                   (let ([new-finished (r:reconstruct-current current-expr mark-list break-kind returned-value-list)])
                     (set! finished-exprs (append finished-exprs new-finished)))]
                  [else (error 'break "unknown label on break")]))))
-  
+         
+         (define (step-through-expression expanded expand-next-expression)
+           ; is there an eof test?
+           ; if so, here's the old thing to to do:
+           ; (receive-result (make-finished-result finished-exprs))
+           (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
+                                                       'foot-wrap)])
+             (set! packaged-envs envs)
+             (set! current-expr expanded)
+             (fprintf (current-error-port) "about to perform eval~n")
+             (let ([expression-result
+                    (with-handlers ([(lambda (x) #t) handle-exception])
+                      (eval annotated))])
+               (add-finished-expr expression-result)
+               (send-to-drscheme-eventspace expand-next-expression))))
+         
+         (define (add-finished-expr expression-result)
+           (let ([reconstructed (r:reconstruct-completed current-expr expression-result)])
+             (set! finished-exprs (append finished-exprs (list reconstructed)))))
+         
          (define (handle-exception exn)
            (if (not (eq? held-expr-list no-sexp))
                (let*-values
@@ -200,27 +194,18 @@
                  (receive-result (make-before-error-result (append finished-exprs before) 
                                                              current held-redex-list (exn-message exn) after)))
                (begin
-                 (receive-result (make-error-result finished-exprs (exn-message exn))))))
+                 (receive-result (make-error-result finished-exprs (exn-message exn)))))))
   
-         (define (make-exception-handler k)
-           (lambda (exn)
-             (send-to-drscheme-eventspace
-              (lambda ()
-                (handle-exception exn)))
-             (k))))
-  
-  (send interactions-text
-        expand-program
-        (drscheme:language:make-text/pos defns-text 
-                                         0
-                                         (send defns-text last-position)) 
-        (preferences:get drscheme:language-configuration:get-settings-preferences-symbol)
+      (program-expander
         (lambda (error? expanded send-to-user-eventspace continue-thunk)
-          (if (error?)
+          (if error?
               (handle-exception (cadr expanded))
               (begin
                 (send-to-user-eventspace
                  (lambda ()
-                   (message-box #f "in user's eventspace"))
-                 (message-box #f "back in drscheme's eventspace")))))))))    
+                   (fprintf (current-error-port) "entering user eventspace~n")
+                   (queue-callback
+                    (lambda ()
+                      (fprintf (current-error-port) "callback triggered~n")
+                      (step-through-expression expanded continue-thunk))))))))))))    
 
