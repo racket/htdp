@@ -10,7 +10,7 @@ languages for other modules (i.e., as the initial import):
    pretty.ss, string.ss, thread.ss, math.ss, match.ss, and
    shared.ss
 
- * _htdp-full-graphical.ss_ - provides big.ss 
+ * _htdp-full-graphics.ss_ - provides big.ss
     plus the MrEd classes
 
  * _htdp-beginner.ss_ - provides Beginning Student
