@@ -10,7 +10,7 @@
   
   (define-higher-order-primitive master master/proc (compare-guess))
   
-  #| ------------------------------------------------------------------------
+  #| ---------------------------------------------------------------------------
   The Basic Constants |#
   
   (define TITLE "TeachScheme Color Guessing")
@@ -28,7 +28,8 @@
   (define WIDTH (* COL# BUT-SIZE))
   (define HIGHT BUT-SIZE)
   
-  (define STOPS (list 'PerfectGuess 'perfect_guess 'perfect!))
+  (define STOPS 
+    (list 'PerfectGuess 'perfect_guess 'perfect! 'perfect 'Perfect 'perfekt 'Perfekt))
   
   (define TRUMPET
     (make-object bitmap% (build-path (collection-path "icons") "trumpet.xbm") 'xbm))

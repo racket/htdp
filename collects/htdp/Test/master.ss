@@ -5,7 +5,7 @@
 (define (check-guess target1 target2 guess1 guess2)
   (cond
     ((and (eq? target1 guess1) (eq? target2 guess2))
-     'perfect_guess)
+     'perfect)
     ((or  (eq? target1 guess1) (eq? target2 guess2))
      'one_color-at_correct_position)
     ((or  (eq? target1 guess2) (eq? target2 guess1))
