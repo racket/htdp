@@ -14,13 +14,16 @@
   
   (define (snip-size a)
     (cond
-      [(is-a? a image-snip%)
-       (let ([bm (send a get-bitmap)])
-         (values (send bm get-width)
-                 (send bm get-height)))]
       [(is-a? a cache-image-snip%)
-       (send a get-size)]))
-  
+       (send a get-size)]
+      [else
+       (let ([dc (new bitmap-dc%)]
+             [wb (box 0)]
+             [hb (box 0)])
+         (send a get-extent dc 0 0 wb hb #f #f #f #f)
+         (values (unbox wb) 
+                 (unbox hb)))]))
+         
   (define (image=? a-raw b-raw)
     (unless (image? a-raw) (raise-type-error 'image=? "image" 0 a-raw b-raw))
     (unless (image? b-raw) (raise-type-error 'image=? "image" 1 a-raw b-raw))
