@@ -507,8 +507,12 @@
                                                                       (recon-value (mark-binding-value (lookup-binding mark-list var))))
                                                                      ((let-bound)
                                                                       (d->so (binding-lifted-name mark-list var)))
+                                                                     ((top-level) var)
+                                                                     ((stepper-temp)
+                                                                      (error 'recon-source-expr "stepper-temp showed up in source?!?"))
                                                                      (else
-                                                                      (error 'recon-source-expr "no 'stepper-binding-type property found"))))]
+                                                                      (error 'recon-source-expr "unknown 'stepper-binding-type property: ~a" 
+                                                                             (syntax-property var 'stepper-binding-type)))))]
                                                               [else ; top-level-varref
                                                                var]))]
                                                      [(#%top . var)

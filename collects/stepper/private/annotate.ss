@@ -257,6 +257,67 @@
   ;                (list #'(let ([a 3] [b 9]) (let ([b 14]) b)) '(let*-values ([(a) (#%datum . 3)] [(b) (#%datum . 9)] [(b) (#%datum . 14)]) b) 14)))
 
 
+  ; label-var-types
+  
+  (define (label-var-types stx)
+  (let loop ([stx stx] [let-bound-bindings null])
+    (let* ([recur-regular 
+            (lambda (stx)
+              (loop stx let-bound-bindings))]
+           [recur-with-bindings
+            (lambda (vars exps)
+              (map (lambda (stx) (loop stx vars)) 
+                   exps))]
+           [do-let/rec
+            (lambda (stx rec?)
+              (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
+                (let* ([vars-list (foldl (lambda (a b) (append b a)) null (map syntax->list (syntax->list (syntax (vars ...)))))]
+                       [rhs-list (if rec?
+                                     (recur-with-bindings vars-list (syntax->list (syntax (rhs ...))))
+                                     (map recur-regular (syntax->list (syntax (rhs ...)))))]
+                       [new-bodies (recur-with-bindings vars-list (syntax->list (syntax bodies)))]
+                       [new-bindings (map list (syntax->list (syntax (vars ...))) rhs-list)])
+                  (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))])
+      (if (pair? stx)
+          (cons (recur-regular (car stx)) (recur-regular (cdr stx)))
+          (kernel:kernel-syntax-case stx #f
+                                     [(let-values x ...) (do-let/rec stx #f)]
+                                     [(letrec-values x ...) (do-let/rec stx #t)]
+                                     [var
+                                      (identifier? (syntax var))
+                                      (if (eq? (identifier-binding (syntax var)) 'lexical)
+                                          (if (ormap (lambda (binding)
+                                                       (bound-identifier=? binding (syntax var)))
+                                                     let-bound-bindings)
+                                              (syntax-property (syntax var) 'stepper-binding-type 'let-bound)
+                                              (syntax-property (syntax var) 'stepper-binding-type 'lambda-bound))
+                                          (syntax-property (syntax var) 'stepper-binding-type 'non-lexical))]
+                                     [stx
+                                      (let ([content (syntax-e (syntax stx))])
+                                        (if (pair? content)
+                                            (datum->syntax-object (syntax stx) (cons (recur-regular (car content)) 
+                                                                                     (recur-regular (cdr content))))
+                                            content))])))))
+  
+;  (syntax-case (label-var-types (expand #'(+ a 3))) (#%app #%top +) 
+;    [(#%app (#%top . +) (#%top . a-var) (#%datum . 3))
+;     (test 'non-lexical syntax-property (syntax a-var) 'stepper-binding-type)])
+;  
+;  (syntax-case (label-var-types (expand #'(let ([a a]) (+ a b)))) (let-values + #%app #%top)
+;    [(let-values ([a-var-0 (#%top . a-var-1)]) (#%app (#%top . +) a-var-2 (#%top . b-var)))
+;     (begin
+;       (test 'non-lexical syntax-property (syntax a-var-1) 'stepper-binding-type)
+;       (test 'let-bound syntax-property (syntax a-var-2) 'stepper-binding-type))])
+;  
+;  (syntax-case (label-var-types (expand #'(letrec ([a a]) (lambda (a) a)))) (letrec-values lambda)
+;    [(letrec-values ([a-0 a-var-0])
+;       (lambda (a-1) a-var-1))
+;     (begin
+;       (test 'let-bound syntax-property (syntax a-var-0) 'stepper-binding-type)
+;       (test 'lambda-bound syntax-property (syntax a-var-1) 'stepper-binding-type))])
+;
+       
+                                                            
                                                    
                                                    
                                                    
@@ -490,29 +551,29 @@
                                                                                      
 	 (define annotate/inner 
            (checked-lambda ((expr SYNTAX-OBJECT) (tail-bound BINDING-SET) (pre-break? BOOLEAN) (top-level? BOOLEAN) 
-                            procedure-name-info (let-bound-vars VARREF-SET))
+                            procedure-name-info (let-bound-bindings VARREF-SET))
 	   
-	   (let* ([tail-recur (lambda (expr) (annotate/inner expr tail-bound #t #f procedure-name-info let-bound-vars))]
+	   (let* ([tail-recur (lambda (expr) (annotate/inner expr tail-bound #t #f procedure-name-info let-bound-bindings))]
                   [define-values-recur (lambda (expr name) 
-                                         (annotate/inner expr tail-bound #f #f name let-bound-vars))]
-                  [non-tail-recur (lambda (expr) (annotate/inner expr null #f #f #f let-bound-vars))]
-                  [result-recur (lambda (expr) (annotate/inner expr null #f #f procedure-name-info let-bound-vars))]
-                  [set!-rhs-recur (lambda (expr name) (annotate/inner expr null #f #f name let-bound-vars))]
+                                         (annotate/inner expr tail-bound #f #f name let-bound-bindings))]
+                  [non-tail-recur (lambda (expr) (annotate/inner expr null #f #f #f let-bound-bindings))]
+                  [result-recur (lambda (expr) (annotate/inner expr null #f #f procedure-name-info let-bound-bindings))]
+                  [set!-rhs-recur (lambda (expr name) (annotate/inner expr null #f #f name let-bound-bindings))]
                   [let-rhs-recur (lambda (expr binding-names dyn-index-syms bindings)
                                    (let* ([proc-name-info 
                                            (if (not (null? binding-names))
                                                (list (car binding-names) (car dyn-index-syms))
                                                #f)])
-                                     (annotate/inner expr null #f #f proc-name-info (binding-set-union (list let-bound-vars bindings)))))]
-                  [lambda-body-recur (lambda (expr) (annotate/inner expr 'all #t #f #f let-bound-vars))]
+                                     (annotate/inner expr null #f #f proc-name-info (binding-set-union (list let-bound-bindings bindings)))))]
+                  [lambda-body-recur (lambda (expr) (annotate/inner expr 'all #t #f #f let-bound-bindings))]
                   ; note: no pre-break for the body of a let; it's handled by the break for the
                   ; let itself.
                   [let-body-recur (lambda (bindings)
                                     (lambda (expr) 
                                       (annotate/inner expr (binding-set-union (list tail-bound bindings)) #f 
-                                                      #f procedure-name-info (binding-set-union (list let-bound-vars bindings)))))]
+                                                      #f procedure-name-info (binding-set-union (list let-bound-bindings bindings)))))]
                   [cheap-wrap-recur (lambda (expr) (let-values ([(ann _) (tail-recur expr)]) ann))]
-                  [no-enclosing-recur (lambda (expr) (annotate/inner expr 'all #f #f #f let-bound-vars))]
+                  [no-enclosing-recur (lambda (expr) (annotate/inner expr 'all #f #f #f let-bound-bindings))]
                   [make-debug-info-normal (lambda (free-bindings)
                                             (make-debug-info expr tail-bound free-bindings 'none foot-wrap?))]
                   [make-debug-info-app (lambda (tail-bound free-bindings label)
@@ -848,7 +909,7 @@
                                                      'stepper-binding-type
                                                      (if (ormap (lambda (binding)
                                                                   (bound-identifier=? binding (syntax var)))
-                                                                let-bound-vars)
+                                                                let-bound-bindings)
                                                          'let-bound
                                                          'lambda-bound))])]
                      [free-varrefs (varref-set-union (list (list tagged-var)
@@ -973,6 +1034,7 @@
                                                                      (and foot-wrap? 
                                                                           (non-annotated-proc? (syntax var)))]
                                                                     [var
+                                                                     (identifier? (syntax var)) ; guard
                                                                      (and (not (eq? (identifier-binding (syntax var)) 'lexical))
                                                                           foot-wrap?
                                                                           (non-annotated-proc? (syntax var)))]
@@ -1021,7 +1083,7 @@
                 (let*-2vals ([var (syntax var-stx)]
                              [tagged (if (ormap (lambda (binding)
                                                   (bound-identifier=? binding var))
-                                                let-bound-vars)
+                                                let-bound-bindings)
                                          (syntax-property var 'stepper-binding-type 'let-bound)
                                          (syntax-property var 'stepper-binding-type 'lambda-bound))]
                              [free-varrefs (list tagged)])
