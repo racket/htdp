@@ -416,7 +416,7 @@
                  [(z:if-form? expr)
                   (let ([test-exp (if (eq? so-far nothing-so-far)
                                       (rectify-source-current-marks 
-                                       (create-bogus-bound-varref if-temp))
+                                       (create-bogus-bound-varref if-temp #f))
                                       so-far)])
                     (cond [(comes-from-cond? expr)
                            (let* ([clause (list test-exp (rectify-source-current-marks (z:if-form-then expr)))]
