@@ -670,3 +670,17 @@ any macro-reversal (hence source-correlation) stuff.
 Bindings.  What's a binding?  It looks to me like the syntax object
 representing the binding occurrence of the variable should serve 
 admirably as a 'binding' for our purposes.
+
+***********
+
+I'm dumping the tracking of the 'never-undefined property.  It was
+originally used for two purposes; first, varrefs had to be wrapped
+with an undefined check.  Second, varrefs in ankle- and cheap-wrap
+were not wrapped if the variables were known never to be
+undefined. Now, the undefined check is (at last) inserted by the
+language's elaborator, so the first use is obsolete.  The second one
+is more or less obsolete as well, because I'm not sure that cheap- or
+ankle-wrap are ever going to be used again.
+
+2002-01-08
+
