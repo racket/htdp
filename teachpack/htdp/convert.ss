@@ -1,3 +1,7 @@
+;(require-library "core.ss")
+;(define-signature plt:userspace^ ((open mred^) (open mzlib:function^)))
+;(require-library "macro.ss")
+
 ;; TODO: docs, htdp update 
 (define-signature convertS (convert-gui convert-repl convert-file))
 (require-library "error.ss" "htdp")
@@ -8,58 +12,76 @@
 
    ;; scale% : (union false (num -> str)) frame% -> scale<%>
    ;; scale<%> : set-current-x + canvas<%>
-   ;; the str produced by to-string shouldn't be more than 3 or 4 chars
    (define scale%
-    (class* canvas% () (to-string . x)
-      (sequence (apply super-init x))
+    (class* canvas% () args
+      
       (inherit get-dc get-size get-client-size)    
       (private 
-	;; managing the ratio
-	(current-x  0)
-	(check-x    
-	  (lambda (x)
-	    (if (and (number? x) (<= 0. x 1.))
-		x 
-		(error 'set-current-x "out of range [0.,1.]: ~e" x))))
-	;; drawing things
-	(dc         (send this get-dc))
-	(black-pen  (make-object pen%   "BLACK" 2 'solid))
-	(red-brush  (make-object brush% "RED"  'solid))
-	(draw-something
-	  (lambda (delta-x)
-	    (send dc clear)
-	    (let-values ([(width height) (get-size)])
-	      (send dc set-brush red-brush)
-	      (send dc draw-rectangle 0 0 delta-x height)
-	      (send dc set-pen black-pen)
-	      (let*-values ([(str)
-			     (if to-string
-				 (to-string current-x)
-				 (string-append
-				  "."
-				  (number->string
-				   (inexact->exact
-				    (truncate
-				     (exact->inexact (* 100 current-x)))))))]
-			    [(cw ch) (get-client-size)]
-			    [(sw sh _1 _2) (send dc get-text-extent str)])
-		(send dc draw-text
-		  str
-		  (floor (- (/ cw 2) (/ (inexact->exact sw) 2)))
-		  (floor (- (/ ch 2) (/ (inexact->exact sh) 2)))))))))
+	[value  0]
+	[black-pen  (send the-pen-list find-or-create-pen "BLACK" 2 'solid)]
+	[red-brush  (send the-brush-list find-or-create-brush "RED" 'solid)]
+	[draw-something
+         (lambda ()
+           (let ([dc (get-dc)])
+             (send dc clear)
+             (let-values ([(width height) (get-client-size)])
+               (send dc set-pen black-pen)
+               (send dc set-brush red-brush)
+               (send dc draw-rectangle 0 0 width height)
+               (let*-values ([(cw ch) (get-client-size)]
+                             [(number) value])
+                 (when (and (number? number)
+                            (exact? number)
+                            (real? number))
+                   (let* ([whole (floor number)]
+                          [wholes (if (and (zero? whole) (not (zero? number)))
+                                      ""
+                                      (number->string whole))]
+                          [nums (number->string (numerator (- number whole)))]
+                          [dens (number->string (denominator (- number whole)))])
+                     (let-values ([(ww wh wa wd) (send dc get-text-extent wholes)]
+                                  [(nw nh na nd) (send dc get-text-extent nums)]
+                                  [(dw dh da dd) (send dc get-text-extent dens)])
+                       (let ([w (if (integer? number) (+ ww (max nw dw)) ww)]
+                             [h (if (integer? number)
+                                    wh
+                                    (+ nh dh))])
+                         (cond
+                           [(integer? number) 
+                            (send dc draw-text
+                                  wholes
+                                  (- (/ cw 2) (/ w 2))
+                                  (- (/ ch 2) (/ wh 2)))]
+                           [else
+                            (send dc draw-text
+                                  wholes
+                                  (- (/ cw 2) (/ w 2))
+                                  (- (/ ch 2) (/ wh 2)))
+                            (send dc draw-text
+                                  nums
+                                  (+ ww (- (/ cw 2) (/ w 2)))
+                                  (- (/ ch 2) (/ h 2)))
+                            (send dc draw-text
+                                  dens
+                                  (+ ww (- (/ cw 2) (/ w 2)))
+                                  (+ nh (- (/ ch 2) (/ h 2))))
+                            (send dc draw-line
+                                  (+ ww (- (/ cw 2) (/ w 2)))
+                                  (/ ch 2)
+                                  (+ ww (max nw dw) (- (/ cw 2) (/ w 2)))
+                                  (/ ch 2))])))))))))])
       (override
-	[on-paint (lambda () 
-		    (let-values ([(width height) (get-size)])
-		      (draw-something (* current-x width))))])
+        [on-paint (lambda () (draw-something))])
       (public 
-	[set-current-x (lambda (x) 
-			 (set! current-x (check-x x))
-			 (on-paint))])
+	[set-value (lambda (v) 
+                     (set! value v)
+                     (draw-something))])
       (inherit min-width min-height)
       (sequence
-	(let-values ([(w h a d) (send (get-dc) get-text-extent "100")])
-	  (min-width (inexact->exact w))
-	  (min-height (inexact->exact h))))))
+        (apply super-init args)
+	(let-values ([(w h a d) (send (get-dc) get-text-extent "100100100")])
+	  (min-width (+ 4 (inexact->exact w)))
+	  (min-height (+ 4 (inexact->exact (* 2 h))))))))
     
     ;; ------------------------------------------------------------------------
     (define OUT-ERROR
@@ -68,10 +90,10 @@
     ;; ============================================================================
     ;; MODEL
     ;; 2int : num -> int
-    ;; to convert a number into an exact integer 
+    ;; to convert a real number into an exact number 
     (define (2int x)
-      (if (number? x)
-          (inexact->exact (round x))
+      (if (and (real? x) (number? x))
+          (inexact->exact x)
           (error 'convert OUT-ERROR x)))
     
     ;; f2c : num -> num
@@ -87,7 +109,7 @@
     ;; slider-cb : slider% event% -> void
     ;; to use fahr->cel to perform the conversion 
     (define (slider-cb c s)
-      (send sliderC set-current-x
+      (send sliderC set-value
 	    ((compose in-slider-range 2int fahr->cel)
              (send sliderF get-value))))
     
@@ -95,12 +117,8 @@
     ;; to check and to convert the new temperature into an appropriate scale 
     (define (in-slider-range x)
       (cond
-        [(<= SLI-MIN x SLI-MAX) (/ (- x SLI-MIN) (- SLI-MAX SLI-MIN))]
+        [(<= SLI-MIN x SLI-MAX) x]
         [else (error 'convert-gui "result out of range for Celsius display")]))
-    
-    ;; to-string : number[0.,1.] -> number[SLI-MIN,SLI-MAX]
-    (define (to-string x)
-      (number->string (+ (* x (- SLI-MAX SLI-MIN)) SLI-MIN)))
     
     
     #| --------------------------------------------------------------------
@@ -138,8 +156,8 @@
     
     ;; sliderC : slider% 
     ;; to display the Celsius temperature 
-    (define sliderC (make-object scale% to-string panel))
-    (define _set-sliderC (send sliderC set-current-x (in-slider-range (f2c F-SLI-0))))
+    (define sliderC (make-object scale% panel))
+    (define _set-sliderC (send sliderC set-value (in-slider-range (f2c F-SLI-0))))
     
     ;; convert : button%
     ;; to convert fahrenheit to celsius 
@@ -154,6 +172,13 @@
     (define (convert-gui f)
       (check-proc 'convert-gui f 1 "convert-gui" "one argument")
       (set! fahr->cel f)
+      ;; only initialize the slider based on the user's program 
+      ;; when there aren't any exceptions.
+      ;; if there are exceptions, wait for the user to click
+      ;; "convert" to see an error.
+      (with-handlers ([(lambda (x) #t)
+                       (lambda (x) (void))])
+        (send sliderC set-value (in-slider-range (fahr->cel F-SLI-0))))
       (send frame show #t))
     
     ;; ============================================================================
