@@ -1,6 +1,6 @@
 ;; Language: Full
 
-(load "tester.ss")
+; (load "tester.ss")
 ;; by hand, Beginner for plain, Full for errors 
 
 
@@ -43,10 +43,8 @@
 (equal? (reveal (make-word 'd 'e 'r) (make-word '_ '_ '_) 'f)
         (make-word '_ '_ '_))
 
-(test-error (hangman make-word))
-(test-error (hangman (make-word 'a 'b 'c) reveal draw-next-part))
-(test-error 
- (hangman make-word
-          (reveal (make-word 'd 'e 'r) (make-word '_ '_ '_) 'd)
-          draw-next-part))
-(test-error (hangman make-word reveal 100))
+;; check errors 
+; (hangman make-word)
+; (hangman (make-word 'a 'b 'c) reveal draw-next-part)
+; (hangman make-word (reveal (make-word 'd 'e 'r) (make-word '_ '_ '_) 'd) draw-next-part)
+; (hangman make-word reveal 100)

@@ -3,6 +3,7 @@
            "draw-sig.ss"
            (lib "etc.ss")
 	   (lib "posn.ss" "lang")
+	   (lib "prim.ss" "lang")           
            (lib "unitsig.ss")
            (prefix mred: (lib "mred.ss" "mred"))
            (lib "mred-sig.ss" "mred")
@@ -16,43 +17,57 @@
   
   (provide-signature-elements graphics:posn-less^)
   
+  (define-primitive draw-solid-disk draw-solid-disk/proc)
+  (define-primitive draw-circle draw-circle/proc)
+  (define-primitive draw-solid-rect draw-solid-rect/proc)
+  (define-primitive draw-solid-line draw-solid-line/proc)  
+
+  (define-primitive clear-solid-disk clear-solid-disk/proc)
+  (define-primitive clear-circle clear-circle/proc)
+  (define-primitive clear-solid-rect clear-solid-rect/proc)
+  (define-primitive clear-solid-line clear-solid-line/proc)  
+  (define-primitive clear-all clear-all/proc)
+
+  (define-primitive sleep-for-a-while sleep-for-a-while/proc)
+  (define-primitive wait-for-mouse-click wait-for-mouse-click/proc)
+  
   (define the-error
     (lambda x
       (error "evaluate (start <num> <num>) first")))  
   
   (define %draw-solid-disk the-error)
-  (define draw-solid-disk (lambda a (apply %draw-solid-disk a)))
+  (define draw-solid-disk/proc (lambda a (apply %draw-solid-disk a)))
   
   (define %clear-solid-disk the-error)
-  (define clear-solid-disk (lambda a (apply %clear-solid-disk a)))
+  (define clear-solid-disk/proc (lambda a (apply %clear-solid-disk a)))
   
   (define %draw-circle the-error)
-  (define draw-circle (lambda a (apply %draw-circle a)))
+  (define draw-circle/proc (lambda a (apply %draw-circle a)))
   
   (define %clear-circle the-error)
-  (define clear-circle (lambda a (apply %clear-circle a)))
+  (define clear-circle/proc (lambda a (apply %clear-circle a)))
   
   (define %draw-solid-rect the-error)
-  (define draw-solid-rect (lambda a (apply %draw-solid-rect a)))
+  (define draw-solid-rect/proc (lambda a (apply %draw-solid-rect a)))
   
   (define %clear-solid-rect the-error)
-  (define clear-solid-rect (lambda a (apply %clear-solid-rect a)))
+  (define clear-solid-rect/proc (lambda a (apply %clear-solid-rect a)))
   
   (define %draw-solid-line the-error) 
-  (define draw-solid-line (lambda a (apply %draw-solid-line a)))
+  (define draw-solid-line/proc (lambda a (apply %draw-solid-line a)))
   
   (define %clear-solid-line the-error)
-  (define clear-solid-line (lambda a (apply %clear-solid-line a)))
+  (define clear-solid-line/proc (lambda a (apply %clear-solid-line a)))
   
   (define %clear-all the-error)
-  (define clear-all (lambda a (apply %clear-all a)))
+  (define clear-all/proc (lambda a (apply %clear-all a)))
   
   (define %wait-for-mouse-click the-error)
-  (define (wait-for-mouse-click) (%wait-for-mouse-click))
+  (define (wait-for-mouse-click/proc) (%wait-for-mouse-click))
   
   (define (make-true f) (lambda x (apply f x) #t))
   
-  (define sleep-for-a-while (make-true sleep))
+  (define sleep-for-a-while/proc (make-true sleep))
   
   ;; i wish i could abstract these functions ...
   (define (make-line name f)

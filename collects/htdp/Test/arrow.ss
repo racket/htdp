@@ -1,6 +1,6 @@
 ; (load "tester.ss")
 
-;; TeachPack : arrow.ss
+;; TeachPack : arrow.ss, draw.ss
 ;; Language: Beginner
 
 ;; ---------------------------------------------------------------------
@@ -52,7 +52,5 @@
 ; (control-left-right 'aa 'bb move draw-it)
 ; (test-error (control-left-right 'aa 10 'cc draw-it))
 ; (control-left-right 'aa 10 'cc draw-it)
-; (test-error (control-left-right 'aa 10 move 'cc))
-; (control-left-right 'aa 10 move 'cc)
 ; (test-error (control-left-right 'aa 10 move 'cc))
 ; (control-left-right 'aa 10 move 'cc)

@@ -1,7 +1,5 @@
-(load "tester.ss")
-
 ;; ------------------------------------------------------------------------
-;; testing repl
+;; language: beginner 
 ;; teachpack: guess.ss
 
 ;; check-guess : number number -> symbol 
@@ -20,6 +18,6 @@
 ;; Test with GUI lib: set lib to guess-lib.ss
 (guess-with-gui check-guess)
 
-(test-error (guess-with-gui list))
-(test-error (guess-with-gui first))
-
+; (guess-with-gui list)
+; (define (foo x) x) (guess-with-gui foo)
+; (guess-with-gui first)

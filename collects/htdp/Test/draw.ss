@@ -51,7 +51,7 @@
                        'black))]))
 
 #| Tests ----------------------------------------------------------
-
+|#
 
 
 (start 200 400)
@@ -69,8 +69,11 @@
 (draw-next-part 'left-leg)
 (sleep-for-a-while 1)
 (draw-next-part 'right-leg)
+"please click on the canvas"
+(posn? (wait-for-mouse-click))
 (stop)
 
+#|
 (load "tester.ss")
 (start 200 400)
 (test-error (draw-solid-line 'a 'b 'c))

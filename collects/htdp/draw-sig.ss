@@ -15,6 +15,7 @@
         clear-all
         sleep-for-a-while
         wait-for-mouse-click ; -> posn
+        get-@VP
         ))
   
   (define-signature draw^ core-draw^))

@@ -1,4 +1,4 @@
-(load "tester.ss")
+; (load "tester.ss")
 
 ;; check-guess : color color color color -> symbol
 
@@ -18,7 +18,6 @@
 (eq? (check-guess 'white 'blue 'blue 'red) 'the_colors_occur)
 (eq? (check-guess 'white 'blue 'red 'green) 'nothing_correct)
 
-(master check-guess)
-
-(test-error (master 1))
-(test-error (master first))
+; (master check-guess)
+; (master 1)
+; (master first)

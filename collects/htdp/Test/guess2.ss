@@ -1,4 +1,4 @@
-(load "tester.ss")
+; (load "tester.ss")
 ;; by hand, bottom
 
 ;; ------------------------------------------------------------------------
@@ -35,6 +35,6 @@
 ;; Test with GUI: set lib to guess-lib.ss
 (guess-with-gui-3 check-guess3)
 
-;; (test-error (repl3 list))
-(test-error (guess-with-gui-3 first))
+; (define (foo x) x) (guess-with-gui-3 foo) 
+; (guess-with-gui-3 'a)
        

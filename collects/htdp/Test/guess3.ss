@@ -1,4 +1,4 @@
-(load "tester.ss")
+; (load "tester.ss")
 ;; by hand, bottom
 
 ;; ------------------------------------------------------------------------
@@ -38,10 +38,4 @@
 
 ;; Test with GUI: set lib to guess-lib.ss
 (guess-with-gui-list 2 check-guess-for-list)
-
-(test-error (repl-for-list check-guess-for-list))
-(test-error (repl-for-list 'abc check-guess-for-list))
-(test-error (repl-for-list 2 'abc))
-(test-error (repl-for-list 2 list))
-
 

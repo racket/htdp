@@ -5,6 +5,8 @@
 ;; See doc.txt for more information.
 
 (module prim mzscheme
+  (require (lib "error.ss" "lang"))
+  
   (provide define-primitive
 	   define-higher-order-primitive)
 

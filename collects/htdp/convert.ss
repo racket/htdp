@@ -12,7 +12,7 @@
   
   (define-higher-order-primitive convert-gui convert-gui/proc (f2c))
   (define-higher-order-primitive convert-repl convert-repl/proc (f2c))
-  (define-higher-order-primitive convert-file convert-file/proc (f2c))
+  (define-higher-order-primitive convert-file convert-file/proc (_ f2c _))
   
   (define black-pen  (send the-pen-list find-or-create-pen "BLACK" 2 'solid))
   (define red-brush  (send the-brush-list find-or-create-brush "RED" 'solid))

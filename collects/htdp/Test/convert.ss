@@ -1,5 +1,5 @@
 ;; test errors by hand in GUI
-(load "tester.ss")
+; (load "tester.ss")
 
 ;; f2c : num -> num
 ;; to convert a Fahrenheit temperature into a Celsius temperature 
@@ -19,10 +19,10 @@
 (define IN "convert-in.dat")
 (define OUT "convert-out.dat")
 
-(define (create-convert-in)
+(define (create-convert-in _)
   (printf "212 32~n-40~n"))
 
-(define (check-convert-out)
+(define (check-convert-out _)
   (and (= (read) 100)
        (= (read) 0)
        (= (read) -40)))
