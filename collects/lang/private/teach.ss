@@ -695,7 +695,7 @@
          (syntax-property
           (syntax/loc stx (check-not-a-function 'id (#%top . id)))
           'stepper-skipto
-          (list syntax-e cdr syntax-e cdr car))]))
+          (list syntax-e cdr syntax-e cdr cdr car))]))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; cond
