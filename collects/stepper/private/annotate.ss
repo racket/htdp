@@ -9,7 +9,7 @@
            (prefix beginner-defined: "beginner-defined.ss"))
 
   (provide
-   initial-env-package ; : annotate-environment
+   make-initial-env-package ; : -> annotate-environment
    annotate ; : annotate-contract
    top-level-rewrite
    )
@@ -17,7 +17,7 @@
   
   (define annotate-opts-list?
     (and/f (listof (listof symbol?)) (lx (<= (length _) 1))))
-  (define-struct annotate-environment (struct-proc-names user-defined-names binding-index))
+  (define-struct annotate-environment (struct-proc-names pre-defined-names binding-index))
   
   (define annotate-contract
     (->* (syntax? annotate-environment? break-contract (symbols 'foot-wrap)) ; required args
@@ -194,17 +194,8 @@
 ;           [full-body (append setters (list `(values ,@arg-temp-syms)))])
 ;      `(#%let-values ((,arg-temp-syms ,annotated)) ,@full-body)))
   
-  (define initial-env-package (make-annotate-environment null null 0))
+  (define (make-initial-env-package) (make-annotate-environment null (namespace-mapped-symbols) 0))
   
-  (define (extract-top-level-vars exprs)
-    (apply append
-           (map (lambda (expr)
-                  (syntax-case expr (define-values)
-                    [(define-values vars body)
-                     (syntax->list (syntax vars))]
-                    [else
-                     null]))
-                exprs)))
   
   (define (term-is-reduced stx)
     (syntax-case stx (quote quote-syntax #%top)
@@ -547,7 +538,8 @@
             ; struct-proc-names may be mutated
             (define struct-proc-names (annotate-environment-struct-proc-names annotate-environment))
             
-            (define input-user-defined-names (annotate-environment-user-defined-names annotate-environment))
+            (define pre-defined-names (annotate-environment-pre-defined-names annotate-environment))
+            
             (define binding-index (annotate-environment-binding-index annotate-environment))
             
             (define (binding-indexer)
@@ -602,27 +594,17 @@
             ;              (#%apply #%values result-values))))
             
             
-            (define (defined-names expr)
-              (syntax-case expr (define-values)
-                [(define-values vars body)
-                 (syntax->list (syntax vars))]
-                [else
-                 null]))
-            
-            (define user-defined-names (append (defined-names expr)
-                                               input-user-defined-names))
-            
             (define (non-annotated-proc? varref)
               (kernel:kernel-syntax-case varref #f
                 [(#%top . id)
                  (or
-                  (memq (syntax-e (syntax id)) beginner-defined:defined-names)
+                  (memq (syntax-e (syntax id)) pre-defined-names)
                   (ormap (lx (module-identifier=? (syntax id) _)) struct-proc-names))]
                 [id
                  (identifier? (syntax id))
                  (case (identifier-binding (syntax id))
                    [(lexical) #f] ; this only works in beginner
-                   [(#f) (memq (syntax-e (syntax id)) beginner-defined:defined-names)]
+                   [(#f) (memq (syntax-e (syntax id)) pre-defined-names)]
                    [else #t])] ; module-bound vars
                 [else
                  #f]))
@@ -1218,15 +1200,18 @@
                                free-varrefs-val))]
                             
                             
-                            [(#%top . var)
-                             (let*-2vals ([var (syntax var)]
+                            [(#%top . var-stx)
+                             (let*-2vals ([var (syntax var-stx)]
                                           [free-varrefs null])
                                          (2vals 
                                           (ccond [(or cheap-wrap? ankle-wrap?)
                                                   (appropriate-wrap var free-varrefs)]
                                                  [foot-wrap?
-                                                  (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                                                  (return-value-wrap var))])
+                                                  (if (and (memq (syntax-e var) pre-defined-names)
+                                                           (not (memq (syntax-e var) beginner-defined:must-reduce)))
+                                                      (wcm-wrap (make-debug-info-normal free-varrefs) var)
+                                                      (wcm-break-wrap (make-debug-info-normal free-varrefs)
+                                                                      (return-value-wrap var)))])
                                           free-varrefs))]
                             
                             [var-stx
@@ -1246,8 +1231,10 @@
                                                     ((non-lexical) 
                                                      (case (identifier-binding var)
                                                        ((#f) (error 'annotate "top-level identifier occurs without #%top"))
-                                                       (else (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                                                             (return-value-wrap var))))))])
+                                                       (else (if (memq (syntax-e var) beginner-defined:must-reduce)
+                                                                 (wcm-break-wrap (make-debug-info-normal free-varrefs)
+                                                                             (return-value-wrap var))
+                                                                 (wcm-wrap (make-debug-info-normal free-varrefs) var))))))])
                                           free-varrefs))]
                             
                             [else ; require, require-for-syntax, define-syntaxes, module, provide
@@ -1263,6 +1250,6 @@
          ; body of local
          (let* ([annotated-expr (annotate/top-level expr)])
            ;(fprintf (current-error-port) "annotated: ~n~a~n" (syntax-object->datum annotated-expr))
-           (values annotated-expr (make-annotate-environment struct-proc-names user-defined-names binding-index)))))
+           (values annotated-expr (make-annotate-environment struct-proc-names pre-defined-names binding-index)))))
      'annotate
      'caller)))

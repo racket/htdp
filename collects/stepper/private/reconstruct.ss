@@ -183,11 +183,7 @@
            (or (kernel:kernel-syntax-case expr #f
                   [id
                    (identifier? expr)
-                   (or (and (model-settings:true-false-printed?) ; if our language prints #t as true, then ...
-                            (cons? (identifier-binding (syntax id)))      ; for module-bound identifiers,
-                            (or (eq? (syntax-e (syntax id)) 'true)        ; don't halt for true or false
-                                (eq? (syntax-e (syntax id)) 'false)))
-                       (eq? (syntax-property expr 'stepper-binding-type) 'lambda-bound) ; don't halt for lambda-bound vars
+                   (or (eq? (syntax-property expr 'stepper-binding-type) 'lambda-bound) ; don't halt for lambda-bound vars
                        (let ([val (mark-binding-value (lookup-binding mark-list expr))]) 
                          (and (procedure? val)
                               (not (continuation? val)))))] ; don't halt for varrefs bound to non-continuation procedures
@@ -565,7 +561,11 @@
                      ((non-lambda-define) 
                       (with-syntax ([source-name (car recon-vars)])
                         (syntax (define name source-name))))
-                     (else (error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property expr 'stepper-define-hint))))))]
+                     (else 
+                      (with-syntax ([source-name (car recon-vars)])
+                        (syntax (define name source-name)))
+                      ;(error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property expr 'stepper-define-hint))
+                      ))))]
              [else
               (recon-value value)]))]))
      'reconstruct-completed

@@ -15,6 +15,7 @@
    (struct closure-record (name mark constructor? lifted-name))
    *unevaluated* 
    no-sexp
+   skipped-step
    struct-flag
    multiple-highlight
    flatten-take
@@ -194,6 +195,9 @@
   ; no-sexp is used to indicate no sexpression for display.
   ; e.g., on an error message, there's no sexp.
   (define no-sexp (gensym "no-sexp-"))
+  
+  ; skipped-step is used to indicate that the "before" step was skipped.
+  (define skipped-step (gensym "skipped-step-"))
 
   ; multiple-highlight is used to indicate multiple highlighted expressions
   (define multiple-highlight (gensym "multiple-highlight-"))
