@@ -122,7 +122,7 @@
                (and (z:app? expr)
                     (let ([fun-val (mark-binding-value
                                     (find-var-binding mark-list 
-                                                      (z:varref-var (get-arg-symbol 0))))])
+                                                      (z:varref-var (get-arg-varref 0))))])
                       (and (procedure? fun-val)
                            (procedure-arity-includes? 
                             fun-val
@@ -143,7 +143,7 @@
                (in-inserted-else-clause mark-list)))))
   
   (define (second-arg-is-list? mark-list)
-    (let ([arg-val (mark-binding-value (find-var-binding mark-list (z:varref-var (get-arg-symbol 2))))])
+    (let ([arg-val (mark-binding-value (find-var-binding mark-list (z:varref-var (get-arg-varref 2))))])
       (list? arg-val)))  
   
   (define (in-inserted-else-clause mark-list)
@@ -367,7 +367,7 @@
                  
                  [(z:app? expr)
                   (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
-                         [arg-temps (build-list (length sub-exprs) get-arg-symbol)]
+                         [arg-temps (build-list (length sub-exprs) get-arg-varref)]
                          [arg-temp-syms (map z:varref-var arg-temps)]
                          [arg-vals (map (lambda (arg-sym) 
                                           (mark-binding-value (find-var-binding mark-list arg-sym)))
