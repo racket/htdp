@@ -901,6 +901,40 @@
                                                     [whole-thing (d->so/user `(,output-identifier ,outer-initialization ,wrapped-begin))])
                                                (2vals whole-thing free-varrefs))]))))]
                                
+                               ; if-abstraction: (-> syntax? syntax? (or/f false? syntax?) (values syntax? varref-set?))
+                               [if-abstraction
+                                (lambda (test then else) 
+                                  (let*-2vals
+                                   ([(annotated-test free-varrefs-test) 
+                                     (non-tail-recur test)]
+                                    [(annotated-then free-varrefs-then) 
+                                     (tail-recur then)]
+                                    [(annotated-else free-varrefs-else)
+                                     (if else
+                                         (tail-recur else)
+                                         (2vals #f null))]
+                                    [free-varrefs (varref-set-union (list free-varrefs-test 
+                                                                          free-varrefs-then 
+                                                                          free-varrefs-else))]
+                                    [annotated-if 
+                                     (with-syntax ([test-stx annotated-test]
+                                                   [then-stx annotated-then]
+                                                   [else-stx annotated-else]
+                                                   [break-stx normal-break]
+                                                   [test-var if-temp])
+                                       (if else
+                                           (syntax/loc expr (begin (set! test-var test-stx) (break-stx) (if test-var then-stx else-stx)))
+                                           (syntax/loc expr (begin (set! test-var test-stx) (break-stx) (if test-var then-stx)))))]
+                                    [wrapped (wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
+                                                                            (varref-set-union (list free-varrefs (list if-temp)))
+                                                                            'none)
+                                                       annotated-if)])
+                                   (2vals
+                                    (with-syntax ([test-var if-temp]
+                                                  [wrapped-stx wrapped]
+                                                  [unevaluated-stx *unevaluated*])
+                                      (syntax/loc expr (let ([test-var unevaluated-stx]) wrapped-stx)))
+                                    free-varrefs)))]
                                )
                           
                           ; find the source expression and associate it with the parsed expression
@@ -927,64 +961,10 @@
                                           [free-varrefs (varref-set-union free-varrefs-cases)])
                                          (outer-lambda-abstraction annotated-case-lambda free-varrefs))]
                             
-                            ; for if's, we assume (for foot-wrap) that the "test" is a varref, and thus the if does not
-                            ; need to be rewritten to move the non-tail part outside of the source break
-                            ; (this is true in beginner, intermediate, & advanced)
                             
-                            [(if test then else)
-                             (let*-2vals
-                              ([(annotated-test free-varrefs-test) 
-                                (non-tail-recur (syntax test))]
-                               [(annotated-then free-varrefs-then) 
-                                (tail-recur (syntax then))]
-                               [(annotated-else free-varrefs-else) 
-                                (tail-recur (syntax else))]
-                               [free-varrefs (varref-set-union (list free-varrefs-test 
-                                                                     free-varrefs-then 
-                                                                     free-varrefs-else))]
-                               [annotated-if 
-                                (with-syntax ([test-stx annotated-test]
-                                              [then-stx annotated-then]
-                                              [else-stx annotated-else]
-                                              [break-stx normal-break]
-                                              [test-var if-temp])
-                                  (syntax/loc expr (begin (set! test-var test-stx) (break-stx) (if test-var then-stx else-stx))))]
-                               [wrapped (wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
-                                                                       (varref-set-union (list free-varrefs (list if-temp)))
-                                                                       'none)
-                                                  annotated-if)])
-                              (2vals
-                               (with-syntax ([test-var if-temp]
-                                             [wrapped-stx wrapped]
-                                             [unevaluated-stx *unevaluated*])
-                                 (syntax/loc expr (let ([test-var unevaluated-stx]) wrapped-stx)))
-                               free-varrefs))]
-                            
-                            ; yecch: should abstract over if with & without else clauses
-                            
-                            [(if test then)
-                             (let*-2vals
-                              ([(annotated-test free-varrefs-test) 
-                                (non-tail-recur (syntax test))]
-                               [(annotated-then free-varrefs-then) 
-                                (tail-recur (syntax then))]
-                               [free-varrefs (varref-set-union (list free-varrefs-test 
-                                                                     free-varrefs-then))]
-                               [annotated-if
-                                (with-syntax ([test-var if-temp]
-                                              [then annotated-then]
-                                              [break-stx normal-break])
-                                  (syntax/loc expr (begin (break-stx) (if test-var then))))]
-                               [wrapped (wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
-                                                                       (varref-set-union (list free-varrefs (list if-temp)))
-                                                                       'none)
-                                                  annotated-if)])
-                              (2vals
-                               (with-syntax ([test-stx annotated-test]
-                                             [test-var if-temp]
-                                             [wrapped-stx wrapped])
-                                 (syntax/loc expr (let ([test-var test-stx]) wrapped-stx)))
-                               free-varrefs))]
+                              
+                            [(if test then else) (if-abstraction (syntax test) (syntax then) (syntax else))]
+                            [(if test then) (if-abstraction (syntax test) (syntax then) #f)]
                             
                             [(begin . bodies-stx)
                              (if top-level? 
