@@ -4,6 +4,10 @@
 ;; case-sensitivity) are not implemented here, and the procedures are
 ;; in a separate module.
 
+;; To a first approximation, this module is one big error-checking
+;; routine. In other words, most of the syntax implementations are
+;; straightforward, but error-checking is complex.
+
 ;; Error-message conventions:
 ;;  - report errors, somewhat anthropomorphicly, in terms of "expected"
 ;;    versus "found" syntax
@@ -39,8 +43,7 @@
 	  b
 	  'boolean))))
 
-  (define undefined (letrec ([x x]) x))
-
+  ;; Wrapped around uses of local-bound variables:
   (define (check-not-undefined name val)
     (if (eq? val undefined)
 	(raise
@@ -49,8 +52,9 @@
 	  (current-continuation-marks)
 	  name))
 	val))
+  (define undefined (letrec ([x x]) x))
 
-  ;; Exception is caught
+  ;; Wrapped around top-level definitions to disallow re-definition:
   (define (check-top-level-not-defined id)
     ((with-handlers ([not-break-exn? (lambda (exn) void)])
        (let ([b (identifier-binding id)])
@@ -84,6 +88,13 @@
 	    (begin
 	      (provide plain-id ...)
 	      (define-syntax-set (id ...) defn ...))))])))
+
+  ;; The implementation of form X is defined below as X/proc. The
+  ;; reason for this is to allow the implementation of Y to re-use the
+  ;; implementation of X (expanding to a use of X would mangle syntax
+  ;; error messages), while preserving the binding of X as the one for
+  ;; the syntax definition (so that quasiquote can regonzie unquote,
+  ;; etc.).
 
   (define-syntax-set/provide (beginner-define
 			      beginner-define-struct
@@ -125,6 +136,7 @@
     ;; compile-time helpers
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+    ;; Raise a syntax error:
     (define (teach-syntax-error form stx detail msg . args)
       (let ([form (if (eq? form '|function call|)
 		      form
@@ -134,6 +146,7 @@
 	    (raise-syntax-error form msg stx detail)
 	    (raise-syntax-error form msg stx))))
     
+    ;; The syntax error when a form's name doesn't follow a "("
     (define (bad-use-error name stx)
       (teach-syntax-error
        name
@@ -142,6 +155,7 @@
        "found a use of `~a' that does not follow an open parenthesis"
        name))
 
+    ;; Use for messages "expected ..., found <something else>"
     (define (something-else v)
       (let ([v (syntax-e v)])
 	(cond
@@ -162,6 +176,9 @@
        [(= 3 (modulo n 10))
 	(format "~ard" n)]))
 
+    ;; At the top level, wrap `defn' to first check for
+    ;; existing definitions of the `names'. The `names'
+    ;; argument is a syntax list of identifiers.
     (define (check-definitions-new stx names defn)
       (if (eq? (syntax-local-context) 'top-level)
 	  (with-syntax ([(name ...) names]
@@ -173,17 +190,24 @@
 		defn)))
 	  defn))
 
+    ;; Same as above, but for one name
     (define (check-definition-new stx name defn)
       (check-definitions-new stx (list name) defn))
     
+    ;; Check context for a `define' before even trying to
+    ;; expand
     (define (ok-definition-context)
       (or (memq (syntax-local-context) '(top-level module))
 	  (and (eq? (syntax-local-context) 'internal-define)
-	       ;; Slimy. Is there a better strategy?
+	       ;; See `intermediate-local/proc'. 
+	       ;; Is there a better strategy?
 	       (expanding-for-intermediate-local))))
-    
     (define expanding-for-intermediate-local (make-parameter #f))
 
+    ;; Use to generate nicer error messages than direct pattern
+    ;; matching. The `where' argument is an English description
+    ;; of the portion of the larger expression where a single
+    ;; sub-expression was expected.
     (define (check-single-expression who where stx exprs)
       (when (null? exprs)
 	(teach-syntax-error
@@ -387,6 +411,7 @@
 	 "expected an expression, but found a definition that is not at the top level"))
       
       (syntax-case stx ()
+	;; First, check for a struct name:
 	[(_ name . __)
 	 (not (identifier? (syntax name)))
 	 (teach-syntax-error
@@ -395,6 +420,7 @@
 	  (syntax name)
 	  "expected a structure type name after `define-struct', but found ~a"
 	  (something-else (syntax name)))]
+	;; Main case (`rest' is for nice error messages):
 	[(_ name_ (field_ ...) . rest)
 	 (let ([name (syntax name_)]
 	       [fields (syntax->list (syntax (field_ ...)))]
@@ -816,6 +842,9 @@
     ;; letrec and let (intermediate)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+    ;; For the `let' forms, match the definitely correct patterns, and
+    ;; put all error checking in `bad-let-form'.
+
     (define (intermediate-letrec/proc stx)
       (syntax-case stx ()
 	[(_ ([name rhs-expr] ...) expr)
@@ -936,6 +965,9 @@
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; recur (intermediate and advanced)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; We can defer some error reporting to `bad-let-form',
+    ;; but not all of it.
 
     (define-values (intermediate-recur/proc advanced-recur/proc)
       (let ([mk
@@ -1495,6 +1527,9 @@
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; shared (advanced)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; We do all the initial syntax checks, and otherwise
+    ;; let "shared-body.ss" implement the form.
 
     (define advanced-shared/proc
       (lambda (stx)
