@@ -5,7 +5,7 @@
 ;; in a separate module.
 
 ;; Error-message conventions:
-;;  - report errors, somewhat anthopomorphicly, in terms of "expected"
+;;  - report errors, somewhat anthropomorphicly, in terms of "expected"
 ;;    versus "found" syntax
 ;;  - report errors according to a left-to-right reading; e.g., the
 ;;    error in `(define 1 2 3)' is "expected an identifier, found 1",
