@@ -128,7 +128,7 @@
 	      #`(let ((marshall
 		       (lambda (s)
 			 (let ((os (open-output-string)))
-			   (with-handlers ((not-break-exn? (lambda (x) "")))
+			   (with-handlers ((exn:fail? (lambda (x) "")))
 			     (display s os)
 			     (get-output-string os))))))
 		  (string-append #,@(chunk-string str null)))))

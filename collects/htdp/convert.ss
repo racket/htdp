@@ -196,7 +196,7 @@
     ;; when there aren't any exceptions.
     ;; if there are exceptions, wait for the user to click
     ;; "convert" to see an error.
-    (with-handlers ([not-break-exn? (lambda (x) (void))])
+    (with-handlers ([exn:fail? (lambda (x) (void))])
       (send sliderC set-value (in-slider-range (fahr->cel F-SLI-0))))
     (send frame show #t))
   
