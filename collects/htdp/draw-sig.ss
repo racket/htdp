@@ -13,7 +13,9 @@
         get-key-event
         stop 
         draw-circle draw-solid-disk draw-solid-rect draw-solid-line
+	draw-solid-string
         clear-circle clear-solid-disk clear-solid-rect clear-solid-line
+	clear-solid-string
         clear-all
         sleep-for-a-while
         wait-for-mouse-click ; -> posn

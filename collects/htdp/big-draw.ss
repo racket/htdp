@@ -28,6 +28,11 @@
      (define-primitive clear-solid-line clear-solid-line/proc)  
      (define-primitive clear-all clear-all/proc)
      
+  ;   (provide draw-solid-string clear-solid-string)
+
+     (define-primitive draw-solid-string draw-string/proc)
+     (define-primitive clear-solid-string clear-string/proc)
+
      (define-primitive sleep-for-a-while sleep-for-a-while/proc)
      (define-primitive wait-for-mouse-click wait-for-mouse-click/proc)
      (define-primitive get-key-event get-key-event/proc)     
@@ -47,6 +52,12 @@
      
      (define %clear-circle the-error)
      (define clear-circle/proc (lambda a (apply %clear-circle a)))
+     
+     (define %draw-string the-error)
+     (define draw-string/proc (lambda a (apply %draw-string a)))
+     
+     (define %clear-string the-error)
+     (define clear-string/proc (lambda a (apply %clear-string a)))
      
      (define %draw-solid-rect the-error)
      (define draw-solid-rect/proc (lambda a (apply %draw-solid-rect a)))
@@ -111,6 +122,15 @@
                     name (and (integer? r) (> r 0)) "positive integer" "second" r)
                    ((ellipsis-2-circle f) p r (check-optional name 3 c "third" x)))
                  x))))
+
+     (define (make-%string name f)
+       (make-true
+        (lambda x
+          (apply (lambda (p s)
+                   (check-arg name (posn? p) "posn" "first" p)
+                   (check-arg name (string? s) "string" "second" s)
+                   (f p s))
+                 x))))
      
      ;; (Listof _) String (Listof _) -> Symbol[color]
      ;; contract: c is shared suffix of all
@@ -157,6 +177,11 @@
                (make-circle 'clear-circle
                             (lambda (p r1 r2 c)
                               ((clear-ellipse current-window) p r1 r2))))
+
+
+	 (set! %draw-string (make-%string 'draw-string (draw-string current-window)))
+         (set! %clear-string (make-%string 'clear-string (clear-string current-window)))
+
          
          (set! %wait-for-mouse-click
                (lambda ()
@@ -168,7 +193,7 @@
                  (cond
                    [(ready-key-press @vp) => key-value]
                    [else false])))
-         
+
          #t))
      
      (define (stop)
