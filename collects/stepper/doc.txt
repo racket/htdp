@@ -58,3 +58,44 @@ in the definitions window, and does not allow the user to enter
 additional expressions.  So, for instance, a definitions buffer
 which contains only procedure definitions will not result in
 any reductions.
+
+
+---
+
+The debugger is structured as a REPL which interacts with the 
+program being debugged through three bindings as
+described below.  The intent is that this interface can easily
+be extended to provide whatever interface the user desires.
+
+In fact, the REPL itself is unnecessary; the debugger could 
+require users to specify a module which provides a unit which
+receives these two bindings at runtime...
+
+
+A debugger-event is either:
+- (make-breakpoint-halt), or
+- (make-normal-breakpoint-info mark-list kind returned-value-list)
+- (make-error-breakpoint-info message)
+- (make-expression-finished returned-value-list)
+
+For more information on the contents of a mark-list and for a
+variety of useful functions for examining them, see 
+"private/marks.ss".
+
+The following bindings are introduced into the top-level namespace
+of the debugger:
+
+go-semaphore : this semaphore releases the debugged program when a
+  breakpoint causes execution to halt.
+
+receive-result : this parameter takes a value of type (debugger-event
+  -> void).  Whenever a debugger event occurs, this parameter's value
+  is invoked with the result. This call is non- blocking; that is, a
+  callback is queued on the debugger's eventspace which makes this
+  call.
+
+user-custodian : a box containing the custodian which manages the
+ operation of the program being debugged.
+
+The execution of the user's program is initially blocked on the 
+go-semaphore.
