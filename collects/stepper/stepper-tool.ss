@@ -326,19 +326,32 @@
                  (-> (union eof-object? syntax? (cons/p string? any?)) (-> void?) void?) ; iter
                  void?)
              (lambda (init iter)
-               (drscheme:eval:expand-program
-                (drscheme:language:make-text/pos (get-definitions-text) 
-                                                 0
-                                                 (send (get-definitions-text)
-                                                       last-position)) 
-                (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))
-                #f
-                (lambda ()
-                  (init)
-                  (drscheme:teachpack:install-teachpacks 
-                   (frame:preferences:get 'drscheme:teachpacks))) ; this belongs in model, but I'd need a unit rewrite
-                void ; kill
-                iter))
+               (let* ([lang-settings 
+                       (frame:preferences:get
+                        (drscheme:language-configuration:get-settings-preferences-symbol))]
+                      [lang (drscheme:language-configuration:language-settings-language lang-settings)]
+                      [settings (drscheme:language-configuration:language-settings-settings lang-settings)])
+                 (drscheme:eval:expand-program
+                  (drscheme:language:make-text/pos (get-definitions-text) 
+                                                   0
+                                                   (send (get-definitions-text)
+                                                         last-position)) 
+                  lang-settings
+                  #f
+                  (lambda ()
+                    (init)
+                    (error-value->string-handler
+                     (lambda (val len)
+                       (let ([sp (open-output-string)])
+                         (send lang render-value val settings sp #f)
+                         (let ([str (get-output-string sp)])
+                           (if ((string-length str) . <= . len)
+                               str
+                               (string-append (substring str 0 (max 0 (- len 3))) "..."))))))
+                    (drscheme:teachpack:install-teachpacks 
+                     (frame:preferences:get 'drscheme:teachpacks))) ; this belongs in model, but I'd need a unit rewrite
+                  void ; kill
+                  iter)))
              'program-expander
              'caller))
           
