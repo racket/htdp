@@ -2,9 +2,8 @@
 ; Simple graphics routines for MrEd
 ; Originally written by Johnathan Franklin
 
-(unit/sig
-    graphics^
-  (import)
+(unit/sig graphics^
+  (import mzlib:file^)
   
   (define-struct viewport (label canvas))
   (define-struct posn (x y))
@@ -705,46 +704,6 @@
   (define clear-pixel (make-do-pixel clear-it))
   (define flip-pixel (make-do-pixel flip-it))
   
-  (define pixmap-functions
-    (lambda (pixel-op)
-      (lambda (viewport)
-	(letrec ([the-function
-		  (case-lambda
-		   [(filename posn) (the-function filename posn #f)]
-		   [(filename posn color)
-		    (let ([bm (make-object wx:bitmap% filename wx:const-bitmap-type-xbm)])
-		      (if (not (send bm ok?))
-			  (error pixel-op ": cannot load pixmap: ~s" filename))
-		      (let* ([offscreen (make-object wx:memory-dc%)]
-			     [x (posn-x posn)] 
-			     [y (posn-y posn)]
-			     [DC (viewport-DC viewport)]
-			     [buffer (viewport-buffer-DC viewport)]
-			     [picture
-			      (lambda (op) 
-				(send offscreen select-object bm)
-				(send DC blit x y
-				      (send bm get-width)
-				      (send bm get-height)
-				      offscreen 0 0 op)
-				(send buffer blit x y
-				      (send bm get-width)
-				      (send bm get-height)
-				      offscreen 0 0 op)
-				(void))])
-			(cond 
-			  [(eq? pixel-op 'draw)
-			   (if color
-			       (set-viewport-pen viewport (get-pen color)))
-			   (picture wx:const-copy)] ; should be or
-			  [(eq? pixel-op 'flip)
-			   (if color
-			       (set-viewport-pen viewport (get-pen color)))
-			   (picture wx:const-xor)]
-			  [(eq? pixel-op 'clear)
-			   (picture wx:const-nand)])))])])
-	  the-function))))
-  
   (define string-functions
     (lambda (string-op)
       (letrec ([outer-function
@@ -791,9 +750,9 @@
 	outer-function)))
   
   (define draw-string (string-functions 'draw))
+  
   (define clear-string (string-functions 'clear))
   (define flip-string (string-functions 'flip))
-  
   (define get-string-size
     (letrec ([outer-function
 	      (case-lambda
@@ -821,9 +780,82 @@
 		1
 		0))))))
   
-  (define draw-pixmap (pixmap-functions 'draw))
-  (define clear-pixmap (pixmap-functions 'clear))
-  (define flip-pixmap (pixmap-functions 'flip))
+  ;; returns the draw, flip and clear operations. In that order.
+  (define pixmap-functions
+    (opt-lambda (filename [type (string->symbol (filename-extension filename))])
+      (let* ([type
+	      (case type
+		[(gif) wx:const-bitmap-type-gif]
+		[(xbm) wx:const-bitmap-type-xbm]
+		[(xpm) wx:const-bitmap-type-xpm]
+		[(bmp) wx:const-bitmap-type-bmp]
+		[(pict) wx:const-bitmap-type-pict]
+		[else 
+		 (error 'pixmap "unrecognized file type: ~a~n" type)])]
+	     [bitmap (make-object wx:bitmap% filename type)]
+	     [mdc (make-object wx:memory-dc%)]
+	     [do-job
+	      (lambda (viewport posn op)
+		(let ([x (posn-x posn)] 
+		      [y (posn-y posn)]
+		      [DC (viewport-DC viewport)]
+		      [buffer (viewport-buffer-DC viewport)])
+		(send DC blit x y
+		      (send bitmap get-width)
+		      (send bitmap get-height)
+		      mdc 0 0 op)
+		(send buffer blit x y
+		      (send bitmap get-width)
+		      (send bitmap get-height)
+		      mdc 0 0 op)))])
+	(send mdc select-object bitmap)
+	(values (opt-lambda (viewport posn [color #f])
+		  (when color
+		    (set-viewport-pen viewport (get-pen color)))
+		  (do-job viewport posn wx:const-copy))
+		(lambda (viewport posn)
+		  (do-job viewport posn wx:const-xor))
+		(opt-lambda (viewport posn [color #f])
+		  (when color
+		    (set-viewport-pen viewport (get-pen color)))
+		  (do-job viewport posn wx:const-nand))))))
+
+  (define-values (draw-pixmap-posn
+		  clear-pixmap-posn
+		  flip-pixmap-posn)
+    (let* ([box (box 0)]
+	   [construct-it
+	    (lambda (select color?)
+	      (opt-lambda (filename [type box])
+		(let ([func
+		       (call-with-values
+			(lambda ()
+			  (if (eq? box type)
+			      (pixmap-functions filename)
+			      (pixmap-functions filename type)))
+			(lambda x (select x)))])
+		  (lambda (pixmap)
+		    (if color?
+			(opt-lambda (posn [color #f])
+			  (func pixmap posn color))
+			(lambda (posn)
+			  (func pixmap posn)))))))])
+      (values (construct-it car #t)
+	      (construct-it cadr #f)
+	      (construct-it caddr #t))))
+
+  (define draw-pixmap
+    (lambda (pixmap)
+      (opt-lambda (filename p [color #f])
+	(((draw-pixmap-posn filename 'xbm) pixmap) p color))))
+  (define flip-pixmap
+    (lambda (pixmap)
+      (opt-lambda (filename p [color #f])
+	(((flip-pixmap-posn filename 'xbm) pixmap) p color))))
+  (define clear-pixmap
+    (lambda (pixmap)
+      (opt-lambda (filename p)
+	(((clear-pixmap-posn filename 'xbm) pixmap) p))))
   
   (define DEFAULT-PEN black-pen)
   (define DEFAULT-FONT
