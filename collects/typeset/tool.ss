@@ -14,15 +14,8 @@
       (define (phase1) (void))
       (define (phase2) (void))
       
-      (define read/snips (lambda x (error x)))
-      
-      (define (snipize obj)
-        (if (is-a? obj snip%)
-            obj
-            (make-string-snip obj)))
-      
       (define (make-string-snip obj)
-        (let* ([str (format "~a" obj)]
+        (let* ([str (format "~e" obj)]
                [sn (make-object string-snip% (string-length str))])
           (send sn insert str (string-length str) 0)
           sn))
@@ -82,8 +75,7 @@
             (make-object (drscheme:unit:program-editor-mixin plain-text%)
               (make-delta family)))
           
-          (super-instantiate 
-              ()
+          (super-instantiate ()
             (editor (make-editor))
             (with-border? #f))))
       
@@ -232,11 +224,42 @@
              (set! value x)])))
       
       (define (replace-in-template family template-snip . replacements)
+
+	(define possibly-inlineable-editor-snip%
+	  (class editor-snip%
+	    (super-instantiate ())))
+
+	(define (inlineable? editor)
+	  (let loop ([snip (send editor find-first-snip)])
+	    (cond
+	      [(not snip) #t]
+	      [(or (memq 'newline (send snip get-flags))
+		   (memq 'hard-newline (send snip get-flags)))
+	       #f]
+	      [else (loop (send snip next))])))
+
+	(define (build-insertables replacement)
+	  (cond
+	    [(and (is-a? replacement possibly-inlineable-editor-snip%)
+		  (inlineable? (send replacement get-editor)))
+	     (let loop ([s (send (send replacement get-editor) find-first-snip)]
+			[snips null])
+	       (cond
+		 [s (loop (send s next)
+			  (cons (send s copy) snips))]
+		 [else snips]))]
+	    [(is-a? replacement snip%)
+	     (list (send replacement copy))]
+	    [else
+	     (list (make-string-snip replacement))]))
+
+
         (let* ([delta (make-delta family)]
                [_ (begin (send delta set-delta-foreground "BLACK")
                          (send delta set-size-mult 0)
                          (send delta set-size-add (typeset-size)))]
-               [text (make-object plain-text% delta)])
+	       ;[text (make-object plain-text% delta)]
+               [text (make-object text%)])
           (let loop ([replacements replacements]
                      [snip (send (send template-snip get-editor) find-first-snip)])
             (cond
@@ -248,12 +271,13 @@
               [(transformable? snip)
                (when (null? replacements)
                  (error 'replace-in-template "found replacable without replacement"))
-               (let ([replacement (car replacements)]
-                     [pos (send text get-snip-position snip)])
-                 (send text insert (if (is-a? replacement snip%)
-                                       (send replacement copy)
-                                       (make-string-snip replacement))
-                       (send text last-position) (send text last-position))
+               (let* ([replacement (car replacements)]
+		      [pos (send text get-snip-position snip)]
+		      [insertables (build-insertables replacement)]
+		      [to-insert-pos (send text last-position)])
+		 (for-each (lambda (insertable)
+			     (send text insert insertable to-insert-pos to-insert-pos))
+			   insertables)
                  (loop (cdr replacements)
                        (send snip next)))]
               
@@ -261,7 +285,7 @@
                (send text insert (send snip copy) (send text last-position) (send text last-position))
                (loop replacements (send snip next))]))
           
-          (let ([snip (make-object editor-snip% text #f
+          (let ([snip (make-object possibly-inlineable-editor-snip% text #f
                         0 0 0 0
                         0 0 0 0)])
             (send text hide-caret #t)
@@ -311,19 +335,4 @@
           
           (frame:reorder-menus this)))
       
-      (define (typeset-rep-extension super-text%)
-        (class super-text%
-          (rename [super-reset-console reset-console])
-          (inherit get-user-namespace)
-          
-          '(define/override (reset-console)
-            (super-reset-console)
-            (parameterize ([current-namespace (get-user-namespace)])
-              (namespace-set-variable-value! 'single-bracket 'single-bracket)
-              (namespace-set-variable-value! 'double-bracket 'double-bracket)
-              ))
-          
-          (super-instantiate ())))
-      
-      (drscheme:get/extend:extend-unit-frame typeset-frame-extension)
-      (drscheme:get/extend:extend-interactions-text typeset-rep-extension))))
+      (drscheme:get/extend:extend-unit-frame typeset-frame-extension))))
