@@ -2,17 +2,10 @@
   (import [z : zodiac:system^]
           mzlib:function^
 	  [e : stepper:error^]
+          [p : mzlib:print-convert^]
 	  stepper:shared^)
     
   (define nothing-so-far (gensym "nothing-so-far-"))
-  
-  (define-values (closure-table-put! closure-table-lookup)
-    (let ([closure-table (make-hash-table-weak)])
-      (values
-       (lambda (key value)
-	 (hash-table-put! closure-table key value))
-       (lambda (key)
-         (hash-table-get closure-table key)))))
   
   (define (mark-source mark)
     (car (mark)))
@@ -95,7 +88,7 @@
              (if recorded-name
                  recorded-name
                  'unknown-procedure))]
-          [else val]))
+          [else (p:print-convert val)]))
   
   (define (o-form-case-lambda->lambda o-form)
     (cond [(eq? (car o-form) 'lambda)
@@ -148,7 +141,13 @@
                       ,(recur (z:if-form-else expr))))]
             
             [(z:quote-form? expr)
-             `(quote ,(read->raw (z:quote-form-expr expr)))]
+             (let ([raw (read->raw (z:quote-form-expr expr))])
+               (cond [(or (string? raw)
+                          (number? raw)
+                          (boolean? raw))
+                      raw]
+                     [else
+                      `(quote ,raw)]))]
 
             [(z:case-lambda-form? expr)
              (let* ([arglists (z:case-lambda-form-args expr)]
@@ -252,7 +251,7 @@
                         [info ((closure-record-mark closure-record))]
                         [expr (car info)])
                    (rectify-source-expr expr (list (lambda () info)) null))
-                 val)))
+                 (rectify-value val))))
                   
          (define (rectify-old-expression expr vars)
            (cond [(z:define-values-form? expr)
@@ -373,8 +372,6 @@
                      expr
                      (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))]))))
          
-         (define dont-care
-           (printf "current definition: ~a~n" current-def-num))
          
          (define old-defs
            (let ([old-exps (list-take current-def-num expr-list)]

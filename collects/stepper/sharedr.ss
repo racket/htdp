@@ -142,4 +142,13 @@
   (define improper-map (make-improper cons))
   (define improper-foreach (make-improper (lambda (x y) y)))
   
+  (define-values (closure-table-put! closure-table-lookup)
+    (let ([closure-table (make-hash-table-weak)])
+      (values
+       (lambda (key value)
+	 (hash-table-put! closure-table key value))
+       (lambda (key)
+         (hash-table-get closure-table key)))))
+  
+  
 ) 
