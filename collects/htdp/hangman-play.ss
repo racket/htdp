@@ -1,11 +1,18 @@
-(require-library "pingp-sig.ss" "htdp")
+#|
 
-(define draw-U (require-library "draw.ss" "htdp"))
-(define hm-U (require-library "hangman.ss" "htdp"))
+Matthias writes, about this file:
+> I just remembered. I removed it because I didn't think kids should be able
+> to look up the solution to the exercise. They don't need to be able to play 
+> the game before they write it. -- Matthias
 
-(define play-U
-  (unit/sig goS
-    (import hangmanS drawS)
+|#
+
+(module hangman-play mzscheme
+  (require "hangman.ss"
+           "big-draw.ss"
+           (lib "teach.ss" "lang" "private"))
+
+  (provide go)
 
     #| ------------------------------------------------------------------------
     draw-next-part :
@@ -48,11 +55,4 @@
     (define (go x)
       (start 200 400)
       (hangman-list reveal-list draw-next-part))    
-    ))
-
-(compound-unit/sig (import (PLT : plt:userspace^))
-  (link
-    [DRAW : drawS (draw-U PLT)]
-    [HANG : hangmanS (hm-U PLT)]
-    [PLAY : goS      (play-U HANG DRAW)])
-  (export (open PLAY)))
+    )

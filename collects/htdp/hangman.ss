@@ -1,3 +1,4 @@
+
 (module hangman mzscheme
   (require "error.ss"
 	   "draw-sig.ss"
@@ -233,11 +234,19 @@
       (set! status (mw '_ '_ '_))
       ;; make uncover work for structs
       (set! uncover
-	(lambda (a-word)
-	  (format "~a~a~a" 
-	    (struct-ref a-word 0)
-	    (struct-ref a-word 1)
-	    (struct-ref a-word 2))))
+            (lambda (a-word)
+              ;; abstraction breaking hack.
+              (parameterize ([current-inspector (dynamic-require 'drscheme-secrets 'drscheme-inspector)])
+                (unless (struct? a-word)
+                  (error 'hangman "expected a struct, got: ~a" a-word))
+                (let ([word-vec (struct->vector a-word)])
+                  (unless (= (vector-length word-vec) 4)
+                    (error 'hangman "expected words to be structures with three fields, found ~a fields"
+                           (- (vector-length word-vec) 1)))
+                  (format "~a~a~a" 
+                          (vector-ref word-vec 1)
+                          (vector-ref word-vec 2)
+                          (vector-ref word-vec 3))))))
       (initialize rv dr status))
 
     ;; word2 = (listof letter)
