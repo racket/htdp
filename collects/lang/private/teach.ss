@@ -18,6 +18,7 @@
   (require-for-syntax "teachhelp.ss"
 		      (lib "kerncase.ss" "syntax")
 		      (lib "stx.ss" "syntax")
+		      (lib "struct.ss" "syntax")
 		      (lib "include.ss"))
 
   ;; syntax:
