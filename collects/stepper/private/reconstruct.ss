@@ -17,9 +17,9 @@
 
   (provide/contract 
    [reconstruct-completed (-> mark-list? (listof any?) render-settings? 
-                              (listof syntax?))]
+                              syntax?)]
    [reconstruct-current (-> mark-list? symbol? (listof any?) render-settings?
-                            (union (list/p (listof syntax?))
+                            (union (listof syntax?)
                                    (list/p (listof syntax?) (listof syntax?))))]
    [final-mark-list? (-> mark-list? boolean?)]
    [skip-step? (-> break-kind? (union mark-list? false?) render-settings? boolean?)]

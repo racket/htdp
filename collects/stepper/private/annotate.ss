@@ -251,11 +251,11 @@
               
               ; xml boxes
               [(#%app . rest)
-               (eq? (syntax-property stx 'stepper-hint 'from-xml-box))
+               (eq? (syntax-property stx 'stepper-hint) 'from-xml-box)
                (rewrite-xml-box stx recur-regular)]
               
               [else
-               (let ([content (syntax-e (syntax stx))])
+               (let ([content (syntax-e stx)])
                  (if (pair? content)
                      (rebuild-stx (syntax-pair-map content recur-regular) stx)
                      content))])))))
@@ -882,6 +882,7 @@
                          [defined-name (if (and (pair? name-list) (null? (cdr name-list)))
                                            (car name-list)
                                            #f)])
+                    (printf "rewritten: ~v\n" (top-level-rewrite #`e))
                     #`(define-values (new-vars ...)
                         #,(top-level-annotate/inner (top-level-rewrite #`e) expr defined-name)))]
                  [(define-syntaxes (new-vars ...) e)

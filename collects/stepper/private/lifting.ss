@@ -148,8 +148,8 @@
   (define-syntax (test-begin stx)
     (syntax-case stx ()
       [(_ expr ...)
-       #'(begin expr ...) ; testing version
-       ;#'(void) ; non-testing version
+       ;#'(begin expr ...) ; testing version
+       #'(void) ; non-testing version
        ]))
   
   (define (datum-ize-context-record cr)
@@ -163,10 +163,10 @@
    ; TEST OF FIND-HIGHLIGHT
    
    
-   (define test-datum (build-stx-with-highlight
-                       `(define (f x) (letrec ([a (lambda (x) (b (- x 1)))]
-                                               [b (lambda (x) ((hilite a) x))])
-                                        (a x)))))
+   (define test-datum (car (build-stx-with-highlight
+                            `((define (f x) (letrec ([a (lambda (x) (b (- x 1)))]
+                                                     [b (lambda (x) ((hilite a) x))])
+                                              (a x)))))))
 
    (define expected (list (list `(#%app a x) '(1) 'expr)
                           (list `(lambda (x) (#%app a x)) '(2) 'expr)
@@ -181,7 +181,7 @@
    
    (test null (lambda () 
                 (let*-2vals ([(context-records dc) 
-                              (find-highlight (build-stx-with-highlight`(hilite foo)))])
+                              (find-highlight (car (build-stx-with-highlight `((hilite foo)))))])
                   context-records))))
   
   ; substitute-in-syntax takes a syntax expression (which must be a proper syntax list) and a path
@@ -231,9 +231,12 @@
     (let-values ([(highlighted-defs highlighted-body) (if lift-in-highlighted?
                                                           (lift-helper highlighted #f null)
                                                           (values null highlighted))])
-      (let loop ([ctx-list ctx-list] [so-far-defs (map (lambda (x) highlight-placeholder-stx) highlighted-defs)] [body highlight-placeholder-stx])
+      (let loop ([ctx-list ctx-list]
+                 [so-far-defs (map (lambda (x) (syntax-property x 'stepper-highlight #t)) 
+                                   highlighted-defs)]
+                 [body (syntax-property highlighted-body 'stepper-highlight #t)])
         (if (null? ctx-list)
-            (values (append so-far-defs (list body)) (append highlighted-defs (list highlighted-body)))
+            (append so-far-defs (list body))
             (let*-values ([(ctx) (car ctx-list)]
                           [(index) (context-record-index ctx)]
                           [(next-defs next-body) 
@@ -274,36 +277,26 @@
   
   (test-begin
    (local 
-       ((define-values (actual-stxs actual-stx-highlights)
+       ((define actual-stxs
           (lift-local-defs
             (list (make-context-record #'(dc 14) '(0) 'expr)
                   (make-context-record #'(letrec-values ([(a) 3] [(b) dc] [(c) 5]) (+ 3 4)) '(1 1 1) 'expr)
                   (make-context-record #'(f dc) '(1) 'expr))
             #'(let-values ([(a) 4] [(b) 9] [(c) 12]) (p q))
             #t))
- 
-        (define (so->d stx) 
-          (if (syntax? stx)
-              (syntax-object->datum stx)
-              stx))
         
-        (define actual-sexps (map so->d actual-stxs))
-        (define actual-highlights (map so->d actual-stx-highlights))
+        (define actual-sexps (map syntax-object->hilite-datum actual-stxs))
         
         (define expected-sexps
           (list '(define-values (a) 3)
-                highlight-placeholder
-                highlight-placeholder
-                highlight-placeholder
-                `(define-values (b) (,highlight-placeholder 14))
+                `(hilite (define-values (a) 4))
+                `(hilite (define-values (b) 9))
+                `(hilite (define-values (c) 12))
+                `(define-values (b) ((hilite (p q)) 14))
                 '(define-values (c) 5)
-                '(f (+ 3 4))))
-        
-        (define expected-highlights 
-          '((define-values (a) 4) (define-values (b) 9) (define-values (c) 12) (p q))))
+                '(f (+ 3 4)))))
      
-     (test expected-sexps map so->d actual-stxs)
-     (test expected-highlights map so->d actual-stx-highlights)
+     (test expected-sexps (lambda () actual-sexps))
      ;(printf "shared: ~v\n" (sexp-shared actual expected))
      )
    

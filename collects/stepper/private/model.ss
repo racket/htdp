@@ -186,6 +186,7 @@
                      [else (error 'break "unknown label on break")])))))
          
          (define (step-through-expression expanded expand-next-expression)
+           (printf "expanded: ~v\n" expanded)
            (let* ([annotated (a:annotate expanded break track-inferred-names?)])
              (parameterize ([current-eval basic-eval])
                (eval annotated))
@@ -202,8 +203,8 @@
       (program-expander
        (lambda () 
          ; swap these to allow errors to escape (e.g., when debugging)
-         (error-display-handler err-display-handler)
-         ;(void)
+         ;(error-display-handler err-display-handler)
+         (void)
          )
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)
