@@ -164,19 +164,19 @@
   
   (define (skip-redex-step? mark-list render-settings)
     
-    (define (varref-skip-step? id varref)
-      (with-handlers ([exn:variable? (lambda (exn) #f)])
-      (let ([val (lookup-binding mark-list varref)])
-        (equal? (syntax-object->datum (recon-value val render-settings))
-                (syntax-object->datum (case (syntax-property varref 'stepper-binding-type)
-                                        ([let-bound]
-                                         (binding-lifted-name mark-list varref))
-                                        ([non-lexical]
-                                         varref)
-                                        (else
-                                         (error 'varref-skip-step? "unexpected value for stepper-binding-type: ~e for variable: ~e\n"
-                                                (syntax-property varref 'stepper-binding-type)
-                                                varref))))))))
+    (define (varref-skip-step? varref)
+      (with-handlers ([exn:variable? (lambda (dc-exn) #f)])
+        (let ([val (lookup-binding mark-list varref)])
+          (equal? (syntax-object->datum (recon-value val render-settings))
+                  (syntax-object->datum (case (syntax-property varref 'stepper-binding-type)
+                                          ([let-bound]
+                                           (binding-lifted-name mark-list varref))
+                                          ([non-lexical]
+                                           varref)
+                                          (else
+                                           (error 'varref-skip-step? "unexpected value for stepper-binding-type: ~e for variable: ~e\n"
+                                                  (syntax-property varref 'stepper-binding-type)
+                                                  varref))))))))
     
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
@@ -186,11 +186,11 @@
                    (case (syntax-property expr 'stepper-binding-type)
                      [(lambda-bound) #t]  ; don't halt for lambda-bound vars
                      [(let-bound)
-                      (varref-skip-step? (binding-lifted-name mark-list expr) expr)]
+                      (varref-skip-step? expr)]
                      [(non-lexical)
-                      (varref-skip-step? expr expr)])]
+                      (varref-skip-step? expr)])]
                   [(#%top . id-stx)
-                   (varref-skip-step? #`id-stx #`id-stx)]
+                   (varref-skip-step? #`id-stx)]
                   [(#%app . terms)
                    ; don't halt for proper applications of constructors
                    (let ([fun-val (lookup-binding mark-list (get-arg-var 0))])

@@ -16,14 +16,13 @@
   ; PROVIDE
   (provide/contract
    [annotate
-    (->* (syntax?                         ; syntax to annotate
-          (opt->* ((union continuation-mark-set? false?) 
-                   break-kind?)
-                  (list?)
-                  (any?))                 ; procedure for runtime break
-          (symbols 'foot-wrap))           ; wrap-kind
-         annotate-opts-list?              ; optional args
-         (syntax?))]                      ; results
+    (-> syntax?                         ; syntax to annotate
+        (opt->* ((union continuation-mark-set? false?) 
+                 break-kind?)
+                (list?)
+                (any?))                 ; procedure for runtime break
+        boolean?                        ; track-inferred-name?
+        syntax?)]                       ; results
    [top-level-rewrite (-> syntax? syntax?)])
  
   ;;                                              ;;;;                          ;                     
@@ -300,32 +299,13 @@
   
   
   ; annotate takes 
-  ; a) a list of zodiac:read expressions,
-  ; b) a list of syntax expressions
-  ; c) a list of previously-defined variables, 
-  ; d) a break routine to be called at breakpoints, and
-  ; e) a symbol which indicates how to annotate the source.  Currently, there are three
-  ;    styles: 'cheap-wrap, 'ankle-wrap, and 'foot-wrap.
-  ; f) optionally, a list of symbols which modifies the annotation.  Currently, valid 
-  ;    choices include: 'no-closure-capturing, which eliminates closure shadowing, and
-  ;    'no-temps-for-varrefs, which prevents rewriting (to capture intermediate values)
-  ;    of applications and ifs which consist
-  ;    only of varrefs.  This one might go away later, or be toggled into a "no-opt" flag.
+  ; a) a list of syntax expressions
+  ; b) a break routine to be called at breakpoints, and
+  ; c) a boolean indicating whether to store inferred names.
   ;
   
-  (define (annotate expr break wrap-style . wrap-opts-list)
+  (define (annotate expr break track-inferred-names?)
 
-    (define foot-wrap? (eq? wrap-style 'foot-wrap))
-
-    (define wrap-opts (cond [(null? wrap-opts-list) null]
-                            [(not (= (length wrap-opts-list) 1))
-                             (error 'annotate "wrong number of arguments.")]
-                            [(not (and (list? (car wrap-opts-list))
-                                       (andmap symbol? (car wrap-opts-list))))
-                             (error 'annotate "wrap-opts-list argument must be a list of symbols. Given: ~a~n"
-                                    (car wrap-opts-list))]
-                            [else (car wrap-opts-list)]))
-    
     (define binding-indexer
       (let ([binding-index 0])
         (lambda ()
@@ -470,9 +450,9 @@
                                         (lambda (expr) 
                                           (annotate/inner expr (binding-set-union (list tail-bound bindings)) #f procedure-name-info)))]
                       [make-debug-info-normal (lambda (free-bindings)
-                                                (make-debug-info expr tail-bound free-bindings 'none foot-wrap?))]
+                                                (make-debug-info expr tail-bound free-bindings 'none #t))]
                       [make-debug-info-app (lambda (tail-bound free-bindings label)
-                                             (make-debug-info expr tail-bound free-bindings label foot-wrap?))]
+                                             (make-debug-info expr tail-bound free-bindings label #t))]
                       [make-debug-info-let (lambda (free-bindings binding-list let-counter)
                                              (make-debug-info expr 
                                                               (binding-set-union (list tail-bound 
@@ -482,7 +462,7 @@
                                                                                       binding-list
                                                                                       (list let-counter))) ; NB using bindings as varrefs
                                                               'let-body
-                                                              foot-wrap?))]
+                                                              #t))]
                       [outer-wcm-wrap (if pre-break?
                                           wcm-pre-break-wrap
                                           wcm-wrap)]
@@ -500,6 +480,7 @@
                          (with-syntax ([(args-stx . bodies) clause])
                            (let*-2vals ([(annotated-body free-varrefs)
                                          ; wrap bodies in explicit begin if more than 1 user-introduced (non-skipped) bodies
+                                         ; NB: CAN'T HAPPEN in beginner up through int/lambda
                                          (if (> (length (filter (lambda (clause)
                                                                   (not (syntax-property clause 'stepper-skip-completely)))
                                                                 (syntax->list (syntax bodies)))) 1)
@@ -515,9 +496,11 @@
                        (lambda (annotated-lambda free-varrefs)
                          (let*-2vals
                              ([closure-info (make-debug-info-app 'all free-varrefs 'none)]
-                              [closure-name (cond [(syntax? procedure-name-info) procedure-name-info]
-                                                  [(pair? procedure-name-info) (car procedure-name-info)]
-                                                  [else #f])]
+                              [closure-name (if track-inferred-names?
+                                                (cond [(syntax? procedure-name-info) procedure-name-info]
+                                                      [(pair? procedure-name-info) (car procedure-name-info)]
+                                                      [else #f])
+                                                #f)]
                               [closure-storing-proc
                                (opt-lambda (closure debug-info [lifted-index #f])
                                  (closure-table-put! closure (make-closure-record 
@@ -531,13 +514,11 @@
                                    (syntax-property annotated-lambda 'inferred-name (syntax-e closure-name))
                                    annotated-lambda)]
                               [captured
-                               (if (memq 'no-closure-capturing wrap-opts)
-                                   inferred-name-lambda
-                                   (cond [(pair? procedure-name-info)
-                                          #`(#,closure-storing-proc #,inferred-name-lambda #,closure-info 
-                                              #,(cadr procedure-name-info))]
-                                         [else
-                                          #`(#,closure-storing-proc #,inferred-name-lambda #,closure-info)]))])
+                               (cond [(pair? procedure-name-info)
+                                      #`(#,closure-storing-proc #,inferred-name-lambda #,closure-info 
+                                          #,(cadr procedure-name-info))]
+                                     [else
+                                      #`(#,closure-storing-proc #,inferred-name-lambda #,closure-info)])])
                            
                            (normal-bundle free-varrefs captured)))]
                       

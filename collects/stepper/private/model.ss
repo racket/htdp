@@ -55,11 +55,12 @@
   (provide/contract [go (-> program-expander-contract       ; program-expander
                             (-> step-result? void?)         ; receive-result
                             (union render-settings? false?) ; render-settings
+                            boolean?                        ; track-inferred-names?
                             void?)])
   
   ; go starts a stepper instance
   ; see provide stmt for contract 
-  (define (go program-expander receive-result render-settings)
+  (define (go program-expander receive-result render-settings track-inferred-names?)
     (local
         
         ((define finished-exprs null)
@@ -201,7 +202,7 @@
                      [else (error 'break "unknown label on break")])))))
          
          (define (step-through-expression expanded expand-next-expression)
-           (let* ([annotated (a:annotate expanded break 'foot-wrap)])
+           (let* ([annotated (a:annotate expanded break track-inferred-names?)])
              (parameterize ([current-eval basic-eval])
                (eval annotated))
              (expand-next-expression)))
