@@ -20,6 +20,9 @@
       (cdr row)))
    docs))
 
+(define current-htdp-lang '(lib "htdp-intermediate.ss" "lang"))
+(load-relative "htdp-test.ss")
+
 (require (lib "htdp-intermediate.ss" "lang"))
 
 (load-relative "beg-adv.ss")

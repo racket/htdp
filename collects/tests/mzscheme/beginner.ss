@@ -19,6 +19,9 @@
 	 (rename mzscheme exn:application:type? exn:application:type?)
 	 (rename mzscheme exn:application:arity? exn:application:arity?))
 
+(define current-htdp-lang '(lib "htdp-beginner.ss" "lang"))
+(load-relative "htdp-test.ss")
+
 (require (lib "htdp-beginner.ss" "lang"))
 
 (load-relative "beg-adv.ss")
@@ -26,10 +29,10 @@
 (load-relative "beg-intm.ss")
 (load-relative "beg-bega.ss")
 
-(syntax-test #'quote)
-(syntax-test #''1)
-(syntax-test #''"hello")
-(syntax-test #''(1 2))
-(syntax-test #'''a)
+(htdp-syntax-test #'quote)
+(htdp-syntax-test #''1)
+(htdp-syntax-test #''"hello")
+(htdp-syntax-test #''(1 2))
+(htdp-syntax-test #'''a)
 
 (report-errs)

@@ -6,8 +6,8 @@
 	   (lib "docprovide.ss" "syntax"))
 
   ;; syntax:
-  (provide (rename beginner-define define)
-	   (rename beginner-define-struct define-struct)
+  (provide (rename intermediate-define define)
+	   (rename intermediate-define-struct define-struct)
 	   (rename beginner-lambda lambda)
 	   (rename intermediate-app #%app)
 	   (rename intermediate-local local)

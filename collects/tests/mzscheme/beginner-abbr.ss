@@ -19,6 +19,9 @@
 	 (rename mzscheme exn:application:type? exn:application:type?)
 	 (rename mzscheme exn:application:arity? exn:application:arity?))
 
+(define current-htdp-lang '(lib "htdp-beginner-abbr.ss" "lang"))
+(load-relative "htdp-test.ss")
+
 (require (lib "htdp-beginner-abbr.ss" "lang"))
 
 (load-relative "beg-adv.ss")

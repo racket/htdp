@@ -2,7 +2,9 @@
 ;; Implements the Teaching languages, at least in terms of the
 ;; forms. The reader-level aspects of the language (e.g.,
 ;; case-sensitivity) are not implemented here, and the procedures are
-;; in a separate module.
+;; in a separate module. Also, the "reference to uninitialized module
+;; identifier" message must be replaced with an "identifier used before
+;; its definition was evaluated" error that omits the name.
 
 ;; To a first approximation, this module is one big error-checking
 ;; routine. In other words, most of the syntax implementations are
@@ -71,30 +73,6 @@
 		  #t)))
       (error who "cannot redefine name: ~a" (syntax-e id))))
 
-  ;; Wrapped around uses of top-level variables:
-  (define (check-not-a-function name val)
-    (if (procedure? val)
-	(raise
-	 (let-values ([(what something)
-		       (cond
-			[(struct-constructor-procedure? val)
-			 (values "constructor"
-				 "called with values for the structure fields")]
-			[(struct-accessor-procedure? val)
-			 (values "selector"
-				 "applied to a structure to get the field value")]
-			[else
-			 (values "procedure"
-				 "applied to arguments")])])
-  	   (make-exn:variable
-	    (format "~a is a ~a, so it must be ~a" 
-		    name
-		    what
-		    something)
-	    (current-continuation-marks)
-	    name)))
-	val))
-
   ;; For quasiquote and shared:
   (require (rename "teachprims.ss" the-cons advanced-cons))
   (require (rename "teachprims.ss" cyclic-list? cyclic-list?))
@@ -137,14 +115,16 @@
   (define-syntax-set/provide (beginner-define
 			      beginner-define-struct
 			      beginner-lambda
-			      beginner-app
-			      beginner-top
+			      beginner-app     beginner-app-continue
+			      beginner-top     beginner-top-continue
 			      beginner-cond
 			      beginner-if
 			      beginner-and
 			      beginner-or
 			      beginner-quote
 			      
+			      intermediate-define
+			      intermediate-define-struct
 			      intermediate-local
 			      intermediate-letrec
 			      intermediate-let
@@ -221,30 +201,50 @@
     ;; existing definitions of the `names'. The `names'
     ;; argument is a syntax list of identifiers.
     (define (check-definitions-new who stx names defn)
-      (if (eq? (syntax-local-context) 'top-level)
-	  (with-syntax ([defn defn]
-			[who who])
-	    (with-syntax ([(check ...)
-			   (map (lambda (name)
-				  (with-syntax ([name name])
-				    ;; Make sure each check has the
-				    ;; source location of the original
-				    ;; expression:
-				    (syntax/loc stx
-				      (check-top-level-not-defined 'who #'name))))
-				(stx->list names))])
-	      (syntax-property
-               (syntax/loc stx
-                 (begin
-                   check ...
-                   defn))
-               'stepper-skipto
-               (list syntax-e cdr syntax-e cdr car))))
-	  defn))
+      (cond
+       [(eq? (syntax-local-context) 'top-level)
+	(with-syntax ([defn defn]
+		      [who who])
+	  (with-syntax ([(check ...)
+			 (map (lambda (name)
+				(with-syntax ([name name])
+				  ;; Make sure each check has the
+				  ;; source location of the original
+				  ;; expression:
+				  (syntax/loc stx
+				    (check-top-level-not-defined 'who #'name))))
+			      (stx->list names))])
+	    (syntax-property
+	     (syntax/loc stx
+	       (begin
+		 check ...
+		 defn))
+	     'stepper-skipto
+	     (list syntax-e cdr syntax-e cdr car))))]
+       [(eq? (syntax-local-context) 'module)
+	(for-each (lambda (name)
+		    (let ([b (identifier-binding name)])
+		      (when b
+			(teach-syntax-error
+			 'duplicate
+			 name
+			 #f
+			 (if (binding-in-this-module? b)
+			     "this name was defined previously and cannot be re-defined"
+			     "this name has a built-in meaning and cannot be re-defined")))))
+		  names)
+	defn]
+       [else defn]))
 
     ;; Same as above, but for one name
     (define (check-definition-new who stx name defn)
       (check-definitions-new who stx (list name) defn))
+
+    (define (binding-in-this-module? b)
+      (and (list? b)
+	   (module-path-index? (car b))
+	   (let-values ([(path base) (module-path-index-split (car b))])
+	     (and (not path) (not base)))))
     
     ;; Check context for a `define' before even trying to
     ;; expand
@@ -304,11 +304,54 @@
 	  "a keyword"
 	  (something-else stx)))
 
+    (define (make-name-inventer)
+      ;; Normally we'd use (make-syntax-introducer) because gensyming makes
+      ;;  identifiers that play badly with exporting. But we don't have
+      ;;  to worry about exporting in the teaching languages, while we do
+      ;;  have to worry about mangled names.
+      (lambda (id)
+	(datum->syntax-object id 
+			      (string->uninterned-symbol (symbol->string (syntax-e id)))
+			      id 
+			      id)))
+
+    (define (wrap-func-definitions first-order? kinds names k)
+      (if first-order?
+	  (let ([name2s (map (make-name-inventer) names)])
+	    (quasisyntax
+	     (begin
+	       #,@(map
+		   (lambda (name name2 kind)
+		     #`(define-syntax #,name 
+			 (make-first-order-function '#,kind 
+						    (quote-syntax #,name2) 
+						    (quote-syntax #%app))))
+		   names name2s kinds)
+	       #,(k name2s))))
+	  (k names)))
+
+      
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; define (beginner)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    (define (beginner-define/proc stx)
+    (define (beginner-or-intermediate-define/proc first-order? stx)
+
+      (define (wrap-func-definition name k)
+	(wrap-func-definitions first-order? 
+			       '(procedure) (list name) 
+			       (lambda (names)
+				 (k (car names)))))
+
+      (define (check-function-defn-ok stx)
+	(when first-order?
+	  (when (eq? 'top-level (syntax-local-context))
+	    (teach-syntax-error
+	     'define
+	     stx
+	     #f
+	     "function definitions are not allowed in the interactions window; ~
+              they must be in the definitions window"))))
 
       (unless (or (ok-definition-context)
 		  (identifier? stx))
@@ -317,7 +360,7 @@
 	 stx
 	 #f
 	 "found a definition that is not at the top level"))
-      
+
       (syntax-case stx ()
 	;; Constant or lambda def:
 	[(_ name expr)
@@ -327,14 +370,23 @@
 	   (syntax-case (syntax expr) (beginner-lambda)
 	     ;; Well-formed lambda def:
 	     [(beginner-lambda arg-seq lexpr ...)
-              (check-definition-new
-               'define
-               stx
-               (syntax name)
-               (quasisyntax/loc stx (define name #,(syntax-property
-                                                    #`(lambda arg-seq #,(syntax-property #`make-lambda-generative 'stepper-skip-completely #t) lexpr ...)
-                                                    'stepper-define-type
-                                                    'lambda-define))))]
+	      (begin
+		(check-function-defn-ok stx)
+		(check-definition-new
+		 'define
+		 stx
+		 #'name
+		 (wrap-func-definition
+		  #'name
+		  (lambda (name)
+		    (with-syntax ([name name])
+		      (quasisyntax/loc 
+		       stx 
+		       (define name
+			 #,(syntax-property
+			    #`(lambda arg-seq #,(syntax-property #`make-lambda-generative 'stepper-skip-completely #t) lexpr ...)
+			    'stepper-define-type
+			    'lambda-define))))))))]
 	     ;; Constant def
 	     [_else
               (check-definition-new
@@ -347,6 +399,7 @@
 	 (syntax-case (syntax name-seq) () [(name ...) #t][_else #f])
 	 ;; name-seq is at least a sequence
 	 (let ([names (syntax->list (syntax name-seq))])
+	   (check-function-defn-ok stx)
 	   (when (null? names)
 	     (teach-syntax-error
 	      'define
@@ -388,15 +441,18 @@
             'define
             stx
             (car names)
-            (with-syntax ([fn (car (syntax-e #'name-seq))] 
-                          [args (cdr (syntax-e #'name-seq))])
-              (quasisyntax/loc stx (define fn #,(syntax-property
-                                                 (syntax-property
-                                                  #`(lambda args expr ...)
-                                                  'stepper-define-type
-                                                  'shortened-proc-define)
-                                                 'stepper-proc-define-name
-                                                 #`fn))))))]
+	    (wrap-func-definition
+	     (car (syntax-e #'name-seq))
+	     (lambda (fn)
+	       (with-syntax ([fn fn]
+			     [args (cdr (syntax-e #'name-seq))])
+		 (quasisyntax/loc stx (define fn #,(syntax-property
+						    (syntax-property
+						     #`(lambda args expr ...)
+						     'stepper-define-type
+						     'shortened-proc-define)
+						    'stepper-proc-define-name
+						    #`fn))))))))]
 	;; Constant/lambda with too many or too few parts:
 	[(_ name expr ...)
 	 (identifier/non-kw? (syntax name))
@@ -424,6 +480,12 @@
          but nothing's there")]
 	[_else
 	 (bad-use-error 'define stx)]))
+
+    (define (beginner-define/proc stx)
+      (beginner-or-intermediate-define/proc #t stx))
+
+    (define (intermediate-define/proc stx)
+      (beginner-or-intermediate-define/proc #f stx))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; lambda (beginner; only works with define)
@@ -494,7 +556,7 @@
     ;; define-struct (beginner)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     
-    (define (do-define-struct stx setters? struct-info-is-useful?)
+    (define (do-define-struct stx first-order? setters? struct-info-is-useful?)
       
       (unless (or (ok-definition-context)
 		  (identifier? stx))
@@ -549,19 +611,18 @@
 		(if (null? (cdr rest))
 		    "one"
 		    "at least one"))))
-	   (let ([to-define-names (let ([l (build-struct-names name fields #f (not setters?))])
+	   (let ([to-define-names (let ([l (build-struct-names name fields #f (not setters?) stx)])
 				    (if struct-info-is-useful?
 					;; All names:
 					l
 					;; Skip `struct:' name:
 					(cdr l)))])
-	     (with-syntax ([(to-define-name ...) to-define-names]
-			   [compile-info (if struct-info-is-useful?
+	     (with-syntax ([compile-info (if struct-info-is-useful?
 					     (build-struct-expand-info name fields #f (not setters?) #t null null)
 					     (syntax
 					      (lambda (stx)
 						(raise-syntax-error
-						 'expression
+						 #f
 						 "expected an expression, but found a structure name"
 						 stx))))])
 	       (let ([defn
@@ -570,16 +631,26 @@
                            #,(syntax-property #`(define-syntaxes (name_) compile-info)
                                               'stepper-skip-completely
                                               #t)
-			   #,(syntax-property #`(define-values (to-define-name ...)
-                                                  (let ()
-                                                    (define-struct name_ (field_ ...) (make-inspector))
-                                                    (values to-define-name ...)))
-                                              'stepper-define-struct-hint
-                                              stx)))])
+			   #,(wrap-func-definitions 
+			      first-order? 
+			      ;; Only used when first-order?, so assume beginner-shaped list:
+			      (list* 'constructor 
+				     'predicate
+				     (map (lambda (x) 'selector) (cddr to-define-names)))
+			      to-define-names
+			      (lambda (def-to-define-names)
+				(with-syntax ([(def-to-define-name ...) def-to-define-names]
+					      [(to-define-name ...) to-define-names])
+				  (syntax-property #`(define-values (def-to-define-name ...)
+						       (let ()
+							 (define-struct name_ (field_ ...) (make-inspector))
+							 (values to-define-name ...)))
+						   'stepper-define-struct-hint
+						   stx))))))])
                  (check-definitions-new 'define-struct
                                         stx 
-                                        (syntax (name_ to-define-name ...)) 
-                                        defn)))))]
+					(cons #'name_ to-define-names)
+					defn)))))]
 	[(_ name_ something . rest)
 	 (teach-syntax-error
 	  'define-struct
@@ -604,11 +675,29 @@
 	[_else (bad-use-error 'define-struct stx)]))
 
     (define (beginner-define-struct/proc stx)
-      (do-define-struct stx #f #f))
+      (do-define-struct stx #t #f #f))
+
+    (define (intermediate-define-struct/proc stx)
+      (do-define-struct stx #f #f #f))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; application (beginner and intermediate)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ;; For beginner:
+
+    ;; #%app should never happen in beginner. Primitive operations and
+    ;; defined functions turn into syntax that handle application
+    ;; forms.  The only vaguely legitimate application would involve a
+    ;; poorly implemented teachpack that exports functions instead of
+    ;; primitive operators. Also, #%app is unavoidable in the REPL.
+
+    ;; An #%app might happen "temporarily" if it appears at the top
+    ;; level before the corresponding function definition. To provide
+    ;; a good error message, we need to wait, and that's what
+    ;; beginner-app-delay does.
+
+    ;; For intermediate:
 
     ;; This application form disallows rator expressions that aren't
     ;; top-level identifiers or of the form `(check-not-undefined ...)'.
@@ -631,20 +720,23 @@
 					   [(check-not-undefined id)
 					    #t]
 					   [_else #f])]
-			   [lex? (and (identifier? fun)
-				      (eq? 'lexical (identifier-binding fun)))])
+			   [binding (and (identifier? fun)
+					 (identifier-binding fun))]
+			   [lex? (eq? 'lexical binding)]
+			   [bad-app (lambda (what)
+				      (teach-syntax-error
+				       '|function call|
+					 stx
+					 fun
+					 "expected a ~a after an open parenthesis, but found ~a"
+					 (if lex-ok?
+					     "name"
+					     "defined name or a primitive operation name")
+					 what))])
 		      (unless (and (identifier? fun) (or lex-ok? undef-check? (not lex?)))
-			(teach-syntax-error
-			 '|function call|
-			   stx
-			   fun
-			   "expected a ~a after an open parenthesis, but found ~a"
-			   (if lex-ok?
-			       "name"
-			       "defined name or a primitive operation name")
-			   (if lex?
-			       "a function argument name"
-			       (something-else fun))))
+			(bad-app (if lex?
+				     "a function argument name"
+				     (something-else fun))))
 		      ;; The following check disallows calling thunks.
 		      ;; It's disabled because we need to allow calls to
 		      ;; primitive thunks.
@@ -654,21 +746,20 @@
 			    stx
 			    #f
 			    "expected an argument after the function name for a function call, ~
-                        but nothing's there"))
-		      ;; For beginner, we need to tell beginner-top that the rator is ok:
-		      (with-syntax ([rator (if (and (identifier? fun)
-						    (let ([b (identifier-binding fun)])
-						      ;; Top-level or local-module reference?
-						      (or (not b)
-							  (and (pair? b)
-							       (module-path-index? (car b))
-							       (let-values ([(base rel) (module-path-index-split (car b))])
-								 (and (not base) (not rel)))))))
-					       ;; avoid beginner #%top:
-					       (syntax/loc stx (#%top . rator))
-					       ;; keep the rator as it was:
-					       fun)])
-			(syntax/loc stx (#%app rator rand ...))))]
+                             but nothing's there"))
+		      (cond
+		       [(and (not lex-ok?) (binding-in-this-module? binding))
+			;; An application of something defined as a constant
+			(bad-app "something else")]
+		       [(or lex-ok? (and binding (not (binding-in-this-module? binding))))
+			(syntax/loc stx (#%app rator rand ...))]
+		       [else
+			;; We don't know what rator is, yet, and it might be local:
+			(quasisyntax/loc 
+			 stx 
+			 (#%app values #,(quasisyntax/loc
+					  stx
+					  (beginner-app-continue rator rand ...))))]))]
 		   [(_)
 		    (teach-syntax-error
 		     '|function call|
@@ -682,26 +773,53 @@
 		   [_else (bad-use-error '#%app stx)])))])
 	(values (mk-app #f) (mk-app #t))))
 
+    (define (beginner-app-continue/proc stx)
+      (syntax-case stx ()
+	[(_ rator rand ...)
+	 (let* ([fun #'rator]
+		[binding (identifier-binding fun)])
+	   (if binding
+	       ;; Now defined in the module:
+	       (if (set!-transformer? (syntax-local-value fun (lambda () #f)))
+		   ;; Something that takes care of itself:
+		   (syntax/loc stx (rator rand ...))
+		   ;; Something for which we probably need to report an error,
+		   ;;  but let beginner-app take care of it:
+		   (syntax/loc stx (beginner-app rator rand ...)))
+	       ;; Something undefined; let beginner-top take care of it:
+	       (syntax/loc stx (#%app rator rand ...))))]))
+
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; top-level variables (beginner)
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ;; Disallow uses of top-level variables that are not in
-    ;; application positions.
+    ;; Report errors for undefined names (but only in modules)
 
     (define (beginner-top/proc stx)
       (syntax-case stx ()
         [(_ . id)
-         (if (syntax-property #`id 'stepper-dont-check-for-function)
-             ;(syntax-property
-             ; (quasisyntax/loc stx (check-not-a-function 'id (#%top . id)))
-             ; 'stepper-skipto
-             ; (list syntax-e cdr syntax-e cdr cdr car))
-             (syntax/loc stx (#%top . id))
-             (syntax-property
-              (syntax/loc stx (check-not-a-function 'id (#%top . id)))
-              'stepper-skipto
-              (list syntax-e cdr syntax-e cdr cdr car)))]))
+	 ;; If we're in a module, we'll need to check that the name
+	 ;;  is bound....
+	 (if (and (not (identifier-binding #'id))
+		  (syntax-source-module #'id))
+	     ;; ... but it might be defined later in the module, so
+	     ;; delay the check.
+	     (syntax/loc stx (#%app values (beginner-top-continue id)))
+	     (syntax/loc stx (#%top . id)))]))
+
+    (define (beginner-top-continue/proc stx)
+      (syntax-case stx ()
+        [(_ id)
+	 ;; If there's still no binding, it's an "unknown name" error.
+	 (if (not (identifier-binding #'id))
+	     (teach-syntax-error
+	      'unknown
+	      #'id
+	      #f
+	      "name is not defined, not an argument, and not a primitive name")
+	     ;; Don't use #%top here; id might have become bound to something
+	     ;;  that isn't a value.
+	     #'id)]))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; cond
@@ -745,7 +863,9 @@
                           (with-syntax ([new-test (syntax-property (syntax #t) 'stepper-else #t)])
                             (syntax/loc clause (new-test answer))))]
 		       [(question answer)
-                        (with-syntax ([verified (syntax-property (syntax (verify-boolean question 'cond)) 'stepper-skipto (list syntax-e cdr syntax-e cdr car))])
+                        (with-syntax ([verified (syntax-property (syntax (verify-boolean question 'cond)) 
+								 'stepper-skipto 
+								 (list syntax-e cdr syntax-e cdr car))])
                           (syntax/loc clause (verified answer)))]
 		       [()
 			(check-preceding-exprs clause)
@@ -760,8 +880,7 @@
 			 'cond
 			 stx
 			 clause
-			 "expected a clause with a question and answer, but found a clause ~
-                                with only one part")]
+			 "expected a clause with a question and answer, but found a clause with only one part")]
 		       [(question? answer? ...)
 			(check-preceding-exprs clause)
 			(let ([parts (syntax->list clause)])
@@ -775,8 +894,7 @@
 			   'cond
 			   stx
 			   clause
-			   "expected a clause with one question and one answer, but found a clause ~
-                                with ~a parts"
+			   "expected a clause with one question and one answer, but found a clause with ~a parts"
 			   (length parts)))]
 		       [_else
 			(teach-syntax-error
@@ -1448,7 +1566,7 @@
 	 ;; new syntax object that is a `beginner-define' form;
 	 ;; that's important for syntax errors, so that they
 	 ;; report `advanced-define' as the source.
-	 (beginner-define/proc stx)]
+	 (intermediate-define/proc stx)]
 	[_else
 	 (bad-use-error 'define stx)]))
 
@@ -1604,7 +1722,7 @@
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     (define (advanced-define-struct/proc stx)
-      (do-define-struct stx #t #t))
+      (do-define-struct stx #f #t #t))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; let (advanced)       >> mz errors in named case <<
