@@ -212,6 +212,12 @@
      (test-mz-sequence "(if 3 4 5)"
                     `((before-after ((hilite (if 3 4 5))) ((hilite 4)))
 		      (finished (4)))))
+
+  (t simple-if
+     (test-upto-int/lam "(if true false true)"
+                        `((before-after ((hilite (if true false true)))
+                                       ((hilite false)))
+                          (finished (false)))))
   
   (t if-bool
      (test-upto-int/lam "(if (if true false true) false true)"
@@ -249,7 +255,8 @@
      (test-mz-sequence "(if 3 4)"
 		       `((before-after ((hilite (if 3 4))) ((hilite 4)))
 			 (finished (4)))))
- 
+
+   
   ;(test-mz-sequence "((call-with-current-continuation call-with-current-continuation) (call-with-current-continuation call-with-current-continuation))"
   ;                  `((before-after (((hilite ,h-p) (call-with-current-continuation call-with-current-continuation))) ((call-with-current-continuation call-with-current-continuation))
   ;                    (((hilite ,h-p) (call-with-current-continuation call-with-current-continuation))) ((lambda args ...)))
@@ -266,6 +273,13 @@
      (test-upto-int/lam "(define a (+ 3 4))"
                         `((before-after ((define a (hilite (+ 3 4)))) ((define a (hilite 7))))
                           (finished ((define a 7))))))
+
+  (t top-def-ref
+     (test-upto-int/lam "(define a 6) a"
+                        `((before-after-finished ((define a 6))
+                                                 ((hilite a))
+                                                 ((hilite 6)))
+                          (finished (6)))))
   
   (t app
      (test-upto-int/lam "(+ 4 129)" 
@@ -1168,6 +1182,6 @@
      (test-teachpack-sequence " (define (f2c x) x) (convert-gui f2c)" `() ; placeholder
                                ))
   
-  (run-tests '(and1))
-  #;(run-all-tests)
+  ;(run-tests '(top-def-ref))
+  (run-all-tests)
   )

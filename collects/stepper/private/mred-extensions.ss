@@ -238,14 +238,14 @@
       
       (define pretty-printed-width #f)
       (define clear-highlight-thunks null)
-      (define (reset-style)
+      (define/private (reset-style)
         (change-style (send (get-style-list) find-named-style "Standard")))
-      (define (set-last-style)
+      (define/private (set-last-style)
         (change-style (send (get-style-list) find-named-style "Standard")
 		      (sub1 (last-position))
 		      (last-position)))
                
-      (define (reformat-sexp width)
+      (define/private (reformat-sexp width)
         (when (not (eq? pretty-printed-width width))
           (set! pretty-printed-width width)
           (format-whole-step)))
@@ -254,7 +254,7 @@
                
       (inherit get-dc)
       
-      (define (format-sexp sexp)
+      (define/private (format-sexp sexp)
         
         (parameterize ([pretty-print-columns pretty-printed-width]
                        
@@ -307,7 +307,7 @@
                        [read-case-sensitive #t])
           (pretty-print sexp)))
              
-      (define (format-whole-step)
+      (define/public (format-whole-step)
         (lock #f)
         (begin-edit-sequence)
         (for-each (lambda (fun) (fun)) clear-highlight-thunks)
@@ -444,13 +444,13 @@
       (define after-snip (make-object stepper-editor-snip%))
       (define horiz-separator-2 (make-object separator-snip%))
       (define bottom-defs-snip (make-object stepper-editor-snip%))
-      (define (release-snip-sizes)
+      (define/private (release-snip-sizes)
         (for-each (lambda (snip)
                     (send snip set-min-height 0.0)
                     (send snip set-max-height 0.0)
                     (send snip set-max-height 'none))
                   (list before-snip after-snip)))
-      (define (coordinate-snip-sizes)
+      (define/private (coordinate-snip-sizes)
         (let* ([get-snip-height
                 (lambda (snip)
                   (let* ([top-box (box 0)]

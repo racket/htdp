@@ -336,7 +336,7 @@
   (define up-mappings
     `((rebuild ((,car ,(lambda (stx new) (cons new (cdr stx))))
                 (,cdr ,(lambda (stx new) (cons (car stx) new)))
-                (,syntax-e ,rebuild-syntax)))
+                (,syntax-e ,rebuild-stx)))
       (discard ((,car ,second-arg)
                 (,cdr ,second-arg)
                 (,syntax-e ,second-arg)))))

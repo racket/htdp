@@ -63,7 +63,7 @@
           (define (printing-proc item evt)
             (message-box "error?" "shouldn't be called"))
           
-          (define (file-menu:print a b) (printing-proc a b))
+          (define/private (file-menu:print a b) (printing-proc a b))
           
           ;; MENUS
           
@@ -88,7 +88,7 @@
           (define window-closed-warning-str (string-constant stepper-program-window-closed))
           
           (define warning-message-visible-already #f)
-          (define (add-warning-message warning-str)
+          (define/private (add-warning-message warning-str)
             (let ([warning-msg (instantiate x:stepper-warning% () 
                                  (warning-str warning-str)
                                  (parent (get-area-container)))])
