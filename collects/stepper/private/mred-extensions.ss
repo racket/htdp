@@ -253,20 +253,26 @@
               (or (null? remaining-highlights)
                   (confusable-value? (car remaining-highlights)))))
                
+      (inherit get-dc)
       (define (format-sexp sexp)
         (let ([real-print-hook (pretty-print-print-hook)])
           (parameterize ([pretty-print-columns pretty-printed-width]
                          [pretty-print-size-hook
                           (lambda (value display? port)
-                            (if (eq? value highlight-placeholder) ; must be a confusable value
-                                (string-length (format "~s" (car remaining-highlights)))
-                                (if (image? value)
-                                    1   ; if there was a good way to calculate a image widths ...
-                                    #f)))]
+                            (cond
+                              [(eq? value highlight-placeholder) ; must be a confusable value
+                               (string-length (format "~s" (car remaining-highlights)))]
+                              [(is-a? value snip%) 
+                               (let ([dc (get-dc)]
+                                     [wbox (box 0)])
+                                 (send value get-extent dc 0 0 wbox #f #f #f #f #f)
+                                 (let-values ([(xw xh xa xd) (send dc get-text-extent "x")])
+                                   (max 1 (inexact->exact (ceiling (/ (unbox wbox) xw))))))]
+                              [else #f]))]
                          [pretty-print-print-hook
                           ; this print-hook is called for confusable highlights and for images.
                           (lambda (value display? port)
-                            (cond [(image? value) (insert (send value copy)) (set-last-style)]
+                            (cond [(is-a? value snip%) (insert (send value copy)) (set-last-style)]
                                   [(eq? value highlight-placeholder) (insert (format "~s" (car remaining-highlights)))]
                                   [else (error 'stepper-GUI "pretty-print-print-hook: expected an image or a highlight-placeholder, got: ~e" value)]))]
                          [pretty-print-display-string-handler
