@@ -204,6 +204,14 @@
                 (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list lexically-bound-vars))
           `((else ,(rectify-source expr))))))
   
+  ; reconstruct : takes a parsed list of expressions, a list of continuation-marks,
+  ; a list of all the names defined in the users program, and which top-level expression is
+  ; currently being evaluated, and it produces a list containing the reconstructed sexp, and the
+  ; sexp which is the redex.  Note that the redex is guaranteed to be eq? to some element in the 
+  ; reconstructed program
+  
+  ;((list-of z:parsed) (list-of mark) (list-of symbol) num -> 
+  ; (list sexp sexp))
   
   (define (reconstruct expr-list mark-list all-defs-list current-def-num)
     
@@ -390,6 +398,8 @@
                  [old-exp-vars (list-take current-def-num all-defs-list)])
              (map rectify-old-expression old-exps old-exp-vars)))
          
+         (define redex #f)
+         
          (define current-def-thunk
            (lambda ()
              (let loop ([so-far nothing-so-far] [mark-list mark-list] [first #t])
@@ -397,9 +407,9 @@
                    (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
                    (loop 
                     (let ([reconstructed (reconstruct-inner mark-list so-far)])
-                      (if first
-                          `(> ,reconstructed <)
-                          reconstructed))
+                      (when first
+                        (set! redex reconstructed))
+                      reconstructed)
                     (cdr mark-list)
                     #f)))))
          
@@ -412,5 +422,7 @@
          )
       
       (if (final-mark-list? mark-list)
-          old-defs
-          (append old-defs (list (current-def-thunk)) (last-defs-thunk))))))
+          (list old-defs null)
+          (list
+           (append old-defs (list (current-def-thunk)) (last-defs-thunk))
+           redex)))))
