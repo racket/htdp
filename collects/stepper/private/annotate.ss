@@ -530,7 +530,7 @@
                                            (if (not (null? binding-names))
                                                (list (car binding-names) (car dyn-index-syms))
                                                #f)])
-                                     (annotate/inner expr tail-bound #f #f proc-name-info (binding-set-union (list let-bound-vars bindings)))))]
+                                     (annotate/inner expr null #f #f proc-name-info (binding-set-union (list let-bound-vars bindings)))))]
                   [lambda-body-recur (lambda (expr) (annotate/inner expr 'all #t #f #f let-bound-vars))]
                   ; note: no pre-break for the body of a let; it's handled by the break for the
                   ; let itself.
@@ -947,13 +947,14 @@
                                
                                ; this is the no-temps optimization:
                                ; (won't work for stepper unless no reductions happen on the vars in the app
+                               ; oh! what if they're all lambda-bound vars? some other day, perhaps.
                                
                                (let ([debug-info (make-debug-info-app tail-bound free-varrefs 'called)])
                                  (wcm-break-wrap debug-info annotated-terms))
                                
                                (let* ([arg-temps (build-list (length annotated-terms) get-arg-var)] 
                                       [let-clauses (d->so `((,arg-temps 
-                                                                (values ,@(map (lambda (_) *unevaluated*) arg-temps)))))]
+                                                             (values ,@(map (lambda (_) *unevaluated*) arg-temps)))))]
                                       [set!-list (map (lambda (arg-symbol annotated-sub-expr)
                                                         (d->so `(set! ,arg-symbol ,annotated-sub-expr)))
                                                       arg-temps annotated-terms)]
