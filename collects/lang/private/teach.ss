@@ -271,11 +271,11 @@
 	 who
 	 stx
 	 (cadr exprs)
-	 "expected only one expression ~a, but found an extra part~a"
+	 "expected only one expression ~a, but found ~a extra part"
 	 where
 	 (if (null? (cddr exprs))
-	     ""
-	     (format " (plus ~a more)" (length (cddr exprs)))))))
+	     "one"
+	     "at least one"))))
 
     (define (check-single-result-expr exprs where enclosing-expr)
       (check-single-expression where
@@ -547,10 +547,10 @@
 		stx
 		(car rest)
 		"expected nothing after the field name sequence in `define-struct', ~
-               but found an extra part~a"
+               but found ~a extra part"
 		(if (null? (cdr rest))
-		    ""
-		    (format " (plus ~a more)" (length (cdr rest)))))))
+		    "one"
+		    "at least one"))))
 	   (let ([to-define-names (let ([l (build-struct-names name fields #f (not setters?))])
 				    (if struct-info-is-useful?
 					;; All names:
