@@ -114,10 +114,13 @@
 
                (define (double-redivide finished-exprs new-exprs-before new-exprs-after)
                  (let*-values ([(before current after) (redivide new-exprs-before)]
-                               [(before-2 current-2 after-2) (redivide new-exprs-after)]
-                               [(_) (unless (and (equal? before before-2)
-                                                 (equal? after after-2))
-                                      (error 'double-redivide "reconstructed before or after defs are not equal."))])
+                               [(before-2 current-2 after-2) (redivide new-exprs-after)])
+                   (unless (equal? (map syntax-object->hilite-datum before) 
+                                   (map syntax-object->hilite-datum before-2))
+                     (error 'double-redivide "reconstructed before defs are not equal."))
+                   (unless (equal? (map syntax-object->hilite-datum after) 
+                                   (map syntax-object->hilite-datum after-2))
+                     (error 'double-redivide "reconstructed after defs are not equal."))
                    (values (append finished-exprs before) current current-2 after)))
                
                (define (reconstruct-helper)
@@ -178,9 +181,6 @@
                      
                      [(expr-finished-break)
                       (let ([reconstructed (r:reconstruct-completed mark-list returned-value-list render-settings)])
-                        (printf "stepper-xml-hint: ~v\nof reconstructed: ~v\n" 
-                                (syntax-property reconstructed 'stepper-xml-hint)
-                                reconstructed)
                         (set! finished-exprs (append finished-exprs (list reconstructed))))]
                      
                      [(define-struct-break)

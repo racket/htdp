@@ -23,6 +23,7 @@
       (if (null? expr-list)
           (iter eof void)
           (iter (expand (car expr-list)) (stream-ify (cdr expr-list) iter)))))
+ 
   
   (define (test-sequence-core namespace-spec render-settings track-inferred-names? in-port expected-steps)
     (let* ([current-error-display-handler (error-display-handler)]) 
@@ -45,15 +46,13 @@
                [program-expander
                 (lambda (init iter)
                   (init)
-                  (letrec ([read-loop (lambda ()
-                                        (let ([r (read-syntax in-port)])
-                                          (if (eof-object? r)
-                                              (begin
-                                                (close-input-port in-port)
-                                                (iter eof void))
-                                              (begin (printf "expanded: ~v\n" (expand r))
-                                              (iter (expand r) read-loop)))))])
-                    (read-loop)))])
+                  (let* ([exps (let read-loop ()
+                                     (let ([expr (read-syntax "test-input" in-port)])
+                                       (if (eof-object? expr)
+                                           null
+                                           (cons expr (read-loop)))))]
+                         [exprs (wrap-in-module exps namespace-spec)])
+                    ((stream-ify exprs iter))))])
           (let/ec escape
             (parameterize ([error-escape-handler (lambda () (escape (void)))])
               (go program-expander receive-result render-settings track-inferred-names?)))
@@ -106,6 +105,11 @@
   (define bell-jar-specimen-1 #f)
   (define bell-jar-specimen-2 #f)
   
+  ;; so->d/finished : call (syntax-object->hilite-datum stx #t).  For finished steps,
+  ;; we want to ignore the highlight but not the xml boxes (and other future stuff?)
+  (define (so->d/finished stx)
+    (syntax-object->hilite-datum stx #t))
+  
   ; (-> step-result? sexp? boolean?)
   (define (compare-steps actual expected)
     (match expected
@@ -123,15 +127,15 @@
                  (compare-steps actual `(before-after ,before ,after))))]
       [`(before-after-finished ,finished-exprs . ,rest)
        (and (before-after-result? actual)
-            (compare-finished (map syntax-object->interned-datum (before-after-result-finished-exprs actual)) finished-exprs)
+            (compare-finished (map so->d/finished (before-after-result-finished-exprs actual)) finished-exprs)
             (compare-steps actual `(before-after ,@rest)))]
       [`(before-after-finished-waiting ,finished-exprs . ,rest)
        (and (before-after-result? actual)
-            (compare-finished (map syntax-object->interned-datum (before-after-result-finished-exprs actual)) finished-exprs)
+            (compare-finished (map so->d/finished (before-after-result-finished-exprs actual)) finished-exprs)
             (compare-steps actual `(before-after-waiting ,@rest)))]
       [`(finished ,finished-exprs)
        (and (finished-result? actual)
-            (compare-finished (map syntax-object->interned-datum (finished-result-finished-exprs actual)) finished-exprs))]
+            (compare-finished (map so->d/finished (finished-result-finished-exprs actual)) finished-exprs))]
       [`(error ,err-msg)
        (and (error-result? actual)
             (equal? err-msg (error-result-err-msg actual)))]
@@ -937,11 +941,11 @@
   ;;
   ;;;;;;;;;;;;;;;;
     
-  (define (test-xml-sequence namespace-spec render-settings track-inferred-names? spec expected-steps)
+  #;(define (test-xml-sequence namespace-spec render-settings track-inferred-names? spec expected-steps)
     (letrec ([port (open-input-text-editor (construct-text spec))])
       (test-sequence-core namespace-spec render-settings track-inferred-names? port expected-steps)))
   
-  (define (construct-text spec)
+  #;(define (construct-text spec)
     (let ([new-text (instantiate text% ())])
       (for-each
        (match-lambda 
@@ -950,34 +954,20 @@
        spec)
       new-text))
   
-  (define (construct-xml-box spec)
-    (let* ([new-xml-box (instantiate xml-snip% () 
-                          [eliminate-whitespace-in-empty-tags? #t])] ;  need to check what the languages themselves do here
-           [xml-editor (send new-xml-box get-editor)])
-      (for-each
-       (match-lambda
-         [`(scheme-box ,@(schemeboxspec ...)) (send new-xml-box insert (construct-scheme-box #f schemeboxspec))]
-         [`(splice-box ,@(spliceboxspec ...)) (send new-xml-box insert (construct-scheme-box #f spliceboxspec))]
-         [(? string? text) (send xml-editor insert text)])
-       spec)
-      new-xml-box))
-  
-  (define (construct-scheme-box splice? spec)
-    (let* ([new-scheme-box (instantiate scheme-snip% () [splice? splice?])]
-           [scheme-editor (send new-scheme-box get-editor)])
-      (for-each 
-       (match-lambda
-         [`(xml-box ,@(xmlspec ...)) (send scheme-editor insert (construct-xml-box xmlspec))]
-         [(? string? text) (send scheme-editor insert text)])
-       spec)))
-  
-  
-  (t xml-box1
-     (test-xml-sequence `(lib "htdp-beginner.ss" "lang")
+  #;(define (test-xml-beginner-sequence spec expected)
+    (test-xml-sequence `(lib "htdp-beginner.ss" "lang")
                         fake-beginner-render-settings
                         #t
-                        `((xml-box "<abba>3</abba>"))
-                        `((finished ((xml-box (cons abba (cons empty (cons 3 empty)))))))))
+                        spec
+                        expected))
+  
+  #;(t xml-box1
+     (test-xml-beginner-sequence `((xml-box "<abba>3</abba>"))
+                                 `((finished ((xml-box-value (cons 'abba (cons empty (cons "3" empty)))))))))
+  
+  #;(t xml-box2
+     (text-xml-beginnner-sequence `("(cdr (cdr " (xml-box "<foozle>a b</foozle>") "))")
+                                  `((before-after ((cdr (cdr (xml-box "<foozle>a b</foozle>"))))))))
   
   ;  
   ;  ;;;;;;;;;;;;;
@@ -1074,6 +1064,6 @@
 ;  (finished (true))))
   
   
-  (run-tests '(xml-box1))
+  (run-tests '(let-scoping3))
   ;(run-all-tests)
   )
