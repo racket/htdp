@@ -657,6 +657,7 @@
                    (lambda (expr)
                      (recon-source-expr expr mark-list))]
                   [top-mark (car mark-list)]
+                  [_ (fprintf (current-error-port) "about to retrieve source location\n")]
                   [expr (mark-source top-mark)]
 
                   [recon-let
@@ -769,15 +770,17 @@
                 
                 ; if
                 [(if test then else)
-                 (so-far-only
-                  (attach-info
-                   (let ([test-exp (if (eq? so-far nothing-so-far)
-                                       (recon-source-current-marks (syntax test))
-                                       so-far)])
-                     (d->so `(if ,test-exp 
-                                 ,(recon-source-current-marks (syntax then))
-                                 ,(recon-source-current-marks (syntax else)))))
-                   expr))]
+                 (begin
+                   (fprintf (current-error-port) "it's an if!\n")
+                   (so-far-only
+                    (attach-info
+                     (let ([test-exp (if (eq? so-far nothing-so-far)
+                                         (recon-source-current-marks (syntax test))
+                                         so-far)])
+                       (d->so `(if ,test-exp 
+                                   ,(recon-source-current-marks (syntax then))
+                                   ,(recon-source-current-marks (syntax else)))))
+                     expr)))]
                 
                 ; quote : there is no break on a quote.
                 

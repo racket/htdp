@@ -85,6 +85,7 @@
          
   
          (define (break mark-set key break-kind returned-value-list)
+           (fprintf (current-error-port) "entering break\n")
            (let* ([mark-list (continuation-mark-set->list mark-set key)])
              (let ([double-redivide
                     (lambda (finished-exprs new-exprs-before new-exprs-after)
