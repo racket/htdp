@@ -9,6 +9,7 @@
   (provide
    initial-env-package
    annotate
+   top-level-rewrite
    )
  
   ;;                                              ;;;;                          ;                     
@@ -270,8 +271,8 @@
               (lambda (stx new-cond-test)
                 (loop stx let-bound-bindings new-cond-test (lambda (x) #f)))]
              [recur-in-and/or
-              (lambda (stx new-and/or-test)
-                (loop stx let-bound-bindings (lambda (x) #f) new-and/or-test))]
+              (lambda (stx new-and/or-test new-bindings)
+                (loop stx (append new-bindings let-bound-bindings) (lambda (x) #f) new-and/or-test))]
              [do-let/rec
               (lambda (stx rec?)
                 (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
@@ -285,16 +286,26 @@
                          [new-bindings (map list labelled-vars-list rhs-list)])
                     (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))]
              [do-and/or
+              ; NOTE: I maintain my invariants in this section through foreknowledge of the shape of 
+              ; the and/or macro. Therefore, this code is fragile.
               (lambda (new-and/or-test stx tag)
                 (kernel:kernel-syntax-case stx #f
                   [(let-values [(part-0 test)] (if part-1 part-2 rest))
-                   (let ([new-if (syntax-property (rebuild-stx `(if ,(recur-regular (syntax part-1))
-                                                                    ,(recur-regular (syntax part-2))
+                   (let ([new-if (syntax-property (rebuild-stx `(if ; HERE!
+                                                                 ,@(map 
+                                                                       (lambda (stx)
+                                                                         (
+                                                                         recur-with-bindings (list (syntax part-1)
+                                                                                                 (syntax part-2))
+                                                                                           (list (syntax part-0)))
+                                                                    ; the part-0 binding cannot occur in the rest:
                                                                     ,(recur-in-and/or (syntax rest) new-and/or-test))
                                                                stx)
                                                   'stepper-hint
                                                   tag)])
-                     (syntax-property (rebuild-stx `(let-values ([,(recur-regular (syntax part-0))
+                     (syntax-property (rebuild-stx `(let-values ([,(syntax-property (recur-regular (syntax part-0))
+                                                                                    'stepper-binding-type
+                                                                                    'let-bound)
                                                                   ,(recur-regular (syntax test))])
                                                       ,new-if)
                                                    stx)
