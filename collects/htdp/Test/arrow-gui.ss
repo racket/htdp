@@ -4,8 +4,7 @@
 ;; make-model : sym -> (button% event% -> void)
 (define (make-model dir)
   (lambda (b e)
-    (begin
-      (view dir)
+    (local ([define _ (view dir)])
       (printf "~a ~n" (control)))))
 
 (connect 

@@ -1,28 +1,37 @@
 (module dir mzscheme
   (require (lib "error.ss" "htdp")
-           (lib "list.ss"))
+           (lib "list.ss")
+           (lib "prim.ss" "lang"))
   
-  (provide dir? make-dir
-           dir-name dir-dirs dir-files
-           ;(struct dir (name dirs files) -mutators)
-
-           file? make-file
-           file-name file-content
-           ;(struct file (name content) -mutators)
-           (rename file--size file-size)
-
-           create-dir)
+  (provide
+   create-dir ; path -> Directory
+   
+   ; structure 
+   dir?
+   make-dir
+   dir-name
+   dir-dirs
+   dir-files
+   
+   ; structure 
+   file?
+   make-file
+   file-name
+   file-content
+   (rename file--size file-size)
+   )
   
   ;; Structures: 
   (define-struct dir (name dirs files))
   (define-struct file (name -size content))
-
+  
+  (define-primitive create-dir create-dir/proc)
+  
   ;; Data:
   ;; Directory  = (make-dir Symbol (listof Dir) (listof File))
   ;; File       = (make-file Symbol Number (union '() X))
   
-  ;; create-dir : path -> Directory
-  (define (create-dir a-path)
+  (define (create-dir/proc a-path)
     (check-arg 'create-dir (string? a-path) "string" "first" a-path)
     (if (directory-exists? a-path)
         (car (explore (list a-path)))
@@ -41,7 +50,7 @@
 			(map (lambda (x) (build-path d x)) fs))
                    (map (lambda (x) (if (link-exists? x) 'link null)) fs)))))
          dirs))
-
+  
   ;; String -> String
   (define (my-split-path d)
     (let-values ([(base name mbd?) (split-path d)])

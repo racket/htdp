@@ -3,7 +3,8 @@
 	   (lib "error.ss" "htdp")
 	   (lib "posn.ss" "lang")
            (lib "etc.ss")
-           (lib "mred.ss" "mred"))
+           (lib "mred.ss" "mred")
+           (lib "prim.ss" "lang"))
 
   ;; Implementation:
   ;;   Stephanie Weirich (1994),
@@ -11,6 +12,8 @@
   ;;   Matthias Felleisen (1996)
 
   (provide run)
+  
+  (define-higher-order-primitive run run/proc (elevator-controller))
 
     ;;  There are really  three distinct levels: graphics, hardware,
     ;;  and software. Don't mix them!
@@ -806,7 +809,7 @@
 
     (define Next-Floor (lambda x (error 'Next-Floor "undefined")))
   
-    (define  run 
+    (define  run/proc 
       (lambda (f)
 	(check-proc 'run f 3 'first "3 arguments")
 	(set! Next-Floor f)

@@ -4,9 +4,18 @@
            (lib "big-draw.ss" "htdp")
            (lib "etc.ss")
            (lib "class.ss")
-           (lib "mred.ss" "mred"))
+           (lib "mred.ss" "mred")
+           (lib "prim.ss" "lang"))
   
-  (provide control view connect)
+  (provide
+   control ; modelT modelT modelT modelT -> true 
+   view    ; X -> true
+   connect ; -> Symbol
+   )
+  
+  (define-higher-order-primitive connect connect/proc (left right up down))
+  (define-primitive control control/proc)
+  (define-primitive view view/proc)
   
   ;; CONSTANTS ---------------------------------------------------------------
   (define MY-ICONS "/home/matthias/icons/")
@@ -45,21 +54,21 @@
   (define lab (make-object message% "Going where?" hor))
   (define msg (make-object message% "Nowhere" hor))
   
-  ;; view : X -> true
+  ;; X -> true
   ;; to display s in the msg panel 
-  (define (view s)
+  (define (view/proc s)
     (send msg set-label (format "~a" s))
     true)
   
   ;; WIRING THINGS UP    ----------------------------------------------------
-  ;; control : -> symbol
+  ;; -> symbol
   ;; to read out the current state of the msg field 
-  (define (control)
+  (define (control/proc)
     (string->symbol (send msg get-label)))
   
   ;; modelT = (button% event% -> true)
-  ;; connect : modelT modelT modelT modelT -> true
-  (define (connect left right up down)
+  ;; connect/proc : modelT modelT modelT modelT -> true
+  (define (connect/proc left right up down)
     (check-proc 'connect left 2 "'left' argument" "two arguments")
     (check-proc 'connect right 2 "'right' argument" "two arguments")
     (check-proc 'connect up 2 "'up' argument" "two arguments")

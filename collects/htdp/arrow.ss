@@ -7,12 +7,20 @@
            (lib "mred.ss" "mred")
            (lib "prim.ss" "lang"))
   
-  (provide control control-up-down control-left-right)
+  (provide
+   control
+   control-up-down
+   control-left-right
+   )
 
   (define-higher-order-primitive control-up-down control-up-down/proc 
                                  (_ _ up-down draw))
+
   (define-higher-order-primitive control-left-right control-left-right/proc 
-                                 (_ _ left-right draw))  
+                                 (_ _ left-right draw))
+
+  (define-higher-order-primitive control control/proc 
+                                 (_ _ left-right up-down draw))  
 
   
   ;; CONSTANTS ---------------------------------------------------------------
@@ -119,8 +127,8 @@
   (define (control-up-down/proc shape delta ud draw)
     (make-controller 'control-up-down UP-DOWN shape delta void2 ud draw))
   
-  ;; control : X number (number X -> true) (number X -> true) (X -> true) -> true
+  ;; control/proc : X number (number X -> true) (number X -> true) (X -> true) -> true
   ;; effect: create a window from which a user can control moves
-  (define (control shape delta lr ud draw)
+  (define (control/proc shape delta lr ud draw)
     (make-controller 'control FOUR shape delta lr ud draw))
   )

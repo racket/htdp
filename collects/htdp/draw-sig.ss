@@ -15,7 +15,6 @@
         clear-all
         sleep-for-a-while
         wait-for-mouse-click ; -> posn
-        ;WHITE YELLOW RED BLUE GREEN BLACK
-        get-@VP))
+        ))
   
   (define-signature draw^ core-draw^))

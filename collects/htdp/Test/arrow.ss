@@ -40,15 +40,19 @@
 ;; this creates the controller GUI
 (control-left-right (make-posn 10 20) 10 move draw-it)
 
-(load "tester.ss")
+; (load "tester.ss")
 
 ; (test-error (control-left-right 'aa 10 move))
 
 ;; cannot raise an exception:
-;; (control-left-right 'aa 10 move draw-it))
+;(control-left-right 'aa 10 move draw-it)
 ;; shape is polymorphic!!
 
-(test-error (control-left-right 'aa 'bb move draw-it))
-(test-error (control-left-right 'aa 10 'cc draw-it))
-(test-error (control-left-right 'aa 10 move 'cc))
-(test-error (control-left-right 'aa 10 move 'cc))
+; (test-error (control-left-right 'aa 'bb move draw-it))
+; (control-left-right 'aa 'bb move draw-it)
+; (test-error (control-left-right 'aa 10 'cc draw-it))
+; (control-left-right 'aa 10 'cc draw-it)
+; (test-error (control-left-right 'aa 10 move 'cc))
+; (control-left-right 'aa 10 move 'cc)
+; (test-error (control-left-right 'aa 10 move 'cc))
+; (control-left-right 'aa 10 move 'cc)

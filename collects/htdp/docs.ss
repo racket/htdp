@@ -1,9 +1,17 @@
 (module docs mzscheme
   (require (lib "error.ss" "htdp")
-           (lib "list.ss"))
+           (lib "list.ss")
+	   (lib "prim.ss" "lang"))
 
-  (provide atom? annotation? end-annotation write-file)
+  (provide
+    atom?
+    annotation?
+    end-annotation
+    write-file
+    )
 
+  (define-primitive atom? atom?/proc)
+  
     ;; mk-annotation : 
     ;;  (str number[str-lenght] -> bool) -> (any-value -> bool)
     (define (mk-annotation test)
@@ -47,7 +55,7 @@
     
     ;; atom? : TSV -> boolean
     ;; to determine whether x is a symbol, number, or string
-    (define (atom? x)
+    (define (atom?/proc x)
       (or (symbol? x) (number? x) (string? x)))
 
     ;; write-file : list-of-atom [file-name] -> void
