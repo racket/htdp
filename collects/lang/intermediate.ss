@@ -58,7 +58,7 @@
 
     (memf ((X -> boolean) (listof X) -> (union false (listof X)))
 	  "to determine whether the first argument produces true for some value in the second argument")
-    (assf (((cons X Y) -> boolean) (listof (cons X Y)) -> (union false (cons X Y)))
+    (assf ((X -> boolean) (listof (cons X Y)) -> (union false (cons X Y)))
 	  "to determine whether the first argument produces true for some value in the second argument")
     
     (apply ((X-1 ... X-N -> Y) X-1 ... X-i (list X-i+1 ... X-N) -> Y)
