@@ -20,7 +20,7 @@
             (make-object menu-item% "Copy" fm (lambda x (send t copy)) #\c)
             (make-object editor-canvas% f t)
             (send f show #t)
-            (with-handlers ([not-break-exn?
+            (with-handlers ([exn:fail?
                              (lambda (x)
                                (send t insert (exn-message x))
                                (send t insert #\newline))])

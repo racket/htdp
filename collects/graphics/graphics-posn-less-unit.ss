@@ -311,13 +311,12 @@
 
   (define sixlib-frame%
     (class mred:frame%
-      (rename [super-on-close on-close])
       (field [canvas #f])
       (define/public (set-canvas x) (set! canvas x))
-      (define/override (on-close)        
+      (define/augment (on-close)        
 	(close-viewport (send canvas get-viewport))
         (send the-time stop)
-	(super-on-close))
+	(inner (void) on-close))
       (super-instantiate ())))
   
   (define repaint
