@@ -474,7 +474,15 @@
   (define stepper-frame%
     (class (d:frame:basics-mixin (f:frame:standard-menus-mixin f:frame:basic%)) (drscheme-frame)
       (rename [super-on-close on-close])
+      (public
+        [set-printing-proc 
+         (lambda (proc)
+           (printf "setting printing proc~n")
+           (set! printing-proc proc))]
+        [printing-proc (lambda (item evt)
+                         (printf "shouldn't be called~n"))])
       (override
+        [file-menu:print (lambda (a b) (printing-proc a b))] ; something other than #f
         [on-close
          (lambda ()
            (send drscheme-frame stepper-frame #f)
@@ -530,6 +538,9 @@
               (send previous-button enable (not (zero? view)))
               (send home-button enable (not (zero? view)))
               (send next-button enable (not (eq? final-view view))))
+            
+            (define (print-current-view item evt)
+              (send (send canvas get-editor) print))
             
             (define (receive-result result)
               (let ([step-text
@@ -593,6 +604,7 @@
                                (marks : stepper:marks^))))
       
       (send drscheme-frame stepper-frame s-frame)
+      (send s-frame set-printing-proc print-current-view)
       (set! view-currently-updating 0)
       (send button-panel stretchable-width #f)
       (send button-panel stretchable-height #f)
