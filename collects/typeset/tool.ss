@@ -31,8 +31,8 @@
 (define font-size (make-parameter 10))
 (define (make-delta family)
   (let ([d (make-object style-delta% 'change-family family)])
-    ;(send d set-size-mult 0)
-    ;(send d set-size-add (font-size))
+    (send d set-size-mult 0)
+    (send d set-size-add (font-size))
     ;(send d set-delta-foreground "BLACK")
     d))
 
