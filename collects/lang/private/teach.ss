@@ -1127,18 +1127,20 @@
 					    (syntax->list def-ids)))
 				     (syntax->list (syntax ((def-id ...) ...))))])
                    (with-syntax ([(mapping ...)
-				  (apply
-				   append
-				   (map
-				    syntax->list
-				    (syntax->list
-				     (syntax
-				      (((define-syntaxes (def-id/prop)
-                                          (make-undefined-check
-                                            (quote-syntax check-not-undefined)
-                                            (quote-syntax tmp-id)))
-					...)
-				       ...)))))])
+				  (let ([mappers
+					 (syntax->list
+					  (syntax
+					   ((define-syntaxes (def-id/prop ...)
+					      (values
+					       (make-undefined-check
+						(quote-syntax check-not-undefined)
+						(quote-syntax tmp-id))
+					       ...))
+					    ...)))])
+				    (map syntax-track-origin
+					 mappers
+					 val-defns
+					 (syntax->list (syntax (d-v ...)))))])
                      (syntax-property
                       (quasisyntax/loc stx
                         (let ()
