@@ -101,7 +101,7 @@
                             (recon-source-expr (mark-source mark) (list mark) null null render-settings)
                             #`#,name))
                       (recon-source-expr (mark-source mark) (list mark) null null render-settings)))
-                (let* ([rendered (read (open-input-string ((render-settings-render-to-string render-settings) val)))])
+                (let* ([rendered ((render-settings-render-to-sexp render-settings) val)])
                   (if (symbol? rendered)
                       #`#,rendered
                       #`(#%datum . #,rendered))))))))
@@ -109,20 +109,19 @@
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
 
-                                                                                         
-                                                                                         
-       ;      ;                                                                     ;;;  
-       ;                                                          ;                    ; 
-  ;;;  ;   ;  ;  ; ;;;         ;    ; ;    ; ;    ;          ;;; ;;;;  ;;;   ; ;;;     ; 
- ;     ;  ;   ;  ;;   ;         ;  ;   ;  ;   ;  ;          ;     ;   ;   ;  ;;   ;    ; 
- ;     ; ;    ;  ;    ;          ;;     ;;     ;;           ;     ;   ;   ;  ;    ;   ;  
-  ;;   ;;     ;  ;    ;  ;;;;;   ;;     ;;     ;;    ;;;;;   ;;   ;   ;;;;;  ;    ;  ;   
-    ;  ; ;    ;  ;    ;          ;;     ;;     ;;              ;  ;   ;      ;    ;  ;   
-    ;  ;  ;   ;  ;;   ;         ;  ;   ;  ;   ;  ;             ;  ;   ;      ;;   ;      
- ;;;   ;   ;  ;  ; ;;;         ;    ; ;    ; ;    ;         ;;;    ;;  ;;;;  ; ;;;   ;   
-                 ;                                                           ;           
-                 ;                                                           ;           
-                                                                                         
+
+       ;      ;                                                                     ;;;
+       ;                                                          ;                    ;
+  ;;;  ;   ;  ;  ; ;;;         ;    ; ;    ; ;    ;          ;;; ;;;;  ;;;   ; ;;;     ;
+ ;     ;  ;   ;  ;;   ;         ;  ;   ;  ;   ;  ;          ;     ;   ;   ;  ;;   ;    ;
+ ;     ; ;    ;  ;    ;          ;;     ;;     ;;           ;     ;   ;   ;  ;    ;   ;
+  ;;   ;;     ;  ;    ;  ;;;;;   ;;     ;;     ;;    ;;;;;   ;;   ;   ;;;;;  ;    ;  ;
+    ;  ; ;    ;  ;    ;          ;;     ;;     ;;              ;  ;   ;      ;    ;  ;
+    ;  ;  ;   ;  ;;   ;         ;  ;   ;  ;   ;  ;             ;  ;   ;      ;;   ;
+ ;;;   ;   ;  ;  ; ;;;         ;    ; ;    ; ;    ;         ;;;    ;;  ;;;;  ; ;;;   ;
+                 ;                                                           ;
+                 ;                                                           ;
+
   (define (skip-step? break-kind mark-list render-settings)
     (case break-kind
       [(result-value-break)

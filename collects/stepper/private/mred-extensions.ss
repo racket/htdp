@@ -217,7 +217,7 @@
   (define stepper-sub-text%
     (class f:text:standard-style-list% ()
       
-      (init-field render-to-string exps highlight-color)
+      (init-field exps highlight-color)
 
       (inherit insert get-style-list set-style-list change-style highlight-range last-position lock erase
                begin-edit-sequence end-edit-sequence get-start-position select-all clear)
@@ -255,36 +255,31 @@
       (inherit get-dc)
       
       (define (format-sexp sexp)
+        
         (parameterize ([pretty-print-columns pretty-printed-width]
                        
                        ; the pretty-print-size-hook decides whether this object should be printed by the new pretty-print-hook
                        [pretty-print-size-hook
                         (lambda (value display? port)
-                          (let* ([looked-up (hash-table-get highlight-table value (lambda () #f))]
-                                 [to-display (or (and looked-up (not (eq? looked-up 'non-confusable)) (car looked-up)) value)])
-                            (fprintf (current-error-port) "to-display: ~v\nrendered: ~v\n" value (string-length (render-to-string value)))
+                          (let ([looked-up (hash-table-get highlight-table value (lambda () #f))])
                             (cond
-                              [(is-a? to-display snip%) 
+                              [(is-a? value snip%) 
                                (let ([dc (get-dc)]
                                      [wbox (box 0)])
                                  (send value get-extent dc 0 0 wbox #f #f #f #f #f)
                                  (let-values ([(xw dc dc2 dc3) (send dc get-text-extent "x")])
                                    (max 1 (inexact->exact (ceiling (/ (unbox wbox) xw))))))]
-                              [(number? to-display)
-                               (string-length (render-to-string to-display))]
                               [(and looked-up (not (eq? looked-up 'non-confusable)))
-                               (string-length (render-to-string (car looked-up)) #;(format "~s" (car looked-up)))]
+                               (string-length (format "~s" (car looked-up)))]
                               [else #f])))]
                        
                        [pretty-print-print-hook
-                        ; this print-hook is called for confusable highlights and for images and for numbers.
+                        ; this print-hook is called for confusable highlights and for images.
                         (lambda (value display? port)
                           (let ([to-display (cond [(hash-table-get highlight-table value (lambda () #f)) => car]
                                                   [else value])])
-                            (cond [(is-a? to-display snip%) 
-                                   (begin (insert (send to-display copy)) 
-                                          (set-last-style))]
-                                  [else (insert (render-to-string to-display) #;(format "~s" to-display))])))]
+                            (cond [(is-a? to-display snip%) (insert (send to-display copy)) (set-last-style)]
+                                  [else (insert (format "~s" to-display))])))]
                        [pretty-print-display-string-handler
                         (lambda (string port)
                           (insert string))]
@@ -310,9 +305,7 @@
                        ;; mflatt: MAJOR HACK - this setting needs to come from the language
                        ;;  somehow
                        [read-case-sensitive #t])
-          (fprintf (current-error-port) "special-rendered: ~v\n" (render-to-string 29283))
-          (pretty-print sexp)
-          (fprintf (current-error-port) "another-special-rendered: ~v\n" (render-to-string 9787))))
+          (pretty-print sexp)))
              
       (define (format-whole-step)
         (lock #f)
@@ -383,7 +376,7 @@
     (class editor-canvas% ()
       (inherit get-editor)
       (override*
-        [on-size 
+        [on-size
          (lambda (width height)
            (super on-size width height)
            (let ([editor (get-editor)])
@@ -412,7 +405,7 @@
   (define stepper-text%
     (class f:text:standard-style-list% ()
       
-      (init-field render-to-string finished-exprs exps post-exps error-msg after-exprs)
+      (init-field finished-exprs exps post-exps error-msg after-exprs)
 
       (inherit find-snip insert change-style highlight-range last-position lock erase auto-wrap
                begin-edit-sequence end-edit-sequence get-start-position get-style-list set-style-list
@@ -433,7 +426,6 @@
                              [vert-separator-width (unbox vert-separator-width-box)]
                              [minus-center-bar (- minus-cursor-margin vert-separator-width)]
                              [l-r-box-widths (floor (/ minus-center-bar 2))])
-                        (render-to-string 'just-before-set-new-width)
                         (send top-defs-snip set-new-width minus-cursor-margin canvas)
                         (send before-snip set-new-width l-r-box-widths canvas)
                         (send after-snip set-new-width l-r-box-widths canvas)
@@ -484,16 +476,16 @@
                                horiz-separator-2 bottom-defs-snip))
         (change-style snip-delta before-position (last-position)))
       (send top-defs-snip set-editor 
-            (make-object stepper-sub-text% render-to-string finished-exprs #f))
+            (make-object stepper-sub-text% finished-exprs #f))
       (send before-snip set-editor
-            (make-object stepper-sub-text% render-to-string exps redex-highlight-color))
+            (make-object stepper-sub-text% exps redex-highlight-color))
       (if (eq? error-msg #f)
           (send after-snip set-editor
-                (make-object stepper-sub-text% render-to-string post-exps reduct-highlight-color))
+                (make-object stepper-sub-text% post-exps reduct-highlight-color))
           (send after-snip set-editor
                 (make-object stepper-sub-error-text% error-msg)))
       (send bottom-defs-snip set-editor
-            (make-object stepper-sub-text% render-to-string after-exprs #f))
+            (make-object stepper-sub-text% after-exprs #f))
       (lock #t)))
   
   (define finished-text
@@ -604,7 +596,7 @@
   
   (define (stepper-text-test . args)
     (let* ([new-frame (make-object frame% "test-frame")]
-           [new-text (apply make-object stepper-text% (lambda (v) (format "~s" v)) args)]
+           [new-text (apply make-object stepper-text% args)]
            [new-canvas (make-object stepper-canvas% new-frame new-text)])
       (send new-canvas min-width 800)
       (send new-canvas min-height 200)
@@ -613,14 +605,14 @@
       new-canvas))
   
   
-  #;(define a
-    (stepper-text-test (build-stx-with-highlight `((define x 3) 14 15 #f 1))
-                       (build-stx-with-highlight `((* 13 (hilite (* 15 16)))))
-                       (build-stx-with-highlight `((hilite (+ 3 4)) (define y 4) 13 14 (+  (hilite 13) (hilite #f)) 13 
-                                                   298 1 1 (+ (x 398 (hilite (+ x 398))) (hilite (x 398 (+ x 398)))) (hilite #f)))
-                       #f
-                       (build-stx-with-highlight `((define y (+ 13 14)) 80))))
- 
+;  (define a
+;    (stepper-text-test (build-stx-with-highlight `((define x 3) 14 15 #f 1))
+;                       (build-stx-with-highlight `((* 13 (hilite (* 15 16)))))
+;                       (build-stx-with-highlight `((hilite (+ 3 4)) (define y 4) 13 14 (+  (hilite 13) (hilite #f)) 13 
+;                                                   298 1 1 (+ (x 398 (hilite (+ x 398))) (hilite (x 398 (+ x 398)))) (hilite #f)))
+;                       #f
+;                       (build-stx-with-highlight `((define y (+ 13 14)) 80))))
+  
   
   
 ;  (stepper-text-test `() `(uninteresting but long series of lines) `() "This is an error message" `((define x 3 4 5)))
