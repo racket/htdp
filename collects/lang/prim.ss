@@ -13,27 +13,30 @@
   (define-syntax (define-primitive stx)
     (syntax-case stx ()
       [(_ name implementation)
-       #'(define-syntax (name stx)
-	   (syntax-case stx ()
-	     [(__ . ___)
-	      ;; HACK: we disable all checks if #%top is 
-	      ;; the usual one, which indicates that we're
-	      ;; not in beginner
-	      (module-identifier=? #'#%top (datum->syntax-object stx '#%top))
-	      (syntax/loc stx (implementation . ___))]
-	     [__
-	      ;; HACK: see above
-	      (module-identifier=? #'#%top (datum->syntax-object stx '#%top))
-	      (syntax/loc stx implementation)]
-	     [(id . args)
-	      (syntax/loc stx (#%app implementation . args))]
-	     [_else
-	      (raise-syntax-error
-	       #f
-	       (string-append
-		"this primitive operator must be applied to arguments; "
-		"expected an open parenthesis before the operator name")
-	       stx)]))]))
+       (with-syntax ([impl #'(let ([name (lambda argv
+					   (apply implementation argv))])
+			       name)])
+	 #'(define-syntax (name stx)
+	     (syntax-case stx ()
+	       [(__ . ___)
+		;; HACK: we disable all checks if #%top is 
+		;; the usual one, which indicates that we're
+		;; not in beginner
+		(module-identifier=? #'#%top (datum->syntax-object stx '#%top))
+		(syntax/loc stx (impl . ___))]
+	       [__
+		;; HACK: see above
+		(module-identifier=? #'#%top (datum->syntax-object stx '#%top))
+		(syntax/loc stx impl)]
+	       [(id . args)
+		(syntax/loc stx (#%app impl . args))]
+	       [_else
+		(raise-syntax-error
+		 #f
+		 (string-append
+		  "this primitive operator must be applied to arguments; "
+		  "expected an open parenthesis before the operator name")
+		 stx)])))]))
 
   (define-syntax (define-higher-order-primitive stx)
     (define (is-proc-arg? arg)
@@ -70,36 +73,38 @@
 				   #`(#%top . #,new-arg)))
                              args new-args)]
                        [num-arguments (length args)])
-           (syntax/loc
-            stx
-            (define-syntax (name s)
-              (syntax-case s ()
-		[(__ . ___)
-		 ;; HACK: see above
-		 (module-identifier=? #'#%top (datum->syntax-object s '#%top))
-		 (syntax/loc s (implementation . ___))]
-		[__
-		 ;; HACK: see above
-		 (module-identifier=? #'#%top (datum->syntax-object s '#%top))
-		 (syntax/loc s implementation)]
-                [(__ new-arg ...)
-                 (begin
-                   checks ...
-		   ;; s is a well-formed use of the primitive;
-		   ;; generate the primitive implementation
-		   (syntax/loc s (implementation wrapped-arg ...)))]
-		[(__ . rest)
-                 (raise-syntax-error
-                  #f
-                  (format
-                   "primitive operator requires ~a arguments"
-                   num-arguments)
-                  s)]
-                [_else
-                 (raise-syntax-error
-                  #f
-                  (string-append
-                   "this primitive operator must be applied to arguments; "
-                   "expected an open parenthesis before the operator name")
-                  s)])))))])))
+	   (with-syntax ([impl #'(let ([name (lambda (new-arg ...)
+					       (implementation new-arg ...))])
+				   name)])
+	     (syntax/loc stx
+	       (define-syntax (name s)
+		 (syntax-case s ()
+		   [(__ . ___)
+		    ;; HACK: see above
+		    (module-identifier=? #'#%top (datum->syntax-object s '#%top))
+		    (syntax/loc s (impl . ___))]
+		   [__
+		    ;; HACK: see above
+		    (module-identifier=? #'#%top (datum->syntax-object s '#%top))
+		    (syntax/loc s impl)]
+		   [(__ new-arg ...)
+		    (begin
+		      checks ...
+		      ;; s is a well-formed use of the primitive;
+		      ;; generate the primitive implementation
+		      (syntax/loc s (impl wrapped-arg ...)))]
+		   [(__ . rest)
+		    (raise-syntax-error
+		     #f
+		     (format
+		      "primitive operator requires ~a arguments"
+		      num-arguments)
+		     s)]
+		   [_else
+		    (raise-syntax-error
+		     #f
+		     (string-append
+		      "this primitive operator must be applied to arguments; "
+		      "expected an open parenthesis before the operator name")
+		     s)]))))))])))
 
