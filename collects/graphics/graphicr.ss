@@ -87,11 +87,11 @@
 	[height 0]
 	[width 0]
 	[label 0]
-	current-pen
-	current-brush
-	bitmap
-	DC
-	buffer-DC
+	[current-pen 'uninitialized-pen]
+	[current-brush 'uninitialized-brush]
+	[bitmap 'uninitalized-bitmap]
+	[DC 'uninitialized-DC]
+	[buffer-DC 'uninitialized-buffer-DC]
 	[get-current-pen (lambda () current-pen)]
 	[get-current-brush (lambda () current-brush)]
 	[remember-pen (lambda (pen) (set! current-pen pen))]
@@ -198,6 +198,10 @@
   (define viewport-buffer-DC
     (lambda (viewport)
       (ivar (viewport-canvas viewport) buffer-DC)))
+
+  (define viewport-bitmap
+    (lambda (viewport)
+      (ivar (viewport-canvas viewport) bitmap)))
   
   (define viewport-frame
     (lambda (viewport)
@@ -638,7 +642,7 @@
 	  [(p width height color)
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'xor))
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "BLACK" 1 'transparent))
 	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'xor)))
 	    viewport p width height)])))
   
@@ -660,7 +664,7 @@
 	  [(p width height color)
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen color 1 'xor))
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "BLACK" 1 'transparent))
 	      (send dc set-brush (send mred:the-brush-list find-or-create-brush color 'xor)))
 	    viewport p width height)])))
   
@@ -874,9 +878,11 @@
   
   (define copy-viewport 
     (lambda (source target)
-      (let* ([source-DC (ivar source DC)]
-	     [target-DC (ivar target DC)])
-	(send target-DC draw-bitmap (send source-DC get-bitmap) 0 0))))
+      (let* ([source-bitmap (viewport-bitmap source)]
+	     [target-DC (viewport-DC target)]
+	     [target-buffer-DC (viewport-DC target)])
+	(send target-DC draw-bitmap source-bitmap 0 0)
+	(send target-buffer-DC draw-bitmap source-bitmap 0 0))))
   
   (define sixlib-eventspace #f)
   
