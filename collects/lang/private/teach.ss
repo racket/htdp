@@ -331,7 +331,7 @@
                 (syntax name)
                 (syntax-property
                  (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...))
-                 'stepper-define-hint
+                 'stepper-hint
                  'lambda-define))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]
@@ -344,7 +344,7 @@
                 (syntax name)
                 (syntax-property
                  (syntax/loc stx (define name expr))
-                 'stepper-define-hint
+                 'stepper-hint
                  'non-lambda-define))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]))]
@@ -396,7 +396,7 @@
              (car names)
              (syntax-property
               (syntax/loc stx (define name-seq expr ...))
-              'stepper-define-hint
+              'stepper-hint
               'shortened-proc-define))
             'stepper-skipto
             (list syntax-e cdr syntax-e cdr car)))]
