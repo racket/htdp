@@ -62,15 +62,20 @@ any reductions.
 
 ---
 
-The debugger is structured as a REPL which interacts with the 
-program being debugged through three bindings as
-described below.  The intent is that this interface can easily
-be extended to provide whatever interface the user desires.
+The debugger is structured as an interaction between the program
+being debugged and a debugger UI.  The program is annotated to
+produce a stream of debugger "events" (as defined below) and to
+periodically block on a debugger semaphore.  The debugger currently
+uses the stepper's annotation; changes to the annotation will
+be the focus of the next stage of the debugger.
 
-In fact, the REPL itself is unnecessary; the debugger could 
-require users to specify a module which provides a unit which
-receives these two bindings at runtime...
+A simple debugger UI is provided as part of the debugger, but
+users who want to use the debugger will probably also want
+to supply their own UI.  For this reason, we describe the interface
+to the UI first, and then the working of the current skeleton 
+UI.
 
+Debugger Events:
 
 A debugger-event is either:
 - (make-breakpoint-halt), or
@@ -78,24 +83,53 @@ A debugger-event is either:
 - (make-error-breakpoint-info message)
 - (make-expression-finished returned-value-list)
 
-For more information on the contents of a mark-list and for a
-variety of useful functions for examining them, see 
-"private/marks.ss".
+These structures are provided by (lib "private/marks.ss" "stepper).
+This library also provides many functions which are used to 
+manipulate the marks in a mark-list.
 
-The following bindings are introduced into the top-level namespace
-of the debugger:
+Debugger UI (view-controller) signatures:
 
-go-semaphore : this semaphore releases the debugged program when a
-  breakpoint causes execution to halt.
+  (define-signature debugger-model^
+    (go-semaphore
+     user-custodian))
+  
+  (define-signature debugger-vc^
+    (receive-result
+     debugger-output-port))
 
-receive-result : this parameter takes a value of type (debugger-event
-  -> void).  Whenever a debugger event occurs, this parameter's value
-  is invoked with the result. This call is non- blocking; that is, a
-  callback is queued on the debugger's eventspace which makes this
-  call.
+A debugger UI is a unit which imports signature debugger-model^
+(name-change suggestions welcomed) and exports signature
+debugger-vc^ (ditto).  
 
-user-custodian : a box containing the custodian which manages the
- operation of the program being debugged.
+go-semaphore: when the user's program halts at a breakpoint,
+it will block on this semaphore.  Therefore, the UI can
+post to this semaphore to allow computation to proceed.
 
-The execution of the user's program is initially blocked on the 
-go-semaphore.
+user-custodian: the user-custodian governs the user's program.
+Therefore, the UI can shut down this custodian to halt debugging.
+
+receive-result : (event -> void) The user's program calls this
+procedure whenever a debugger event occurs.  Note that a 
+(make-breakpoint-halt) event will occur whenever the user's 
+program blocks at a breakpoint.
+
+debugger-output-port : output from the user's program goes 
+to this port. (NB: at the moment, this appears to be broken.)  
+
+
+Existing mini-UI:
+
+The debugger starts a graphical read-eval-print loop, with the 
+following bindings:
+
+go-semaphore: passed through from the debugger
+
+events: a list of all events that have occurred during the
+execution of the program.
+
+user-custodian: passed through from the debugger.
+
+In addition, the mini-UI prints a message to the grepl whenever
+an event occurs (which is cheerfully accepted as input the next
+time the user presses return...).
+
