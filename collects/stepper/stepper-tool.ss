@@ -206,19 +206,19 @@
                           (set! stepper-is-waiting? #t)
                           #f))))
                 
-                ; hand-off-and-block : (-> text%? void?)
+                ; hand-off-and-block : (-> text%? boolean? void?)
                 ; hand-off-and-block generates a new semaphore, hands off a thunk to drscheme's eventspace,
                 ; and blocks on the new semaphore.  The thunk adds the text% to the waiting queue, and checks
                 ; to see if the stepper is waiting for a new step.  If so, it takes that new text% out of 
                 ; the queue, puts it on the list of available ones, and updates the view.  The new semaphore
                 ; won't be released until the user clicks next on the last step.
                 
-                (define (hand-off-and-block step-text)
+                (define (hand-off-and-block step-text end-of-stepping?)
                   (let ([new-semaphore (make-semaphore)])
                     (parameterize ([current-eventspace drscheme-eventspace])
                       (queue-callback
                        (lambda ()
-                         (when (eq? step-text x:finished-text)
+                         (when end-of-stepping?
                            (set! never-step-again #t))
                          (channel-put view-channel (list step-text new-semaphore))
                          (when stepper-is-waiting?
@@ -305,6 +305,9 @@
                 (define (print-current-view item evt)
                   (send (send canvas get-editor) print))
                 
+                (define (final-step? result)
+                  (ormap (lambda (fn) (fn result)) (list before-error-result? error-result? finished-result?)))
+                
                 ; receive-result takes a result from the model and renders it on-screen
                 ; : (step-result -> void)
                 (define (receive-result result)
@@ -347,7 +350,7 @@
                                   null)]
                                [(finished-stepping? result)
                                 x:finished-text])])
-                    (hand-off-and-block step-text)))
+                    (hand-off-and-block step-text (final-step? result))))
                 
                 ; need to capture the custodian as the thread starts up:
                 (define (program-expander-prime init iter)
