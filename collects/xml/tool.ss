@@ -79,21 +79,26 @@
       (define xml-snip%
         (class* renderable-editor-snip% (drscheme:snip:special<%>) 
           (inherit get-editor)
+          
           (define/public (read-special file line col pos)
-            (send (get-editor) lock #t)
-            (let* ([fill-chars (make-fill-chars (get-editor))]
-                   [raw-syntaxes (get-syntaxes (get-editor))]
-                   [unquote-syntaxes (add-unquotes raw-syntaxes)]
-                   [port (make-custom-input-port #f fill-chars #f void)]
-                   [xml (read-xml port)]
-                   [xexpr (xml->xexpr (document-element xml))]
-                   [subd-xexpr (substitute xexpr unquote-syntaxes)]
-                   [qq-body (datum->syntax-object #'here subd-xexpr)])
-              (send (get-editor) lock #f)
-              (values
-               (with-syntax ([qq-body qq-body])
-                 (syntax (quasiquote qq-body)))
-               1)))
+            (let ([editor (get-editor)]
+                  [old-locked #f])
+              (dynamic-wind
+               (lambda () 
+                 (set! old-locked (send editor is-locked?))
+                 (send editor lock #t))
+               (lambda ()
+                 (let* ([fill-chars (make-fill-chars editor)]
+                        [port (make-custom-input-port #f fill-chars #f void)]
+                        [xml (read-xml port)]
+                        [xexpr (xml->xexpr (document-element xml))]
+                        [expd-xexpr (expand-embedded xexpr)]
+                        [qq-body (datum->syntax-object #'here expd-xexpr (list editor #f #f #f #f))])
+                   (values
+                    (with-syntax ([qq-body qq-body])
+                      (syntax (quasiquote qq-body)))
+                    1)))
+               (lambda () (send editor lock old-locked)))))
           
           (define/override (write stream-out)
             (send (get-editor) write-to-file stream-out 0 'eof))
@@ -106,94 +111,53 @@
           (show-border #t)
           (set-snipclass xml-snipclass)))
 
-      ;; funny-magic-string-constant and funny-magic-symbol-constant
-      ;; have to match up.
-      (define funny-magic-string-constant "&backdoor;")
-      (define funny-magic-symbol-constant 'backdoor)
+      ;; wrapped = (make-wraped sexp text number number number)
+      (define-struct wrapped (snip text line col pos))
       
-      ;; make-fill-chars : text -> string -> number
+      ;; make-fill-chars : text -> string -> (union (tst number number number -> (values snip number)) number)
       ;; given an editor, makes the second argument to `make-custom-port'
       ;; that reads from the editor. If it finds a transformable?
-      ;; snip, it returns the funny-magic-string-constant.
-      (define op (current-output-port))
+      ;; snip, it returns snip via the ``special'' functionality of custom ports.
       (define (make-fill-chars text)
         (let ([ptr 0]
-              [in-funny-string #f]
-              [b (box 0)]
               [sema (make-semaphore 1)])
           (lambda (str)
             (semaphore-wait sema)
-            (letrec ([snip (send text find-snip ptr 'after-or-none)]
-                     [funny ;; pre: (number? in-funny-string)
-                      (lambda ()
-                        (cond
-                          [(< in-funny-string (string-length funny-magic-string-constant))
-                           (string-set! str 0 (string-ref funny-magic-string-constant in-funny-string))
-                           (set! in-funny-string (+ in-funny-string 1))
-                           1]
-                          [else
-                           (set! in-funny-string #f)
-                           (regular)]))]
-                     [regular ;; pre: (not in-funny-string)
-                      (lambda ()
-                        (cond
-                          [(not snip)
-                           eof]
-                          [(transformable? snip)
-                           (set! ptr (+ ptr 1))
-                           (set! in-funny-string 0)
-                           (funny)]
-                          [else
-                           (string-set! str 0 (send text get-character ptr))
-                           (set! ptr (+ ptr 1))
-                           1]))])
+            (let ([snip (send text find-snip ptr 'after-or-none)])
               (begin0
                 (cond
-                  [in-funny-string
-                   (funny)]
+                  [(not snip)
+                   eof]
+                  [(transformable? snip)
+                   (set! ptr (+ ptr 1))
+                   (lambda (src line col pos)
+                     (values (make-wrapped snip text line col pos) 1))]
                   [else
-                   (regular)])
+                   (string-set! str 0 (send text get-character ptr))
+                   (set! ptr (+ ptr 1))
+                   1])
                 (semaphore-post sema))))))
               
-      ;; get-syntaxes : text -> (listof syntax)
-      ;; extracts the syntax from each renderable snip in the editor
-      (define (get-syntaxes text)
-        (let loop ([snip (send text find-first-snip)])
+      ;; expand-embedded : xexpr -> xexpr
+      ;; constructs a new xexpr that has the embedded snips expanded 
+      ;; and wrapped with unquotes
+      (define (expand-embedded _xexpr)
+        (let loop ([xexpr _xexpr])
           (cond
-            [(not snip) null]
-            [(transformable? snip)
-             (let* ([pos (send text get-snip-position snip)]
-                    [line (send text position-paragraph pos)]
-                    [col (- pos (send text paragraph-start-position line))])
+            [(pair? xexpr)
+             (list* (car xexpr)
+                    (cadr xexpr)
+                    (map loop (cddr xexpr)))]
+            [(wrapped? xexpr)
+             (let* ([snip (wrapped-snip xexpr)]
+                    [text (wrapped-text xexpr)]
+                    [pos (wrapped-pos xexpr)]
+                    [line (wrapped-line xexpr)]
+                    [col (wrapped-col xexpr)])
                (let-values ([(stx wid) (send snip read-special text line col pos)])
-                 (cons stx (loop (send snip next)))))]
-            [else (loop (send snip next))])))
-      
-      ;; add-unquotes : (listof syntax) -> (listof syntax)
-      ;; adds an unquote to the front of each syntax object
-      (define (add-unquotes syntaxes)
-        (map (lambda (x)
-               (with-syntax ([x x])
-                 (syntax (unquote x))))
-             syntaxes))
-   
-      ;; substitute : xexpr (listof syntax) -> xexpr
-      ;; constructs a new xexpr that substitutes the funny symbol with the syntaxes
-      (define (substitute _xexpr syntaxes)
-        (let ([syntaxes syntaxes])
-          (let loop ([xexpr _xexpr])
-            (cond
-              [(pair? xexpr)
-               (list* (car xexpr)
-                      (cadr xexpr)
-                      (map loop (cddr xexpr)))]
-              [(eq? funny-magic-symbol-constant xexpr)
-               (when (null? syntaxes)
-                 (error 'substitute "not enough funny symbols: ~e" _xexpr))
-               (begin0
-                 (car syntaxes)
-                 (set! syntaxes (cdr syntaxes)))]
-              [else xexpr]))))
+                 (with-syntax ([stx stx])
+                   (syntax (unquote stx)))))]
+            [else xexpr])))
       
       (define xml-snipclass%
         (class snip-class%
