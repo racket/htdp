@@ -3,7 +3,7 @@
 ; a varref at the top of the mark-list must either be a top-level-variable
 ;  or have a value in some mark somewhere (or both).
 
-(module reconstruct mzscheme
+(module reconstruct mzscheme/contract
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
            (lib "list.ss")
            (lib "etc.ss")
@@ -240,12 +240,15 @@
 ;                      (hash-table-put! binding-number-table binding new-index)
 ;                      new-index)]))))
   
-  ; construct-lifted-name (SYNTAX-OBJECT num -> string)
+  ; construct-lifted-name 
+  ; (-> syntax? (or/f false? num?) symbol?)
   
   (define (construct-lifted-name binding dynamic-index)
-    (string->symbol
-     (string-append (symbol->string (syntax-e binding)) "_" 
-                    (number->string dynamic-index))))
+    (if dynamic-index
+        (string->symbol
+         (string-append (symbol->string (syntax-e binding)) "_" 
+                        (number->string dynamic-index)))
+        (syntax-e binding)))
 
   ; binding-lifted-name ((listof mark) SYNTAX-OBJECT -> num)
   
@@ -270,13 +273,8 @@
   ;      ((listof sexp-with-highlights) (listof sexp-without-highlights?)))
   
   (define (unwind stx highlight lift-at-highlight?)
-    (let*-values ([(stx-a highlight-a-lst) (macro-unwind stx (list highlight))]
-                  [(_) (unless (= (length highlight-a-lst) 1)
-                         (error 'unwind "macro-unwind returned a list of highlights not of length 1: ~v" 
-                                (map syntax-object->datum highlight-a-lst)))]
-                  [(stx-b-lst highlight-b-lst) 
-                   (lift stx-a (car highlight-a-lst) lift-at-highlight?)])
-      (second-pass-unwind stx-b-lst highlight-b-lst)))
+    (let*-values ([(stx-l-lst highlight-l-lst) (lift stx highlight lift-at-highlight?)])
+      (macro-unwind stx-l-lst highlight-l-lst)))
   
   ; unwind-no-highlight is really just macro-unwind, but with the 'right' interface that
   ; makes it more obvious what it does.
@@ -285,38 +283,6 @@
   (define (unwind-no-highlight stx)
     (let-values ([(stxs _) (macro-unwind stx null)])
       stxs))
-  
-  
-
-  (define (second-pass-unwind stxs highlights)
-    (local
-        ((define (inner stx)
-           (if (eq? (syntax-e stx) highlight-placeholder)
-               #`#,highlight-placeholder
-               (kernel:kernel-syntax-case stx #f
-                 [(define-values (name . others) body)
-                  (let* ([vars (syntax->list (syntax vars-stx))])
-                    (unless (null? #'others)
-                      (error 'reconstruct "reconstruct fails on multiple-values define\n"))
-                    (case (syntax-property stx 'stepper-define-hint)
-                      ((lambda-define) 
-                       #`(define name body))
-                      ((shortened-proc-define) 
-                       (kernel:kernel-syntax-case #`body #f
-                         [(lambda (arg ...) lambda-body)
-                          #`(define (name arg ...) lambda-body)]
-                         [else ; (e.g., highlight-placeholder)
-                          #`(define name body)]))
-                      ((non-lambda-define) 
-                       #`(define name body))
-                      [(lifted-define)
-                       #`(define name body)]
-                      (else (error 'reconstruct-top-level "unexpected stepper-define-hint: ~e\n" (syntax-property stx 'stepper-define-hint)))))]
-                 [else stx]))))
-      
-      (values (map inner stxs) (map inner highlights))))
-
-  
   
   ;(->* (syntax? (listof syntax?)) 
   ;     (syntax? (listof syntax?)))
@@ -338,17 +304,44 @@
                       highlight-placeholder-stx)
                (if (syntax-property stx 'user-stepper-hint)
                    (case (syntax-property stx 'user-stepper-hint)
-                     ((comes-from-cond) (unwind-cond stx 
+                     [(lambda-define lifted-define non-lambda-define)
+                      (kernel:kernel-syntax-case stx #f
+                        [(define-values (name . others) body)
+                         (let ([lifted-name (if (eq? (syntax-property stx 'user-stepper-hint) 'lifted-define)
+                                                (construct-lifted-name #'name (syntax-property #'name 'stepper-lifted-name))
+                                                #'name)])
+                           (unless (null? (syntax-e #'others))
+                             (error 'reconstruct "reconstruct fails on multiple-values define\n"))
+                           #`(define #,lifted-name body))]
+                        [else (error 'macro-unwind "unexpected shape for expression: ~v with hint ~v" 
+                                     (syntax-object->datum stx) 
+                                     (syntax-property stx 'user-stepper-hint))])]
+                     
+                     [(shortened-proc-define)
+                      (kernel:kernel-syntax-case stx #f
+                        [(define-values (name . others) 
+                           (lambda arglist body ...))
+                         (unless (null? (syntax-e #'others))
+                           (error 'reconstruct "reconstruct fails on multiple-values define\n"))
+                         #`(define (name . arglist) lambda-body)]
+                        [else (error 'macro-unwind "unexpected shape for expression: ~v with hint ~v" 
+                                     (syntax-object->datum stx) 
+                                     (syntax-property stx 'user-stepper-hint))])]
+                     
+                     [(comes-from-cond) (unwind-cond stx 
                                                      (syntax-property stx 'user-source)
-                                                     (syntax-property stx 'user-position)))
-                     ((comes-from-and) (unwind-and/or stx
+                                                     (syntax-property stx 'user-position))]
+                     
+                     [(comes-from-and) (unwind-and/or stx
                                                       (syntax-property stx 'user-source)
                                                       (syntax-property stx 'user-position)
-                                                      'and))
-                     ((comes-from-or) (unwind-and/or stx
+                                                      'and)]
+                     
+                     [(comes-from-or) (unwind-and/or stx
                                                      (syntax-property stx 'user-source)
                                                      (syntax-property stx 'user-position)
-                                                     'or))
+                                                     'or)]
+                     
                      ((quasiquote-the-cons-application) (unwind-quasiquote-the-cons-application stx))
                      (else (recur-on-pieces stx)))
                    (recur-on-pieces stx))))
@@ -579,10 +572,6 @@
   ; reconstruct-completed : reconstructs a completed expression or definition.  This now
   ; relies upon the model-settings:global-lookup procedure to find values in the user-namespace.
   
-  ; I'm unhappy about the copied code and lack of generality in this procedure (2002-05-08)
-  ; also, the examination of the stepper-define-hint and the consequent restructuring should 
-  ; probably be in the unwinder, rather than here.  Ugh.
-  
   (define (reconstruct-completed expr value render-settings)
     (cond 
       [(syntax-property expr 'stepper-skipto) =>
@@ -595,34 +584,22 @@
          (syntax-object->datum (cadr define-struct-info)))]
       [else
        (syntax-object->datum
-        (kernel:kernel-syntax-case expr #f
-          [(define-values vars-stx body)
-           (let* ([vars (syntax->list (syntax vars-stx))]
-                  [values (map global-lookup (map syntax-e vars))]
-                  [recon-vars (map (lx (recon-value _ render-settings)) values)])
-             (unless (= (length vars) 1)
-               (error 'reconstruct "final reconstruct fails on multiple-values define\n"))
-             (with-syntax ([name (car vars)])
-               (case (syntax-property expr 'stepper-define-hint)
-                 ((lambda-define) 
-                  (with-syntax ([recon (reconstruct-completed-procedure (car values) render-settings)])
-                    (syntax (define name recon))))
-                 ((shortened-proc-define) 
-                  (kernel:kernel-syntax-case (reconstruct-completed-procedure (car values) render-settings) #f
-                    [(lambda (arg ...) body)
-                     (syntax (define (name arg ...) body))]
-                    [else (error 'reconstruct "non-procedure as result of procedure definition: ~e\n"
-                                 (syntax-object->datum (reconstruct-completed-procedure (car values) render-settings)))]))
-                 ((non-lambda-define) 
-                  (with-syntax ([source-name (car recon-vars)])
-                    (syntax (define name source-name))))
-                 (else 
-                  (with-syntax ([source-name (car recon-vars)])
-                    (syntax (define name source-name)))
-                  ;(error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property expr 'stepper-define-hint))
-                  ))))]
-          [else
-           (recon-value value render-settings)]))]))
+        (unwind-no-highlight
+         (kernel:kernel-syntax-case expr #f
+           [(define-values vars-stx body)
+            (let* ([vars (syntax->list #'vars-stx)]
+                   [values (map global-lookup (map syntax-e vars))]
+                   [recon-vals (map (lambda (val var) 
+                                      (if (procedure? val)
+                                          (reconstruct-completed-procedure 
+                                           val
+                                           (construct-lifted-name var (syntax-property var 'stepper-lifted-name)))
+                                          (recon-value val render-settings))) values)])
+              (if (= (length recon-vals) 1)
+                  #`(define-values vars-stx #,(car recon-vals))
+                  #'(define-values vars-stx (values #,@recon-vals))))]
+           [else
+            (recon-value value render-settings)])))]))
   
   ; : (-> syntax? syntax? sexp?)
   ; DESPERATELY SEEKING ABSTRACTION
@@ -641,14 +618,20 @@
           [else
            reconstructed])]))
   
-  ; : (-> procedure? syntax?)
+  ; : (-> procedure? syntax? render-settings? syntax?)
   ; constructs the lambda expression for a closure
-  (define (reconstruct-completed-procedure val render-settings)
+  (define (reconstruct-completed-procedure val assigned-name render-settings)
     (let* ([closure-record (closure-table-lookup val 
                                                  (lambda () 
                                                    (error 'reconstruct-completed "can't find user-defined proc in closure table: ~e\n" val)))]
-           [mark (closure-record-mark closure-record)])
-      (let-values () (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null render-settings)))))
+           [mark (closure-record-mark closure-record)]
+           [base-name (closure-record-name closure-record)]
+           [name (if base-name
+                     (construct-lifted-name base-name (closure-record-lifted-name closure-record))
+                     #f)])
+      (if (eq? name (syntax-e assigned-name))
+          (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null render-settings))
+          #`#,name)))
 
                                                                                                                 
                                                                                                                 

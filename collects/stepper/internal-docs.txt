@@ -70,6 +70,14 @@ stepper-hint :
  of 'cond'. This tag is applied to all the if's, but not to the else
  clause.
 
+ [ lambda-define ] : source had form (define id (lambda ...))
+
+ [ non-lambda-define ] : source had form (define id exp) where exp !=
+ (lambda ...)
+
+ [ shortened-proc-define ] : source had form (define (id arg ...) body
+ ...)
+
 stepper-binding-type : 
  this is actually unrelated to macro expansion. It differentiates
  between the various kinds of lexical bindings. (Not transferred.)
@@ -91,18 +99,6 @@ stepper-else :
   place to annotated the cond that is passed to mzscheme's
   expander which will result in an annotation on the 'if.'
   (Transferred.)
-
-stepper-define-hint :
- What kind of a source expression did this 'define' come from? (Not
- transferred.)
-
- [ lambda-define ] : source had form (define id (lambda ...))
-
- [ non-lambda-define ] : source had form (define id exp) where exp !=
- (lambda ...)
-
- [ shortened-proc-define ] : source had form (define (id arg ...) body
- ...)
 
 stepper-define-struct-hint :
   this expression came from a define-struct. The value associated with

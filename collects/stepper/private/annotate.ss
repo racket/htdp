@@ -240,7 +240,7 @@
               
               ; define-lambda :
               [(define-values names (lambda args make-gen-lam body))
-               (eq? (syntax-property stx 'stepper-define-hint) 'lambda-define)
+               (eq? (syntax-property stx 'stepper-hint) 'lambda-define)
                (with-syntax ([lambda-body
                               (syntax-property
                                (with-syntax ([new-body (recur-regular (syntax body))])
