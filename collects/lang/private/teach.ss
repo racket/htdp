@@ -654,7 +654,7 @@
 				     'predicate
 				     (map (lambda (x) 'selector) (cddr proc-names)))
 			      proc-names
-			      (list* (- (length to-define-names) 2)
+			      (list* (- (length proc-names) 2)
 				     1
 				     (map (lambda (x) 1) (cddr proc-names)))
 			      (lambda (def-proc-names)
@@ -694,7 +694,7 @@
 	[_else (bad-use-error 'define-struct stx)]))
 
     (define (beginner-define-struct/proc stx)
-      (do-define-struct stx #t #f #f))
+      (do-define-struct stx #t #f #t))
 
     (define (intermediate-define-struct/proc stx)
       (do-define-struct stx #f #f #f))
