@@ -59,7 +59,7 @@
     (define ORIGIN (make-posn OFFSET          (- SOUTH OFFSET)))
     (define X-AXIS (make-posn OFFSET OFFSET))
     (define Y-AXIS (make-posn (- EAST OFFSET) (- SOUTH OFFSET)))
-    (define GRAPH-COLOR RED)
+    (define GRAPH-COLOR 'red)
     
     (define DELTA .1)
     (define DOT   1)
