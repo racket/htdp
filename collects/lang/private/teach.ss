@@ -1202,12 +1202,6 @@
 		'case
 		clause
 		"expected a choices--answer clause, but found an empty clause")]
-	      [(question?)
-	       (teach-syntax-error
-		'case
-		clause
-		"expected a clause with a choice sequence and answer, but found a clause ~
-                                with only one part")]
 	      [_else
 	       (teach-syntax-error
 		'case
@@ -1271,7 +1265,6 @@
 		  "expected a name for the binding, but found ~a"
 		  (something-else (syntax a)))]
 		[()
-		 (not (identifier? (syntax a)))
 		 (teach-syntax-error
 		  'shared
 		  (syntax a)
