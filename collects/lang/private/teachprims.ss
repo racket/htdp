@@ -1,5 +1,7 @@
 
 (module teachprims mzscheme
+
+  (require "../imageeq.ss")
   
   (define-syntax (define-teach stx)
     (syntax-case stx ()
@@ -52,7 +54,7 @@
 		  a b)
 	  (current-continuation-marks)
 	  b
-	  'list)))))
+	  prim-name)))))
 
   (define check-second 
     (mk-check-second beginner-list? "list"))
@@ -88,6 +90,27 @@
 
   (define check-last/cycle
     (mk-check-last cyclic-list? "list or cyclic list"))
+
+  (define (check-three a b c prim-name ok1? 1type ok2? 2type ok3? 3type)
+    (let ([bad
+	   (lambda (v which type)
+	     (raise
+	      (make-exn:application:type
+	       (format "~a: ~a argument must be of type <~a>, given ~e, ~e, and ~e"
+		       prim-name which type
+		       a b c)
+	       (current-continuation-marks)
+	       v
+	       prim-name)))])
+      (unless (ok1? a)
+	(bad a "first" 1type))
+      (unless (ok2? b)
+	(bad b "second" 2type))
+      (unless (ok3? c)
+	(bad c "second" 3type))))
+
+  (define (positive-real? v)
+    (and (real? v) (>= v 0)))
 
   (define-teach beginner not
     (lambda (a)
@@ -157,6 +180,26 @@
 
   (define-teach beginner exit
     (lambda () (exit)))
+  
+  (define-teach beginner equal?
+    (lambda (a b)
+      (if (image? a)
+	  (and (image? b)
+	       (image=? a b))
+	  (equal? a b))))
+
+  (define-teach beginner =~
+    (lambda (a b c)
+      (check-three a b c '=~ real? 'real real? 'real positive-real? 'non-negative-real)
+      (<= (- a c) b (+ a c))))
+
+  (define-teach beginner equal~?
+    (lambda (a b c)
+      (check-three a b c 'equal~? values 'any values 'any positive-real? 'non-negative-real)
+      (if (and (real? a)
+	       (real? b))
+	  (<= (- a c) b (+ a c))
+	  (beginner-equal? a b))))
 
   (define-teach advanced cons 
     (lambda (a b)
@@ -199,6 +242,9 @@
 	   beginner-error
 	   beginner-struct?
 	   beginner-exit
+	   beginner-equal?
+	   beginner-equal~?
+	   beginner-=~
 	   advanced-cons
 	   advanced-set-cdr!
 	   advanced-set-rest!

@@ -4,6 +4,9 @@
 
   (define util-dc #f)
 
+  (define (image? a)
+    (is-a? a image-snip%))
+
   (define (image=? a b)
     (unless (is-a? a image-snip%)
       (raise-type-error 'image=? "image" 0 a b))
@@ -40,6 +43,6 @@
 	       (send b-dc get-argb-pixels 0 0 w h s2)
 	       (string=? s1 s2))))))
   
-  (provide image=?))
+  (provide image? image=?))
 
       

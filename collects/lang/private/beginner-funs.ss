@@ -7,8 +7,8 @@
 
   ;; Implements the procedures:
   (require "teachprims.ss"
-    "../posn.ss"
-    "../imageeq.ss")
+	   "../posn.ss"
+	   "../imageeq.ss")
 
   ;; procedures with documentation:
   (provide-and-document
@@ -298,9 +298,7 @@
 	"to create a reversed version of a list")
       (assq (X (listof (cons X Y)) -> (union false (cons X Y)))
 	"to determine whether some item is the first item of a pair"
-	"in a list of pairs")
-      (equal? (any any -> boolean)
-	"to determine whether two values are structurally equal"))
+	"in a list of pairs"))
 
     ("Posns"
       (make-posn (number number -> posn) "to construct a posn")
@@ -428,15 +426,23 @@
     ("Misc"
       (identity (any -> any)
 	"to return the argument unchanged")
+      (image? (any -> boolean)
+	"to determine whether a value is an image")
       (image=? (image image -> boolean)
 	"to determine whether two images are equal")
       ((beginner-error error) (symbol string -> void) "to signal an error")
       ((beginner-struct? struct?) (any -> boolean)
        "to determine whether some value is a structure")
+      ((beginner-equal? equal?) (any any -> boolean)
+	"to determine whether two values are structurally equal")
       (eq? (any any -> boolean)
 	"to compare two values")
       (eqv? (any any -> boolean)
-	"to compare two values")      
+	"to compare two values")
+      ((beginner-=~ =~) (real real non-negative-real -> boolean)
+	"to check whether two real numbers are within some amount (the third argument) of either other")
+      ((beginner-equal~? equal~?) (any any non-negative-real -> boolean)
+	"to compare like equal? on the first two arguments, except using =~ in the case of real numbers")
       (eof eof
 	"the end-of-file value")
       (eof-object? (any -> boolean)
