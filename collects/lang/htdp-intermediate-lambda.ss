@@ -17,6 +17,7 @@
 	   (rename intermediate-letrec letrec)
 	   (rename intermediate-recur recur)
 	   (rename beginner-cond cond)
+	   (rename beginner-else else)
 	   (rename beginner-if if)
 	   (rename beginner-and and)
 	   (rename beginner-or or)

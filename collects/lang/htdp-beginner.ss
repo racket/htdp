@@ -18,6 +18,7 @@
 	   (rename beginner-app #%app)
 	   (rename beginner-top #%top)
 	   (rename beginner-cond cond)
+	   (rename beginner-else else)
 	   (rename beginner-if if)
 	   (rename beginner-and and)
 	   (rename beginner-or or)

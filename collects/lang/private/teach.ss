@@ -118,6 +118,7 @@
 			      beginner-app     beginner-app-continue
 			      beginner-top     beginner-top-continue
 			      beginner-cond
+			      beginner-else
 			      beginner-if
 			      beginner-and
 			      beginner-or
@@ -862,14 +863,15 @@
 				     (syntax-case clause ()
 				       [(question answer)
 					(begin
-					  (local-expand (syntax question) 'expression null)
+					  (unless (module-identifier=? (syntax question) #'beginner-else)
+					    (local-expand (syntax question) 'expression null))
 					  (local-expand (syntax answer) 'expression null))])))
 			       clauses)))])
 	   (let ([checked-clauses
 		  (map
 		   (lambda (clause)
-		     (syntax-case clause (else)
-		       [(else answer)
+		     (syntax-case clause (beginner-else)
+		       [(beginner-else answer)
 			(let ([lpos (memq clause clauses)])
 			  (when (not (null? (cdr lpos)))
 			    (teach-syntax-error
@@ -904,7 +906,8 @@
 			(let ([parts (syntax->list clause)])
 			  ;; to ensure the illusion of left-to-right checking, make sure 
 			  ;; the question and first answer (if any) are ok:
-			  (local-expand (car parts) 'expression null)
+			  (unless (module-identifier=? (car parts) #'beginner-else)
+			    (local-expand (car parts) 'expression null))
 			  (unless (null? (cdr parts))
 			    (local-expand (cadr parts) 'expression null))
 			  ;; question and answer (if any) are ok, raise a count-based exception:
@@ -930,6 +933,20 @@
 	       (with-syntax ([clauses clauses])
 		 (syntax/loc stx (cond . clauses))))))]
 	[_else (bad-use-error 'cond stx)]))
+
+    (define beginner-else/proc
+      (make-set!-transformer
+       (lambda (stx)
+	 (define (bad expr)
+	   (teach-syntax-error
+	    'else
+	    expr
+	    #f
+	    "not allowed here, because this is not an immediate question in a `cond' clause"))
+	 (syntax-case stx (set! x)
+	   [(set! e expr) (bad #'e)]
+	   [(e . expr) (bad #'e)]
+	   [e (bad stx)]))))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; if
