@@ -395,9 +395,8 @@
         (let loop ([xexpr _xexpr])
           (cond
             [(pair? xexpr)
-             (list* (car xexpr)
-                    (cadr xexpr)
-                    (map loop (cddr xexpr)))]
+             (cons (loop (car xexpr))
+                   (loop (cdr xexpr)))]
             [(wrapped? xexpr)
              (let* ([snip (wrapped-snip xexpr)]
                     [text (wrapped-text xexpr)]
