@@ -26,10 +26,10 @@
 
   ; hidden invariant: this list should be a sublist of the language-level dialog (i.e., same order):
   (define stepper-works-for
-    (list ((string-constant beginning-student)
-           (string-constant beginning-student/abbrev)
-           (string-constant intermediate-student)
-           (string-constant intermediate-student/lambda))))
+    (list (string-constant beginning-student)
+          (string-constant beginning-student/abbrev)
+          (string-constant intermediate-student)
+          (string-constant intermediate-student/lambda)))
   
   (provide stepper-tool@)
   
@@ -150,7 +150,7 @@
         
         ;; make-print-convert-hook: simple-settings -> (TST (TST -> TST) (TST -> TST) -> TST)
         ;; this code copied from various locations in language.ss and rep.ss
-        (define (make-print-convert-hook simple-settings)
+        #;(define (make-print-convert-hook simple-settings)
           (lambda (expr basic-convert sub-convert)
             (cond
               [(is-a? expr snip%) 
@@ -173,7 +173,7 @@
               [else (basic-convert expr)])))
         
         ;; render-to-sexp : TST -> sexp
-        (define (render-to-sexp val)
+        #;(define (render-to-sexp val)
           (parameterize ([current-print-convert-hook (make-print-convert-hook simple-settings)])
             (set-print-settings
              language
@@ -426,7 +426,7 @@
         (send (send s-frame edit-menu:get-redo-item) enable #f)
         
         ; START THE MODEL
-        (model:go program-expander-prime receive-result (get-render-settings render-to-string render-to-sexp #t)
+        (model:go program-expander-prime receive-result (get-render-settings render-to-string #;render-to-sexp #t)
                   (not (string=? language-level-name (string-constant intermediate-student/lambda))))
         (send s-frame show #t)
         
@@ -449,7 +449,6 @@
         (class* super% (stepper-unit-frame<%>)
           
           (inherit get-button-panel get-interactions-text get-definitions-text)
-          (rename [super-on-close on-close])
           
           (define stepper-frame #f)
           (define/public (on-stepper-close)
@@ -536,13 +535,13 @@
                   (when stepper-window
                     (send stepper-window original-program-changed))))))
           
-          (define/override (on-insert x y)
-            (super on-insert x y)
-            (notify-stepper-frame-of-change))
+          (define/augment (on-insert x y)
+            (notify-stepper-frame-of-change)
+            (inner (void) on-insert x y))
           
-          (define/override (on-delete x y)
-            (super on-delete x y)
-            (notify-stepper-frame-of-change))
+          (define/augment (on-delete x y)
+            (notify-stepper-frame-of-change)
+            (inner (void) on-delete x y))
           
           (super-instantiate ())))
       

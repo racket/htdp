@@ -16,7 +16,7 @@
   ; the reconstructor gets the right invocation of the unit, it needs to be a 
   ; unit as well.  Pretty soon, everything is units.
 
-  (define-struct render-settings (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? render-to-sexp lifting?))
+  (define-struct render-settings (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? #;render-to-sexp render-to-string lifting?))
   
   (provide/contract [check-global-defined (-> symbol? boolean?)]
                     [global-lookup (-> any? any)]
@@ -25,12 +25,13 @@
                             ([true-false-printed? (-> render-settings? boolean?)]
                              [constructor-style-printing? (-> render-settings? boolean?)]
                              [abbreviate-cons-as-list? (-> render-settings? boolean?)]
-                             [render-to-sexp (-> any? any)]
+                             #;[render-to-sexp (-> any? any)]
+                             [render-to-string (any? . -> . any?)]
                              [lifting? (-> render-settings? boolean?)])]
                     
                     
                     [get-render-settings ((any? . -> . string?) ; render-to-string
-                                          (any? . -> . any) ; render-to-sexp
+                                          #;(any? . -> . any) ; render-to-sexp
                                           boolean? ; lifting?
                                           . -> .
                                           render-settings?)]
@@ -53,11 +54,12 @@
                  (object-name val))
             (print-convert val)))))
     
+  ; FIXME : #f totally unacceptable as 'render-to-string'
   (define fake-beginner-render-settings
-    (make-render-settings #t #t #f (make-fake-render-to-sexp #t #t #f) #t))
+    (make-render-settings #t #t #f #;(make-fake-render-to-sexp #t #t #f) #f #t))
   
   (define fake-beginner-wla-render-settings
-    (make-render-settings #t #t #t (make-fake-render-to-sexp #t #t #t) #t))
+    (make-render-settings #t #t #t #;(make-fake-render-to-sexp #t #t #t) #f #t))
   
   (define fake-intermediate-render-settings
     fake-beginner-wla-render-settings)
@@ -66,13 +68,13 @@
     fake-beginner-wla-render-settings)
   
   (define fake-mz-render-settings
-    (make-render-settings (booleans-as-true/false) (constructor-style-printing) (abbreviate-cons-as-list) print-convert #f))
+    (make-render-settings (booleans-as-true/false) (constructor-style-printing) (abbreviate-cons-as-list) #;print-convert #f #f))
   
   (define-struct test-struct () (make-inspector))
   
   ;; get-render-settings : infer aspects of the current language's print conversion by explicitly testing 
   ;;  assorted test expressions
-  (define (get-render-settings render-to-string render-to-sexp lifting?)
+  (define (get-render-settings render-to-string #;render-to-sexp lifting?)
     (let* ([true-false-printed? (string=? (render-to-string #t) "true")]
            [constructor-style-printing? (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
            [rendered-list (render-to-string '(3))]
@@ -86,7 +88,8 @@
        true-false-printed?
        constructor-style-printing?
        abbreviate-cons-as-list?
-       render-to-sexp
+       #;render-to-sexp
+       render-to-string
        lifting?)))
   
   (define (check-global-defined identifier)
