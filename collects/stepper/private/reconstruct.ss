@@ -18,7 +18,10 @@
   (provide/contract 
    [reconstruct-completed (-> syntax? any? render-settings? any)]
    [reconstruct-current (-> syntax? mark-list? symbol? (listof any?) render-settings?
-       (list/p (listof exp-with-holes?) (listof exp-without-holes?)))]
+       (or/f (listof exp-without-holes?)
+             (list/p (listof exp-with-holes?) (listof exp-without-holes?))
+             (list/p (listof exp-with-holes?) (listof exp-without-holes?) 
+                     (listof exp-with-holes?) (listof exp-without-holes?))))]
    [final-mark-list? (-> mark-list? boolean?)]
    [skip-step? (-> break-kind? mark-list? render-settings? boolean?)])
   
@@ -280,19 +283,16 @@
   ; [unwind-no-highlight (-> syntax? syntax?)]
   
   (define (unwind-no-highlight stx)
-    (macro-unwind stx null))
+    (let-values ([(stxs _) (macro-unwind stx null)])
+      stxs))
   
   
 
   (define (second-pass-unwind stxs highlights)
     (local
-        ((define highlight-queue-src (make-queue))
-         (define highlight-queue-dest (make-queue))
-         
-         (define (inner stx)
+        ((define (inner stx)
            (if (eq? (syntax-e stx) highlight-placeholder)
-               (begin (queue-push highlight-queue-dest (inner (queue-pop highlight-queue-src)))
-                      highlight-placeholder-stx)
+               #`#,highlight-placeholder
                (kernel:kernel-syntax-case stx #f
                  [(define-values (name . others) body)
                   (let* ([vars (syntax->list (syntax vars-stx))])
@@ -314,10 +314,7 @@
                       (else (error 'reconstruct-top-level "unexpected stepper-define-hint: ~e\n" (syntax-property stx 'stepper-define-hint)))))]
                  [else stx]))))
       
-      (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
-      (let* ([main (map inner stxs)]
-             [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
-        (values main new-highlights))))
+      (values (map inner stxs) (map inner highlights))))
 
   
   
@@ -651,7 +648,7 @@
                                                  (lambda () 
                                                    (error 'reconstruct-completed "can't find user-defined proc in closure table: ~e\n" val)))]
            [mark (closure-record-mark closure-record)])
-      (caar (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null render-settings)))))
+      (let-values () (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null render-settings)))))
 
                                                                                                                 
                                                                                                                 
@@ -888,7 +885,7 @@
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
                      (let-values ([(a b) (unwind recon-expr redex #f)])
                        (list a b))))
-                  ((double-break late-let-break)
+                  ((double-break)
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
                      (let-values ([(before-stxs before-highlights) (unwind recon-expr redex #f)]
                                   [(after-stxs after-highlights) (unwind recon-expr redex #t)])
