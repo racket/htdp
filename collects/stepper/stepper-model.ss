@@ -1,6 +1,3 @@
-(require-library "errortrace.ss" "errortrace")
-
-
 (unit/sig stepper:model^
   (import [i : stepper:model-input^]
           mred^
