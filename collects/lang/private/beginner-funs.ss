@@ -79,7 +79,7 @@
 	"to compute the arctan (inverse of tan) of a number")    
     
       (sinh (num -> num)
-	"to compute the hyperbolic cosine of a number")
+	"to compute the hyperbolic sine of a number")
       (cosh (num -> num)
 	"to compute the hyperbolic cosine of a number")
     
