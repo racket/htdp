@@ -81,5 +81,14 @@
       (values
        (lambda (parsed) (getter (z:parsed-back parsed)))
        (lambda (parsed read) (setter (z:parsed-back parsed) read)))))
-                                                       
+  
+  (define (list-take n a-list)
+    (if (= 0 n)
+        null
+        (cons (car a-list)
+              (list-take (- n 1)
+                         (cdr a-list)))))
+  
+  (define (flatten-take n a-list)
+    (apply append (list-take n a-list)))
 ) 

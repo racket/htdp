@@ -54,61 +54,64 @@
       (and first-symbol
            (eq? first-symbol 'cond))))
   
+  (define (rectify-source-expr expr mark-list)
+    (cond [(z:varref expr)
+           (let* ([var-record (find-var-binding mark-list (z:varref-var expr))]
+                  [var-val (car var-record)]
+                  [var-top-level? (varref-top-level? (cadr var-record))])
+             (if var-top-level?
+                 (z:binding-orig-name
+                  (z:bound-varref-binding expr))
+                 (rectify-value var-val)))]
+          
+          [(z:app? expr)
+           (map rectify-source-expr (cons (z:app-fun expr) (z:app-args expr)))]
+          
+          [(z:struct-form? expr)
+           (if (comes-from-define-struct expr)
+               (e:internal-error expr "this expression should have been skipped during reconstruction")
+               (let ([super-expr (z:struct-form-super expr)]
+                     [raw-type (read->raw (z:struct-form-type expr))]
+                     [raw-fields (map read->raw (z:struct-form-fields expr))])
+                 (if super-expr
+                     `(struct (,raw-type ,(rectify-source-expr super-expr))
+                              ,raw-fields)
+                     `(struct ,raw-type ,raw-fields))))]
+          
+          [(z:if-form? expr)
+           (if (comes-from-cond expr)
+               `(cond ,@(rectify-cond-clauses (z:start expr) expr))
+               `(if ,(rectify-source-expr (z:if-form-test expr))
+                    ,(rectify-source-expr (z:if-form-then expr))
+                    ,(rectify-source-expr (z:if-form-else expr))))]
+          
+          [(z:quote-form? expr)
+           `(quote ,(read->raw (z:quote-form-expr expr)))]
+          
+          ; we won't call rectify-source-expr on define-values expressions
+          
+          
+          
+          [else
+           (print-struct #t)
+           (e:dynamic-error
+            expr
+            (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))]))
   
-  
-  (define (reconstruct top-defs current-def mark-list so-far)
+  (define (reconstruct all-defs-list current-def expr-list mark-list)
     
     (local
-        ((define (rectify-value val)
+        ((define (rectify-source-current-marks expr)
+           (rectify-source-expr expr mark-list))
+         
+         (define (rectify-value val)
            (cond [(and (procedure? val) (primitive? val))
                   (primitive-name val)]
                  [(and (procedure? val) (inferred-name val))
                   (inferred-name val)]
                  [else val]))
          
-         (define (rectify-source-expr expr)
-           (cond [(z:varref expr)
-                  (let* ([var-record (find-var-binding mark-list (z:varref-var expr))]
-                         [var-val (car var-record)]
-                         [var-top-level? (varref-top-level? (cadr var-record))])
-                    (if var-top-level?
-                        (z:binding-orig-name
-                         (z:bound-varref-binding expr))
-                        (rectify-value var-val)))]
-                 
-                 [(z:app? expr)
-                  (map rectify-source-expr (cons (z:app-fun expr) (z:app-args expr)))]
-                 
-                 [(z:struct-form? expr)
-                  (if (comes-from-define-struct expr)
-                      (e:internal-error expr "this expression should have been skipped during reconstruction")
-                      (let ([super-expr (z:struct-form-super expr)]
-                            [raw-type (read->raw (z:struct-form-type expr))]
-                            [raw-fields (map read->raw (z:struct-form-fields expr))])
-                        (if super-expr
-                            `(struct (,raw-type ,(rectify-source-expr super-expr))
-                              ,raw-fields)
-                            `(struct ,raw-type ,raw-fields))))]
-                 
-                 [(z:if-form? expr)
-                  (if (comes-from-cond expr)
-                      `(cond ,@(rectify-cond-clauses (z:start expr) expr))
-                      `(if ,(rectify-source-expr (z:if-form-test expr))
-                           ,(rectify-source-expr (z:if-form-then expr))
-                           ,(rectify-source-expr (z:if-form-else expr))))]
-                 
-                 [(z:quote-form? expr)
-                  `(quote ,(read->raw (z:quote-form-expr expr)))]
-
-                 ; we won't call rectify-source-expr on define-values expressions
-                 
-
-                 
-                 [else
-                  (print-struct #t)
-                  (e:dynamic-error
-                   expr
-                   (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))]))
+         
          
          
          (define (rectify-define expr current-expr? so-far)
@@ -123,13 +126,13 @@
                         ,(if super-expr
                              (list raw-type (if current-expr?
                                                 so-far
-                                                (rectify-source-expr super-expr)))
+                                                (rectify-source-current-marks super-expr)))
                              raw-type)
                         ,raw-fields))]
                    [(comes-from-define-procedure? expr)
                     (let ([name (read->raw (car vars))]
                           [args (map read->raw (car (z:case-lambda-form-args val)))]
-                          [body (rectify-source-expr (car (z:case-lambda-form-bodies)))])
+                          [body (rectify-source-current-marks (car (z:case-lambda-form-bodies)))])
                       `(define ,(cons name args) ,body))]
                    
                    [(comes-from define? expr)
@@ -137,12 +140,12 @@
                        ,(read->raw (car vars))
                        ,(if current-expr?
                             so-far
-                            (rectify-source-expr val)))]
+                            (rectify-source-current-marks val)))]
                    
                    [else
                     `(define-values 
                        ,(map read->raw vars)
-                       ,(rectify-source-expr val))])))
+                       ,(rectify-source-current-marks val))])))
          
          (define (rectify-old-definition var)
            (let ([val (find-var-binding mark-list var)])
@@ -153,25 +156,17 @@
                         [bodies-list (z:case-lambda-form-args expr)])
                    (if (> (length bodies-list) 1)
                        (e:dynamic-error expr "too many bodies!")
-                       
-                   
-
-                 
-                 
-                      
-                 
-                 
+                       `(define ,(cons var (car args-list))
+                          ,(rectify-source-expr (car bodies-list) (list info)))))
+                 val)))
                  
          (define (rectify-cond-clauses cond-source expr)
            (if (and (z:if-form? expr) (equal? cond-source (z:start expr)))
-               (cons (list (rectify-source-expr (z:if-form-test expr))
-                           (rectify-source-expr (z:if-form-then expr)))
+               (cons (list (rectify-source-current-marks (z:if-form-test expr))
+                           (rectify-source-current-marks (z:if-form-then expr)))
                      (rectify-cond-clauses cond-source (z:if-form-else expr)))
-               `((else ,(rectify-source-expr expr)))))
-                
+               `((else ,(rectify-source-current-marks expr)))))
 
-                  
-                  
          (define (reconstruct-inner mark-list so-far)
            (if (null? mark-list)
                so-far
@@ -183,7 +178,7 @@
                     (if (not (null? so-far))
                         (e:dynamic-error expr 
                                          "variable reference given as context")
-                        (else (rectify-source-expr expr)))]
+                        (else (rectify-source-current-marks expr)))]
                    
                    ; applications
                    
@@ -206,7 +201,7 @@
                              (let-values ([(evaluated unevaluated) (split-lists sub-exprs arg-vals)])
                                (append (map rectify-value evaluated)
                                        (cons so-far
-                                             (map rectify-source-expr (cdr unevaluated))))))))]
+                                             (map rectify-source-current-marks (cdr unevaluated))))))))]
                    
                    ; define-struct 
                    
@@ -225,11 +220,11 @@
                    
                    [(z:if-form? expr)
                     (if (comes-from-cond? expr)
-                        (let ([clause (list so-far (rectify-source-expr (z:if-form-then expr)))]
+                        (let ([clause (list so-far (rectify-source-current-marks (z:if-form-then expr)))]
                               [cond-source (z:start expr)]
                               [rest-clauses (rectify-cond-clauses cond-source (z:if-form-else expr))])
                           `(cond ,clause ,@rest-clauses))
-                        `(if ,so-far ,(rectify-source-expr (z:if-form-else expr))))]
+                        `(if ,so-far ,(rectify-source-current-marks (z:if-form-else expr))))]
                    
                    ; quote
                    
@@ -237,7 +232,7 @@
                     (if (not (null? so-far))
                         (e:dynamic-error expr 
                                          "quoted expression given as context")
-                        (else (rectify-source-expr expr)))]
+                        (else (rectify-source-current-marks expr)))]
                    
                    
                    ; define-values : define's don't get marks, so they can't occur here
@@ -254,6 +249,24 @@
                     (e:dynamic-error
                      expr
                      (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))]))))
+         
+         (define old-defs
+           (let ([old-defs (flatten-take current-def all-defs-list)])
+             (map rectify-old-def old-defs)))
+         
+         (define current-def 
+           (let loop ([so-far null] [mark-list mark-list])
+             (if (null? mark-list)
+                 (rectify-define (list-ref expr-list current-def) #t so-far)
+                 (unwind-current-def (reconstruct-inner so-far mark-list) (cdr mark-list)))))
+                  
+         (define last-defs
+           (map rectify-source-current-marks (list-drop expr-list (+ current-def 1))))
+         )
+      
+      (append old-defs current-def last-defs))))
+
+
          
          
                    
