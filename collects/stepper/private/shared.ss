@@ -9,7 +9,7 @@
   ; CONTRACTS
   
   (define varref-set? (listof identifier?))
-  (define binding-set? (or/f varref-set? (symbols 'all)))
+  (define binding-set? (union varref-set? (symbols 'all)))
   
   (provide/contract
    [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
@@ -71,19 +71,19 @@
   ; - a symbol, or
   ; - the highlight-placeholder
   
-  (define exp-without-holes-base-case? (or/f symbol? number? string? null?))
+  (define exp-without-holes-base-case? (union symbol? number? string? null?))
   
   (define exp-without-holes?
-    (or/f  exp-without-holes-base-case?
+    (union  exp-without-holes-base-case?
            (and/f pair? (cons/p (lx ((flat-named-contract-predicate exp-without-holes?) _))
                                 (lx ((flat-named-contract-predicate exp-without-holes?) _))))))
   
   (define exp-with-holes-base-case? 
-    (or/f exp-without-holes-base-case?
+    (union exp-without-holes-base-case?
           (lx (eq? _ highlight-placeholder))))
   
   (define exp-with-holes?
-    (or/f exp-with-holes-base-case?
+    (union exp-with-holes-base-case?
           (and/f pair? (cons/p (lx ((flat-named-contract-predicate exp-with-holes?) _)) 
                                (lx ((flat-named-contract-predicate exp-with-holes?) _))))))
   
@@ -98,7 +98,7 @@
   (define-struct error-result (finished-exprs err-msg))
   (define-struct finished-result (finished-exprs))
   
-  (define step-result? (or/f before-after-result? before-error-result? error-result? finished-result?))
+  (define step-result? (union before-after-result? before-error-result? error-result? finished-result?))
   
   ; the closure record is placed in the closure table
 

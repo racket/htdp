@@ -292,9 +292,6 @@
                                       (apply init args))
                                     iter)))
           
-	  (set-render-to-string! render-to-string)
-	  (set-render-to-sexp! render-to-sexp)           
-          
           (send s-frame set-printing-proc print-current-view)
           (set! view-currently-updating 0)
           (send button-panel stretchable-width #f)
@@ -305,7 +302,7 @@
           (send next-button enable #f)
           (send (send s-frame edit-menu:get-undo-item) enable #f)
           (send (send s-frame edit-menu:get-redo-item) enable #f)
-          (model:go program-expander-prime receive-result)
+          (model:go program-expander-prime receive-result (get-render-settings render-to-string render-to-sexp))
           (send s-frame show #t)
           
           s-frame))

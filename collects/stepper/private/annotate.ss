@@ -773,7 +773,7 @@
                                                 (#,output-identifier #,outer-initialization #,wrapped-begin)) 
                                                free-varrefs)))))]
                                
-                               ; if-abstraction: (-> syntax? syntax? (or/f false? syntax?) (values syntax? varref-set?))
+                               ; if-abstraction: (-> syntax? syntax? (union false? syntax?) (values syntax? varref-set?))
                                [if-abstraction
                                 (lambda (test then else) 
                                   (let*-2vals

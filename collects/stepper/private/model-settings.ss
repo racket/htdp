@@ -14,51 +14,30 @@
   ; implementatian.
   
   ; HOWEVER, like I said, it's just too painful. Once this is a unit, then 
-  ; everything else wants to be a unit too. For instance, ta make sure that 
+  ; everything else wants to be a unit too. For instance, to make sure that 
   ; the reconstructor gets the right invocation of the unit, it needs to be a 
   ; unit as well.  Pretty soon, everything is units.
 
-  ; contracts for procedures in the settings unit:
-  ; true-false-printed? ; : ( -> boolean)
-  ; constructor-style-printing? ; : ( -> boolean)
-  ; abbreviate-cons-as-list? ; : ( -> boolean)
-  ; render-to-sexp ; (TST -> TST)
-  (define render-settings? (vector/p procedure? procedure? procedure? procedure?))
-
+  (define-struct render-settings (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? render-to-sexp))
+  
   (provide/contract [check-global-defined (-> symbol? boolean?)]
                     [global-lookup (-> any? any)]
 
-                    [render-settings? contract?]
-                    [get-render-settings (-> render-settings?)]
-                    [set-render-to-string! (-> (-> any? string?) void?)]
-                    [set-render-to-sexp! (-> (-> any? any) void?)]
+                    [render-settings? (-> any? boolean?)]
+                    [render-settings-true-false-printed? (-> render-settings? boolean?)]
+                    [render-settings-constructor-style-printing? (-> render-settings? boolean?)]
+                    [render-settings-abbreviate-cons-as-list? (-> render-settings? boolean?)]
+                    [render-settings-render-to-sexp (-> any? any)]
+                    
+                    [get-render-settings (-> (-> any? string?) ; render-to-string
+                                             (-> any? any) ; render-to-sexp
+                                             render-settings?)]
                     
                     [fake-beginner-render-settings render-settings?]
                     [fake-beginner-wla-render-settings render-settings?]
                     [fake-intermediate-render-settings render-settings?]
                     [fake-intermediate/lambda-render-settings render-settings?]
                     [fake-mz-render-settings render-settings?])
-  
-
-  (define (render-to-string val)
-    (error 'model-settings "render not set yet"))
-  (define (render-to-sexp val)
-    (error 'model-settings "set-print-settings not set yet"))
-  
-  (define set-render-to-string!
-    (contract
-     (-> (-> any? string?) void?)
-     (lx (set! render-to-string _))
-     'model-settings
-     'caller))
-  
-  (define set-render-to-sexp!
-    (contract
-     (-> (-> any? any)
-         void?)
-     (lx (set! render-to-sexp _))
-     'model-settings
-     'caller))
   
   (define (make-fake-render-to-sexp true/false constructor-style abbreviate)
     (lambda (val)
@@ -74,10 +53,10 @@
   (define (lf) #f)
   
   (define fake-beginner-render-settings
-    (vector lt lt lf (make-fake-render-to-sexp #t #t #f)))
+    (make-render-settings lt lt lf (make-fake-render-to-sexp #t #t #f)))
   
   (define fake-beginner-wla-render-settings
-    (vector lt lt lt (make-fake-render-to-sexp #t #t #t)))
+    (make-render-settings lt lt lt (make-fake-render-to-sexp #t #t #t)))
   
   (define fake-intermediate-render-settings
     fake-beginner-wla-render-settings)
@@ -86,11 +65,11 @@
     fake-beginner-wla-render-settings)
   
   (define fake-mz-render-settings
-    (vector booleans-as-true/false constructor-style-printing abbreviate-cons-as-list print-convert))
+    (make-render-settings booleans-as-true/false constructor-style-printing abbreviate-cons-as-list print-convert))
   
   (define-struct test-struct () (make-inspector))
   
-  (define (get-render-settings)
+  (define (get-render-settings render-to-string render-to-sexp)
     (let* ([true-false-printed/bool (string=? (render-to-string #t) "true")]
            [constructor-style-printing/bool (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
            [rendered-list (render-to-string '(3))]
@@ -99,7 +78,7 @@
                                                (min 5 (string-length rendered-list)))]
            [abbreviate-cons-as-list/bool (and constructor-style-printing/bool
                                               (string=? rendered-list-substring "(list"))])
-      (vector
+      (make-render-settings
        (lambda () true-false-printed/bool)
        (lambda () constructor-style-printing/bool)
        (lambda () abbreviate-cons-as-list/bool)

@@ -15,23 +15,11 @@
 	   (lib "contracts.ss"))
 
   (provide/contract 
-   [reconstruct-completed (-> syntax? any? any)]
-   [reconstruct-current (-> syntax? mark-list? symbol? (listof any?)
+   [reconstruct-completed (-> syntax? any? render-settings? any)]
+   [reconstruct-current (-> syntax? mark-list? symbol? (listof any?) render-settings?
        (list/p (listof exp-with-holes?) (listof exp-without-holes?)))]
    [final-mark-list? (-> mark-list? boolean?)]
-   [skip-step? (-> break-kind? mark-list? boolean?)]
-   [set-render-settings! (-> render-settings? any)]
-   )
-  
-  (define-values (true-false-printed? constructor-style-printing? abbreviate-cons-as-list? render-to-sexp)
-    (let ([not-set-yet (lx (error 'reconstruct "render-settings not yet set"))])
-      (values not-set-yet not-set-yet not-set-yet not-set-yet)))
-  
-  (define (set-render-settings! render-settings)
-     (set! true-false-printed? (vector-ref render-settings 0))
-       (set! constructor-style-printing? (vector-ref render-settings 1))
-       (set! abbreviate-cons-as-list? (vector-ref render-settings 2))
-       (set! render-to-sexp (vector-ref render-settings 3)))
+   [skip-step? (-> break-kind? mark-list? render-settings? boolean?)])
   
   (define the-undefined-value (letrec ([x x]) x))
   
@@ -122,7 +110,7 @@
   ; prints the name attached to the procedure, unless we're on the right-hand-side
   ; of a let, or unless there _is_ no name.
   
-  (define (recon-value val . hint-list)
+  (define (recon-value val render-settings . hint-list)
     (let ([hint (if (pair? hint-list) (car hint-list))]
           [closure-record (closure-table-lookup val (lambda () #f))])
       (cond
@@ -136,12 +124,12 @@
                              [else #`#,name]))]
                [else
                 (let ([mark (closure-record-mark closure-record)])
-                  (recon-source-expr (mark-source mark) (list mark) null))])]
+                  (recon-source-expr (mark-source mark) (list mark) null render-settings))])]
         [else
-         #`#,(render-to-sexp val)])))
+         #`#,((render-settings-render-to-sexp render-settings) val)])))
   
-  (define (let-rhs-recon-value val)
-    (recon-value val 'let-rhs))
+  (define (let-rhs-recon-value val render-settings)
+    (recon-value val render-settings 'let-rhs))
   
   (define (final-mark-list? mark-list)
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
@@ -166,16 +154,16 @@
                  ;                                                           ;           
                  ;                                                           ;           
                                                                                          
-  (define (skip-step? break-kind mark-list)
+  (define (skip-step? break-kind mark-list render-settings)
     (case break-kind
       ((result-value-break result-exp-break)
        #f)
       ((normal-break)
-       (skip-redex-step? mark-list))
+       (skip-redex-step? mark-list render-settings))
       ((double-break late-let-break)
        #f)))  
   
-  (define (skip-redex-step? mark-list)
+  (define (skip-redex-step? mark-list render-settings)
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
            (or (kernel:kernel-syntax-case expr #f
@@ -209,8 +197,8 @@
                           (procedure-arity-includes? 
                            fun-val
                            (length (cdr (syntax->list (syntax terms)))))
-                          (or (and (constructor-style-printing?)
-                                   (if (abbreviate-cons-as-list?)
+                          (or (and (render-settings-constructor-style-printing? render-settings)
+                                   (if (render-settings-abbreviate-cons-as-list? render-settings)
                                        (eq? fun-val (find-special-value 'list '(3)))    
                                        (and (eq? fun-val (find-special-value 'cons '(3 null)))
                                             (second-arg-is-list? mark-list))))
@@ -420,17 +408,17 @@
 
   (define recon-source-expr 
     (contract
-     (-> syntax? mark-list? binding-set? syntax?)
-     (lambda (expr mark-list lexically-bound-bindings)
+     (-> syntax? mark-list? binding-set? render-settings? syntax?)
+     (lambda (expr mark-list lexically-bound-bindings render-settings)
       (if (syntax-property expr 'stepper-skipto)
                (skipto-reconstruct
                 (syntax-property expr 'stepper-skipto)
                 expr
                 (lambda (stx)
-                  (recon-source-expr stx mark-list lexically-bound-bindings)))
-               (let* ([recur (lambda (expr) (recon-source-expr expr mark-list lexically-bound-bindings))]
+                  (recon-source-expr stx mark-list lexically-bound-bindings render-settings)))
+               (let* ([recur (lambda (expr) (recon-source-expr expr mark-list lexically-bound-bindings render-settings))]
                       [let-recur (lambda (expr bindings)
-                                   (recon-source-expr expr mark-list (append bindings lexically-bound-bindings)))]
+                                   (recon-source-expr expr mark-list (append bindings lexically-bound-bindings) render-settings))]
                       
                       [recon-basic
                        (lambda ()
@@ -478,7 +466,7 @@
                                ; set! : set! doesn't fit into this scheme. It would be a mistake to allow it to proceed.
                                
                                ; quote 
-                               [(quote body) (recon-value (syntax-e (syntax body)))]
+                               [(quote body) (recon-value (syntax-e (syntax body)) render-settings)]
                                
                                ; quote-syntax : like set!, the current stepper cannot handle quote-syntax
                                
@@ -490,7 +478,7 @@
                                 #`#,(map recur (syntax->list (syntax terms)))]
                                
                                ; #%datum
-                               [(#%datum . datum) (recon-value (syntax-e (syntax datum)))]
+                               [(#%datum . datum) (recon-value (syntax-e (syntax datum)) render-settings)]
                                
                                ; varref                        
                                [var-stx
@@ -504,10 +492,10 @@
                                              var
                                              (case (syntax-property var 'stepper-binding-type)
                                                ((lambda-bound) 
-                                                (recon-value (lookup-binding mark-list var)))
+                                                (recon-value (lookup-binding mark-list var) render-settings))
                                                ((macro-bound)
                                                 ; for the moment, let-bound vars occur only in and/or :
-                                                (recon-value (lookup-binding mark-list var)))
+                                                (recon-value (lookup-binding mark-list var) render-settings))
                                                 ; #`#,(binding-lifted-name mark-list var))
                                                ((top-level) var)
                                                ((let-bound)
@@ -558,13 +546,13 @@
   ; also, the examination of the stepper-define-hint and the consequent restructuring should 
   ; probably be in the unwinder, rather than here.  Ugh.
   
-  (define (reconstruct-completed expr value)
+  (define (reconstruct-completed expr value render-settings)
     (cond 
       [(syntax-property expr 'stepper-skipto) =>
        (lambda (skipto)
          (skipto-reconstruct skipto expr
                              (lambda (expr)
-                               (reconstruct-completed expr value))))]
+                               (reconstruct-completed expr value render-settings))))]
       [(syntax-property expr 'stepper-define-struct-hint) =>
        (lambda (define-struct-info)
          (syntax-object->datum (cadr define-struct-info)))]
@@ -574,20 +562,20 @@
           [(define-values vars-stx body)
            (let* ([vars (syntax->list (syntax vars-stx))]
                   [values (map global-lookup (map syntax-e vars))]
-                  [recon-vars (map recon-value values)])
+                  [recon-vars (map (lx (recon-value _ render-settings)) values)])
              (unless (= (length vars) 1)
                (error 'reconstruct "final reconstruct fails on multiple-values define\n"))
              (with-syntax ([name (car vars)])
                (case (syntax-property expr 'stepper-define-hint)
                  ((lambda-define) 
-                  (with-syntax ([recon (reconstruct-completed-procedure (car values))])
+                  (with-syntax ([recon (reconstruct-completed-procedure (car values) render-settings)])
                     (syntax (define name recon))))
                  ((shortened-proc-define) 
-                  (kernel:kernel-syntax-case (reconstruct-completed-procedure (car values)) #f
+                  (kernel:kernel-syntax-case (reconstruct-completed-procedure (car values) render-settings) #f
                     [(lambda (arg ...) body)
                      (syntax (define (name arg ...) body))]
                     [else (error 'reconstruct "non-procedure as result of procedure definition: ~e\n"
-                                 (syntax-object->datum (reconstruct-completed-procedure (car values))))]))
+                                 (syntax-object->datum (reconstruct-completed-procedure (car values) render-settings)))]))
                  ((non-lambda-define) 
                   (with-syntax ([source-name (car recon-vars)])
                     (syntax (define name source-name))))
@@ -597,7 +585,7 @@
                   ;(error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property expr 'stepper-define-hint))
                   ))))]
           [else
-           (recon-value value)]))]))
+           (recon-value value render-settings)]))]))
   
   ; : (-> syntax? syntax? sexp?)
   ; DESPERATELY SEEKING ABSTRACTION
@@ -635,12 +623,12 @@
   
   ; : (-> procedure? syntax?)
   ; constructs the lambda expression for a closure
-  (define (reconstruct-completed-procedure val)
+  (define (reconstruct-completed-procedure val render-settings)
     (let* ([closure-record (closure-table-lookup val 
                                                  (lambda () 
                                                    (error 'reconstruct-completed "can't find user-defined proc in closure table: ~e\n" val)))]
            [mark (closure-record-mark closure-record)])
-      (caar (unwind (list (recon-source-expr (mark-source mark) (list mark) null)) null))))
+      (caar (unwind (list (recon-source-expr (mark-source mark) (list mark) null render-settings)) null))))
 
                                                                                                                 
                                                                                                                 
@@ -662,9 +650,7 @@
   ; (the result of reconstruction) --- which may contain holes, indicated by the 
   ; highlight-placeholder --- and a list of sexps which go in the holes
   
-  ; reconstruct-current : syntax (list-of mark) symbol (list-of value) -> (list (listof sexp) (listof sexp))
-
-  (define (reconstruct-current expr mark-list break-kind returned-value-list)
+  (define (reconstruct-current expr mark-list break-kind returned-value-list render-settings)
     (local
         (
          
@@ -680,7 +666,7 @@
          (define (recon-inner mark-list so-far)
            (let* ([recon-source-current-marks 
                    (lambda (expr)
-                     (recon-source-expr expr mark-list null))]
+                     (recon-source-expr expr mark-list null render-settings))]
                   [top-mark (car mark-list)]
                   [expr (mark-source top-mark)]
                   
@@ -708,7 +694,7 @@
                                      (n-split-list num-defns-done glumps)]
                                     [recon-lifted-val
                                      (lambda (name val)
-                                       (let ([rectified-val (let-rhs-recon-value val)])
+                                       (let ([rectified-val (let-rhs-recon-value val render-settings)])
                                          #`(#,name #,rectified-val)))]
                                     [recon-lifted 
                                      (lambda (names expr)
@@ -735,7 +721,7 @@
                                                    (map reconstruct-remaining-def (cdr not-done-glumps))))
                                          null)]
                                     [recon-bindings (append before-bindings after-bindings)]
-                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list))
+                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list render-settings))
                                                            (syntax->list (syntax bodies)))])
                          (attach-info #`(label #,recon-bindings #,@rectified-bodies) expr))))])
              (kernel:kernel-syntax-case expr #f 
@@ -763,7 +749,7 @@
                      ((not-yet-called)
                       (let*-2vals ([(evaluated unevaluated) (split-list (lambda (x) (eq? (cadr x) *unevaluated*))
                                                                         (zip sub-exprs arg-vals))]
-                                   [rectified-evaluated (map recon-value (map cadr evaluated))])
+                                   [rectified-evaluated (map (lx (recon-value _ render-settings)) (map cadr evaluated))])
                         (if (null? unevaluated)
                             #`#,rectified-evaluated
                             #`(#,@rectified-evaluated
@@ -794,7 +780,7 @@
                [(if test then else)
                 (attach-info
                  (let ([test-exp (if (eq? so-far nothing-so-far)
-                                     (recon-value (lookup-binding mark-list if-temp))
+                                     (recon-value (lookup-binding mark-list if-temp) render-settings)
                                      so-far)])
                    #`(if #,test-exp 
                          #,(recon-source-current-marks (syntax then))
@@ -854,7 +840,7 @@
          ; we're turning off lifting, for the moment:
          
          ;         (define (rectify-let-values-step)
-         ;           (let*-values ([(redex) (recon-source-expr (mark-source (car mark-list)) mark-list)]
+         ;           (let*-values ([(redex) (recon-source-expr (mark-source (car mark-list)) mark-list render-settings)]
          ;                         [(before-step) (recon null highlight-placeholder-stx (cdr mark-list) #f)]
          ;                         [(r-before r-after reduct) (recon-inner mark-list nothing-so-far)]
          ;                         [(new-defs) (append r-before r-after)]
@@ -871,8 +857,8 @@
                 (case break-kind
                   ((result-value-break result-exp-break)
                    (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
-                                         (recon-source-expr (mark-source (car mark-list)) mark-list null)
-                                         (recon-value (car returned-value-list)))]
+                                         (recon-source-expr (mark-source (car mark-list)) mark-list null render-settings)
+                                         (recon-value (car returned-value-list) render-settings))]
                           [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
                      (unwind (list recon-expr) (list innermost))))
                   ((normal-break)
