@@ -101,16 +101,11 @@
           (define/public (original-program-changed)
             (unless program-change-already-warned?
               (set! program-change-already-warned? #t)
-              (set! can-step #f)
               (add-warning-message program-changed-warning-str)))
           
           (define/public (original-program-gone)
-            (set! can-step #f)
             (add-warning-message window-closed-warning-str))
 
-          (define can-step #t)
-          (define/public (get-can-step)
-            can-step)
 
           (override  on-close) ; file-menu:print
           (define (on-close)

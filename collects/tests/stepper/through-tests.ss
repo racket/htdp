@@ -1,32 +1,37 @@
-(module through-test mzscheme
+(module through-tests mzscheme
   (require (lib "private/shared.ss" "stepper")
            (lib "private/model.ss" "stepper")
+           (lib "private/model-settings.ss" "stepper")
+           (lib "private/highlight-placeholder.ss" "stepper")
            "tests-common.ss")
   
   
   (define (test-sequence namespace render-settings exp-str expected-steps)
-    (let ([receive-result
-           (lambda (result go-semaphore)
-             (if (compare-steps result (car expected-steps))
-                 (begin 
-                   (set! expected-steps (cdr expected-steps))
-                   (semaphore-post go-semaphore))
-                 (error 'test-sequence "steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expected-steps))))]
-          [expand-in-namespace
-           (lambda (sexp)
-             (parameterize ([current-namespace namespace])
-               (expand sexp)))]
-          [program-expander
-           (lambda (init iter)
-             (letrec ([input-port (make-string-input-port exp-str)]
-                      [read-and-deliver
-                       (lambda ()
-                         (let ([new-exp (read input-port)])
-                           (if (eof-object? new-exp)
-                               (iter new-exp void)
-                               (iter (expand-in-namespace new-exp) read-and-deliver))))])
-               (init)
-               (read-and-deliver)))])
+    (let* ([all-done-semaphore (make-semaphore)]
+           [receive-result
+            (lambda (result go-semaphore)
+              (if (compare-steps result (car expected-steps))
+                  (begin 
+                    (set! expected-steps (cdr expected-steps))
+                    (semaphore-post go-semaphore))
+                  (error 'test-sequence "steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expected-steps))))]
+           [expand-in-namespace
+            (lambda (sexp)
+              (parameterize ([current-namespace namespace])
+                (expand sexp)))]
+           [program-expander
+            (lambda (init iter)
+              (letrec ([input-port (open-input-string exp-str)]
+                       [read-and-deliver
+                        (lambda ()
+                          (let ([new-exp (read input-port)])
+                            (if (eof-object? new-exp)
+                                (begin 
+                                  (iter new-exp void)
+                                  (semaphore-post all-done-semaphore))
+                                (iter (expand-in-namespace new-exp) read-and-deliver))))])
+                (init)
+                (read-and-deliver)))])
       (go program-expander receive-result render-settings)))
   
   (define (lang-level-test-sequence ns rs)
@@ -37,14 +42,26 @@
   (define test-beginner-sequence (lang-level-test-sequence beginner-namespace fake-beginner-render-settings))
   (define test-beginner-wla-sequence (lang-level-test-sequence beginner-wla-namespace fake-beginner-wla-render-settings))
   (define test-intermediate-sequence (lang-level-test-sequence intermediate-namespace fake-intermediate-render-settings))
-  (define test-intermediate-lambda-sequence (lang-level-test-sequence intermediate-lambda-namespace fake-intermediate-lambda-render-settings))
+  (define test-intermediate/lambda-sequence (lang-level-test-sequence intermediate/lambda-namespace fake-intermediate/lambda-render-settings))
   
   
   (define (compare-steps expected actual)
     (case (car expected)
-      [(before-after) (and )]
+      [(before-after) (and (before-after-result? actual)
+                           (andmap equal? 
+                                   (map (lambda (fn) (fn actual))
+                                        (before-after-result-exp)
+                                        (before-after-result-redex)
+                                        (before-after-result-post-exp)
+                                        (before-after-result-reduct))
+                                   (cdr expected)))]
+      [(finished) (let ([finished-exps (finished-result-finished-exprs)]
+                        [expected-exps (cdr expected)]) 
+                    (andmap equal? 
+                            (list-tail (- (length finished-exps) (length expected)) finished-exps)
+                            expected-exps))]
       
-           ))
+      [else (error 'compare-steps "unexpected expected step type: ~v\n" (car expected))]))
   
   
   
@@ -56,14 +73,11 @@
   ;;;;;;;;;;;;;
   
   (test-mz-sequence "(for-each (lambda (x) x) '(1 2 3))"
-                    `(((,highlight-placeholder) ((for-each (lambda (x) x) `(1 2 3))))
-                      (((... ,highlight-placeholder ...)) (1))
-                      ((...) ())
-                      (((... ,highlight-placeholder ...)) (2))
-                      ((...) ())
-                      (((... ,highlight-placeholder ...)) (3))
-                      ((...) ())
-                      ((,highlight-placeholder) ((void)))))
+                    `((before-after (,highlight-placeholder) ((for-each (lambda (x) x) `(1 2 3))) ((... ,highlight-placeholder ...)) (1))
+                      (before-after (...) () ((... ,highlight-placeholder ...)) (2))
+                      (before-after (...) () ((... ,highlight-placeholder ...)) (3))
+                      (before-after (...) () (,highlight-placeholder) ((void)))
+                      (finished (void))))
   
   (test-mz-sequence "(+ 3 4)"
                     `(((,highlight-placeholder) ((+ 3 4)))
@@ -368,7 +382,7 @@
                           `()
                           `((define (f2 x) (+ (g2 x) 10))))
   
-  (err/rt-test (test-beginner-sequence "(cons 1 2)" `() `()) exn:application:type?)
+  ;(err/rt-test (test-beginner-sequence "(cons 1 2)" `() `()) exn:application:type?)
   
   (test-beginner-sequence "(cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3)"
                           `(((,highlight-placeholder) ((list 1 2 3)))
@@ -453,16 +467,13 @@
         (namespace-require '(lib "guess.ss" "htdp"))
         new-namespace)))
   
-  (reconstruct:set-render-settings! fake-beginner-render-settings)
-  (test-sequence "(define (check-guess guess target) 'TooSmall) (guess-with-gui check-guess)"
-                 `(((,highlight-placeholder) ((guess-with-gui check-guess)))
-                   ((,highlight-placeholder) (true)))
-                 `((define (check-guess guess target) 'toosmall) true)
-                 tp-namespace)
+  ; uses set-render-settings!
+  ;(reconstruct:set-render-settings! fake-beginner-render-settings)
+  ;(test-sequence "(define (check-guess guess target) 'TooSmall) (guess-with-gui check-guess)"
+  ;               `(((,highlight-placeholder) ((guess-with-gui check-guess)))
+  ;                 ((,highlight-placeholder) (true)))
+  ;               `((define (check-guess guess target) 'toosmall) true)
+  ;               tp-namespace)
   
   
-  
-  (report-errs)
-  
-  
-  )
+   )
