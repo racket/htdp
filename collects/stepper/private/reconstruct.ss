@@ -330,7 +330,6 @@
               (error 'reconstruct "unexpected result for unwinding the-cons application")]))
          
          (define (unwind-cond stx user-source user-position)
-           (fprintf (current-error-port) "unwinding cond: ~a\n" (syntax-object->datum stx))
            (if (eq? stx highlight-placeholder-stx)
                (begin (queue-push highlight-queue-dest (unwind-cond (queue-pop highlight-queue-src) user-source user-position))
                       highlight-placeholder-stx)
@@ -340,7 +339,7 @@
                                          (eq? user-position (syntax-property stx 'user-position)))
                                     (syntax-case stx (if begin #%app)
                                       [(if test result else-clause)
-                                       (with-syntax ([new-test (if (syntax-property (syntax test) 'user-stepper-else)
+                                       (with-syntax ([new-test (if (syntax-property stx 'user-stepper-else)
                                                                (syntax else)
                                                                (inner (syntax test)))]
                                                      [result (inner (syntax result))])

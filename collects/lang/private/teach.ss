@@ -737,7 +737,7 @@
 			     "found an `else' clause that isn't the last clause ~
                                     in its `cond' expression"))
                           (with-syntax ([new-test (syntax-property (syntax #t) 'stepper-else #t)])
-                            (syntax-property (syntax/loc clause (new-test answer)) 'foo 14)))]
+                            (syntax/loc clause (new-test answer))))]
 		       [(question answer)
                         (with-syntax ([verified (syntax-property (syntax (verify-boolean question 'cond)) 'stepper-skipto (list syntax-e cdr syntax-e cdr car))])
                           (syntax/loc clause (verified answer)))]

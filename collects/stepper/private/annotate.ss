@@ -372,14 +372,18 @@
                (let ([origin (syntax-property stx 'origin)]
                      [rebuild-if
                       (lambda (new-cond-test)
-                        (let* ([new-then (recur-regular (syntax then))])
-                          (syntax-property
-                           (rebuild-stx `(if ,(recur-regular (syntax test))
-                                             ,new-then
-                                             ,(recur-in-cond (syntax else-stx) new-cond-test))
-                                        stx)
-                           'stepper-hint
-                           'comes-from-cond)))])
+                        (let* ([new-then (recur-regular (syntax then))]
+                               [rebuilt (syntax-property
+                                         (rebuild-stx `(if ,(recur-regular (syntax test))
+                                                           ,new-then
+                                                           ,(recur-in-cond (syntax else-stx) new-cond-test))
+                                                      stx)
+                                         'stepper-hint
+                                         'comes-from-cond)])
+                          ; move the stepper-else mark to the if, if it's present:
+                          (if (syntax-property (syntax test) 'stepper-else)
+                              (syntax-property rebuilt 'stepper-else #t)
+                              rebuilt)))])
                  (cond [(cond-test stx)
                         (rebuild-if cond-test)]
                        [(and origin (pair? origin) (eq? (syntax-e (car origin)) 'cond))
@@ -388,10 +392,9 @@
                                            (eq? (syntax-position stx) (syntax-position test-stx)))))]
                        [else
                         (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) stx)]))]
-              [(begin body) ; else clauses of conds
+              [(begin body) ; else clauses of conds; ALWAYS AN ERROR CALL
                (cond-test stx)
-               (let ([new-body (recur-regular (syntax body))])
-                 (syntax-property (rebuild-stx `(begin ,new-body) stx) 'stepper-skipto (list syntax-e cdr car)))]
+               (syntax-property stx 'stepper-skip-completely #t)]
               
               
               ; let/letrec :

@@ -85,8 +85,12 @@ stepper-skipto :
  elements are car, cdr, or syntax-e. (Not transferred)
 
 stepper-else : 
- [ #t ] : this `if' expression comes from a user program's 
- `cond'. (Transferred.)
+ [ #t ] : Initially applied to the 'true' that the cond macro
+  replaces a beginner's 'else' with, it is later transferred
+  to the 'if' wrapping that 'true'.  This is because there is no
+  place to annotated the cond that is passed to mzscheme's
+  expander which will result in an annotation on the 'if.'
+  (Transferred.)
 
 stepper-define-hint :
  What kind of a source expression did this 'define' come from? (Not
