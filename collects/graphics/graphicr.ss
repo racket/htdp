@@ -28,30 +28,47 @@
 	 (class object% ()
 	   (private
 	     [queue '()]
-	     [last #f])
+	     [last #f]
+	     [lock (make-semaphore 1)]
+	     [ready (make-semaphore)])
 	   (public
 	     [flush
 	      (lambda ()
+		(semaphore-wait lock)
 		(set! queue '())
-		(set! last #f))]
+		(set! last #f)
+		(set! ready (make-semaphore))
+		(semaphore-post lock))]
 	     [add
 	      (lambda (v)
+		(semaphore-wait lock)
 		(if last
 		    (begin
 		      (set-cdr! last (cons v '()))
 		      (set! last (cdr last)))
 		    (begin
 		      (set! queue (cons v '()))
-		      (set! last queue))))]
+		      (set! last queue)))
+		(semaphore-post ready)
+		(semaphore-post lock))]
 	     [remove
 	      (lambda ()
-		(if (null? queue)
-		    #f
-		    (begin0
+		(semaphore-wait lock)
+		(begin0
+		 (if (null? queue)
+		     #f
+		     (begin0
 		      (car queue)
+		      (semaphore-wait ready)
 		      (set! queue (cdr queue))
 		      (if (null? queue)
-			  (set! last #f)))))])
+			  (set! last #f))))
+		 (semaphore-post lock)))]
+	     [remove/wait
+	      (lambda ()
+		(semaphore-wait ready)
+		(semaphore-post ready)
+		(remove))])
 	   (sequence
 	     (super-init)))]
 	[click-queue (make-object queue%)]
@@ -73,9 +90,7 @@
 	       (when f
 		 (send buffer-dc set-font f)))
 	     (send buffer-dc clear)
-	     (send dc clear)))]
-	
-	[event-sema #f])
+	     (send dc clear)))])
       
       
       (public
@@ -114,34 +129,33 @@
 	       (send click-queue add sixm)]
 	      [(send mouse-event button-up?)
 	       (send release-queue add sixm)]
-	      [else (void)])
-	    (when event-sema
-	      (semaphore-post event-sema))))]
+	      [else (void)])))]
        
        [on-char
 	(lambda (key-event)
-	  (send press-queue add (make-sixkey (send key-event key-code)))
-	  (when event-sema 
-	    (semaphore-post event-sema)))])
+	  (send press-queue add (make-sixkey (send key-event get-key-code))))])
       
       (public
 	[get-click
 	 (lambda ()
 	   (send click-queue remove))]
+	[get-click-now
+	 (lambda ()
+	   (send click-queue remove/wait))]
 	
 	[get-release
 	 (lambda ()
 	   (send release-queue remove))]
+	[get-release-noew
+	 (lambda ()
+	   (send release-queue remove/wait))]
 	
 	[get-press
 	 (lambda ()
 	   (send press-queue remove))]
-	
-	[wait-event
+	[get-press-now
 	 (lambda ()
-	   (set! event-sema (make-semaphore))
-	   (mred:yield event-sema)
-	   (set! event-sema #f))]
+	   (send press-queue remove/wait))]
 	
 	[get-posn (lambda () current-mouse-posn)]
 	[set-dc (lambda (new-dc) (set! dc new-dc))]
@@ -213,33 +227,20 @@
     (lambda (viewport)
       (ivar (viewport-canvas viewport) width)))
   
-  (define arrow-cursor
-    (make-object mred:cursor% 'arrow))
-  
-  
-  (define (get-mouse-click viewport) 
-    (let* ([status (ready-mouse-click viewport)]
-	   [icon-change (send (viewport-canvas viewport) set-cursor arrow-cursor)])
-      (cond
-	[status status]
-	[else (send (viewport-canvas viewport) wait-event) (get-mouse-click viewport)])))
-  
+  (define (get-mouse-click viewport)
+    (send (viewport-canvas viewport) get-click-now))
   
   (define (get-key-press viewport) 
-    (let* ([status (ready-key-press viewport)])
-      (cond
-	[status status]
-	[else (send (viewport-canvas viewport) wait-event) (get-key-press viewport)])))
+    (send (viewport-canvas viewport) get-press-now))
   
-  (define ready-mouse-click
-    (lambda (viewport)
-      (send (viewport-canvas viewport) get-click)))
+  (define (ready-mouse-click viewport)
+    (send (viewport-canvas viewport) get-click))
   
-  (define ready-mouse-release
-    (lambda (viewport) (send (viewport-canvas viewport) get-release)))
+  (define (ready-mouse-release viewport)
+    (send (viewport-canvas viewport) get-release))
   
-  (define ready-key-press
-    (lambda (viewport) (send (viewport-canvas viewport) get-press)))
+  (define (ready-key-press viewport)
+    (send (viewport-canvas viewport) get-press))
   
   (define mouse-click-posn
     (lambda (mouse-event)
@@ -903,7 +904,7 @@
     (lambda (source target)
       (let* ([source-bitmap (viewport-bitmap source)]
 	     [target-dc (viewport-dc target)]
-	     [target-buffer-dc (viewport-bitmap target)])
+	     [target-buffer-dc (viewport-buffer-dc target)])
 	(send target-dc draw-bitmap source-bitmap 0 0)
 	(send target-buffer-dc draw-bitmap source-bitmap 0 0))))
   
