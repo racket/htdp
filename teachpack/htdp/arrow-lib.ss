@@ -1,0 +1,126 @@
+(reference-file "error-lib.ss")
+
+(define-signature arrowS (control control-up-down control-left-right))
+
+(define arrowU
+  (unit/sig arrowS
+    (import errorS plt:userspace^)
+
+    ; (require-library "macro.ss")
+
+    ;; CONSTANTS ---------------------------------------------------------------
+    (define MY-ICONS "/home/matthias/icons/")
+    (define TITLE "Controller")
+
+    (define (mk-image-constant kind)
+      (make-object bitmap%
+	(build-path (collection-path "icons") (format "arrow.~a.gif" kind)) 'gif))
+
+    ;(define LEFT-ARROW  (mk-image-constant "marble.left"))
+    ;(define RIGHT-ARROW (mk-image-constant "marble.right"))
+    ;(define UP-ARROW    (mk-image-constant "marble.up"))
+    ;(define DOWN-ARROW  (mk-image-constant "marble.down"))
+
+    (define LEFT-ARROW  (mk-image-constant "blue.left"))
+    (define RIGHT-ARROW (mk-image-constant "blue.right"))
+    (define UP-ARROW    (mk-image-constant "blue.up"))
+    (define DOWN-ARROW  (mk-image-constant "blue.down"))
+
+    ;; LAYOUT ------------------------------------------------------------------
+
+    ;; layout = (listof (listof (union #f bitmap%)))  
+
+    (define FOUR 
+      `( (,#f         ,UP-ARROW   ,#f)
+	 (,LEFT-ARROW ,#f         ,RIGHT-ARROW)
+	 (,#f         ,DOWN-ARROW ,#f) ))
+
+    (define UP-DOWN
+      `( (,UP-ARROW   )
+	 (,DOWN-ARROW ) ))
+
+    (define LEFT-RIGHT
+      `( (,LEFT-ARROW ,RIGHT-ARROW ) ))
+
+    ;; make-button-table : 
+    ;;   panel% layout (bitmap% -> (_ _ -> X))
+    ;;   -> 
+    ;;   (listof (listof (union panel% button%)))
+    ;; to translate a layout table into a button table 
+    ;;   each button is controled by (control a-bitmap)
+    (define (make-button-table panel control layout)
+      (define (make-row a-row)
+	(define row-panel (make-object horizontal-panel% panel))
+	(define (make-item an-item)
+	  (if an-item
+	      (make-object button% an-item row-panel (control an-item))
+	      (let ([panel (make-object horizontal-panel% row-panel)])
+		(send panel min-width 30))))
+	;; --- 
+	(map make-item a-row))
+      ;; --- 
+      (map make-row layout))
+
+    ;; GUI ---------------------------------------------------------------------
+
+    ;; make-controller :
+    ;;   symbol layout number X (number X -> true) (number X -> true)  -> void
+    ;; effect: create a left-right controller that invokes move on delta
+    (define (make-controller tag layout shape delta left-right-action up-down-action)
+      (check-arg  tag
+	(and (number? delta) (integer? delta) (>= delta 1))
+	"positive integer"
+	'2nd
+	delta)
+      (check-proc tag left-right-action 2 "move-left-right argument" "two arguments")
+      (check-proc tag up-down-action 2 "move-up-down argument" "two arguments")
+      ;; --- 
+      (local ((define frame (make-object frame% TITLE #f 10 10))
+	      (define panel (make-object vertical-panel% frame))
+	      ;; control : bitmap% -> (_ _ -> void)
+	      ;; to check whcih button was clicked 
+	      (define (control an-item)
+		(lambda (x y)
+		  (evcase an-item
+		    (UP-ARROW
+		      (set! shape (up-down-action shape (- delta))))
+		    (DOWN-ARROW
+		      (set! shape (up-down-action shape delta)))
+		    (LEFT-ARROW
+		      (set! shape (left-right-action shape (- delta))))
+		    (RIGHT-ARROW
+		      (set! shape (left-right-action shape delta)))))))
+	(make-button-table panel control layout)
+	(send frame show #t)
+	#t))
+
+    ;; EXPORTS:
+
+    (define (void2 x y) (void))
+
+    ;; control-left-right : X number (number X -> true) -> true
+    ;; effect: create a window from which a user can control L/R moves
+    (define (control-left-right shape delta lr)
+      (make-controller 'control-left-right LEFT-RIGHT shape delta lr void2))
+
+    ;; control-up-down : X number (number X -> true) -> true
+    ;; effect: create a window from which a user can control U/D moves      
+    (define (control-up-down shape delta ud)
+      (make-controller 'control-up-down UP-DOWN shape delta void2 ud))
+
+    ;; control : X number (number X -> true) (number X -> true) -> true
+    ;; effect: create a window from which a user can control moves
+    (define (control shape delta lr ud)
+      (make-controller 'control FOUR shape delta lr ud))
+
+    ))
+
+(reference-file "draw-lib.ss")
+
+(compound-unit/sig
+  (import (PLT : plt:userspace^))
+  (link
+    (XXX : arrowS (arrowU ERR PLT))
+    [DRAW  : bigDrawS  (bigDrawU ERR PLT)]
+    (ERR : errorS (errorU)))
+  (export (open (DRAW : drawS)) (open XXX)))
