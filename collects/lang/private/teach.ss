@@ -1369,6 +1369,10 @@
 	  stx
 	  (syntax name)
 	  (syntax/loc stx (define (name) expr)))]
+	[(_ (name) expr ...)
+	 (check-single-result-expr (syntax->list (syntax (expr ...)))
+				   #f
+				   stx)]
 	[(_ . rest)
 	 ;; Call transformer beginner-define/proc.
 	 ;; Note that we call the transformer instead of producing
