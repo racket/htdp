@@ -3,7 +3,7 @@
 (define errorU
   (unit/sig errorS
     (import)
-    
+
     ;; check-arg : sym bool str str TST -> void
     (define (check-arg pname condition expected arg-posn given)
       (unless condition
@@ -22,7 +22,11 @@
     (define (check-proc proc f exp-arity arg# arg-err)
       (unless (procedure? f)
 	(error proc "procedure expected as ~s argument; given ~e" arg# f))
-      (unless (and (number? (arity f)) (= (arity f) exp-arity))
-	(error proc
-	  "procedure of ~a expected as ~s argument; given procedure of ~s arguments" 
-	  arg-err arg# (arity f))))))
+      (unless (procedure-arity-includes? f exp-arity)
+	      (let ([arity-of-f (arity f)])
+	      (error proc "procedure of ~a expected as ~s argument; given procedure of ~s arguments" 
+		     arg-err arg# 
+		     (cond
+		      [(number? arity-of-f) arity-of-f]
+		      [(arity-at-least? f) (format "at least ~s" (arity-at-least-value f))]
+		      [else arity-of-f])))))))

@@ -808,7 +808,7 @@
   
     (define  run 
       (lambda (f)
-	(check-proc 'run f 3 'first 'three)
+	(check-proc 'run f 3 'first "3 arguments")
 	(set! Next-Floor f)
 	(start-program)))
 
