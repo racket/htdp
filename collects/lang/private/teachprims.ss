@@ -89,6 +89,18 @@
   (define check-last/cycle
     (mk-check-last cyclic-list? "list or cyclic list"))
 
+  (define-teach beginner not
+    (lambda (a)
+      (unless (boolean? a)
+	(raise
+	 (make-exn:application:type
+	  (format "not: expected either true or false; given ~e"
+		  a)
+	  (current-continuation-marks)
+	  a
+	  'not)))
+      (not a)))
+
   (define-teach beginner +
     (lambda (a b . args)
       (apply + a b args)))
@@ -176,7 +188,8 @@
       (check-last/cycle 'append! x)
       (apply append! x)))
 
-  (provide beginner-+
+  (provide beginner-not
+	   beginner-+
 	   beginner-/
 	   beginner-*
 	   beginner-list?

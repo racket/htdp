@@ -189,7 +189,7 @@
       (boolean=? (boolean boolean -> boolean)
 	"to determine whether two booleans are equal")
     
-      (not (boolean -> boolean)
+      ((beginner-not not) (boolean -> boolean)
 	"to compute the negation of a boolean value"))
    
     ("Symbols"
