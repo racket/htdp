@@ -914,8 +914,10 @@
          ; recon : (syntax-object mark-list boolean -> syntax-object)
          
          (define (recon so-far mark-list first)
-           (cond [(null? mark-list)
-                  (error `recon "expcted a top-level mark at the end of the mark list.")]
+           (cond [(null? mark-list) ; now taken to indicate a callback:
+                  so-far
+                  ;(error `recon "expcted a top-level mark at the end of the mark list.")
+                  ]
                  [else
                   (case (mark-label (car mark-list)) 
                     [(top-level)
