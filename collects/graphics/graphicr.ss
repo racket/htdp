@@ -106,9 +106,9 @@
 	 (lambda (mouse-event)
 	   (let* ([x (send mouse-event get-x)]
 		  [y (send mouse-event get-y)]
-		  [left? (send mouse-event button-down? 1)]
-		  [middle? (send mouse-event button-down? 2)]
-		  [right? (send mouse-event button-down? 3)]
+		  [left? (send mouse-event button-down? 'left)]
+		  [middle? (send mouse-event button-down? 'middle)]
+		  [right? (send mouse-event button-down? 'right)]
 		  [sixm (make-sixmouse x y left? middle? right?)])
 	     (set! current-mouse-posn (make-posn x y))
 	     (cond
