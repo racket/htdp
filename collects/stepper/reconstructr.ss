@@ -1,10 +1,7 @@
-(require-library "pretty.ss")
-
 (unit/sig stepper:reconstruct^
   (import [z : zodiac:system^]
           mzlib:function^
 	  [e : stepper:error^]
-          [p : mzlib:print-convert^]
           [b : userspace:basis^]
           [s : stepper:settings^]
 	  stepper:shared^)
@@ -130,7 +127,7 @@
            (or (and (z:varref? expr)
                     (or (z:bound-varref? expr)
                         (let ([var (z:varref-var expr)])
-                          (or (memq var (s:get-global-defined-vars))
+                          (or (s:check-pre-defined-var var)
                               (call-with-current-continuation
                                (lambda (k)
                                  (with-handlers ([exn:variable?
@@ -150,12 +147,12 @@
                            (procedure-arity-includes? 
                             fun-val
                             (length (z:app-args expr)))
-                           (or (and (s:get-constructor-style-printing)
-                                    (if (s:get-abbreviate-cons-as-list)
-                                        (eq? fun-val list)
-                                        (and (eq? fun-val (s:get-cons))
+                           (or (and (s:constructor-style-printing?)
+                                    (if (s:abbreviate-cons-as-list?)
+                                        (eq? fun-val list) ; that needs exporting too.
+                                        (and (s:user-cons? fun-val)
                                              (second-arg-is-list? mark-list))))
-                               (eq? fun-val (s:get-vector))
+                               (s:user-vector? fun-val)
                                (and (eq? fun-val void)
                                     (eq? (z:app-args expr) null))
                                (struct-constructor-procedure? fun-val)
@@ -287,32 +284,53 @@
                     (rectify-cond-clauses cond-source (z:if-form-else expr) mark-list lexically-bound-vars))
               null)
           `((else ,(rectify-source expr))))))
-  
-  ; reconstruct : takes a parsed list of expressions, a list of continuation-marks,
-  ; a list of all the names defined in the users program, and which top-level expression is
-  ; currently being evaluated, and it produces a list containing the reconstructed sexp, and the
-  ; sexp which is the redex.  Note that the redex is guaranteed to be eq? to some element in the 
-  ; reconstructed program
-  
-  ;((list-of z:parsed) (list-of mark) (list-of symbol) num -> 
-  ; (list sexp sexp))
-  
-  (define next-output-file
-    (let ([n 1])
-      (lambda ()
-        (begin0
-          (build-path "Cupertino:" "steps" (format "step~a" n))
-          (set! n (+ n 1))))))
 
-  (define (reconstruct expr-list mark-list all-defs-list current-def-num break-kind returned-value-list)
+  ; reconstruct-completed : reconstructs a completed expression or definition.  This now
+  ; relies upon the s:global-lookup procedure to find values in the user-namespace.
+  ; I'm not yet sure whether or not 'vars' must be supplied or whether they can be derived
+  ; from the expression itself.
+  
+  (define (reconstruct-completed expr)    
+      (cond [(z:define-values-form? expr)
+             (if (comes-from-define-struct? expr)
+                 (read->raw (expr-read expr))
+                 (let* ([vars (map z:varref-var (z:define-values-form-vars expr))]
+                        [values (map s:global-lookup vars)]
+                        [rectified-vars (map rectify-value values)])
+                   (cond [(comes-from-define-procedure? expr)
+                          (let* ([mark (closure-record-mark  (closure-table-lookup (car values)))]
+                                 [rectified (rectify-source-expr (mark-source mark) (list mark) null)])
+                            (o-form-lambda->define (o-form-case-lambda->lambda rectified)
+                                                   (car vars)))]
+                         [(comes-from-define? expr)
+                          `(define ,(car vars) ,(car rectified-vars))]
+                         [else
+                          `(define-values ,vars
+                             ,(if (= (length values) 1)
+                                  (car rectified-vars)
+                                  `(values ,@rectified-vars)))])))]
+            [else
+             (let ([value (s:global-lookup (top-level-exp-gensym-source expr))])
+               (rectify-value value))]))
+    
+  ; reconstruct-current : takes a parsed expression, a list of marks, the kind of break, and
+  ; any values that may have been returned at the break point. It produces a list containing the
+  ; reconstructed sexp, and the (contained) sexp which is the redex.  If the redex is a heap value
+  ; (and can thus be distinguished from syntactically identical occurrences of that value using
+  ; eq?), it is embedded directly in the sexp. Otherwise, its place in the sexp is taken by the 
+  ; highlight-placeholder, which is replaced by the highlighted redex in the construction of the 
+  ; text%
+  
+  ; z:parsed (list-of mark) symbol (list-of value) -> 
+  ; (list sexp sexp)
+
+  (define (reconstruct-current expr mark-list break-kind returned-value-list)
     
     (local
         ((define (rectify-source-top-marks expr)
            (rectify-source-expr expr mark-list null))
          
-
-        
-         (define (rectify-top-level expr current-expr? so-far)
+         (define (rectify-top-level expr so-far)
            (if (z:define-values-form? expr)
                (let ([vars (z:define-values-form-vars expr)]
                      [val (z:define-values-form-val expr)])
@@ -323,66 +341,29 @@
                                [raw-fields (map read->raw (z:struct-form-fields struct-expr))])
                           `(define-struct
                             ,(if super-expr
-                                 (list raw-type (if current-expr?
-                                                    so-far
-                                                    (rectify-source-top-marks super-expr)))
+                                 (list raw-type so-far)
                                  raw-type)
                             ,raw-fields))]
                        [(or (comes-from-define-procedure? expr)
                             (and (comes-from-define? expr)
-                                 current-expr?
                                  (pair? so-far)
                                  (eq? (car so-far) 'lambda)))
                         (let* ([proc-name (z:varref-var
                                            (car (z:define-values-form-vars expr)))]
-                               [o-form-proc (if current-expr?
-                                                so-far
-                                                (rectify-source-top-marks 
-                                                 (z:define-values-form-val expr)))])
+                               [o-form-proc so-far])
                           (o-form-lambda->define o-form-proc proc-name))]
                                               
                        [(comes-from-define? expr)
                         `(define 
                            ,(z:varref-var (car vars))
-                           ,(if current-expr?
-                                so-far
-                                (rectify-source-top-marks val)))]
+                           ,so-far)]
                        
                        [else
                         `(define-values 
                            ,(map read->raw vars)
                            ,(rectify-source-top-marks val))]))
-               (if current-expr?
-                   so-far
-                   (rectify-source-top-marks expr))))
+               so-far))
          
-         (define (rectify-old-var var)
-           (let ([val (mark-binding-value (find-var-binding mark-list var))])
-             (rectify-value val)))
-                  
-         (define (rectify-old-expression expr vars)
-           (let ([values (map (lambda (var) (mark-binding-value
-                                             (find-var-binding mark-list var)))
-                              vars)])
-             (cond [(z:define-values-form? expr)
-                    (if (comes-from-define-struct? expr)
-                        (read->raw (expr-read expr))
-                        (let ([rectified-vars (map rectify-value values)])
-                          (cond [(comes-from-define-procedure? expr)
-                                 (let* ([mark (closure-record-mark  (closure-table-lookup (car values)))]
-                                        [rectified (rectify-source-expr (mark-source mark) (list mark) null)])
-                                   (o-form-lambda->define (o-form-case-lambda->lambda rectified)
-                                                          (car vars)))]
-                                [(comes-from-define? expr)
-                                 `(define ,(car vars) ,(car rectified-vars))]
-                                [else
-                                 `(define-values ,vars
-                                    ,(if (= (length values) 1)
-                                         (car rectified-vars)
-                                         `(values ,@rectified-vars)))])))]
-                   [else
-                    (rectify-old-var (top-level-exp-gensym-source expr))])))
-
          (define (reconstruct-inner mark-list so-far)
            (let ([rectify-source-current-marks 
                   (lambda (expr)
@@ -488,17 +469,12 @@
                    (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))]))))
          
          
-         (define old-defs
-           (let ([old-exps (list-take current-def-num expr-list)]
-                 [old-exp-vars (list-take current-def-num all-defs-list)])
-             (map rectify-old-expression old-exps old-exp-vars)))
-         
          (define redex #f)
          
          (define current-def-rectifier
            (lambda (so-far mark-list first)
              (if (null? mark-list)
-                 (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
+                 (rectify-top-level expr so-far)
                  (current-def-rectifier 
                   (let ([reconstructed (reconstruct-inner mark-list so-far)])
                     (when first
@@ -507,42 +483,25 @@
                   (cdr mark-list)
                   #f))))
          
-         (define last-defs-thunk
-           (lambda () 
-             (if (>= current-def-num (length expr-list))
-                 ()
-                 (map (lambda (expr) (rectify-top-level expr #f null)) 
-                      (list-tail expr-list (+ current-def-num 1))))))
          
-         (define (heap-value? val)
+         (define (confusable-value? val)
            (not (or (number? val)
                     (boolean? val)
                     (string? val)
                     (symbol? val))))
 
          (define answer
-           (if (final-mark-list? mark-list)
-               (list old-defs null)
-               (let ([last-defs (last-defs-thunk)])
-                 (if (eq? break-kind 'result-break)
-                     (if (null? returned-value-list)
-                         (let* ([first-exp (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
-                                [so-far (if (heap-value? first-exp) first-exp highlight-placeholder)]
-                                [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
-                           (list (append old-defs (list current-def) last-defs) first-exp))
-                         (let* ([inner-value (rectify-value (car returned-value-list))]
-                                [so-far (if (heap-value? inner-value) inner-value highlight-placeholder)]
-                                [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
-                           (list (append old-defs (list current-def) last-defs) inner-value)))
-                     (begin
-                       (let ([current-def (current-def-rectifier  nothing-so-far mark-list #t)])
-                         (list (append old-defs (list current-def) last-defs) redex)))))))
+           (if (eq? break-kind 'result-break)
+               (let* ([innermost (if (null? returned-value-list)
+                                     (rectify-source-expr (mark-source (car mark-list)) mark-list null)
+                                     (rectify-value (car returned-value-list)))]
+                      [so-far (if (confusable-value? innermost) innermost highlight-placeholder)]
+                      [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
+                 (list current-def innermost))
+               (begin
+                 (let ([current-def (current-def-rectifier nothing-so-far mark-list #t)])
+                   (list current-def redex)))))
 
          )
       
-;      (call-with-output-file (next-output-file)
-;        (lambda (port)
-;          (write answer port))
-;        'truncate 'text)
-      
-         answer)))
+      answer)))
