@@ -172,30 +172,28 @@
                     (comes-from-cond? expr))
                (in-inserted-else-clause (cdr mark-list))))))
   
-   ; static-binding-indexer (z:parsed -> integer)
-  
-  (define static-binding-indexer
-    (let* ([name-number-table (make-hash-table)]
-           [binding-number-table (make-hash-table-weak)])
-      (lambda (binding)
-        (cond [(hash-table-get binding-number-table binding (lambda () #f)) =>
-               (lambda (x) x)]
-              [else (let* ([orig-name (z:binding-orig-name binding)]
-                           [old-index (hash-table-get name-number-table orig-name (lambda () -1))]
-                           [new-index (+ old-index 1)])
-                      (hash-table-put! name-number-table orig-name new-index)
-                      (hash-table-put! binding-number-table binding new-index)
-                      new-index)]))))
+;   ; static-binding-indexer (z:parsed -> integer)
+;  
+;  (define static-binding-indexer
+;    (let* ([name-number-table (make-hash-table)]
+;           [binding-number-table (make-hash-table-weak)])
+;      (lambda (binding)
+;        (cond [(hash-table-get binding-number-table binding (lambda () #f)) =>
+;               (lambda (x) x)]
+;              [else (let* ([orig-name (z:binding-orig-name binding)]
+;                           [old-index (hash-table-get name-number-table orig-name (lambda () -1))]
+;                           [new-index (+ old-index 1)])
+;                      (hash-table-put! name-number-table orig-name new-index)
+;                      (hash-table-put! binding-number-table binding new-index)
+;                      new-index)]))))
   
   ; construct-lifted-name (z:parsed num -> string)
   
   (define (construct-lifted-name binding dynamic-index)
-    (let* ([static-index (static-binding-indexer binding)])
-      (string->symbol
-       (string-append (symbol->string (z:binding-orig-name binding)) "0" 
-                      (number->string static-index) "0" 
-                      (number->string dynamic-index)))))
-  
+    (string->symbol
+     (string-append (symbol->string (z:binding-orig-name binding)) "_" 
+                    (number->string dynamic-index))))
+
   ; binding-lifted-name ((listof mark) z:binding -> num)
   
   (define (binding-lifted-name mark-list binding)

@@ -11,6 +11,8 @@
   
   (define image? i:image?)
   
+  (binding-index-reset)
+  
   (define (send-to-other-eventspace eventspace thunk)
     (parameterize ([current-eventspace eventspace])
       (queue-callback thunk)))

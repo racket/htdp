@@ -168,4 +168,18 @@
              (list->vector (map recur (vector->list exp)))]
             [(eq? exp highlight-placeholder)
              inserted]
-            [else exp])))) 
+            [else exp])))
+  
+  ; binding-indexer: (z:parsed -> integer)
+  
+  (define-values (binding-indexer binding-index-reset)
+    (let ([counter 0])
+      (values
+       (lambda ()
+         (begin0 counter (set! counter (+ counter 1))))
+       (lambda ()
+         (set! counter 0)))))
+  
+  
+
+  ) 
