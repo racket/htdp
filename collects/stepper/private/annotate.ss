@@ -339,6 +339,15 @@
                                         'comes-from-and)]))])
             (kernel:kernel-syntax-case stx #f
               
+              ; define-lambda : INSERT RECURRENCES
+              [(define-values names (begin name-check (lambda args make-gen-lam body)))
+               (eq? (syntax-property stx 'stepper-define-hint) 'lambda-define)
+               (with-syntax ([lambda-body
+                              (syntax-property
+                               (syntax (begin make-gen-lam body))
+                               'stepper-skipto
+                               (list syntax-e cdr syntax-e cdr car))])
+               (datum->syntax-object stx (cons 'define (syntax (names (begin name-check (lambda args make-gen-lam new-body
               ; or :
               [(let-values x ...)
                (let ([origin (syntax-property stx 'origin)])

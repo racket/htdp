@@ -294,15 +294,10 @@
                 'define
                 stx
                 (syntax name)
-                (with-syntax ([a (syntax-property (syntax make-lambda-generative) 'foo 'bar)])
-                  (with-syntax ([procedure-body 
-                                 (syntax-property (syntax (begin a lexpr ...))
-                                                  'stepper-skipto
-                                                  (list syntax-e cdr syntax-e cdr car))])
-                    (syntax-property
-                     (syntax/loc stx (define (name . arg-seq) procedure-body))
-                     'stepper-define-hint
-                     'lambda-define))))
+                (syntax-property
+                 (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...))
+                 'stepper-define-hint
+                 'lambda-define))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]
 	     ;; Constant def
