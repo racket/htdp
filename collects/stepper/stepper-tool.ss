@@ -44,28 +44,55 @@
           
           (define (file-menu:print a b) (printing-proc a b))
           
+          ;; CUSTODIAN:
+          
+          (define custodian #f)
+          (define/public (set-custodian! cust)
+            (set! custodian cust))
+          
+          ;; WARNING BOXES:
+          
+          (define program-changed-warning-str (string-constant stepper-program-has-changed))
+          (define window-closed-warning-str (string-constant stepper-program-window-closed))
+
+          (define warning-message-visible-already #f)
+          (define (add-warning-message warning-str)
+            (let ([warning-msg (instantiate x:stepper-warning% () 
+                                 (warning-str warning-str)
+                                 (parent (get-area-container)))])
+              (send (get-area-container)
+                    change-children
+                    (if warning-message-visible-already
+                        (lambda (l) 
+                          (list (car l)
+                                warning-msg
+                                (caddr l)))
+                        (lambda (l)
+                          (list (car l)
+                                warning-msg
+                                (cadr l)))))
+              (set! warning-message-visible-already #t)))
+          
           (inherit get-area-container)
-          (define already-warned? #f)
+          (define program-change-already-warned? #f)
           (define/public (original-program-changed)
-            (unless already-warned?
-              (set! already-warned? #t)
-              (let ([warning-msg (instantiate x:stepper-warning% ()
-                                   (parent (get-area-container)))])
-                (send (get-area-container)
-                      change-children
-                      (lambda (l)
-                        (list (car l)
-                              warning-msg
-                              (cadr l)))))))
+            (unless program-change-already-warned?
+              (set! program-change-already-warned? #t)
+              (set! can-step #f)
+              (add-warning-message program-changed-warning-str)))
+          
+          (define/public (original-program-gone)
+            (set! can-step #f)
+            (add-warning-message window-closed-warning-str))
 
           (define can-step #t)
           (define/public (get-can-step)
             can-step)
-          (define/public (stop-stepping)
-            (set! can-step #f))
-          
+
           (override  on-close) ; file-menu:print
           (define (on-close)
+            (when custodian
+              (custodian-shutdown-all custodian))
             (send drscheme-frame on-stepper-close)
             (super-on-close))
           
@@ -142,9 +169,12 @@
                   (if (= view (- (length view-history) 1))
                       (if (send s-frame get-can-step)
                           (update-view/next-step (+ view 1))
-                          (message-box (string-append
-                                        "The source text for this program is no longer in"
-                                        "memory.  No further steps can be computed.")))
+                          (begin
+                            (message-box "Stepper"
+                                         (string-append
+                                          "The source text for this program has changed or is no longer in "
+                                          "memory.  No further steps can be computed."))
+                            (en/dis-able-buttons)))
                       (update-view (+ view 1))))
                 
                 (define (previous)
@@ -174,6 +204,9 @@
                     (send canvas set-editor e)
                     (send e reset-width canvas)
                     (send e set-position (send e last-position)))
+                  (en/dis-able-buttons))
+                
+                (define (en/dis-able-buttons)
                   (send previous-button enable (not (zero? view)))
                   (send home-button enable (not (zero? view)))
                   (send next-button enable (not (eq? final-view view))))
@@ -226,11 +259,18 @@
                                   #f
                                   null)])])
                     (set! view-history (append view-history (list step-text))) 
-                    (update-view view-currently-updating))))
+                    (update-view view-currently-updating)))
+                
+                ; need to capture the custodian as the thread starts up:
+                (define (program-expander-prime init iter)
+                  (program-expander (lambda args
+                                      (send s-frame set-custodian! (current-custodian))
+                                      (apply init args))
+                                    iter)))
           
 	  (set-render-to-string! render-to-string)
 	  (set-render-to-sexp! render-to-sexp)           
-
+          
           (send s-frame set-printing-proc print-current-view)
           (set! view-currently-updating 0)
           (send button-panel stretchable-width #f)
@@ -241,7 +281,7 @@
           (send next-button enable #f)
           (send (send s-frame edit-menu:get-undo-item) enable #f)
           (send (send s-frame edit-menu:get-redo-item) enable #f)
-          (model:go program-expander receive-result)
+          (model:go program-expander-prime receive-result)
           (send s-frame show #t)
           
           s-frame))
@@ -299,7 +339,21 @@
               (stepper-bitmap this)
               (get-button-panel)
               (lambda (button evt)
-                (set! stepper-frame (view-controller-go this program-expander)))))
+                (if stepper-frame
+                    (send stepper-frame show #t)
+                    (let* ([settings (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))]
+                           [language (drscheme:language-configuration:language-settings-language settings)]
+                           [language-level (car (last-pair (send language get-language-position)))]
+                           [beginner-language-level (string-constant beginning-student)]
+                           [beginner-wla-language-level (string-constant beginning-student/abbrev)])
+                      (if (or (string=? language-level beginner-language-level)
+                              (string=? language-level beginner-wla-language-level))
+                          (set! stepper-frame (view-controller-go this program-expander))
+                          (message-box "Stepper"
+                                       (string-append
+                                        "The language level is set to \"" language-level "\". "
+                                        "Currently, the stepper works only for the \"" beginner-language-level
+                                        "\" and the \"" beginner-wla-language-level "\" language levels."))))))))
           
           (rename [super-enable-evaluation enable-evaluation])
           (define/override (enable-evaluation)
@@ -313,24 +367,11 @@
           
           (define/override (on-close)
             (when stepper-frame
-              (send stepper-frame stop-stepping))
-            (callback-unregisterer)
+              (send stepper-frame original-program-gone))
             (super-on-close))
           
-          (define (on-language-level-change pref-name new-settings)
-            (let* ([language (drscheme:language-configuration:language-settings-language new-settings)]
-                   [language-level (car (last-pair (send language get-language-position)))])
-              (if (or (string=? language-level (string-constant beginning-student))
-                      (string=? language-level (string-constant beginning-student/abbrev)))
-                  (send (get-button-panel) change-children
-                        (lx (cons stepper-button (remq stepper-button _))))
-                  (send (get-button-panel) change-children
-                        (lx (remq stepper-button _)))))) 
-          
-          (define callback-unregisterer
-            (frame:preferences:add-callback (drscheme:language-configuration:get-settings-preferences-symbol) on-language-level-change))
-          (on-language-level-change (drscheme:language-configuration:get-settings-preferences-symbol) 
-                                    (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol)))))
+          (send (get-button-panel) change-children
+                (lx (cons stepper-button (remq stepper-button _))))))
       
 
       (define (stepper-definitions-text-mixin %)

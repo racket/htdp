@@ -3,7 +3,8 @@
            (lib "mred.ss" "mred")
            (prefix f: (lib "framework.ss" "framework"))
            (lib "pretty.ss")
-           "highlight-placeholder.ss")
+           "highlight-placeholder.ss"
+	   (lib "string-constant.ss" "string-constants"))
 
   (provide
    stepper-canvas%
@@ -441,8 +442,8 @@
                         (send bottom-defs-snip set-new-width minus-cursor-margin canvas)
                         (coordinate-snip-sizes)
                         (send horiz-separator-1 reset-width)
-                        (send horiz-separator-2 reset-width)
-                        (end-edit-sequence)))))])
+                        (send horiz-separator-2 reset-width)))
+                    (end-edit-sequence)))])
 
       (define old-width #f)
       (define top-defs-snip (make-object stepper-editor-snip%))
@@ -509,13 +510,13 @@
         (symbol? val)))
   
   (define warning-color "yellow")
-  (define program-changed-warning-str (string-constant stepper-program-has-changed))
-  (define window-closed-warning-str (string-constant stepper-program-window-closed))
   (define warning-font (send the-font-list find-or-create-font 18 'decorative 'normal 'bold #f))
   
   (define stepper-warning%
     (class canvas%
       
+      (init-field warning-str)
+       
       (inherit get-dc get-client-size)
       (define/override (on-paint)
         (let ([dc (get-dc)])
