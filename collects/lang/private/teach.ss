@@ -296,11 +296,14 @@
 	       (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...)))]
 	     ;; Constant def
 	     [_else
-	      (check-definition-new
-	       'define
-	       stx
-	       (syntax name)
-	       (syntax/loc stx (define name expr)))]))]
+              (syntax-property
+               (check-definition-new
+                'define
+                stx
+                (syntax name)
+                (syntax/loc stx (define name expr)))
+               'stepper-skipto
+               (list syntax-e cdr syntax-e cdr car))]))]
 	;; Function definition:
 	[(_ name-seq expr ...)
 	 (syntax-case (syntax name-seq) () [(name ...) #t][_else #f])
@@ -342,11 +345,14 @@
 	   (check-single-result-expr (syntax->list (syntax (expr ...)))
 				     #f
 				     stx)
-	   (check-definition-new 
-	    'define
-	    stx
-	    (car names)
-	    (syntax/loc stx (define name-seq expr ...))))]
+           (syntax-property
+            (check-definition-new 
+             'define
+             stx
+             (car names)
+             (syntax/loc stx (define name-seq expr ...)))
+            'stepper-skipto
+            (list syntax-e cdr syntax-e cdr car)))]
 	;; Constant/lambda with too many or too few parts:
 	[(_ name expr ...)
 	 (identifier/non-kw? (syntax name))
@@ -550,7 +556,9 @@
 	[_else (bad-use-error 'define-struct stx)]))
 
     (define (beginner-define-struct/proc stx)
-      (do-define-struct stx #f #f))
+      (syntax-property (do-define-struct stx #f #f)
+                       'stepper-skip-completely
+                       #t))
 
     ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ;; application (beginner and intermediate)
@@ -740,7 +748,7 @@
                                       (with-syntax ([term term])
                                         (syntax-property (syntax/loc stx (verify-boolean term 'swhere))
                                                          'stepper-skipto
-                                                         (list syntax-e cdr car))))
+                                                         (list syntax-e cdr syntax-e cdr car))))
                                     (syntax->list (syntax clauses)))])
                           (datum->syntax-object #'here (cons where verified-clauses) stx)))]
 		     [_else (bad-use-error where stx)]))))])

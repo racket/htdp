@@ -204,12 +204,13 @@
                                   
                                   ; Do we need this stuff for lifted names? :
                                   
-                                  (or (not (closure-table-lookup val (lambda () #f))) ; that are primitives, or ...
-                                      (and (not (continuation? val))
-                                           (cond [(closure-table-lookup val (lambda () #f)) => ; are user fns with the right (original) name
-                                                  (lambda (x)
-                                                    (eq? id (closure-record-name x)))] ; has wrong name
-                                                 [else #f]))))))))]
+;                                  (or (not (closure-table-lookup val (lambda () #f))) ; that are primitives, or ...
+;                                      (and (not (continuation? val))
+;                                           (cond [(closure-table-lookup val (lambda () #f)) => ; are user fns with the right (original) name
+;                                                  (lambda (x)
+;                                                    (eq? id (closure-record-name x)))] ; has wrong name
+;                                                 [else #f])))
+                                  )))))]
                   [(#%app . terms)
                    ; don't halt for proper applications of constructors
                    (let ([fun-val (mark-binding-value (lookup-binding mark-list (get-arg-var 0)))])

@@ -5,7 +5,8 @@
            (lib "etc.ss")
            "marks.ss"
            "shared.ss"
-           "my-macros.ss")
+           "my-macros.ss"
+           (prefix beginner-defined: "beginner-defined.ss"))
 
   (provide
    initial-env-package ; : annotate-environment
@@ -266,141 +267,143 @@
   
   (define (top-level-rewrite stx)
     (let loop ([stx stx] [let-bound-bindings null] [cond-test (lx #f)] [and/or-test (lx #f)])
-      (let* ([recur-regular 
-              (lambda (stx)
-                (loop stx let-bound-bindings (lx #f) (lx #f)))]
-             [recur-with-bindings
-              (lambda (exp vars)
-                (loop exp (append vars let-bound-bindings) (lx #f) (lx #f)))]
-             [recur-in-cond
-              (lambda (stx new-cond-test)
-                (loop stx let-bound-bindings new-cond-test (lx #f)))]
-             [recur-in-and/or
-              (lambda (stx new-and/or-test new-bindings)
-                (loop stx (append new-bindings let-bound-bindings) (lx #f) new-and/or-test))]
-             [do-let/rec
-              (lambda (stx rec?)
-                (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
-                  (let* ([vars-list (foldl (lambda (a b) (append b a)) null (map syntax->list (syntax->list (syntax (vars ...)))))]
-                         [labelled-vars-list (map (lambda (var-list) (map (lambda (exp) (recur-with-bindings exp (syntax->list var-list)))
-                                                                          vars-list))
-                                                  (syntax->list (syntax (vars ...))))]
-                         [rhs-list (if rec?
-                                       (recur-with-bindings vars-list (syntax->list (syntax (rhs ...))))
-                                       (map recur-regular (syntax->list (syntax (rhs ...)))))]
-                         [new-bodies (map (lambda (exp) (recur-with-bindings exp vars-list)) (syntax->list (syntax bodies)))]
-                         [new-bindings (map list labelled-vars-list rhs-list)])
-                    (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))]
-             [do-or
-              ; NOTE: I maintain my invariants in this section through foreknowledge of the shape of 
-              ; the or macro. Therefore, this code is fragile.
-              (lambda (new-and/or-test stx)
-                (kernel:kernel-syntax-case stx #f
-                  [(let-values [((test-var) test-exp)] (if if-test then else))
-                   (let* ([new-test (syntax-property (recur-with-bindings (syntax if-test) (list (syntax test-var)))
-                                                     'stepper-skip-completely
-                                                     #t)]
-                          [new-then-else (list (recur-with-bindings (syntax then) (list (syntax test-var)))
-                                               (recur-in-and/or (syntax else) new-and/or-test (list (syntax test-var))))]
-                          [new-if (syntax-property (rebuild-stx `(if ,new-test
-                                                                     ,@new-then-else)
-                                                                stx)
-                                                  'stepper-hint
-                                                  'comes-from-or)])
-                     (syntax-property (rebuild-stx `(let-values ([(,(syntax-property (recur-regular (syntax test-var))
-                                                                                    'stepper-binding-type
-                                                                                    'let-bound))
-                                                                  ,(recur-regular (syntax test-exp))])
-                                                      ,new-if)
-                                                   stx)
-                                      'stepper-hint
-                                      'comes-from-or))]))]
-             
-             [do-and
-              ; same note as above
-              (lambda (new-and/or-test stx)
-                (kernel:kernel-syntax-case stx #f
-                  [(if test then else)
-                   (syntax-property (rebuild-stx `(if ,(recur-regular (syntax test))
-                                                      ,(recur-in-and/or (syntax then) new-and/or-test null)
-                                                      ,(recur-regular (syntax else)))
-                                                 stx)
-                                    'stepper-hint
-                                    'comes-from-and)]))])
-        (kernel:kernel-syntax-case stx #f
-
-          ; or :
-          [(let-values x ...)
-           (let ([origin (syntax-property stx 'origin)])
-             (and origin (pair? origin) (pair? (cdr origin)) (eq? (syntax-e (cadr origin)) 'or)))
-           (do-or (lx (and (eq? (syntax-source stx) (syntax-source _))
-                           (eq? (syntax-position stx) (syntax-position _)))) 
-                  stx)]
-          [(let-values x ...)
-           (and/or-test stx)
-           (do-or and/or-test stx)]
-          
-          ; and : 
-          [(if test then else)
-           (let ([origin (syntax-property stx 'origin)])
-             (and origin (pair? origin) (pair? (cdr origin)) (eq? (syntax-e (cadr origin)) 'and)))
-           (do-and (lx (and (eq? (syntax-source stx) (syntax-source _))
-                            (eq? (syntax-position stx) (syntax-position _))))
-                   stx)]
-          
-          [(if test then else)
-           (and/or-test stx)
-           (do-and and/or-test stx)]
-           
-          ; cond :
-          [(if test (begin then) else-stx)
-           (let ([origin (syntax-property stx 'origin)]
-                 [rebuild-if
-                  (lambda (new-cond-test)
-                    (let* ([new-then (syntax-property (recur-regular (syntax (begin then)))
-                                                            'stepper-skipto
-                                                            (list syntax-e cdr car))])
-                      (syntax-property
-                       (rebuild-stx `(if ,(recur-regular (syntax test))
-                                         ,new-then
-                                         ,(recur-in-cond (syntax else-stx) new-cond-test))
-                                    stx)
-                       'stepper-hint
-                       'comes-from-cond)))])
-             (cond [(cond-test stx)
-                    (rebuild-if cond-test)]
-                   [(and origin (pair? origin) (eq? (syntax-e (car origin)) 'cond))
-                    (rebuild-if (lambda (test-stx) 
-                                  (and (eq? (syntax-source stx) (syntax-source test-stx))
-                                       (eq? (syntax-position stx) (syntax-position test-stx)))))]
-                   [else
-                    (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) stx)]))]
-          [(begin body) ; else clauses of conds
-           (cond-test stx)
-           (let ([new-body (syntax-property (recur-regular (syntax body)) 'stepper-else #t)])
-             (syntax-property (rebuild-stx `(begin ,new-body) stx) 'stepper-skipto (list syntax-e cdr car)))]
-          
-          
-          ; let/letrec :
-          [(let-values x ...) (do-let/rec stx #f)]
-          [(letrec-values x ...) (do-let/rec stx #t)]
-          [var
-           (identifier? (syntax var))
-           (if (eq? (identifier-binding (syntax var)) 'lexical)
-               (if (ormap (lambda (binding)
-                            (bound-identifier=? binding (syntax var)))
-                          let-bound-bindings)
-                   (syntax-property (syntax var) 'stepper-binding-type 'let-bound)
-                   (syntax-property (syntax var) 'stepper-binding-type 'lambda-bound))
-               (syntax-property (syntax var) 'stepper-binding-type 'non-lexical))]
-          [stx
-           (let ([content (syntax-e (syntax stx))])
-             (if (pair? content)
-                 (datum->syntax-object (syntax stx)
-                                       (syntax-pair-map content recur-regular)
-                                       (syntax stx)
-                                       (syntax stx))
-                 content))]))))
+      (if (syntax-property stx 'stepper-skip-completely)
+          stx
+          (let* ([recur-regular 
+                  (lambda (stx)
+                    (loop stx let-bound-bindings (lx #f) (lx #f)))]
+                 [recur-with-bindings
+                  (lambda (exp vars)
+                    (loop exp (append vars let-bound-bindings) (lx #f) (lx #f)))]
+                 [recur-in-cond
+                  (lambda (stx new-cond-test)
+                    (loop stx let-bound-bindings new-cond-test (lx #f)))]
+                 [recur-in-and/or
+                  (lambda (stx new-and/or-test new-bindings)
+                    (loop stx (append new-bindings let-bound-bindings) (lx #f) new-and/or-test))]
+                 [do-let/rec
+                  (lambda (stx rec?)
+                    (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
+                      (let* ([vars-list (foldl (lambda (a b) (append b a)) null (map syntax->list (syntax->list (syntax (vars ...)))))]
+                             [labelled-vars-list (map (lambda (var-list) (map (lambda (exp) (recur-with-bindings exp (syntax->list var-list)))
+                                                                              vars-list))
+                                                      (syntax->list (syntax (vars ...))))]
+                             [rhs-list (if rec?
+                                           (recur-with-bindings vars-list (syntax->list (syntax (rhs ...))))
+                                           (map recur-regular (syntax->list (syntax (rhs ...)))))]
+                             [new-bodies (map (lambda (exp) (recur-with-bindings exp vars-list)) (syntax->list (syntax bodies)))]
+                             [new-bindings (map list labelled-vars-list rhs-list)])
+                        (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))]
+                 [do-or
+                  ; NOTE: I maintain my invariants in this section through foreknowledge of the shape of 
+                  ; the or macro. Therefore, this code is fragile.
+                  (lambda (new-and/or-test stx)
+                    (kernel:kernel-syntax-case stx #f
+                      [(let-values [((test-var) test-exp)] (if if-test then else))
+                       (let* ([new-test (syntax-property (recur-with-bindings (syntax if-test) (list (syntax test-var)))
+                                                         'stepper-skip-completely
+                                                         #t)]
+                              [new-then-else (list (recur-with-bindings (syntax then) (list (syntax test-var)))
+                                                   (recur-in-and/or (syntax else) new-and/or-test (list (syntax test-var))))]
+                              [new-if (syntax-property (rebuild-stx `(if ,new-test
+                                                                         ,@new-then-else)
+                                                                    stx)
+                                                       'stepper-hint
+                                                       'comes-from-or)])
+                         (syntax-property (rebuild-stx `(let-values ([(,(syntax-property (recur-regular (syntax test-var))
+                                                                                         'stepper-binding-type
+                                                                                         'let-bound))
+                                                                      ,(recur-regular (syntax test-exp))])
+                                                          ,new-if)
+                                                       stx)
+                                          'stepper-hint
+                                          'comes-from-or))]))]
+                 
+                 [do-and
+                  ; same note as above
+                  (lambda (new-and/or-test stx)
+                    (kernel:kernel-syntax-case stx #f
+                      [(if test then else)
+                       (syntax-property (rebuild-stx `(if ,(recur-regular (syntax test))
+                                                          ,(recur-in-and/or (syntax then) new-and/or-test null)
+                                                          ,(recur-regular (syntax else)))
+                                                     stx)
+                                        'stepper-hint
+                                        'comes-from-and)]))])
+            (kernel:kernel-syntax-case stx #f
+              
+              ; or :
+              [(let-values x ...)
+               (let ([origin (syntax-property stx 'origin)])
+                 (and origin (pair? origin) (pair? (cdr origin)) (eq? (syntax-e (cadr origin)) 'or)))
+               (do-or (lx (and (eq? (syntax-source stx) (syntax-source _))
+                               (eq? (syntax-position stx) (syntax-position _)))) 
+                      stx)]
+              [(let-values x ...)
+               (and/or-test stx)
+               (do-or and/or-test stx)]
+              
+              ; and : 
+              [(if test then else)
+               (let ([origin (syntax-property stx 'origin)])
+                 (and origin (pair? origin) (pair? (cdr origin)) (eq? (syntax-e (cadr origin)) 'and)))
+               (do-and (lx (and (eq? (syntax-source stx) (syntax-source _))
+                                (eq? (syntax-position stx) (syntax-position _))))
+                       stx)]
+              
+              [(if test then else)
+               (and/or-test stx)
+               (do-and and/or-test stx)]
+              
+              ; cond :
+              [(if test (begin then) else-stx)
+               (let ([origin (syntax-property stx 'origin)]
+                     [rebuild-if
+                      (lambda (new-cond-test)
+                        (let* ([new-then (syntax-property (recur-regular (syntax (begin then)))
+                                                          'stepper-skipto
+                                                          (list syntax-e cdr car))])
+                          (syntax-property
+                           (rebuild-stx `(if ,(recur-regular (syntax test))
+                                             ,new-then
+                                             ,(recur-in-cond (syntax else-stx) new-cond-test))
+                                        stx)
+                           'stepper-hint
+                           'comes-from-cond)))])
+                 (cond [(cond-test stx)
+                        (rebuild-if cond-test)]
+                       [(and origin (pair? origin) (eq? (syntax-e (car origin)) 'cond))
+                        (rebuild-if (lambda (test-stx) 
+                                      (and (eq? (syntax-source stx) (syntax-source test-stx))
+                                           (eq? (syntax-position stx) (syntax-position test-stx)))))]
+                       [else
+                        (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) stx)]))]
+              [(begin body) ; else clauses of conds
+               (cond-test stx)
+               (let ([new-body (syntax-property (recur-regular (syntax body)) 'stepper-else #t)])
+                 (syntax-property (rebuild-stx `(begin ,new-body) stx) 'stepper-skipto (list syntax-e cdr car)))]
+              
+              
+              ; let/letrec :
+              [(let-values x ...) (do-let/rec stx #f)]
+              [(letrec-values x ...) (do-let/rec stx #t)]
+              [var
+               (identifier? (syntax var))
+               (if (eq? (identifier-binding (syntax var)) 'lexical)
+                   (if (ormap (lambda (binding)
+                                (bound-identifier=? binding (syntax var)))
+                              let-bound-bindings)
+                       (syntax-property (syntax var) 'stepper-binding-type 'let-bound)
+                       (syntax-property (syntax var) 'stepper-binding-type 'lambda-bound))
+                   (syntax-property (syntax var) 'stepper-binding-type 'non-lexical))]
+              [stx
+               (let ([content (syntax-e (syntax stx))])
+                 (if (pair? content)
+                     (datum->syntax-object (syntax stx)
+                                           (syntax-pair-map content recur-regular)
+                                           (syntax stx)
+                                           (syntax stx))
+                     content))])))))
   
 ;  (syntax-case (label-var-types (expand #'(+ a 3))) (#%app #%top + #%datum) 
 ;    [(#%app (#%top . +) (#%top . a-var) (#%datum . 3))
@@ -597,12 +600,15 @@
                                                input-user-defined-names))
             
             (define (non-annotated-proc? varref)
-              (or (not (ormap (lambda (id)
-                                (bound-identifier=? id varref))
-                              user-defined-names))
-                  (ormap (lambda (id)
-                           (bound-identifier=? id varref))
-                         struct-proc-names)))
+              (kernel:kernel-syntax-case varref ()
+                [(#%top . id)
+                 (memq (syntax-e (syntax id)) beginner-defined:defined-names)]
+                [id
+                 (and (identifier? (syntax id))
+                      (not (eq? (identifier-binding (syntax id)) 'lexical)))
+                 (memq (syntax-e (syntax id)) beginner-defined:defined-names)]
+                [else
+                 #f]))
             
             (define (top-level-annotate/inner expr)
               (annotate/inner expr 'all #f #t #f))
@@ -661,7 +667,9 @@
                                  free-vars-captured))]
                        
                        [(syntax-property expr 'stepper-skip-completely)
-                        (2vals expr null)]
+                        (if top-level?
+                            (2vals expr null)
+                            (2vals (simple-wcm-wrap 13 expr) null))]
                      
                        [else
                         (let* ([d->so/user (lambda (stx) (datum->syntax-object #'here stx expr))]
@@ -752,8 +760,10 @@
                                            closure)]
                                         [inferred-name-lambda
                                          (cond [(symbol? procedure-name-info)
+                                                (printf "inferred name: ~a\n" procedure-name-info)
                                                 (syntax-property annotated-lambda 'inferred-name procedure-name-info)]
                                                [(pair? procedure-name-info)
+                                                (printf "inferred name: ~a\n" (car procedure-name-info))
                                                 (syntax-property annotated-lambda 'inferred-name (car procedure-name-info))]
                                                [else
                                                 annotated-lambda])]
@@ -1131,6 +1141,7 @@
                                                                   tagged-arg-temps annotated-terms)]
                                                   [new-tail-bound (binding-set-union (list tail-bound tagged-arg-temps))]
                                                   [app-debug-info (make-debug-info-app new-tail-bound tagged-arg-temps 'called)]
+                                                  [app-term (d->so/user tagged-arg-temps)]
                                                   [final-app (break-wrap (simple-wcm-wrap 
                                                                           app-debug-info
                                                                           (if (syntax-case (car (syntax->list (syntax terms))) (#%top)
@@ -1143,8 +1154,8 @@
                                                                                       foot-wrap?
                                                                                       (non-annotated-proc? (syntax var)))]
                                                                                 [else #f])
-                                                                              (return-value-wrap (d->so/user arg-temps))
-                                                                              (d->so/user tagged-arg-temps))))]
+                                                                              (return-value-wrap app-term)
+                                                                              app-term)))]
                                                   [debug-info (make-debug-info-app new-tail-bound
                                                                                    (varref-set-union (list free-varrefs tagged-arg-temps)) ; NB using bindings as vars
                                                                                    'not-yet-called)]
