@@ -126,3 +126,31 @@ particular, lambda-bound ones). Well, in beginner mode anyway...
 So, here's the next macro we need to handle: define-struct.
 
 
+*********
+
+Don't forget a test like
+
+(cond [blah]
+      [else cond [blah] [blah]])
+	  
+	  
+**********
+
+Okay, I'm a complete moron.  In particular, I threw out all of the source 
+correlation code a week ago because I somehow convinced myself that the 
+parsed expressions retained references to the read expressions.  That's 
+not true; all that's kept is a "location" structure, which records the file 
+and offset and all that jazz.  
+
+So I tried to fix that by inserting these source expressions into the 
+marks, along with the parsed expressions.  This doesn't work because I 
+need to find the read expressions for expressions that don't get marks... 
+or do I?  Yes, I do.  In particular, to unparse (define a 3), I need to see 
+the read expression to know that it wasn't really (define-values (a) 
+(values 3)).
+
+Maybe I can add a field to zodiac structures a la maybe-undefined?
+
+
+
+

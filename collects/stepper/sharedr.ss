@@ -69,35 +69,17 @@
   
   (define-struct varref (var top-level?))
     
-  ; source correlation stuff:
-
-  (define source-table (make-hash-table-weak))
-
-  (define (register-source key value)
-    (hash-table-put! source-table key value))
+  ; to perform source correlation, we use the 'register-client' ability of zodiac to
+  ; add fields to parsed structures at runtime.
   
-  (define (find-source-expr key offset)
-    (let search-exprs ([exprs (hash-table-get key)])
-      (let ([expr 
-	     (car (filter 
-		   (lambda (expr) 
-		     (< offset (z:location-offset (z:zodiac-finish expr))))
-		   exprs))])
-	(if (= offset (z:location-offset (z:zodiac-start expr)))
-	    expr
-	    (cond
-	      ((z:scalar? expr) (e:static-error "starting offset inside scalar:" offset))
-	      ((z:sequence? expr) 
-	       (let ([object (z:read-object expr)])
-		 (cond
-		   ((z:list? expr) (search-exprs object))
-		   ((z:vector? expr) 
-		    (search-exprs (vector->list object))) ; can source exprs be here?
-		   ((z:improper-list? expr)
-		    (search-exprs (search-exprs object))) ; can source exprs be here?
-		   (else (e:static-error "unknown expression type in sequence" expr)))))
-	      (else (e:static-error "unknown read type" expr)))))))
-  
-  
-  
+  (define-values (expr-read set-expr-read!)
+    (let-values ([(getter setter) 
+                  (z:register-client 'stepper:read 
+                                     (lambda () 
+                                       (e:dynamic-error
+                                        "no source expression set for this parsed expression")))])
+      (values
+       (lambda (parsed) (getter (z:parsed-back parsed)))
+       (lambda (parsed read) (setter (z:parsed-back parsed) read)))))
+                                                       
 ) 
