@@ -4,6 +4,22 @@
   
   ;;;;;;;;;;
   ;;
+  ;;  paul graham's [ _ ] macro
+  ;;
+  ;;;;;;;;;;
+  
+  (provide lx)
+  
+  (define-syntax (lx stx)
+    (syntax-case stx ()
+      [(lx term)
+       (with-syntax ([binder (datum->syntax-object (syntax term) `_)])
+         (syntax (lambda (binder) term)))]))
+  
+  
+  
+  ;;;;;;;;;;
+  ;;
   ;;  ccond implementation
   ;; 
   ;;;;;;;;;;

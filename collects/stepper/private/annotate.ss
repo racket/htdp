@@ -26,7 +26,7 @@
                                                                                                       
   ;; mapmap : maps the fn across the sub-lists
   (define (mapmap fn lolst)
-    (map (lambda (x) (map fn x)) lolst))
+    (map (lx (map fn _)) lolst))
   
 
   
@@ -142,8 +142,7 @@
   (define make-debug-info
     (checked-lambda (source (tail-bound BINDING-SET) (free-vars VARREF-SET) label lifting?)
                     (let*-2vals ([kept-vars (binding-set-varref-set-intersect tail-bound free-vars)]
-                                 [var-clauses (map (lambda (x) 
-                                                     (list x (d->so `(quote-syntax ,x))))
+                                 [var-clauses (map (lx (list _ (d->so `(quote-syntax ,_))))
                                                    kept-vars)]
                                  [let-bindings (filter (lambda (var) 
                                                          (case (syntax-property var 'stepper-binding-type)
@@ -259,19 +258,19 @@
   ; with the syntax-property 'stepper-binding-type, which is set to either let-bound, lambda-bound, or non-lexical.
   
   (define (top-level-rewrite stx)
-    (let loop ([stx stx] [let-bound-bindings null] [cond-test (lambda (x) #f)] [and/or-test (lambda (x) #f)])
+    (let loop ([stx stx] [let-bound-bindings null] [cond-test (lx #f)] [and/or-test (lx #f)])
       (let* ([recur-regular 
               (lambda (stx)
-                (loop stx let-bound-bindings (lambda (x) #f) (lambda (x) #f)))]
+                (loop stx let-bound-bindings (lx #f) (lx #f)))]
              [recur-with-bindings
               (lambda (exp vars)
-                (loop exp (append vars let-bound-bindings) (lambda (x) #f) (lambda (x) #f)))]
+                (loop exp (append vars let-bound-bindings) (lx #f) (lx #f)))]
              [recur-in-cond
               (lambda (stx new-cond-test)
-                (loop stx let-bound-bindings new-cond-test (lambda (x) #f)))]
+                (loop stx let-bound-bindings new-cond-test (lx #f)))]
              [recur-in-and/or
               (lambda (stx new-and/or-test new-bindings)
-                (loop stx (append new-bindings let-bound-bindings) (lambda (x) #f) new-and/or-test))]
+                (loop stx (append new-bindings let-bound-bindings) (lx #f) new-and/or-test))]
              [do-let/rec
               (lambda (stx rec?)
                 (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
@@ -792,7 +791,7 @@
                              [binding-name-sets (mapmap syntax-e binding-sets)]
                              [binding-list (foldl append null binding-sets)]
                              [vals (syntax->list (syntax (val ...)))]
-                             [lifted-var-sets (map (lambda (x) (map get-lifted-var x)) binding-sets)]
+                             [lifted-var-sets (map (lx (map get-lifted-var _)) binding-sets)]
                              [lifted-vars (apply append lifted-var-sets)]
                              [(annotated-vals free-varref-sets-vals)
                               (2vals-map let-rhs-recur vals binding-name-sets lifted-var-sets binding-sets)]
