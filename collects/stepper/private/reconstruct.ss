@@ -180,8 +180,6 @@
      'reconstruct-module
      'caller))
   
-  ; OUCH! primitives are not necessarily top-level vars
-  
   (define (skip-redex-step? mark-list)
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])

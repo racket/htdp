@@ -2,7 +2,8 @@
   
   (require "my-macros.ss")
   (require "highlight-placeholder.ss")
-  
+  (require (lib "specs.ss" "framework"))
+
   (provide
    (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs))
    (struct before-error-result (finished-exprs exp redex err-msg after-exprs))
@@ -40,7 +41,8 @@
    queue-pop ; queue -> val
    queue-length ; queue -> num
    rebuild-stx ; datum syntax-object -> syntax-object
-   break-kind?
+   break-kind-contract ; contract
+   break-contract ; contract
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -400,11 +402,11 @@
   (define (rebuild-stx new old)
     (datum->syntax-object old new old old))
   
-  (define (break-kind? symbol)
-    (case symbol
-      ((normal-break result-exp-break result-value-break double-break late-let-break) #t)
-      (else #f)))
-             
+  (define break-kind-contract
+    (symbols 'result-exp-break 'result-value-break 'double-break 'late-let-break))
+    
+  (define break-contract
+    (-> continuation-mark-set? any? break-kind-contract list?))
   )
 
 ; test cases

@@ -8,10 +8,19 @@
 
   (provide
    initial-env-package
-   annotate
+   annotate ; : annotate-contract
    top-level-rewrite
    )
  
+  
+  (notate expr annotate-environment break wrap-style . wrap-opts-list)
+  (define annotate-contract
+    (->* (syntax? annotate-environment? break-contract (symbols 'foot-wrap)) annotate-opts-list-contract (syntax?)))
+ 
+  (define annotate-opts-list-contract
+    (and/f (listof (listof symbol?)) (lx (= (length _) 1))))
+  (define-struct annotate-environment (struct-proc-names user-defined-names binding-index))
+  
   ;;                                              ;;;;                          ;                     
  ;  ;                                     ;       ;                         ;                         
  ;     ;   ;  ; ;;;   ; ;;;    ;;;   ; ;;;;;;     ;     ;   ;  ; ;;    ;;; ;;;; ;   ;;;   ; ;;    ;;; 
@@ -27,8 +36,6 @@
   ;; mapmap : maps the fn across the sub-lists
   (define (mapmap fn lolst)
     (map (lx (map fn _)) lolst))
-  
-
   
   ;; this looks wrong...
   (define (internal-error . x)
@@ -180,7 +187,7 @@
 ;           [full-body (append setters (list `(values ,@arg-temp-syms)))])
 ;      `(#%let-values ((,arg-temp-syms ,annotated)) ,@full-body)))
   
-  (define initial-env-package (list null null 0))
+  (define initial-env-package (make-annotate-environment null null 0))
   
   (define (extract-top-level-vars exprs)
     (apply append
@@ -485,9 +492,9 @@
          (define result-value-break
            (make-break 'result-value-break))
          
-         (define input-struct-proc-names (car annotate-environment))
-         (define input-user-defined-names (cadr annotate-environment))
-         (define binding-index (caddr annotate-environment))
+         (define input-struct-proc-names (annotate-environment-struct-proc-names annotate-environment))
+         (define input-user-defined-names (annotate-environment-user-defined-names annotate-environment))
+         (define binding-index (annotate-environment-binding-index annotate-environment))
          
          (define (binding-indexer)
            (let ([index binding-index])
