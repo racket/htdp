@@ -119,10 +119,7 @@
 
     (define (master cg)
       ;; --- error checks on arguments:
-      (if (= N 2)
-	  (check-proc 'master cg 4 'first 'arguments)
-	  (check-proc 'master cg 2 'first 'arguments))
-      ;; --- check-guess is a procedure of 4 arguments
+      (check-proc 'master cg 4 'first "four arguments")
       (set! check-guess cg)
 
       ; Show the frame 
@@ -146,24 +143,39 @@
 	(build-list GUESSES# (lambda (i) (list-ref COLORS (random COL#))))))
     (new-game)
 
+    ;; guesses : (listof color-button%)
+    ;; keep track of the list of guesses to be made in the form of buttons
+    ;; to be colored 
     (define guesses null)
+    ;; effect: all buttons are colorable 
     (define (initialize-guesses)
       (set! guesses guess-buttons))
+    ;; effect: remove the first guess button, if appropriate
     (define (pop!)
       (when (null? guesses) (error 'TeachMind "can't happen"))
       (let ((g (car guesses)))
 	(set! guesses (cdr guesses))
 	g))
+    ;; get started 
     (initialize-guesses)
 
+    ;; guessed-colors : (listof sym)
+    ;; keep track of the colors that the user has guessed for one round 
     (define guessed-colors null)
+    ;; sym -> void
+    ;; add a guess to the front 
     (define (add-a-guess! color:sym)
       (set! guessed-colors (cons color:sym guessed-colors)))
+    ;; -> symbol
+    ;; to determine "how correct" the guesses are 
+    ;; effect: reset guessed-colors
     (define (check-now!)
       (begin0
-	(if (= GUESSES# 2)
-	    (apply check-guess (append choices (reverse! guessed-colors)))
-	    (check-guess choices (reverse! guessed-colors)))
+	(with-handlers
+	  ([exn:user? (lambda (x)
+			(string->symbol
+			  (string-append "error: " (exn-message x))))])
+	  (apply check-guess (append choices (reverse! guessed-colors))))
 	(set! guessed-colors null)))
 
     ;; ------------------------------------------------------------------------
