@@ -59,7 +59,7 @@
   ; make-gensym-source : (string -> (key -> symbol))
   
   (define (make-gensym-source id-string)
-    (let ([assoc-table (make-hash-table)])
+    (let ([assoc-table (make-hash-table-weak)])
       (lambda (key)
         (let ([maybe-fetch (hash-table-get assoc-table key (lambda () #f))])
           (or maybe-fetch
