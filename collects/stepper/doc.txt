@@ -62,6 +62,8 @@ any reductions.
 
 ---
 
+Preliminary _Debugger_ Documentation
+
 The debugger is structured as an interaction between the program
 being debugged and a debugger UI.  The program is annotated to
 produce a stream of debugger "events" (as defined below) and to
