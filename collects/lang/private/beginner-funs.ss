@@ -8,7 +8,7 @@
   ;; Implements the procedures:
   (require "teachprims.ss"
 	   "../posn.ss"
-	   "../image.ss")
+	   "../imageeq.ss")
 
   ;; Test-suite support (require is really an effect
   ;;  to make sure that it's loaded)
@@ -431,49 +431,7 @@
      (image? (any -> boolean)
        "to determine whether a value is an image")
      (image=? (image image -> boolean)
-       "to determine whether two images are equal")
-     (image+ (image image -> image)
-       "to add the non-white pixels of the second image onto the first image at its top-left corner")
-     (offset-image+ (image int int image -> image)
-       "to add the non-white pixels of the second image onto the first at a number of pixels right and down")
-     (offset-masked-image+ (image int int image image -> image)
-       "to add the second image onto the first, using a third as a mask")
-     (image-width (image -> int)
-       "to obtain an image's width in pixels")
-     (image-height (image -> int)
-       "to obtain an image's height in pixels")
-     
-     (filled-rect (int int symbol -> image)
-       "to create an image of a filled rectangle using the given width, height, and color")
-     (outline-rect (int int symbol -> image)
-       "to create an image of a rectangle's outline using the given with, height, and color")
-     (filled-circle (int int symbol -> image)
-       "to create an image of a filled ellipse using the given width, height, and color")
-     (outline-circle (int int symbol -> image)
-       "to create an image of an ellipse's outline using the given width, height, and color")
-
-     (line (int int symbol -> image)
-       "to create an image with a colored line from (0,0) to the point with the given coordinates")
-
-     (text (string color -> image)
-       "to create an image from the given string and background color")
-
-     (image-inside? (image image -> boolean)
-       "to determine whether the non-white pixels of the second image appear in the first")
-     (find-image (image image -> posn)
-       "to determine where the non-white pixels of the second image appear in the first")
-	     
-     (image->color-list (image -> (listof color))
-       "to convert an image to a list of colors")
-     (color-list->image ((listof color) int int -> image)
-       "to convert a list of colors to an image with the given width and height"))
-
-    ("Colors"
-      (make-color (int int int -> color) "to construct a color")
-      (color? (anything -> boolean) "to determine if its input is a color")
-      (color-red (color -> int) "to extract the red component of a color")
-      (color-green (color -> int) "to extract the green component of a color")
-      (color-blue (color -> int) "to extract the blue component of a color"))
+       "to determine whether two images are equal"))
 
     ("Misc"
       (identity (any -> any)
