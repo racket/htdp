@@ -859,10 +859,13 @@
                   (syntax-property expr 'stepper-test-suite-hint)
                   (top-level-annotate/inner (top-level-rewrite expr) expr #f)]
                  [else
-                  (error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax-object->datum expr))])])))
+                  (top-level-annotate/inner (top-level-rewrite expr) expr #f)
+                  ;; the following check can't be permitted in the presence of things like test-suite cases
+                  ;; which produce arbitrary expressions at the top level.
+                  #;(error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax-object->datum expr))])])))
     
     ; body of local
-    ;(printf "input: ~a\n" expr)
+    #;(printf "input: ~a\n" expr)
     (let* ([annotated-expr (annotate/top-level expr)])
-      ;(printf "annotated: \n~a\n" annotated-expr)
+      ;(printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
       annotated-expr)))

@@ -632,10 +632,11 @@
   
   
   ;; filter-skipped : (listof syntax?) -> (listof syntax?)
-  ;; filter out any elements of the list with 'stepper-skip-completely set.
+  ;; filter out any elements of the list with 'stepper-skip-completely set, except those with stepper-prim-name set. (HACK).
   (define (filter-skipped los)
     (filter (lambda (stx)
-              (not (syntax-property stx 'stepper-skip-completely)))
+              (or (syntax-property stx 'stepper-prim-name)
+                  (not (syntax-property stx 'stepper-skip-completely))))
             los))
  
   
