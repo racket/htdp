@@ -1,7 +1,6 @@
-#define LIBNAME Simplified Scheme Web Servlets
-#include head.tinc
-
-<<LIBDESC>>{servlet2.ss}
+<< (define LIBNAME "Simplified Scheme Web Servlets")
+   (define FILENAME "servlet2.ss")
+   (include "head.tinc") >>
 
 <p>This teachpack provides a simplified API for PLT Scheme servlets. The
 teachpack does not require any understanding of HTML and higher-order
@@ -213,4 +212,5 @@ strings and numbers, respectively.
 (login (form-query login-page))
 
 </pre>
-#include foot.tinc
+
+<<(include "foot.tinc")>>

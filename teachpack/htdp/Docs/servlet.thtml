@@ -1,7 +1,6 @@
-#define LIBNAME Scheme Web Servlets
-#include head.tinc
-
-<<LIBDESC>>{servlet.ss}
+<< (define LIBNAME "Scheme Web Servlets")
+   (define FILENAME "servlet.ss")
+   (include "head.tinc") >>
 
 <p>The teachpack <code>servlet.ss</code> provides structures and
 functions for building Web servlets in Scheme. The data definitions
@@ -138,6 +137,4 @@ constrained as follows:
 </code>
 </pre>
 
-
-#include foot.tinc
-
+<<(include "foot.tinc")>>
