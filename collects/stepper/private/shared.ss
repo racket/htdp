@@ -4,7 +4,9 @@
 	   "highlight-placeholder.ss"
 	   (lib "contracts.ss")
            (lib "etc.ss")
-           (lib "list.ss"))
+           (lib "list.ss")
+           (lib "class.ss")
+           (lib "mred.ss" "mred"))
 
   ; CONTRACTS
   
@@ -74,7 +76,7 @@
   ; - a symbol, or
   ; - the highlight-placeholder
   
-  (define exp-without-holes-base-case? (union symbol? number? string? null?))
+  (define exp-without-holes-base-case? (union symbol? number? string? null? (lambda (v) (is-a? v snip%))))
   
   (define exp-without-holes?
     (union  exp-without-holes-base-case?

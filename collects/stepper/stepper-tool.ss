@@ -279,7 +279,7 @@
           (update-view 0)
           (send (send s-frame edit-menu:get-undo-item) enable #f)
           (send (send s-frame edit-menu:get-redo-item) enable #f)
-          (model:go program-expander-prime receive-result (get-render-settings render-to-string render-to-sexp))
+          (model:go program-expander-prime receive-result (get-render-settings render-to-string render-to-sexp #t))
           (send s-frame show #t)
           
           s-frame))
