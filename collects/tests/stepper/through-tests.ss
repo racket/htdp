@@ -574,6 +574,24 @@
   ;;
   ;;;;;;;;;;;;;
   
+  (test-intermediate-sequence "(define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))) (countdown 2)"
+                              `((before-after-finished ((define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))))
+                                                       (,h-p) ((countdown 2)) same ((recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1))))))
+                                (before-after (,h-p) ((recur loop ([n 2]) (if (= n 0) 13 (loop (- n 1))))) 
+                                              (,h-p ,h-p) ((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1)))) ((loop_0 2))))
+                                (before-after-finished ((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1)))))
+                                                       (,h-p) ((loop_0 2)) same ((if (= 2 0) 13 (loop_0 (- 2 1)))))
+                                (before-after ((if ,h-p 13 (loop_0 (- 2 1)))) ((= 2 0)) same (false))
+                                (before-after (,h-p) ((if false 13 (loop_0 (- 2 1)))) same ((loop_0 (- 2 1))))
+                                (before-after ((loop_0 ,h-p)) ((- 2 1)) same (1))
+                                (before-after (,h-p) ((loop_0 1)) same ((if (= 1 0) 13 (loop_0 (- 1 1)))))
+                                (before-after ((if ,h-p 13 (loop_0 (- 1 1)))) ((= 1 0)) same (false))
+                                (before-after (,h-p) ((if false 13 (loop_0 (- 1 1)))) same ((loop_0 (- 1 1))))
+                                (before-after ((loop_0 ,h-p)) ((- 1 1)) same (0))
+                                (before-after (,h-p) ((loop_0 0)) same ((if (= 0 0) 13 (loop_0 (- 0 1)))))
+                                (before-after ((if ,h-p 13 (loop_0 (- 0 1)))) ((= 0 0)) same (true))
+                                (before-after (,h-p) ((if true 13 (loop_0 (- 1 1)))) same (13))
+                                (finished (13))))
 
   ;;;;;;;;;;;;;
   ;;

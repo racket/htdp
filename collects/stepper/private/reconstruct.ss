@@ -258,7 +258,10 @@
  ;   ;   ;  ;   ;  ;     ;    ;   ;      ;  ;;  ;   ;  ; ; ; ;  ;  ;   ;  ;   ;;  ;  ;   ;  ;  ;; 
  ;   ;   ;   ;;;;;  ;;;  ;     ;;;        ;; ;  ;   ;   ;   ;   ;  ;   ;   ;;; ;  ;  ;   ;   ;; ; 
                                                                                                 ; 
-
+  
+  (->* ((listof sexp-with-highlights) (listof sexp-without-highlights)) 
+       ((listof sexp-with-highlights) (listof sexp-without-highlights)))
+  
   (define (unwind stx-list highlights)
     
     (local
@@ -356,7 +359,7 @@
       (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
       (let* ([main (map inner stx-list)]
              [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
-        (list main new-highlights))))
+        (values main new-highlights))))
   
   
                                                                        

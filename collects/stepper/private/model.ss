@@ -36,8 +36,8 @@
 (module model mzscheme
   (require (lib "contracts.ss")
            (lib "etc.ss")
-           (lib "mred.ss" "mred")  
-           (prefix frame: (lib "framework.ss" "framework"))
+           (lib "list.ss")
+           (lib "mred.ss" "mred")
            "my-macros.ss"
            (prefix a: "annotate.ss")
            (prefix r: "reconstruct.ss")
@@ -78,8 +78,10 @@
          
          (define basic-eval (current-eval))
          
-         ; if there's a sexp which _doesn't_ contain a highlight in between two that do, we're in trouble.
-         
+         ; redivide takes a list of sexps and divides them into the 'before', 'during', and 'after' lists,
+         ; where the before and after sets are maximal-length lists where none of the s-expressions contain
+         ; a highlight-placeholder
+         ; (->* ((listof sexp)) (list/p sexp sexp sexp))
          (define (redivide exprs)
            (letrec ([contains-highlight-placeholder
                      (lambda (expr)
@@ -87,41 +89,40 @@
                            (or (contains-highlight-placeholder (car expr))
                                (contains-highlight-placeholder (cdr expr)))
                            (eq? expr highlight-placeholder)))])
-             (let loop ([exprs-left exprs] [mode 'before])
-               (cond [(null? exprs-left) 
-                      (if (eq? mode 'before)
-                          (error 'redivide "no sexp contained the highlight-placeholder.")
-                          (values null null null))]
-                     [(contains-highlight-placeholder (car exprs-left))
-                      (if (eq? mode 'after)
-                          (error 'redivide "highlighted sexp when already in after mode")
-                          (let-values ([(before during after) (loop (cdr exprs-left) 'during)])
-                            (values before (cons (car exprs-left) during) after)))]
-                     [else
-                      (case mode
-                        ((before) 
-                         (let-values ([(before during after) (loop (cdr exprs-left) 'before)])
-                           (values (cons (car exprs-left) before) during after)))
-                        ((during after) 
-                         (let-values ([(before during after) (loop (cdr exprs-left) 'after)])
-                           (values before during (cons (car exprs-left) after)))))]))))
+             (let* ([list-length (length exprs)]
+                    [split-point-a (- list-length (length (or (memf contains-highlight-placeholder exprs) null)))]
+                    [split-point-b (length (or (memf contains-highlight-placeholder (reverse exprs)) null))])
+               (if (<= split-point-b split-point-a)
+                   (error 'redivide-exprs "s-expressions did not contain the highlight-placeholder: ~v" exprs)
+                   (values (sublist 0 split-point-a exprs) ; before
+                           (sublist split-point-a split-point-b exprs) ; during
+                           (sublist split-point-b list-length exprs)))))) ; after
+
+         ; sublist returns the list beginning with element <begin> and ending just before element <end>.
+         ; (-> number? number? list? list?)
+         (define (sublist begin end lst) 
+           (if (= end 0) 
+               null
+               (if (= begin 0)
+                   (cons (car lst)
+                         (sublist 0 (- end 1) (cdr lst)))
+                   (sublist (- begin 1) (- end 1) (cdr lst)))))
          
-         ;(redivide `(3 4 (+ (define ,highlight-placeholder) 13) 5 6))
-         ;(values `(3 4) `((+ (define ,highlight-placeholder) 13)) `(5 6))
-         ;
-         ;(redivide `(,highlight-placeholder 5 6))
-         ;(values `() `(,highlight-placeholder) `(5 6))
-         ;
-         ;(redivide `(4 5 ,highlight-placeholder ,highlight-placeholder))
-         ;(values `(4 5) `(,highlight-placeholder ,highlight-placeholder) `())
-         ;
-         ;(printf "will be errors:~n")
-         ;(equal? (redivide `(1 2 3 4))
-         ;        error-value)
-         ;
-         ;(equal? (redivide `(1 2 ,highlight-placeholder 3 ,highlight-placeholder 4 5))
-         ;        error-value)
-         
+;         (redivide `(3 4 (+ (define ,highlight-placeholder) 13) 5 6))
+;         (values `(3 4) `((+ (define ,highlight-placeholder) 13)) `(5 6))
+;         
+;         (redivide `(,highlight-placeholder 5 6))
+;         (values `() `(,highlight-placeholder) `(5 6))
+;         
+;         (redivide `(4 5 ,highlight-placeholder ,highlight-placeholder))
+;         (values `(4 5) `(,highlight-placeholder ,highlight-placeholder) `())
+;         
+;         (printf "will be errors:~n")
+;         (equal? (redivide `(1 2 3 4))
+;                 error-value)
+;         
+;         (redivide `(1 2 ,highlight-placeholder 3 ,highlight-placeholder 4 5))
+;         (values `(1 2) `(,highlight-placeholder 3 ,highlight-placeholder) `(4 5))
          
          (define (break mark-set break-kind returned-value-list)
            (let* ([mark-list (extract-mark-list mark-set)])
@@ -161,6 +162,10 @@
                             ; (... <body-of-my-proc> ...), where the context of the first one is
                             ; empty and the context of the second one is (... ...).
                             ; so, I'll just disable this invariant test.
+                            ;
+                            ; in fact, this also fails for let/let*/etc., where a single expression
+                            ; reduces to multiple top-level-expressions.
+                            ;
                             ;(when (not (equal? reconstructed held-expr-list))
                             ;  (error 'reconstruct-helper
                             ;         "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
