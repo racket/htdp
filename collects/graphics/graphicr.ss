@@ -235,7 +235,6 @@
   
   (define ready-mouse-click
     (lambda (viewport)
-      (mred:yield)
       (send (viewport-canvas viewport) get-click)))
   
   (define ready-mouse-release
