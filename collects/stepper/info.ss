@@ -7,5 +7,6 @@
                             "gui.ss"
                             "stepper-test.ss"
                             "stepper-testr.ss"
-                            "sig.ss")]
+                            "sig.ss"
+                            "big-annotater.ss")]
     [else (failure)]))
