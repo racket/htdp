@@ -8,8 +8,8 @@
   ;; syntax:
   (provide (rename beginner-define define)
 	   (rename beginner-define-struct define-struct)
-	   (rename beginner-app #%app)
 	   (rename intermediate-lambda lambda)
+	   (rename intermediate-app #%app)
 	   (rename intermediate-local local)
 	   (rename intermediate-let let)
 	   (rename intermediate-letrec letrec)
@@ -18,6 +18,9 @@
 	   (rename beginner-and and)
 	   (rename beginner-or or)
 	   (rename quote quote)
+	   (rename intermediate-quasiquote quasiquote)
+	   (rename intermediate-unquote unquote)
+	   (rename intermediate-unquote-splicing unquote-splicing)
 	   (rename intermediate-time time)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum

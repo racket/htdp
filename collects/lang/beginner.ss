@@ -226,6 +226,9 @@
     ((beginner-cons cons) (X (listof X) -> (listof X))
 	  "to construct a list")
 
+    (null ( empty )
+	   "the empty list")
+
     (first ( (cons Y (listof X)) -> Y )
 	   "to select the first item of a non-empty list")
     (car ( (cons Y (listof X)) -> Y )
@@ -239,10 +242,30 @@
 	    "to select the second item of a non-empty list")
     (cadr ( (cons Z (cons Y (listof X))) -> Y )
 	  "to select the second item of a non-empty list")	  
+    (cdar ( (cons (cons Z (listof Y)) (listof X)) -> (listof Y) )
+	  "to select the rest of a non-empty list in a list") 
+    (caar ( (cons (cons Z (listof Y)) (listof X)) -> Z )
+	  "to select the first item of the first list in a list")
+    (cddr ( (cons Z (cons Y (listof X))) -> (listof X) )
+	  "to select the rest of the rest of a list")
     (third ( (cons W (cons Z (cons Y (listof X)))) -> Y )
 	   "to select the third item of a non-empty list")
     (caddr ( (cons W (cons Z (cons Y (listof X)))) -> Y )
 	   "to select the third item of a non-empty list")	  
+    (caadr ( (cons (cons (cons W (listof Z)) (listof Y)) (listof X)) -> (listof Z) )
+	   "to select the rest of the first list in the first list of a list")
+    (caaar ( (cons (cons (cons W (listof Z)) (listof Y)) (listof X)) -> W )
+	   "to select the first item of the first list in the first list of a list")
+    (cdaar ( (cons (cons (cons W (listof Z)) (listof Y)) (listof X)) -> (listof Z) )
+	   "to select the rest of the first list in the first list of a list")
+    (cdadr ( (cons W (cons (cons Z (listof Y)) (listof X))) -> (listof Y) )
+	   "to select the rest of the first list in the rest of a list")
+    (cadar ( (cons (cons W (cons Z (listof Y))) (listof X)) -> Z )
+	   "to select the second item of the first list of a list")
+    (cddar ( (cons (cons W (cons Z (listof Y))) (listof X)) -> (listof Y) )
+	   "to select the rest of the rest of the first list of a list")
+    (cdddr ( (cons W (cons Z (cons Y (listof X)))) -> (listof X) )
+	   "to select the rest of the rest of the rest of a list")
     (fourth ( (listof Y)  -> Y ) ; domain: (cons V (cons W (cons Z (cons Y (listof X)))))
 	    "to select the fourth item of a non-empty list")
     (cadddr ( (listof Y)  -> Y ) ;  domain: (cons V (cons W (cons Z (cons Y (listof X)))))
@@ -404,6 +427,7 @@
 	    "to format a string, possibly embedding values"))
 
    ("Reading and Printing"
+    (display (sexp ->) "to display output to the user")
     (read (-> sexp) "to read input from the user"))
    
    ("Misc"

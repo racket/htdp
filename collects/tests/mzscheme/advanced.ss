@@ -69,6 +69,7 @@
 (syntax-test #'(let name ([x 10] 2) 1))
 (syntax-test #'(let name ([11 10]) 1))
 (syntax-test #'(let name ([x 10]) 1 2))
+(syntax-test #'(let name ([x 10][x 11]) 1))
 (test 10 'lookup (let name () 10))
 (test 1024 'loop (let loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
 
@@ -79,8 +80,29 @@
 (syntax-test #'(recur name ([x 10] 2) 1))
 (syntax-test #'(recur name ([11 10]) 1))
 (syntax-test #'(recur name ([x 10]) 1 2))
+(syntax-test #'(recur name ([x 10][x 11]) 1))
 (test 10 'lookup (recur name () 10))
 (test 1024 'loop (recur loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
+
+(syntax-test #'shared)
+(syntax-test #'(shared))
+(syntax-test #'(shared ()))
+(syntax-test #'(shared () 1 2))
+(syntax-test #'(shared (x) 2))
+(syntax-test #'(shared ([x]) 2))
+(syntax-test #'(shared ([x 1 3]) 2))
+(syntax-test #'(shared ([1 3]) 2))
+(syntax-test #'(shared ([x 1][x 2]) 2))
+
+(test 1 'shared (shared () 1))
+(test 1 'shared (shared ([x 1]) x))
+(test '(1) 'shared (shared ([x (cons 1 null)]) x))
+(test 1 car (shared ([x (cons 1 x)]) x))
+(test 1 cadr (shared ([x (cons 1 x)][y (cons 2 x)]) y))
+(test 1 cadddr (shared ([x (cons 1 x)][y (cons 2 x)]) y))
+(test #t (lambda (l) (eq? l (cdr l))) (shared ([x (cons 1 x)]) x))
+(test #t (lambda (l) (eq? l (car l))) (shared ([x (list x x)]) x))
+(test #t (lambda (l) (eq? l (cadr l))) (shared ([x (list x x)]) x))
 
 (report-errs)
 

@@ -33,4 +33,6 @@
 (syntax-test #'(define x (lambda (y) (lambda (z) z))))
 (syntax-test #'(lambda (x) 10))
 
+(syntax-test #'(lambda (f) (f f)))
+
 (do-report-errs #t)

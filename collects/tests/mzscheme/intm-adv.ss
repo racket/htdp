@@ -1,12 +1,43 @@
 
 (test 1 'quote '1)
+(test (list 'quote 1) 'quote ''1)
 (test "Hello" 'quote '"Hello")
 (test (list 1 2) 'quote '(1 2))
 (test (list 1 (list 2 "hi")) 'quote '(1 (2 "hi")))
 
+(test 1 'qq `1)
+(test '(1 2) 'qq `(1 2))
+(test 7 'qq `,(+ 3 4))
+(test '(1 3) 'qq `(1 ,(+ 1 2)))
+(test '(99 88 77) 'qq `(,(* 11 9) ,(* 11 `8) ,`,(* 11 7)))
+(test '(1 2 3 4) 'qq `(1 ,@(list 2 3) 4))
+(test '(quasiquote 11) 'qq ``11)
+(test '(quasiquote (unquote 11)) 'qq ``,11)
+(test '(quasiquote (unquote 22)) 'qq ``,,(* 11 2))
+(test '(quasiquote ((unquote-splicing (22)))) 'qq ``(,@(,@(list (* 11 2)))))
+
+(syntax-test #'quasiquote)
+(syntax-test #'`unquote)
+(syntax-test #'`unquote-splicing)
+(syntax-test #'`(unquote-splicing 10))
+
+(syntax-test #'unquote)
+(syntax-test #'(unquote))
+(syntax-test #'(unquote 10))
+
+(syntax-test #'unquote-splicing)
+(syntax-test #'(unquote-splicing (list 10)))
+(syntax-test #'((unquote-splicing (list 10))))
+
+(err/rt-test `(,@4))
+
+(syntax-test #'(lambda (z z) 10))
+
 (define f (lambda (y) (lambda (z) z)))
 (test #t procedure? f)
 (test 778 (lambda (x) 778) 'ignored)
+
+(test values (lambda (f) (f f)) values)
 
 (syntax-test #'local)
 (syntax-test #'(local))
@@ -18,6 +49,7 @@
 (syntax-test #'(local [(+ 1 2)] 1))
 (syntax-test #'(local [(define x)] 1))
 (syntax-test #'(local [(lambda (x) x)] 1))
+(syntax-test #'(local [(define x 1) (define x 2)] 1))
 (syntax-test #'(local [(define (x a) 12) (+ 1 2)] 1))
 
 (err/rt-test (local [(define x y) (define y 5)] 10) exn:variable?)
@@ -41,6 +73,7 @@
 (syntax-test #'(letrec ([x 5] 10) 1))
 (syntax-test #'(letrec ([1 5]) 1))
 (syntax-test #'(letrec ([x 5]) 1 2))
+(syntax-test #'(letrec ([x 5][x 6]) 1))
 
 (err/rt-test (letrec ([x y] [y 5]) 10) exn:variable?)
 
@@ -63,6 +96,7 @@
 (syntax-test #'(let ([x 5] 10) 1))
 (syntax-test #'(let ([1 5]) 1))
 (syntax-test #'(let ([x 5]) 1 2))
+(syntax-test #'(let ([x 5][x 6]) 1))
 
 (test 1 'let (let () 1))
 (test 5 'let (let ([y 5]) (let ([x y]) x)))

@@ -11,6 +11,7 @@
 (syntax-test #'(define (y "x") 12))
 (syntax-test #'(define (y z 10) 12))
 (syntax-test #'(define (x y) 10 12))
+(syntax-test #'(define (x y y) 10))
 (syntax-test #'(define x lambda))
 (syntax-test #'(define x (lambda)))
 (syntax-test #'(define x (lambda (x))))
@@ -19,6 +20,8 @@
 (syntax-test #'(define x (lambda (10) 10)))
 (syntax-test #'(define x (lambda (x 10) 10)))
 (syntax-test #'(define x (lambda (y) 10 11)))
+(syntax-test #'(define x (lambda (y) 10 11)))
+(syntax-test #'(define x (lambda (y y) 10)))
 (syntax-test #'(+ (define x 5)))
 
 (syntax-test #'define-struct)
@@ -30,6 +33,7 @@
 (syntax-test #'(define-struct a (10)))
 (syntax-test #'(define-struct a (b 10)))
 (syntax-test #'(define-struct (a) (b)))
+(syntax-test #'(define-struct a (b b)))
 
 (define x 5)
 (define (f y) (+ x y))

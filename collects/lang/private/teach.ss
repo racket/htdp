@@ -20,7 +20,9 @@
 	   (lib "list.ss")
 	   (lib "math.ss"))
   (require-for-syntax "teachhelp.ss"
-		      (lib "kerncase.ss" "syntax"))
+		      (lib "kerncase.ss" "syntax")
+		      (lib "stx.ss" "syntax")
+		      (lib "include.ss"))
 
   ;; syntax:
   (provide beginner-define
@@ -37,6 +39,10 @@
 	   intermediate-letrec
 	   intermediate-let
 	   intermediate-lambda
+	   intermediate-app
+	   intermediate-quasiquote
+	   intermediate-unquote
+	   intermediate-unquote-splicing
 	   intermediate-time
 
 	   advanced-define
@@ -45,7 +51,8 @@
 	   advanced-define-struct
 	   advanced-let
 	   advanced-recur
-	   advanced-begin)
+	   advanced-begin
+	   advanced-shared)
   
   (define-struct posn (x y) (make-inspector)) ; transparent
   (provide (struct posn (x y)))
@@ -114,6 +121,13 @@
 	       'lambda
 	       (syntax arg-seq)
 	       "expected at least one argument name in the sequence after `lambda', but found none"))
+	    (let ([dup (check-duplicate-identifier args)])
+	      (when dup
+		(teach-syntax-error
+		 'lambda
+		 dup
+		 "found an argument name that was used more than once: ~a"
+		 (syntax-e dup))))
 	    (check-single-result-expr (syntax->list (syntax (lexpr ...)))
 				      'lambda
 				      (syntax expr))
@@ -161,6 +175,13 @@
 	     'define
 	     (syntax name-seq)
 	     "expected at least one argument name after the function name, but found none"))
+	  (let ([dup (check-duplicate-identifier (cdr names))])
+	    (when dup
+	      (teach-syntax-error
+	       'define
+	       dup
+	       "found an argument name that was used more than once: ~a"
+	       (syntax-e dup))))
 	  (check-single-result-expr (syntax->list (syntax (expr ...)))
 				    'define
 				    stx)
@@ -221,7 +242,8 @@
 	(something-else (syntax name)))]
       [(_ name_ (field_ ...) . rest)
        (let ([name (syntax name_)]
-	     [fields (syntax->list (syntax (field_ ...)))])
+	     [fields (syntax->list (syntax (field_ ...)))]
+	     [ht (make-hash-table)])
 	 (for-each
 	  (lambda (field)
 	    (unless (identifier? field)
@@ -229,7 +251,15 @@
 	       'define-struct
 	       field
 	       "expected a structure field name, found ~a"
-	       (something-else field))))
+	       (something-else field)))
+	    (let ([sym (syntax-e field)])
+	      (when (hash-table-get ht sym (lambda () #f))
+		(teach-syntax-error
+		 'define-struct
+		 field
+		 "found a field name that was used more than once: ~a"
+		 sym))
+	      (hash-table-put! ht sym #t)))
 	  fields)
 	 (when (null? fields)
 	   (teach-syntax-error
@@ -284,7 +314,7 @@
       [_else (bad-use-error 'define-struct stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; application (beginner)
+  ;; application (beginner and intermediate)
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   ;; This application form disallows rator expressions that aren't
@@ -297,38 +327,49 @@
   ;; `local'-bound identifiers, which are legal as rator
   ;; expressions. (`let' and `letrec' get converted to `local'.)
 
-  (define-syntax (beginner-app stx)
-    (syntax-case stx ()
-      [(_ rator rand ...)
-       (let* ([fun (syntax rator)]
-	      [undef-check? (syntax-case fun (check-not-undefined)
-			      [(check-not-undefined id)
-			       #t]
-			      [_else #f])]
-	      [lex? (and (identifier? fun)
-			 (eq? 'lexical (identifier-binding fun)))])
-	 (unless (and (identifier? fun) (or undef-check? (not lex?)))
-	   (teach-syntax-error
-	    'application
-	    fun
-	    "expected a defined name or a primitive operation name after an ~
-             open parenthesis, but found ~a"
-	    (if lex?
-		"a function argument name"
-		(something-else fun))))
-	 (when (null? (syntax->list (syntax (rand ...))))
-	   (teach-syntax-error
-	    'application
-	    stx
-	    "expected an argument after the function name for a function call, but nothing's there"))
-	 (syntax (#%app rator rand ...)))]
-      [(_)
-       (teach-syntax-error
-	'application
-	stx
-	"expected a defined name or a primitive operation name after after an ~
-         open parenthesis, but nothing's there")]
-      [_else (bad-use-error '#%app stx)]))
+  (define-syntaxes (beginner-app intermediate-app)
+    (let ([mk-app
+	   (lambda (lex-ok?)
+	     (lambda (stx)
+	       (syntax-case stx ()
+		 [(_ rator rand ...)
+		  (let* ([fun (syntax rator)]
+			 [undef-check? (syntax-case fun (check-not-undefined)
+					 [(check-not-undefined id)
+					  #t]
+					 [_else #f])]
+			 [lex? (and (identifier? fun)
+				    (eq? 'lexical (identifier-binding fun)))])
+		    (unless (and (identifier? fun) (or lex-ok? undef-check? (not lex?)))
+		      (teach-syntax-error
+		       'application
+		       fun
+		       "expected a ~a after an ~
+                        open parenthesis, but found ~a"
+		       (if lex-ok?
+			   "name"
+			   "defined name or a primitive operation name")
+		       (if lex?
+			   "a function argument name"
+			   (something-else fun))))
+		    (when (null? (syntax->list (syntax (rand ...))))
+		      (teach-syntax-error
+		       'application
+		       stx
+		       "expected an argument after the function name for a function call, ~
+                        but nothing's there"))
+		    (syntax (#%app rator rand ...)))]
+		 [(_)
+		  (teach-syntax-error
+		   'application
+		   stx
+		   (format
+		    "expected a ~a after after an open parenthesis, but nothing's there"
+		    (if lex-ok?
+			"name"
+			"defined name or a primitive operation name")))]
+		 [_else (bad-use-error '#%app stx)])))])
+      (values (mk-app #f) (mk-app #t))))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; cond
@@ -693,6 +734,74 @@
        (bad-use-error 'lambda stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; quasiquote (intermediate)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  ;; This quasiquote uses the right cons, and perhaps provides more
+  ;; suitable error messages. The "right" cons is actually advanced-cons,
+  ;; because it works with shared:
+
+  (require (rename "teachprims.ss" the-cons advanced-cons))
+  
+  (define-syntax (intermediate-quasiquote stx)
+    (let loop ([stx (syntax-case stx ()
+		      [(_ stx) (syntax stx)]
+		      [(_ . any)
+		       (teach-syntax-error
+			'quasiquote
+			stx
+			"misuse of `quasiquote'")]
+		      [_else (bad-use-error 'quasiquote stx)])]
+	       [depth 0])
+      (syntax-case stx (intermediate-unquote intermediate-unquote-splicing intermediate-quasiquote)
+	[(intermediate-unquote x)
+	 (if (zero? depth)
+	     (syntax x)
+	     (with-syntax ([x (loop (syntax x) (sub1 depth))]
+			   [uq (stx-car stx)])
+	       (syntax (list (quote uq) x))))]
+	[intermediate-unquote
+	 (teach-syntax-error
+	  'quasiquote
+	  stx
+	  "misuse of `unquote' within a quasiquoting backquote")]
+	[((intermediate-unquote-splicing x) . rest)
+	 (if (zero? depth)
+	     (with-syntax ([rest (loop (syntax rest) depth)])
+	       (syntax (append x rest)))
+	     (with-syntax ([x (loop (syntax x) (sub1 depth))]
+			   [rest (loop (syntax rest) depth)]
+			   [uq-splicing (stx-car (stx-car stx))])
+	       (syntax (the-cons (list (quote uq-splicing) x) rest))))]
+	[intermediate-unquote-splicing
+	 (teach-syntax-error
+	  'quasiquote
+	  stx
+	  "misuse of ,@ or `unquote-splicing' within a quasiquoting backquote")]
+	[(intermediate-quasiquote x)
+	 (with-syntax ([x (loop (syntax x) (add1 depth))]
+		       [qq (stx-car stx)])
+	   (syntax (list (quote qq) x)))]
+	[(a . b)
+	 (with-syntax ([a (loop (syntax a) depth)]
+		       [b (loop (syntax b) depth)])
+	   (syntax (the-cons a b)))]
+	[any
+	 (syntax (quote any))])))
+
+  (define-syntax (intermediate-unquote stx)
+    (teach-syntax-error
+     'unquote
+     stx
+     "misuse of a comma or `unquote', not under a quasiquoting backquote"))
+  
+  (define-syntax (intermediate-unquote-splicing stx)
+    (teach-syntax-error
+     'unquote-splicing
+     stx
+     "misuse of ,@ or `unquote-splicing', not under a quasiquoting backquote"))
+  
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; time
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -852,5 +961,76 @@
       [(_ e ...)
        (syntax (let () e ...))]
       [_else
-       (bad-use-error 'begin stx)])))
+       (bad-use-error 'begin stx)]))
 
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; shared (advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (require (rename "teachprims.ss" cyclic-list? cyclic-list?))
+
+  (define-syntax advanced-shared
+    (lambda (stx)
+      ;; Helper for the main implementation
+      (define (make-check-cdr name)
+	(with-syntax ([name name])
+	  (syntax (unless (cyclic-list? (cdr name))
+		    (raise-type-error
+		     'cons
+		     "list or cyclic list"
+		     1
+		     va
+		     vd)))))
+
+      ;; Check the syntax before letting the main implementation go:
+      (syntax-case stx ()
+	[(_ (binding ...) . exprs)
+	 (let ([bindings (syntax->list (syntax (binding ...)))])
+	   (for-each
+	    (lambda (binding)
+	      (syntax-case binding ()
+		[(id . exprs)
+		 (identifier? (syntax id))
+		 (check-single-expression 'shared
+					  "after the binding name"
+					  binding
+					  (syntax->list (syntax exprs)))]
+		[(a . rest)
+		 (not (identifier? (syntax a)))
+		 (teach-syntax-error
+		  'shared
+		  (syntax a)
+		  "expected a name for the binding, but found ~a"
+		  (something-else (syntax a)))]
+		[()
+		 (not (identifier? (syntax a)))
+		 (teach-syntax-error
+		  'shared
+		  (syntax a)
+		  "expected a name for a binding, but nothing's there")]
+		[_else
+		 (teach-syntax-error
+		  'shared
+		  binding
+		  "expected a name--expression pair for a binding, but found ~a"
+		  (something-else binding))]))
+	    bindings)
+	   (check-single-expression 'shared
+				    "after the bindings"
+				    stx
+				    (syntax->list (syntax exprs))))]
+	[(_ bad-bind . exprs)
+	 (teach-syntax-error
+	  'shared
+	  (syntax bad-bind)
+	  "expected a sequence of bindings after `shared', but found ~a"
+	  (something-else (syntax bad-bind)))]
+	[(_)
+	 (teach-syntax-error
+	  'shared
+	  (syntax bad-bind)
+	  "expected a sequence of bindings after `shared', but nothing's there")]
+	[_else (bad-use-error 'shared stx)])
+
+      ;; The main implementation
+      (include (build-path up up "mzlib" "private" "shared-body.ss")))))

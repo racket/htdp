@@ -1,6 +1,18 @@
 
 (module teachprims mzscheme
   
+  (define cyclic-list?
+    (lambda (l)
+      (or (list? l)
+	  (and (pair? l)
+	       (let loop ([hare (cdr l)][turtle l])
+		 (cond
+		  [(eq? hare turtle) #t]
+		  [(not (pair? hare)) #f]
+		  [(eq? (cdr hare) turtle) #t]
+		  [(not (pair? (cdr hare))) #f]
+		  [else (loop (cddr hare) (cdr turtle))]))))))
+
   (define (build-arg-list args)
     (let loop ([args args][n 0])
       (cond
@@ -9,30 +21,36 @@
        [else
 	(format " ~e~a" (car args) (loop (cdr args) (add1 n)))])))
 
-  (define check-second 
+  (define (mk-check-second ok? type)
     (lambda (prim-name a b)
-      (unless (list? b)
+      (unless (ok? b)
 	(raise
 	 (make-exn:application:type
-	  (format "~a: second argument must be of type <list>, given ~e and ~e"
-		  prim-name
+	  (format "~a: second argument must be of type <~a>, given ~e and ~e"
+		  prim-name type
 		  a b)
 	  (current-continuation-marks)
 	  b
 	  'list)))))
-  
-  (define check-last
+
+  (define check-second 
+    (mk-check-second list? "list"))
+
+  (define check-second/cycle
+    (mk-check-second cyclic-list? "list or cyclic list"))
+
+  (define (mk-check-last ok? type)
     (lambda (prim-name args)
       (let loop ([l args])
 	(cond
 	 [(null? l) (void)]
 	 [(null? (cdr l))
 	  (let ([last (car l)])
-	    (unless (list? last)
+	    (unless (ok? last)
 	      (raise
 	       (make-exn:application:type
-		(format "~a: last argument must be of type <list>, given ~e; other args:~a"
-			prim-name
+		(format "~a: last argument must be of type <~a>, given ~e; other args:~a"
+			prim-name type
 			last
 			(build-arg-list
 			 (let loop ([args args])
@@ -43,6 +61,12 @@
 		last
 		'list))))]
 	 [else (loop (cdr l))]))))
+
+  (define check-last 
+    (mk-check-last list? "list"))
+
+  (define check-last/cycle
+    (mk-check-last cyclic-list? "list or cyclic list"))
 
   (define-syntax (define-teach stx)
     (syntax-case stx ()
@@ -75,11 +99,6 @@
       (check-second 'cons a b)
       (cons a b)))
   
-  (define-teach advanced set-cdr!
-    (lambda (a b)
-      (check-second 'set-cdr! a b)
-      (set-cdr! a b)))
-  
   (define-teach beginner list*
     (lambda x
       (check-last 'list* x)
@@ -90,11 +109,6 @@
       (check-last 'append x)
       (apply append x)))
   
-  (define-teach advanced append!
-    (lambda x
-      (check-last 'append! x)
-      (apply append! x)))
-
   (define-teach beginner error
     (lambda (sym str)
       (unless (and (symbol? sym)
@@ -108,12 +122,47 @@
 	  (if (symbol? sym) 'string 'symbol))))
       (error sym "~a" str)))
 
+  (define-teach advanced cons 
+    (lambda (a b)
+      (check-second/cycle 'cons a b)
+      (cons a b)))
+  
+  (define-teach advanced set-cdr!
+    (lambda (a b)
+      (check-second/cycle 'set-cdr! a b)
+      (set-cdr! a b)))
+  
+  (define-teach advanced set-rest!
+    (lambda (a b)
+      (check-second/cycle 'set-rest! a b)
+      (set-cdr! a b)))
+  
+  (define-teach advanced list*
+    (lambda x
+      (check-last/cycle 'list* x)
+      (apply list* x)))
+  
+  (define-teach advanced append
+    (lambda x
+      (check-last/cycle 'append x)
+      (apply append x)))
+  
+  (define-teach advanced append!
+    (lambda x
+      (check-last/cycle 'append! x)
+      (apply append! x)))
+
   (provide beginner-+
 	   beginner-/
 	   beginner-*
 	   beginner-cons
-	   advanced-set-cdr!
 	   beginner-list*
 	   beginner-append
+	   beginner-error
+	   advanced-cons
+	   advanced-set-cdr!
+	   advanced-set-rest!
+	   advanced-list*
+	   advanced-append
 	   advanced-append!
-	   beginner-error))
+	   cyclic-list?))
