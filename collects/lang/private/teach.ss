@@ -665,7 +665,13 @@
                         but nothing's there"))
 		      ;; For beginner, we need to tell beginner-top that the rator is ok:
 		      (with-syntax ([rator (if (and (identifier? fun)
-						    (not (identifier-binding fun)))
+						    (let ([b (identifier-binding fun)])
+						      ;; Top-level or local-module reference?
+						      (or (not b)
+							  (and (pair? b)
+							       (module-path-index? (car b))
+							       (let-values ([(base rel) (module-path-index-split (car b))])
+								 (and (not base) (not rel)))))))
 					       ;; avoid beginner #%top:
 					       (syntax/loc stx (#%top . rator))
 					       ;; keep the rator as it was:
