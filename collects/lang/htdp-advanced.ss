@@ -58,6 +58,8 @@
 	   "like write, but with standard newlines and indentation")
     (printf (string any ... -> void)
 	    "to format the rest of the arguments according to the first argument and print it to stdout")
+    (newline (-> void)
+	     "to print a newline to stdout")
     (read (-> sexp) "to read input from the user"))
    
    ("Lists"
