@@ -208,33 +208,17 @@
 	   (send release-queue flush)
 	   (send press-queue flush))])))
   
-  (define open-frames-sema (make-semaphore 1))
-  (define open-frames 0)
   (define open-frames-timer (make-object mred:timer%))
 
   (define sixlib-frame%
-    (class100 mred:frame% args
+    (class mred:frame%
       (rename [super-on-close on-close])
-      (private-field ;was public
-	[canvas #f])
-      (public
-	[set-canvas (lambda (x) (set! canvas x))])
-      (override
-       [on-close
-	(lambda ()
-	  (close-viewport (send canvas get-viewport))
-	  (semaphore-wait open-frames-sema)
-	  (set! open-frames (- open-frames 1))
-	  (when (zero? open-frames)
-	    (send open-frames-timer stop))
-	  (semaphore-post open-frames-sema)
-	  (super-on-close))])
-      (sequence (apply super-init args)
-		(semaphore-wait open-frames-sema)
-		(when (zero? open-frames)
-		  (send open-frames-timer start 100000000))
-		(set! open-frames (+ open-frames 1))
-		(semaphore-post open-frames-sema))))
+      (field [canvas #f])
+      (define/public (set-canvas x) (set! canvas x))
+      (define/override (on-close)
+	(close-viewport (send canvas get-viewport))
+	(super-on-close))
+      (super-instantiate ())))
   
   (define repaint
     (lambda (viewport)
@@ -366,7 +350,9 @@
 		[(eq? (car l) viewport) (cdr l)]
 		[else (cons (car l) (loop (cdr l)))])))
       (send (viewport-frame viewport) show #f)
-      (send (viewport-canvas viewport) show #f)))
+      (send (viewport-canvas viewport) show #f)
+      (when (null? global-viewport-list)
+	(send open-frames-timer stop))))
   
   (define open-graphics 
     (lambda () 
@@ -376,7 +362,8 @@
     (lambda ()
       (map close-viewport global-viewport-list)
       (set! graphics-flag #f)
-      (set! global-viewport-list '())))
+      (set! global-viewport-list '())
+      (send open-frames-timer stop)))
   
   (define graphics-open? (lambda () graphics-flag))
   
@@ -1114,6 +1101,8 @@
 		       (set-viewport-pen viewport black-pen)
 		       (set-viewport-brush viewport black-brush)
 		       ((clear-viewport viewport))
+		       (when (null? global-viewport-list)
+			 (send open-frames-timer start 100000000))
 		       (set! global-viewport-list (cons viewport global-viewport-list))
 		       viewport)]
 		    [else (error "graphics not open")])])])
