@@ -80,10 +80,10 @@ UI.
 Debugger Events:
 
 A debugger-event is either:
-- (make-breakpoint-halt), or
-- (make-normal-breakpoint-info mark-list kind returned-value-list)
-- (make-error-breakpoint-info message)
-- (make-expression-finished returned-value-list)
+> (make-breakpoint-halt), or
+> (make-normal-breakpoint-info mark-list kind returned-value-list)
+> (make-error-breakpoint-info message)
+> (make-expression-finished returned-value-list)
 
 These structures are provided by (lib "private/marks.ss" "stepper).
 This library also provides many functions which are used to 
@@ -103,20 +103,21 @@ A debugger UI is a unit which imports signature debugger-model^
 (name-change suggestions welcomed) and exports signature
 debugger-vc^ (ditto).  
 
-go-semaphore: when the user's program halts at a breakpoint,
+> go-semaphore: when the user's program halts at a breakpoint,
 it will block on this semaphore.  Therefore, the UI can
 post to this semaphore to allow computation to proceed.
 
-user-custodian: the user-custodian governs the user's program.
+> user-custodian: the user-custodian governs the user's program.
 Therefore, the UI can shut down this custodian to halt debugging.
 
-receive-result : (event -> void) The user's program calls this
-procedure whenever a debugger event occurs.  Note that a 
-(make-breakpoint-halt) event will occur whenever the user's 
+> (receive-result event) : (event -> void) The user's program 
+calls this procedure whenever a debugger event occurs.  Note that 
+a  (make-breakpoint-halt) event will occur whenever the user's 
 program blocks at a breakpoint.
 
-debugger-output-port : output from the user's program goes 
-to this port. (NB: at the moment, this appears to be broken.)  
+> debugger-output-port : output from the user's program goes 
+to this port. (NB: at the moment, this is broken for a known
+reason.)  
 
 
 Existing mini-UI:
@@ -124,12 +125,12 @@ Existing mini-UI:
 The debugger starts a graphical read-eval-print loop, with the 
 following bindings:
 
-go-semaphore: passed through from the debugger
+> go-semaphore: passed through from the debugger
 
-events: a list of all events that have occurred during the
-execution of the program.
+> (events): returns a list of all events that have occurred during 
+the execution of the program.
 
-user-custodian: passed through from the debugger.
+> user-custodian: passed through from the debugger.
 
 In addition, the mini-UI prints a message to the grepl whenever
 an event occurs (which is cheerfully accepted as input the next
