@@ -4,41 +4,37 @@
 
 (require (lib "errortrace.ss" "errortrace"))
 
-(define image-snip1 
-  (let* ([c-bm (make-object bitmap% 10 10)]
-         [m-bm (make-object bitmap% 10 10 #t)]
-         [bdc (make-object bitmap-dc% c-bm)])
-    (send bdc clear)
-    (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
-    (send bdc set-brush (send the-brush-list find-or-create-brush "red" 'solid))
-    (send bdc draw-rectangle 0 0 10 10)
-    (send bdc set-bitmap m-bm)
-    (send bdc clear)
-    (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
-    (send bdc set-brush (send the-brush-list find-or-create-brush "black" 'solid))
-    (send bdc draw-rectangle 0 0 5 10)
-    (send bdc set-bitmap #f)
-    (make-object image-snip% c-bm m-bm)))
+(define-values (image-snip1 image-snip2)
+  (let ()
+    (define size 2)
+    
+    (define (do-draw c-bm m-bm)
+      (let ([bdc (make-object bitmap-dc% c-bm)])
+        (send bdc clear)
+        (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
+        (send bdc set-brush (send the-brush-list find-or-create-brush "red" 'solid))
+        (send bdc draw-rectangle 0 0 size size)
+        (send bdc set-bitmap m-bm)
+        (send bdc clear)
+        (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
+        (send bdc set-brush (send the-brush-list find-or-create-brush "black" 'solid))
+        (send bdc draw-rectangle 0 0 (/ size 2) size)
+        (send bdc set-bitmap #f)))
+    
+    (define image-snip1 
+      (let* ([c-bm (make-object bitmap% size size)]
+             [m-bm (make-object bitmap% size size #t)])
+        (do-draw c-bm m-bm)
+        (make-object image-snip% c-bm m-bm)))
+    
+    (define image-snip2 
+      (let* ([c-bm (make-object bitmap% size size)]
+             [m-bm (make-object bitmap% size size)])
+        (do-draw c-bm m-bm)
+        (send c-bm set-loaded-mask m-bm)
+        (make-object image-snip% c-bm)))
 
-(define image-snip2 
-  (let* ([c-bm (make-object bitmap% 10 10)]
-         [m-bm (make-object bitmap% 10 10)]
-         [bdc (make-object bitmap-dc% c-bm)])
-    (send bdc clear)
-    (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
-    (send bdc set-brush (send the-brush-list find-or-create-brush "red" 'solid))
-    (send bdc draw-rectangle 0 0 10 10)
-    (send bdc set-bitmap m-bm)
-    (send bdc clear)
-    (send bdc set-pen (send the-pen-list find-or-create-pen "black" 1 'transparent))
-    (send bdc set-brush (send the-brush-list find-or-create-brush "black" 'solid))
-    (send bdc draw-rectangle 0 0 5 10)
-    (send bdc set-bitmap #f)
-    (send c-bm set-loaded-mask m-bm)
-    (make-object image-snip% c-bm)))
-
-(define current-htdp-lang '(lib "htdp-beginner.ss" "lang"))
-(load-relative "htdp-test.ss")
+    (values image-snip1 image-snip2)))
 
 ;; check-on-bitmap : symbol snip -> void
 ;; checks on various aspects of the bitmap snips to make
@@ -94,8 +90,9 @@
               (lambda () (list 'bmsame name 
                                (<= (max-difference s-normal s-bitmap) 2))))))))
 
+(define current-htdp-lang '(lib "htdp-beginner.ss" "lang"))
+(load-relative "htdp-test.ss")
 (require (lib "htdp-beginner.ss" "lang"))
-      
 
 (htdp-test #t 'image? (image? (filled-rect 10 10 'blue)))
 (htdp-test #f 'image? (image? 5))
@@ -334,6 +331,11 @@
 					 (filled-rect 1 2 'blue))
 			  (filled-rect 2 1 'red)))
 
+(htdp-test #t
+           'image-inside?5
+           (image-inside? (alpha-color-list->image (list (make-alpha-color 0 255 0 0)) 1 1)
+                          (alpha-color-list->image (list (make-alpha-color 255 0 0 0)) 1 1)))
+
 (htdp-test #f
 	   'image-inside?6
 	   (image-inside? (offset-image+ (filled-rect 3 2 'red)
@@ -343,13 +345,26 @@
 					     3 1)))
 
 (htdp-test #t
+	   'image-inside?7
+	   (image-inside? (offset-image+ (filled-rect 16 16 'red)
+                                         2 5
+                                         (outline-circle 6 6 'blue))
+                          (outline-circle 6 6 'blue)))
+
+(htdp-test #t
            'image-inside?8
            (image-inside?
-            (text "y x y" 12 'red)
             (image+ (filled-rect (image-width (text "x" 12 'red))
                                  (image-height (text "x" 12 'red))
                                  'white)
-                    (text "x" 12 'red))))
+                    (text "x" 12 'red))
+            (text "x" 12 'red)))
+
+(htdp-test #t
+           'image-inside?9
+           (image-inside?
+            (text "y x y" 12 'red)
+            (text "x" 12 'red)))
 
 (htdp-test (make-posn 2 5)
 	   'find-image
@@ -416,8 +431,8 @@
            (image=? (image+ (filled-rect 5 4 'black)
                             (filled-rect 1 4 'red))
                     (add-line (filled-rect 4 4 'black)
-                              -1 0
-                              -1 3
+                              (make-posn -1 0)
+                              (make-posn -1 3)
                               'red)))
 
 (htdp-test #t
@@ -425,8 +440,8 @@
            (image=? (image+ (filled-rect 4 5 'black)
                             (filled-rect 4 1 'red))
                     (add-line (filled-rect 4 4 'black)
-                              0 -1
-                              3 -1
+                              (make-posn 0 -1)
+                              (make-posn 3 -1)
                               'red)))
 
 (check-on-bitmap 'filled-rect (htdp-eval (filled-rect 2 2 'red)))
@@ -455,8 +470,8 @@
                  (htdp-eval
                   (add-line
                    (filled-rect 100 100 'black)
-                   -10 -10
-                   110 110
+                   (make-posn -10 -10)
+                   (make-posn 110 110)
                    'red)))
 
 #|
@@ -476,12 +491,18 @@ snips as arguments
 (htdp-test #t
            'bs-image=?
            (image=? image-snip1 image-snip2))
-(htdp-test 10
+(htdp-test 2
            'bs-image-width
            (image-width image-snip1))
-(htdp-test 10
-           'bs-image-height
+(htdp-test 2
+           'bs-image-width
            (image-width image-snip2))
+(htdp-test 2
+           'bs-image-height
+           (image-height image-snip1))
+(htdp-test 2
+           'bs-image-height
+           (image-height image-snip2))
 (htdp-test #t
            'bs-image+
            (image=? image-snip1 (image+ image-snip1 image-snip2)))
@@ -491,8 +512,8 @@ snips as arguments
 (htdp-test #t
            'bs-add-line
            (image=?
-            (add-line image-snip1 0 0 10 10 'green)
-            (add-line image-snip2 0 0 10 10 'green)))
+            (add-line image-snip1 (make-posn 0 0) (make-posn 10 10) 'green)
+            (add-line image-snip2 (make-posn 0 0) (make-posn 10 10) 'green)))
 (htdp-test #t
            'bs-image-inside?1
            (image-inside? image-snip1 image-snip2))
@@ -502,7 +523,6 @@ snips as arguments
 (htdp-test (make-posn 0 0)
            'bs-find-image1
            (find-image image-snip1 image-snip2))
-#;
 (htdp-test (make-posn 0 0)
            'bs-find-image2
            (find-image image-snip2 image-snip1))
