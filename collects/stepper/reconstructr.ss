@@ -3,7 +3,6 @@
           mzlib:function^
           [e : zodiac:interface^]
           [utils : stepper:cogen-utils^]
-          [b : plt:basis^]
           stepper:marks^
           [s : stepper:model^]
 	  stepper:shared^)
