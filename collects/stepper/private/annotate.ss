@@ -233,7 +233,19 @@
   ;          (list (list #'(let ([a 3] [b 9]) (+ a b)) '(let-values ([(a) (#%datum . 3)] [(b) (#%datum . 9)]) (#%app (#%top . +) a b)) 12)
   ;                (list #'(let* ([a 9] [b a] [c b]) c) '(let*-values ([(a) (#%datum . 9)] [(b) a] [(c) b]) c) 9)
   ;                (list #'(let ([a 3] [b 9]) (let ([b 14]) b)) '(let*-values ([(a) (#%datum . 3)] [(b) (#%datum . 9)] [(b) (#%datum . 14)]) b) 14)))
-
+                                                                                                
+                           ;                      ;                                ;            
+ ;                         ;                      ;                                   ;         
+;;;;  ;;;   ; ;;;          ;   ;;;  ;   ;   ;;;   ;      ; ;;  ;;;  ;   ;   ; ; ;; ; ;;;;  ;;;  
+ ;   ;   ;  ;;   ;         ;  ;   ; ;   ;  ;   ;  ;      ;;   ;   ; ;   ;   ; ;;   ;  ;   ;   ; 
+ ;   ;   ;  ;    ;         ;  ;   ;  ; ;   ;   ;  ;      ;    ;   ;  ; ; ; ;  ;    ;  ;   ;   ; 
+ ;   ;   ;  ;    ;  ;;;;;  ;  ;;;;;  ; ;   ;;;;;  ;      ;    ;;;;;  ; ; ; ;  ;    ;  ;   ;;;;; 
+ ;   ;   ;  ;    ;         ;  ;      ; ;   ;      ;      ;    ;      ; ; ; ;  ;    ;  ;   ;     
+ ;   ;   ;  ;;   ;         ;  ;      ;;    ;      ;      ;    ;      ; ; ; ;  ;    ;  ;   ;     
+  ;;  ;;;   ; ;;;          ;   ;;;;   ;     ;;;;  ;      ;     ;;;;   ;   ;   ;    ;   ;;  ;;;; 
+            ;                                                                                   
+            ;                                                                                   
+                                                                                                
 
   
   ; top-level-rewrite : (SYNTAX-OBJECT -> SYNTAX-OBJECT)
@@ -277,12 +289,14 @@
                   [(let-values [(part-0 test)] (if part-1 part-2 rest))
                    (let ([new-if (syntax-property (rebuild-stx `(if ,(recur-regular (syntax part-1))
                                                                     ,(recur-regular (syntax part-2))
-                                                                    ,(recur-in-and/or (syntax rest) new-and/or-test)))
+                                                                    ,(recur-in-and/or (syntax rest) new-and/or-test))
+                                                               stx)
                                                   'stepper-hint
                                                   tag)])
                      (syntax-property (rebuild-stx `(let-values ([,(recur-regular (syntax part-0))
                                                                   ,(recur-regular (syntax test))])
-                                                      ,new-if))
+                                                      ,new-if)
+                                                   stx)
                                       'stepper-hint
                                       tag))]))])
         (kernel:kernel-syntax-case stx #f
@@ -494,12 +508,16 @@
          (define (break-wrap expr)
            (d->so `(begin (,normal-break) ,expr)))
          
+         ; turning off both kinds of let-wrapping :
+         
          (define (double-break-wrap expr)
-           (d->so `(begin (,(make-break 'double-break)) ,expr)))
+           expr)
+           ;(d->so `(begin (,(make-break 'double-break)) ,expr)))
          
          (define (late-let-break-wrap var-names lifted-gensyms expr)
-           (let* ([interlaced (apply append (map list var-names lifted-gensyms))])
-                 (d->so `(begin (,(make-break 'late-let-break) ,@interlaced) ,expr))))
+           expr)
+           ;(let* ([interlaced (apply append (map list var-names lifted-gensyms))])
+           ;      (d->so `(begin (,(make-break 'late-let-break) ,@interlaced) ,expr))))
          
          (define (return-value-wrap expr)
            (d->so

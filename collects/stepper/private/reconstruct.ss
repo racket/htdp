@@ -270,7 +270,6 @@
 ;                    (comes-from-cond? expr))
 ;               (in-inserted-else-clause (cdr mark-list))))))
   
-  (define (lift-lets stx-list)
   (define (unwind stx-list highlights)
     (local
         ((define highlight-queue-src (make-queue))
@@ -288,9 +287,16 @@
                  (if (syntax-property stx 'user-stepper-hint)
                      (case (syntax-property stx 'user-stepper-hint)
                        ((comes-from-cond) (unwind-cond stx 
-                                            (syntax-property stx 'user-source)
-                                            (syntax-property stx 'user-position)))
-                       ((comes-from-and/or) 
+                                                       (syntax-property stx 'user-source)
+                                                       (syntax-property stx 'user-position)))
+                       ((comes-from-and) (unwind-and/or stx
+                                                        (syntax-property stx 'user-source)
+                                                        (syntax-property stx 'user-position)
+                                                        'and))
+                       ((comes-from-or) (unwind-and/or stx
+                                                        (syntax-property stx 'user-source)
+                                                        (syntax-property stx 'user-position)
+                                                        'or))
                        (else (recur-on-pieces)))
                      (recur-on-pieces)))))
          
@@ -314,7 +320,27 @@
                                            (cons (inner (syntax (else else-stx)))
                                                  null))])
                                     (error 'unwind-cond "unexpected source for cond element ~a\n" (syntax-object->datum stx))))])
-                 (syntax (cond . clauses))))))
+                 (syntax (cond . clauses)))))
+         
+         (define (unwind-and/or stx user-source user-position label)
+           (if (eq? stx highlight-placeholder-stx)
+               (begin (queue-push highlight-queue-dest (unwind-and/or (queue-pop highlight-queue-src) user-source user-position))
+                      highlight-placeholder-stx)
+               (with-syntax ([label (datum->syntax-object label)]
+                             [clauses
+                              (let loop ([stx stx])
+                                (if (and (eq? user-source (syntax-property stx 'user-source))
+                                         (eq? user-position (syntax-property stx 'user-position)))
+                                    (syntax-case stx (if let-values)
+                                      [(let-values ((part-0) test-stx) (if part-1 part-2 rest))
+                                       (cons (inner (syntax test-stx))
+                                             (loop (syntax rest)))]
+                                      [(if part-1 part-2 rest)
+                                       (cons (inner (syntax part-1))
+                                             (loop (syntax rest)))]
+                                      [else (inner stx)])
+                                    (inner stx)))])
+                 (syntax (label . clauses))))))
       
       (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
       (let* ([main (map inner stx-list)]
@@ -555,7 +581,9 @@
                                                ((lambda-bound) 
                                                 (recon-value (mark-binding-value (lookup-binding mark-list var))))
                                                ((let-bound)
-                                                (d->so (binding-lifted-name mark-list var)))
+                                                ; for the moment, let-bound vars occur only in and/or :
+                                                (recon-value (mark-binding-value (lookup-binding mark-list var))))
+                                                ; (d->so (binding-lifted-name mark-list var)))
                                                ((top-level) var)
                                                ((stepper-temp)
                                                 (error 'recon-source-expr "stepper-temp showed up in source?!?"))
@@ -604,9 +632,6 @@
          [else
           (recon-value value)])))
   
-  
-  (define (so-far-only so-far) (values null null so-far))
- 
   
   (define-struct let-glump (name-set lifted-name-set exp val-set))
                                                                                                                 
@@ -677,7 +702,8 @@
                                     [rhs-val-sets (reshape-list rhs-vals binding-sets)]
                                     [rhs-name-sets
                                      (map (lambda (binding-set)
-                                            (map syntax-e binding-set)))]
+                                            (map syntax-e binding-set))
+                                          binding-sets)]
                                     [rhs-lifted-name-sets
                                      (map (lambda (binding-set)
                                             (map (lambda (binding)
