@@ -47,10 +47,14 @@
 	   advanced-lambda
 	   advanced-app
 	   advanced-set!
+	   advanced-when
+	   advanced-unless
 	   advanced-define-struct
 	   advanced-let
 	   advanced-recur
 	   advanced-begin
+	   advanced-begin0
+	   advanced-case
 	   advanced-shared)
   
   (define-struct posn (x y) (make-inspector)) ; transparent
@@ -388,7 +392,7 @@
        (teach-syntax-error
 	'cond
 	stx
-	"expected a question-answer clause after `cond', but nothing's there")]
+	"expected a question--answer clause after `cond', but nothing's there")]
       [(_ clause ...)
        (let ([clauses (syntax->list (syntax (clause ...)))])
 	 (let ([checked-clauses
@@ -410,7 +414,7 @@
 		      (teach-syntax-error
 		       'cond
 		       clause
-		       "expected a question-answer clause, but found an empty clause")]
+		       "expected a question--answer clause, but found an empty clause")]
 		     [(question?)
 		      (teach-syntax-error
 		       'cond
@@ -428,7 +432,7 @@
 		      (teach-syntax-error
 		       'cond
 		       clause
-		       "expected a question-answer clause, but found ~a"
+		       "expected a question--answer clause, but found ~a"
 		       (something-else clause))]))
 		 clauses)])
 	   ;; Add `else' clause for error, if necessary:
@@ -1020,6 +1024,36 @@
       [_else (bad-use-error 'set! stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; when and unless (advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  
+  (define-syntaxes (advanced-when advanced-unless)
+    (let ([mk
+	   (lambda (who target-stx)
+	     (lambda (stx)
+	       (syntax-case stx ()
+		 [(_ q expr ...)
+		  (let ([exprs (syntax->list (syntax (expr ...)))])
+		    (check-single-expression who
+					     (format "for the answer in `~a'"
+						     who)
+					     stx
+					     exprs)
+		    (with-syntax ([who who]
+				  [target target-stx])
+		      (syntax (target (verify-boolean q 'who) expr ...))))]
+		 [(_)
+		  (teach-syntax-error
+		   who
+		   stx
+		   "expected a question expression after `~a', but nothing's there"
+		   who)]
+		 [_else
+		  (bad-use-error who stx)])))])
+      (values (mk 'when (quote-syntax when))
+	      (mk 'unless (quote-syntax unless)))))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; define-struct (advanced)         >> weak errors <<
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -1082,6 +1116,120 @@
        (syntax (let () e ...))]
       [_else
        (bad-use-error 'begin stx)]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; begin0 (advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  
+  (define-syntax (advanced-begin0 stx)
+    (syntax-case stx ()
+      [(_)
+       (teach-syntax-error
+	'begin
+	stx
+	"expected a sequence of expressions after `begin0', but nothing's there")]
+      [(_ e ...)
+       (syntax (begin0 e ...))]
+      [_else
+       (bad-use-error 'begin0 stx)]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; case
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (advanced-case stx)
+    (syntax-case stx ()
+      [(_)
+       (teach-syntax-error
+	'case
+	stx
+	"expected an expression after `case', but nothing's there")]
+      [(_ expr)
+       (teach-syntax-error
+	'case
+	stx
+	"expected a choices--answer clause after the expression following `case', but nothing's there")]
+      [(_ v-expr clause ...)
+       (let ([clauses (syntax->list (syntax (clause ...)))])
+	 (for-each
+	  (lambda (clause)
+	    (syntax-case clause (else)
+	      [(else answer ...)
+	       (let ([lpos (memq clause clauses)])
+		 (when (not (null? (cdr lpos)))
+		   (teach-syntax-error
+		    'case
+		    clause
+		    "found an `else' clause that isn't the last clause ~
+                                    in its `case' expression"))
+		 (let ([answers (syntax->list (syntax (answer ...)))])
+		   (check-single-expression 'case
+					    "for the answer in a case clause"
+					    clause
+					    answers)))]
+	      [(choices answer ...)
+	       (let ([choices (syntax choices)]
+		     [answers (syntax->list (syntax (answer ...)))])
+		 (syntax-case choices ()
+		   [(elem ...)
+		    (let ([elems (syntax->list (syntax (elem ...)))])
+		      (for-each (lambda (e)
+				  (let ([v (syntax-e e)])
+				    (unless (or (number? v)
+						(symbol? v))
+				      (teach-syntax-error
+				       'case
+				       e
+				       "expected a name (for a symbol) or a number as a choice value, but found ~a"
+				       (something-else e)))))
+				elems))]
+		   [_else (teach-syntax-error
+			   'case
+			   choices
+			   "expected a parenthesized sequence of choice values, but found ~a"
+			   (something-else choices))])
+		 (when (stx-null? choices)
+		   (teach-syntax-error
+		    'case
+		    choices
+		    "expected at least once choice in a parenthesized sequence of choice values, but nothing's there"))
+		 (check-single-expression 'case
+					  "for the answer in a `case' clause"
+					  clause
+					  answers))]
+	      [()
+	       (teach-syntax-error
+		'case
+		clause
+		"expected a choices--answer clause, but found an empty clause")]
+	      [(question?)
+	       (teach-syntax-error
+		'case
+		clause
+		"expected a clause with a choice sequence and answer, but found a clause ~
+                                with only one part")]
+	      [_else
+	       (teach-syntax-error
+		'case
+		clause
+		"expected a choices--answer clause, but found ~a"
+		(something-else clause))]))
+	  clauses)
+	 ;; Add `else' clause for error, if necessary:
+	 (let ([clauses (let loop ([clauses clauses])
+			  (cond
+			   [(null? clauses)
+			    (list
+			     (syntax/loc stx
+				 [else (error 'cases "the expression matched none of the choices")]))]
+			   [(syntax-case (car clauses) (else)
+			      [(else . _) #t]
+			      [_else #f])
+			    clauses]
+			   [else (cons (car clauses) (loop (cdr clauses)))]))])
+	   (with-syntax ([clauses clauses])
+	     (syntax (case v-expr . clauses)))))]
+      [_else (bad-use-error 'case stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; shared (advanced)

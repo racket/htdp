@@ -4,6 +4,7 @@
 	   "private/teachprims.ss"
 	   (lib "etc.ss")
 	   (lib "list.ss")
+	   (lib "pretty.ss")
 	   (lib "docprovide.ss" "syntax"))
 
   ;; syntax:
@@ -26,8 +27,12 @@
 	   (rename intermediate-unquote-splicing unquote-splicing)
 	   (rename intermediate-time time)
 	   (rename advanced-begin begin)
+	   (rename advanced-begin0 begin0)
 	   (rename advanced-shared shared)
 	   (rename advanced-set! set!)
+	   (rename advanced-when when)
+	   (rename advanced-unless unless)
+	   (rename advanced-case case)
 	   (rename delay delay)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum
@@ -45,7 +50,9 @@
     (printf (string any ... -> void)
 	    "to format the rest of the arguments according to the first argument and print it to stdout")
     (write (any -> void)
-	   "to print the argument to stdout"))
+	   "to print the argument to stdout")
+    (pretty-print (any -> void)
+	   "like write, but with standard newlines and indentation"))
    
    ("Lists"
     ((advanced-cons cons) (X (listof X) -> (listof X))
@@ -65,8 +72,9 @@
 				"to create a single list from several, by updating the lists"))
    
    ("Misc"
-    (force (delay -> any) "to find the delayed value. See also delay.")
-    (promise? (any -> boolean) "to determine if a value is delayed."))
+    (force (delay -> any) "to find the delayed value; see also delay")
+    (promise? (any -> boolean) "to determine if a value is delayed")
+    (void? (any -> boolean) "to determine if a value is void"))
 
    ("Posns"
     (set-posn-x! (posn number -> void) "to update the x component of a posn")
@@ -87,13 +95,6 @@
 		 "to update a vector")
     (vector? (any -> boolean)
 	     "to determine if a value is a vector"))
-
-   ("Continuations"
-    (call/cc ((cont -> any) -> any)
-	     "to capture the current continuation")
-    (call-with-current-continuation
-     ((cont -> any) -> any)
-     "to capture the current continuation"))
 
    ("Boxes"
     (box (any -> box)
