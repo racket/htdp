@@ -22,12 +22,12 @@
                     [global-lookup (-> any/c any)]
 
                     [struct render-settings 
-                            ([true-false-printed? (-> render-settings? boolean?)]
-                             [constructor-style-printing? (-> render-settings? boolean?)]
-                             [abbreviate-cons-as-list? (-> render-settings? boolean?)]
+                            ([true-false-printed? boolean?]
+                             [constructor-style-printing? boolean?]
+                             [abbreviate-cons-as-list? boolean?]
                              #;[render-to-sexp (-> any/c any)]
                              [render-to-string (any/c . -> . any/c)]
-                             [lifting? (-> render-settings? boolean?)])]
+                             [lifting? boolean?])]
                     
                     
                     [get-render-settings ((any/c . -> . string?) ; render-to-string
@@ -44,22 +44,22 @@
                     [fake-intermediate/lambda-render-settings render-settings?]
                     [fake-mz-render-settings render-settings?])
   
-  (define (make-fake-render-to-sexp true/false constructor-style abbreviate)
+  (define (make-fake-render-to-string true/false constructor-style abbreviate)
     (lambda (val)
       (parameterize ([booleans-as-true/false true/false]
                      [constructor-style-printing constructor-style]
                      [abbreviate-cons-as-list abbreviate])
         ;; duplication of hack inserted by matthew flatt for 201 release:
         (or (and (procedure? val)
-                 (object-name val))
-            (print-convert val)))))
+                 (symbol->string (object-name val)))
+            (format "~v" (print-convert val))))))
     
   ; FIXME : #f totally unacceptable as 'render-to-string'
   (define fake-beginner-render-settings
-    (make-render-settings #t #t #f #;(make-fake-render-to-sexp #t #t #f) #f #t))
+    (make-render-settings #t #t #f (make-fake-render-to-string #t #t #f) #t))
   
   (define fake-beginner-wla-render-settings
-    (make-render-settings #t #t #t #;(make-fake-render-to-sexp #t #t #t) #f #t))
+    (make-render-settings #t #t #t (make-fake-render-to-string #t #t #t) #t))
   
   (define fake-intermediate-render-settings
     fake-beginner-wla-render-settings)
@@ -68,13 +68,18 @@
     fake-beginner-wla-render-settings)
   
   (define fake-mz-render-settings
-    (make-render-settings (booleans-as-true/false) (constructor-style-printing) (abbreviate-cons-as-list) #;print-convert #f #f))
+    (make-render-settings (booleans-as-true/false) 
+                          (constructor-style-printing) 
+                          (abbreviate-cons-as-list) 
+                          (lambda (v) 
+                            (format "~v" (print-convert v)))
+                          #f))
   
   (define-struct test-struct () (make-inspector))
   
   ;; get-render-settings : infer aspects of the current language's print conversion by explicitly testing 
   ;;  assorted test expressions
-  (define (get-render-settings render-to-string #;render-to-sexp lifting?)
+  (define (get-render-settings render-to-string lifting?)
     (let* ([true-false-printed? (string=? (render-to-string #t) "true")]
            [constructor-style-printing? (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
            [rendered-list (render-to-string '(3))]
@@ -82,13 +87,11 @@
                                                0 
                                                (min 5 (string-length rendered-list)))]
            [abbreviate-cons-as-list? (and constructor-style-printing?
-                                              (string=? rendered-list-substring "(list"))]
-           [dc (fprintf (current-error-port) "~s\n" (render-to-string (exact->inexact (/ 1.0 3))))])
+                                              (string=? rendered-list-substring "(list"))])
       (make-render-settings
        true-false-printed?
        constructor-style-printing?
        abbreviate-cons-as-list?
-       #;render-to-sexp
        render-to-string
        lifting?)))
   

@@ -143,8 +143,7 @@
                   render-value
                   val
                   simple-settings
-                  string-port
-                  #f)
+                  (current-error-port))
             (get-output-string string-port)))
         
         ;; make-print-convert-hook: simple-settings -> (TST (TST -> TST) (TST -> TST) -> TST)
@@ -371,6 +370,7 @@
         ; receive-result takes a result from the model and renders it on-screen. Runs on the user thread.
         ; : (step-result -> void)
         (define (receive-result result)
+          (render-to-string 'just-called-receive-result)
           (let ([step-text
                  (cond [(before-after-result? result) 
                         (instantiate x:stepper-text% () 
@@ -378,28 +378,32 @@
                           [exps (before-after-result-exp result)]
                           [post-exps (before-after-result-post-exp result)]
                           [error-msg #f]
-                          [after-exprs (before-after-result-after-exprs result)])]
+                          [after-exprs (before-after-result-after-exprs result)]
+                          [render-to-string render-to-string])]
                        [(before-error-result? result)
                         (instantiate x:stepper-text% ()
                           [finished-exprs (before-error-result-finished-exprs result)]
                           [exps (before-error-result-exp result)]
                           [post-exps null]
                           [error-msg (before-error-result-err-msg result)]
-                          [after-exprs (before-error-result-after-exprs result)])]
+                          [after-exprs (before-error-result-after-exprs result)]
+                          [render-to-string render-to-string])]
                        [(error-result? result)
                         (instantiate x:stepper-text% ()
                           [finished-exprs (error-result-finished-exprs result)]
                           [exps null]
                           [post-exps null]
                           [error-msg (error-result-err-msg result)]
-                          [after-exprs null])]
+                          [after-exprs null]
+                          [render-to-string render-to-string])]
                        [(finished-result? result)
                         (instantiate x:stepper-text% ()
                           [finished-exprs (finished-result-finished-exprs result)]
                           [exps null]
                           [post-exps null]
                           [error-msg #f]
-                          [after-exprs null])]
+                          [after-exprs null]
+                          [render-to-string render-to-string])]
                        [(finished-stepping? result)
                         x:finished-text])]
                 [step-kind (or (and (before-after-result? result)
@@ -474,7 +478,7 @@
                     (error-value->string-handler
                      (lambda (val len)
                        (let ([sp (open-output-string)])
-                         (send lang render-value val settings sp #f)
+                         (send lang render-value val settings sp)
                          (let ([str (get-output-string sp)])
                            (if ((string-length str) . <= . len)
                                str

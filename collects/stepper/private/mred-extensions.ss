@@ -247,8 +247,8 @@
                
       (define (reformat-sexp width)
         (when (not (eq? pretty-printed-width width))
-          (format-whole-step)
-          (set! pretty-printed-width width)))
+          (set! pretty-printed-width width)
+          (format-whole-step)))
                
       (define highlight-begin #f)
                
@@ -262,7 +262,7 @@
                         (lambda (value display? port)
                           (let* ([looked-up (hash-table-get highlight-table value (lambda () #f))]
                                  [to-display (or (and looked-up (not (eq? looked-up 'non-confusable)) (car looked-up)) value)])
-                            (fprintf (current-error-port) "to-display: ~v\nrendered: ~v\n" value (render-to-string value))
+                            (fprintf (current-error-port) "to-display: ~v\nrendered: ~v\n" value (string-length (render-to-string value)))
                             (cond
                               [(is-a? to-display snip%) 
                                (let ([dc (get-dc)]
@@ -310,7 +310,9 @@
                        ;; mflatt: MAJOR HACK - this setting needs to come from the language
                        ;;  somehow
                        [read-case-sensitive #t])
-          (pretty-print sexp)))
+          (fprintf (current-error-port) "special-rendered: ~v\n" (render-to-string 29283))
+          (pretty-print sexp)
+          (fprintf (current-error-port) "another-special-rendered: ~v\n" (render-to-string 9787))))
              
       (define (format-whole-step)
         (lock #f)
@@ -431,6 +433,7 @@
                              [vert-separator-width (unbox vert-separator-width-box)]
                              [minus-center-bar (- minus-cursor-margin vert-separator-width)]
                              [l-r-box-widths (floor (/ minus-center-bar 2))])
+                        (render-to-string 'just-before-set-new-width)
                         (send top-defs-snip set-new-width minus-cursor-margin canvas)
                         (send before-snip set-new-width l-r-box-widths canvas)
                         (send after-snip set-new-width l-r-box-widths canvas)
