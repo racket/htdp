@@ -589,10 +589,16 @@
   (define draw/clear/flip-ellipse (draw/clear/flip 'draw-ellipse))
   
   (define (draw-rectangle viewport)
+    (check-viewport 'draw-rectangle viewport)
     (rec draw-rectangle-viewport
 	 (case-lambda 
 	  [(p width height) (draw-rectangle-viewport p width height "BLACK")]
 	  [(p width height color)
+	   (check 'draw-rectangle
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number"
+		  (orp color? number?) color "color or index")
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
@@ -600,43 +606,33 @@
 	    viewport p width height)])))
     
   (define (draw-solid-rectangle viewport)
+    (check-viewport 'draw-solid-rectangle viewport)
     (rec draw-solid-rectangle-viewport
 	 (case-lambda 
 	  [(p width height) (draw-solid-rectangle-viewport p width height "BLACK")]
 	  [(p width height color)
+	   (check 'draw-solid-rectangle
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number"
+		  (orp color? number?) color "color or index")
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
 	      (send dc set-brush (send mred:the-brush-list find-or-create-brush (get-color color) 'solid)))
 	    viewport p width height)])))
   
-  (define (draw-ellipse viewport)
-    (rec draw-ellipse-viewport
-	 (case-lambda 
-	  [(p width height) (draw-ellipse-viewport p width height "BLACK")]
-	  [(p width height color)
-	   (draw/clear/flip-ellipse
-	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
-	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
-	    viewport p width height)])))
-  
-  (define (draw-solid-ellipse viewport)
-    (rec draw-solid-ellipse-viewport
-	 (case-lambda 
-	  [(p width height) (draw-solid-ellipse-viewport p width height "BLACK")]
-	  [(p width height color)
-	   (draw/clear/flip-ellipse
-	    (lambda (dc)
-	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
-	      (send dc set-brush (send mred:the-brush-list find-or-create-brush (get-color color) 'solid)))
-	    viewport p width height)])))
-  
   (define (flip-rectangle viewport)
+    (check-viewport 'flip-rectangle viewport)
     (rec flip-rectangle-viewport
 	 (case-lambda 
 	  [(p width height) (flip-rectangle-viewport p width height "BLACK")]
 	  [(p width height color)
+	   (check 'flip-rectangle
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number"
+		  (orp color? number?) color "color or index")
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'xor))
@@ -644,21 +640,67 @@
 	    viewport p width height)])))
   
   (define (flip-solid-rectangle viewport)
+    (check-viewport 'flip-solid-rectangle viewport)
     (rec flip-solid-rectangle-viewport
 	 (case-lambda 
 	  [(p width height) (flip-solid-rectangle-viewport p width height "BLACK")]
 	  [(p width height color)
+	   (check 'flip-solid-rectangle
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number"
+		  (orp color? number?) color "color or index")
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "BLACK" 1 'transparent))
 	      (send dc set-brush (send mred:the-brush-list find-or-create-brush (get-color color) 'xor)))
 	    viewport p width height)])))
+
+  (define (draw-ellipse viewport)
+    (check-viewport 'draw-ellipse viewport)
+    (rec draw-ellipse-viewport
+	 (case-lambda 
+	  [(p width height) (draw-ellipse-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (check 'draw-ellipse
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number"
+		  (orp color? number?) color "color or index")
+	   (draw/clear/flip-ellipse
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush "BLACK" 'transparent)))
+	    viewport p width height)])))
+  
+  (define (draw-solid-ellipse viewport)
+    (check-viewport 'draw-solid-ellipse viewport)
+    (rec draw-solid-ellipse-viewport
+	 (case-lambda 
+	  [(p width height) (draw-solid-ellipse-viewport p width height "BLACK")]
+	  [(p width height color)
+	   (check 'draw-solid-ellipse
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number"
+		  (orp color? number?) color "color or index")
+	   (draw/clear/flip-ellipse
+	    (lambda (dc)
+	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'solid))
+	      (send dc set-brush (send mred:the-brush-list find-or-create-brush (get-color color) 'solid)))
+	    viewport p width height)])))
   
   (define (flip-ellipse viewport)
+    (check-viewport 'flip-ellipse viewport)
     (rec flip-ellipse-viewport
 	 (case-lambda 
 	  [(p width height) (flip-ellipse-viewport p width height "BLACK")]
 	  [(p width height color)
+	   (check 'flip-ellipse
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number"
+		  (orp color? number?) color "color or index")
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen (get-color color) 1 'xor))
@@ -666,10 +708,16 @@
 	    viewport p width height)])))
   
   (define (flip-solid-ellipse viewport)
+    (check-viewport 'flip-solid-rectangle viewport)
     (rec flip-solid-ellipse-viewport
 	 (case-lambda 
 	  [(p width height) (flip-solid-ellipse-viewport p width height "BLACK")]
 	  [(p width height color)
+	   (check 'flip-solid-ellipse
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number"
+		  (orp color? number?) color "color or index")
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "BLACK" 1 'transparent))
@@ -677,8 +725,13 @@
 	    viewport p width height)])))
   
   (define (clear-rectangle viewport)
+    (check-viewport 'clear-rectangle viewport)
     (rec clear-rectangle-viewport
 	 (lambda (p width height)
+	   (check 'clear-rectangle
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number")
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "WHITE" 1 'solid))
@@ -686,8 +739,13 @@
 	    viewport p width height))))
   
   (define (clear-solid-rectangle viewport)
+    (check-viewport 'clear-solid-rectangle viewport)
     (rec clear-solid-rectangle-viewport
 	 (lambda (p width height)
+	   (check 'clear-solid-rectangle
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number")
 	   (draw/clear/flip-rectangle
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "WHITE" 1 'solid))
@@ -695,8 +753,13 @@
 	    viewport p width height))))
   
   (define (clear-ellipse viewport)
+    (check-viewport 'clear-ellipse viewport)
     (rec clear-ellipse-viewport
 	 (lambda (p width height)
+	   (check 'clear-ellipse
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number")
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "WHITE" 1 'solid))
@@ -704,8 +767,13 @@
 	    viewport p width height))))
   
   (define (clear-solid-ellipse viewport)
+    (check-viewport 'clear-solid-ellipse viewport)
     (rec clear-solid-ellipse-viewport
 	 (lambda (p width height)
+	   (check 'clear-solid-ellipse
+		  posn? p "posn"
+		  number? width "number"
+		  number? height "number")
 	   (draw/clear/flip-ellipse
 	    (lambda (dc)
 	      (send dc set-pen (send mred:the-pen-list find-or-create-pen "WHITE" 1 'solid))
@@ -1037,4 +1105,44 @@
 	    (send snip set-bitmap new-bitmap)
 	    snip)))))
   
-  (create-cmap))
+  (create-cmap)
+
+
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;;                                                             ;;;
+  ;;;                        ERROR CHECKING                       ;;;
+  ;;;                                                             ;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+  ;; check-viewport : symbol TST -> void
+  (define (check-viewport f-name obj)
+    (unless (viewport? obj)
+      (error f-name "expected viewport as first argument, got ~e" obj)))
+
+  ;; (define-type arg/pred/name-list (list* (TST -> bool) TST string arg/pred/name-list))
+  ;; check : (symbol arg/pred/name-list *-> void)
+  (define (check f-name . in-args)
+    (let loop ([args in-args]
+	       [n 0])
+      (cond
+       [(null? args) (void)]
+       [else (let ([pred? (car args)]
+		   [val (cadr args)]
+		   [name (caddr args)])
+	       (unless (pred? val)
+		 (error f-name "expected ~a as arg ~a, got: ~e, all args: ~a"
+			name n val
+			(let loop ([args in-args])
+			  (cond
+			   [(null? args) ""]
+			   [else (string-append (format "~e" (cadr args))
+						" "
+						(loop (cdddr args)))]))))
+	       (loop (cdddr args)
+		     (+ n 1)))])))
+
+  (define (orp . preds)
+    (lambda (TST)
+      (ormap (lambda (p) (p TST)) preds)))
+  )
