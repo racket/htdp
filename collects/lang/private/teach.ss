@@ -149,7 +149,7 @@
 	   "expected a sequence of function arguments after `lambda', but nothing's there")]
 	 ;; Constant def
 	 [_else
-	  (syntax (define name expr))])]
+	  (syntax/loc stx (define name expr))])]
       ;; Function definition:
       [(_ name-seq expr ...)
        (syntax-case (syntax name-seq) () [(name ...) #t][_else #f])
@@ -299,10 +299,11 @@
 				 (lambda (f) 
 				   (+ n "-" (symbol->string (syntax-e f))))
 				 fields))))])
-	   (syntax (define-values (to-define-name ...)
-		     (let ()
-		       (define-struct name_ (field_ ...))
-		       (values to-define-name ...))))))]
+	   (syntax/loc stx
+		       (define-values (to-define-name ...)
+			 (let ()
+			   (define-struct name_ (field_ ...))
+			   (values to-define-name ...))))))]
       [(_ name_ something . rest)
        (teach-syntax-error
 	'define-struct
@@ -369,7 +370,7 @@
 			stx
 			"expected an argument after the function name for a function call, ~
                         but nothing's there"))
-		    (syntax (#%app rator rand ...)))]
+		    (syntax/loc stx (#%app rator rand ...)))]
 		 [(_)
 		  (teach-syntax-error
 		   '|function call|
@@ -407,9 +408,9 @@
 			   clause
 			   "found an `else' clause that isn't the last clause ~
                                     in its `cond' expression"))
-			(syntax (else answer)))]
+			(syntax/loc clause (else answer)))]
 		     [(question answer)
-		      (syntax ((verify-boolean question 'cond) answer))]
+		      (syntax/loc clause ((verify-boolean question 'cond) answer))]
 		     [()
 		      (teach-syntax-error
 		       'cond
@@ -448,7 +449,7 @@
 			      clauses]
 			     [else (cons (car clauses) (loop (cdr clauses)))]))])
 	     (with-syntax ([clauses clauses])
-	       (syntax (cond . clauses))))))]
+	       (syntax/loc stx (cond . clauses))))))]
       [_else (bad-use-error 'cond stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -458,9 +459,10 @@
   (define-syntax (beginner-if stx)
     (syntax-case stx ()
       [(_ test then else)
-       (syntax (if (verify-boolean test 'if)
-		   then
-		   else))]
+       (syntax/loc stx
+		   (if (verify-boolean test 'if)
+		       then
+		       else))]
       [(_ . rest)
        (let ([n (length (syntax->list (syntax rest)))])
 	 (teach-syntax-error
@@ -490,7 +492,7 @@
 			 "expected at least two expressions after `~a', but found ~a"
 			 where
 			 (if (zero? n) "no expressions" "only one expression")))
-		      (syntax (swhere (verify-boolean a 'swhere) ...)))]
+		      (syntax/loc stx (swhere (verify-boolean a 'swhere) ...)))]
 		   [_else (bad-use-error where stx)]))))])
       (values (mk 'or) (mk 'and))))
 
@@ -508,7 +510,7 @@
 	    stx
 	    "expected a name after a ', found ~a"
 	    (something-else sym)))
-	 (syntax (quote expr)))]
+	 (syntax/loc stx (quote expr)))]
       [_else (bad-use-error 'quote stx)]))
 
 
@@ -843,7 +845,7 @@
 	     (syntax x)
 	     (with-syntax ([x (loop (syntax x) (sub1 depth))]
 			   [uq (stx-car stx)])
-	       (syntax (list (quote uq) x))))]
+	       (syntax/loc stx (list (quote uq) x))))]
 	[intermediate-unquote
 	 (teach-syntax-error
 	  'quasiquote
@@ -856,7 +858,7 @@
 	     (with-syntax ([x (loop (syntax x) (sub1 depth))]
 			   [rest (loop (syntax rest) depth)]
 			   [uq-splicing (stx-car (stx-car stx))])
-	       (syntax (the-cons (list (quote uq-splicing) x) rest))))]
+	       (syntax/loc stx (the-cons (list (quote uq-splicing) x) rest))))]
 	[intermediate-unquote-splicing
 	 (teach-syntax-error
 	  'quasiquote
@@ -865,13 +867,13 @@
 	[(intermediate-quasiquote x)
 	 (with-syntax ([x (loop (syntax x) (add1 depth))]
 		       [qq (stx-car stx)])
-	   (syntax (list (quote qq) x)))]
+	   (syntax/loc stx (list (quote qq) x)))]
 	[(a . b)
 	 (with-syntax ([a (loop (syntax a) depth)]
 		       [b (loop (syntax b) depth)])
-	   (syntax (the-cons a b)))]
+	   (syntax/loc stx (the-cons a b)))]
 	[any
-	 (syntax (quote any))])))
+	 (syntax/loc stx (quote any))])))
 
   (define-syntax (intermediate-unquote stx)
     (teach-syntax-error
@@ -965,7 +967,7 @@
   (define-syntax (advanced-app stx)
     (syntax-case stx ()
       [(_ rator rand ...)
-       (syntax (#%app rator rand ...))]
+       (syntax/loc stx (#%app rator rand ...))]
       [(_)
        (teach-syntax-error
 	'|function call|
@@ -1009,7 +1011,7 @@
 				  "for the new value"
 				  stx
 				  exprs)
-	 (syntax (set! id expr ...)))]
+	 (syntax/loc stx (set! id expr ...)))]
       [(_ id . __)
        (teach-syntax-error
 	'set!
@@ -1041,7 +1043,7 @@
 					     exprs)
 		    (with-syntax ([who who]
 				  [target target-stx])
-		      (syntax (target (verify-boolean q 'who) expr ...))))]
+		      (syntax/loc stx (target (verify-boolean q 'who) expr ...))))]
 		 [(_)
 		  (teach-syntax-error
 		   who
@@ -1113,7 +1115,7 @@
 	stx
 	"expected a sequence of expressions after `begin', but nothing's there")]
       [(_ e ...)
-       (syntax (let () e ...))]
+       (syntax/loc stx (let () e ...))]
       [_else
        (bad-use-error 'begin stx)]))
 
@@ -1129,7 +1131,7 @@
 	stx
 	"expected a sequence of expressions after `begin0', but nothing's there")]
       [(_ e ...)
-       (syntax (begin0 e ...))]
+       (syntax/loc stx (begin0 e ...))]
       [_else
        (bad-use-error 'begin0 stx)]))
 
@@ -1222,7 +1224,7 @@
 			    clauses]
 			   [else (cons (car clauses) (loop (cdr clauses)))]))])
 	   (with-syntax ([clauses clauses])
-	     (syntax (case v-expr . clauses)))))]
+	     (syntax/loc stx (case v-expr . clauses)))))]
       [_else (bad-use-error 'case stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
