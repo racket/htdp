@@ -56,7 +56,9 @@
                 [qq-body (datum->syntax-object #'here expd-xexpr (list editor #f #f #f #f))])
            (values
             (with-syntax ([qq-body qq-body])
-              (syntax (quasiquote qq-body)))
+              (syntax-property (syntax (quasiquote qq-body))
+                               'stepper-from-xml-box
+                               #t))
             1
             #t)))
        (lambda () (send editor lock old-locked)))))
@@ -111,11 +113,17 @@
                  (with-syntax ([err (syntax/loc 
                                      (car (last-pair raw-stxs))
                                      (error 'scheme-splice-box "expected a list, found: ~e" lst))])
-                   (syntax ,@(let ([lst (begin stxs ...)])
+                   (syntax-property
+                    (syntax ,@(let ([lst (begin stxs ...)])
                                (if (list? lst)
                                    lst
-                                   err))))
-                 (syntax ,(begin stxs ...)))))]
+                                   err)))
+                    'stepper-from-splice-box
+                    #t))
+                 (syntax-property
+                  (syntax ,(begin stxs ...))
+                  'stepper-from-scheme-box
+                  #t))))]
         [else xexpr])))
   
   ;; eliminate-whitespace-in-list (listof xexpr) -> (listof xexpr)

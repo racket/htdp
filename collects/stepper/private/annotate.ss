@@ -850,11 +850,15 @@
     (define/contract annotate/top-level
       (syntax? . -> . syntax?)
       (lambda (expr)
-        (syntax-case expr (module #%plain-module-begin)
+        (syntax-case expr (module #%plain-module-begin let-values dynamic-wind lambda)
           [(module name lang
              (#%plain-module-begin . bodies))
            #`(module name lang (#%plain-module-begin #,@(map annotate/module-top-level (syntax->list #`bodies))))]
-          [(require #%htdp)
+          [(let-values ([(done-already?) . rest1])
+                (#%app dynamic-wind
+                 void
+                 (lambda () . rest2)
+                 (lambda () . rest3)))
            expr]
           [else (error `annotate/top-level "unexpected top-level expression: ~a\n" (syntax-object->datum expr))])))
     
