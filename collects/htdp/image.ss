@@ -23,6 +23,7 @@ plt/collects/tests/mzscheme/image-test.ss
            pinhole-x
            pinhole-y
            move-pinhole
+           put-pinhole
            
            rectangle
            circle
@@ -31,6 +32,12 @@ plt/collects/tests/mzscheme/image-test.ss
            line
            add-line
            text
+           
+           shrink
+           shrink-tl
+           shrink-tr
+           shrink-bl
+           shrink-br
            
 	   image-inside?
 	   find-image
@@ -70,9 +77,14 @@ plt/collects/tests/mzscheme/image-test.ss
 
   (define (check-coordinate name val arg-posn) (check name number? val "number" arg-posn))
   (define (check-size name val arg-posn) (check name posi? val "positive exact integer" arg-posn))
+  (define (check-size/0 name val arg-posn) (check name nnosi? val "non-negative exact integer" arg-posn))
   (define (check-image name val arg-posn) (check name image? val "image" arg-posn))
   (define (check-image-color name val arg-posn) (check name image-color? val "image-color" arg-posn))
   (define (check-mode name val arg-posn) (check name mode? val mode-str arg-posn))
+  
+  (define (posi? i) (and (number? i) (integer? i) (positive? i) (exact? i)))
+  (define (nnosi? i) (and (number? i) (integer? i) (exact? i) (or (zero? i) (positive? i))))
+
   
   (define (check-sizes who w h)
     (unless (and (< 0 w 10000) (< 0 h 10000))
@@ -147,6 +159,21 @@ plt/collects/tests/mzscheme/image-test.ss
              (argb (send i get-argb/no-compute))
              (px (+ px dx))
              (py (+ py dy))))))
+  
+  (define (put-pinhole raw-i px py)
+    (check-image 'put-pinhole raw-i "first")
+    (check-coordinate 'put-pinhole px "second")
+    (check-coordinate 'put-pinhole py "third")
+    (let ([i (coerce-to-cache-image-snip raw-i)])
+      (let-values ([(w h) (send i get-size)])
+        (new cache-image-snip%
+             (dc-proc (send i get-dc-proc))
+             (argb-proc (send i get-argb-proc))
+             (width w)
+             (height h)
+             (argb (send i get-argb/no-compute))
+             (px (floor px))
+             (py (floor py))))))
         
   (define (overlay a b . cs)
     (check-image 'overlay a "first")
@@ -205,7 +232,69 @@ plt/collects/tests/mzscheme/image-test.ss
                [height new-h]
                [px new-px]
                [py new-py])))))
+  ;; ------------------------------------------------------------
   
+  (define (shrink raw-img left up right down)
+    (check-image 'shrink raw-img "first")
+    (check-size/0 'shrink left "second")
+    (check-size/0 'shrink up "third")
+    (check-size/0 'shrink right "fourth")
+    (check-coordinate 'shrink down "fifth")
+    (let ([img (coerce-to-cache-image-snip raw-img)])
+      (let-values ([(i-px i-py) (send img get-pinhole)]
+                   [(i-width i-height) (send img get-size)])
+        (let* ([dc-proc (send img get-dc-proc)]
+               [argb-proc (send img get-argb-proc)]
+               [delta-w (- i-px left)]
+               [delta-h (- i-py up)]
+               [width (+ left right 1)]
+               [height (+ up down 1)])
+          (new cache-image-snip%
+               [px left]
+               [py up]
+               [dc-proc (lambda (dc dx dy)
+                          (let ([clip (send dc get-clipping-region)])
+                            (send dc set-clipping-rect dx dy width height)
+                            (dc-proc dc (- dx delta-w) (- dy delta-h))
+                            (send dc set-clipping-region clip)))]
+               [argb-proc (lambda (argb dx dy) (argb-proc argb (- dx delta-w) (- dy delta-h)))]
+               [width width]
+               [height height])))))
+  
+  (define (shrink-tl raw-img x y)
+    (check-image 'shrink-tl raw-img "first")
+    (check-size 'shrink-tl x "second")
+    (check-size 'shrink-tl y "third")
+    (put-pinhole (shrink (put-pinhole raw-img 0 0) 0 0 (- x 1) (- y 1)) (/ x 2) (/ y 2)))
+  
+  (define (shrink-tr raw-img x y)
+    (check-image 'shrink-tr raw-img "first")
+    (check-size 'shrink-tr x "second")
+    (check-size 'shrink-tr y "third")
+    (put-pinhole (shrink (put-pinhole raw-img (- (image-width raw-img) 1) 0) (- x 1) 0 0 (- y 1))
+                 (/ x 2)
+                 (/ y 2)))
+  
+  (define (shrink-bl raw-img x y)
+    (check-image 'shrink-bl raw-img "first")
+    (check-size 'shrink-bl x "second")
+    (check-size 'shrink-bl y "third")
+    (put-pinhole (shrink (put-pinhole raw-img 0 (- (image-height raw-img) 1)) 0 (- y 1) (- x 1) 0) 
+                 (/ x 2)
+                 (/ y 2)))
+  
+  (define (shrink-br raw-img x y)
+    (check-image 'shrink-br raw-img "first")
+    (check-size 'shrink-br x "second")
+    (check-size 'shrink-br y "third")
+    (put-pinhole (shrink (put-pinhole raw-img (- (image-width raw-img) 1) (- (image-height raw-img) 1))
+                         (- x 1)
+                         (- y 1)
+                         0
+                         0)
+                 (/ x 2)
+                 (/ y 2)))
+
 
   ;; ------------------------------------------------------------
 
@@ -214,10 +303,11 @@ plt/collects/tests/mzscheme/image-test.ss
     (check-coordinate 'line y "second")
     (check-image-color 'line color "third")
     (check-sizes 'line (+ x 1) (+ y 1))
-    (let ([draw-proc (make-color-wrapper
-                      color 'transparent 'solid
-                      (lambda (dc dx dy)
-                        (send dc draw-line dx dy (+ dx x) (+ dy y))))]
+    (let ([draw-proc 
+           (make-color-wrapper
+            color 'transparent 'solid
+            (lambda (dc dx dy)
+              (send dc draw-line dx dy (+ dx x) (+ dy y))))]
           [mask-proc
            (make-color-wrapper
             'black 'transparent 'solid
@@ -677,9 +767,6 @@ converting from the computer's coordinates, we get:
                              (vector-ref v (- i 2))
                              (vector-ref v (- i 1)))
                             a))]))))
-  
-  (define (posi? i)
-    (and (number? i) (integer? i) (positive? i) (exact? i)))
 
   (define (color-list->image cl w h px py)
     (check 'color-list->image color-list? cl "list-of-colors" "first")
