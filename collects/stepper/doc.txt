@@ -151,6 +151,108 @@ the read expression to know that it wasn't really (define-values (a)
 
 Maybe I can add a field to zodiac structures a la maybe-undefined?
 
+************
+
+That worked great!
+
+************
+
+Man, there's a lot of shared code in here. 
+
+************
+
+Okay, back to the drawing board on a lot of things.
+
+1) Matthias and Robby are of the opinion that the break for an expression 
+should be triggered only when that expression becomes the redex.  For 
+example, the breakpoint for an if expression is triggered _after_ the test 
+expression is evaluated.
+
+2) I've realized that I need a more general approach in the annotater to 
+handle binding constructs other than lambda.  In particular, the new 
+scheme handles top-level variables differently than lexically bound ones.  
+In particular, the mark for an expression contains the value of a 
+top-level variable if (1) the variable occurs free in the expression, and 
+(2) the expression is on the spine of the current procedure or definition.
+Lexically bound variables are placed in the mark if (1) they occur free in 
+the expression, and (2) they are in tail position relative to the innermost 
+binding expression for the variable.
+
+*** Wait, no.  This is crap, because the bodies of lambdas need to store 
+all free variables, regardless of whether they're lexically tail w.r.t. 
+the binding occurrence. Maybe it really would just be easier to do this in 
+two passes.  How would this work?  One pass would attach the free variables 
+to each expression.  Then, the variables you must store in the mark for an 
+expression are those which (1) occur free and (2) are not contained in 
+some lexically enclosing expression. I guess we can use the 
+register-client ability of zodiac for this... 
+
+We're helped out in the lexical variables by the fact that zodiac renames 
+all lexically bound variables, so no two bindings have the same name. Of 
+course, that's not the case for the special variables inserted by the 
+annotator.  Most of these ... well, no, all of these will have to appear 
+in marks now.  The question is whether they'll ever fight with each other. 
+In the case of applications, I'm okay, because the only expressions which 
+appear in tail ... wait, wait, the only problem that I could have here 
+arises when top-level variables have the same names as lexically bound 
+ones, and since all of the special ones are lexically bound, this is fine. 
 
 
+************
+
+I'm taking these comments out of the program file.  They just clutter 
+things up.
+
+           ; make-debug-info takes a list of variables and an expression and
+           ; creates a thunk closed over the expression and (if bindings-needed is true) 
+           ; the following information for each variable in kept-vars:
+           ; 1) the name of the variable (could actually be inferred)
+           ; 2) the value of the variable
+           ; 3) a mutator for the variable, if it appears in mutated-vars.
+           ; (The reason for the third of these is actually that it can be used
+           ;  in the stepper to determine which bindings refer to the same location,
+           ;  as per Matthew's suggestion.)
+           ; 
+           ; as an optimization:
+           ; note that the mutators are needed only for the bindings which appear in
+           ; closures; no location ambiguity can occur in the 'currently-live' bindings,
+           ; since at most one location can exist for any given stack binding.  That is,
+           ; using the source, I can tell whether variables referenced directly in the
+           ; continuation chain refer to the same location.
+           
+           ; okay, things have changed a bit.  For this iteration, I'm simply not going to 
+           ; store mutators.  later, I'll add them in.
+
+		  
+************
+
+Okay, I'm back to the one-pass scheme, and here's how it's going to work.  
+Top-level variables are handled differently from lexically bound ones.  
+Annotate/inner takes an expression to annotate, and a list of variables whose 
+bindings the current expression is in tail position to.  This list may 
+optionally also hold the symbol 'all, which indicates that all variables 
+which occur free should be placed in the mark.
+
+
+***********
+
+Regarding the question: what the heck is this lexically-bound-vars argument 
+to annotate-source-expr?  The answer is that if we're displaying a lambda, 
+we do not have values for the variables whose bindings are the arguments 
+to the lambda.  For instance, suppose we have:
+
+(define my-top-level 13)
+
+(define my-closure
+  (lambda (x) (x top-level)))
+
+When we're displaying my-closure, we better not try to find a value for x 
+when reconstructing the body, as there isn't one.
+
+*************
+
+This may come back to haunt me: the temporary variables I'm introducing for 
+applications and 'if's are funny: they have no bindings.  They have no 
+orig-name's.  They _must_ be expanded, always. This may be a problem when 
+I stop displaying the values of lambda-bound variables.
 

@@ -2,6 +2,7 @@
   (import [z : zodiac:system^]
 	  [e : stepper:error^])
   
+  
   ; copied from aries
   
   (define read->raw
@@ -30,7 +31,26 @@
   
   ; *unevaluated* is the value assigned to temps before they are evaluated.
   (define *unevaluated* (gensym "unevaluated-"))
+ 
+  ; if-temp : uninterned-symbol
+  (define if-temp (gensym "if-temp-"))
+
+  (define (read-exprs text)
+    (let ([reader (z:read (open-input-string text) 
+                          (z:make-location 1 1 0 "stepper-string"))])
+      (let read-loop ([new-expr (reader)])
+        (if (z:eof? new-expr)
+            ()
+            (cons new-expr (read-loop (reader)))))))
+
+  ; bogus-varref is used so that we can create legal zodiac varrefs for temporary variables
   
+  (define (create-bogus-bound-varref name)
+    (z:make-bound-varref #f #f #f #f name #f))
+  
+  (define (create-bogus-top-level-varref name)
+    (z:make-top-level-varref #f #f #f #f name))
+
   ; get-arg-symbol maintains a list of gensyms associated with the non-negative
   ; integers.  These symbols are used in the elaboration of applications; the nth
   ; in the application is evaluated and stored in a variable whose name is the nth
@@ -44,11 +64,11 @@
       (lambda (arg-num)
 	(let ([arg-symbol (hash-table-get assoc-table arg-num (lambda () #f))])
 	  (if arg-symbol
-	      (z:create-lexical-varref arg-symbol)
+	      (create-bogus-bound-varref arg-symbol)
 	      (begin
 		(let ([new-sym (gensym (string-append "arg" (number->string arg-num) "-"))])
 		  (hash-table-put! assoc-table arg-num new-sym)
-		  (z:create-lexical-varref new-sym))))))))
+		  (create-bogus-bound-varref new-sym))))))))
   
   ; test cases: (returns #t on success)
   #| (let ([arg3 (get-arg-symbol 3)]
