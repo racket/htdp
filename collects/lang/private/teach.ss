@@ -38,6 +38,7 @@
 	   intermediate-local
 	   intermediate-letrec
 	   intermediate-let
+	   intermediate-let*
 	   intermediate-lambda
 	   intermediate-app
 	   intermediate-quasiquote
@@ -618,6 +619,21 @@
       [_else (with-syntax ([stx stx])
 	       (syntax (bad-let-form let stx)))]))
 
+  (define-syntax (intermediate-let* stx)
+    (syntax-case stx ()
+      [(_ () expr)
+       (syntax (let () expr))]
+      [(_ ([name0 rhs-expr0] [name rhs-expr] ...) expr)
+       (let ([names (syntax->list (syntax (name0 name ...)))])
+	 (andmap identifier? names))
+       (syntax/loc stx
+	   (intermediate-let ([name0 rhs-expr0])
+	     (intermediate-let* ([name rhs-expr]
+				 ...)
+				expr)))]
+      [_else (with-syntax ([stx stx])
+	       (syntax (bad-let-form let* stx)))]))
+
   (define-syntax (bad-let-form stx)
     (syntax-case stx ()
       [(_ who stx)
@@ -660,16 +676,17 @@
 			      who
 			      (something-else binding))]))
 			bindings)
-	      (let ([dup (check-duplicate-identifier (map (lambda (binding)
-							    (syntax-case binding ()
-							      [(name . _) (syntax name)]))
-							  bindings))])
-		(when dup
-		  (teach-syntax-error
-		   who
-		   dup
-		   "found a name that was defined locally more than once: ~a"
-		   (syntax-e dup))))
+	      (unless (eq? who 'let*)
+		(let ([dup (check-duplicate-identifier (map (lambda (binding)
+							      (syntax-case binding ()
+								[(name . _) (syntax name)]))
+							    bindings))])
+		  (when dup
+		    (teach-syntax-error
+		     who
+		     dup
+		     "found a name that was defined locally more than once: ~a"
+		     (syntax-e dup)))))
 	      (let ([exprs (syntax->list (syntax exprs))])
 		(check-single-expression who 
 					 "after the name-defining sequence"

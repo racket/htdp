@@ -73,6 +73,8 @@
 	  "to compute the exponent of two numbers")
     (abs (real -> real)
 	 "to compute the absolute value of a real number")
+    (sgn (real -> (union 1 |#i1.0| 0 |#i0.0| -1 |#i-1.0|))
+	 "to compute the sign of a real number")
     
     ;; fancy numeric 
     (exp (num -> num)
@@ -284,6 +286,9 @@
     
     (list (any ... -> (listof any)) "to construct a list of its arguments")
 
+    ((beginner-list* list*) (any ... (listof any) -> (listof any)) 
+			    "to construct a list by adding multiple items to a list")
+
     ((beginner-append append) ((listof any) ... -> (listof any))
 	    "to create a single list from several, by juxtaposition of the items")
     (length (list -> number)
@@ -427,7 +432,8 @@
 	    "to format a string, possibly embedding values"))
 
    ("Reading and Printing"
-    (display (sexp ->) "to display output to the user")
+    (display (any -> void)
+	     "to print the argument to stdout")
     (read (-> sexp) "to read input from the user"))
    
    ("Misc"

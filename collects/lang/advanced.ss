@@ -14,6 +14,7 @@
 	   (rename intermediate-local local)
 	   (rename advanced-let let)
 	   (rename advanced-recur recur)
+	   (rename intermediate-let* let*)
 	   (rename intermediate-letrec letrec)
 	   (rename beginner-cond cond)
 	   (rename beginner-if if)
@@ -43,8 +44,6 @@
    ("Reading and Printing"
     (printf (string any ... -> void)
 	    "to format the rest of the arguments according to the first argument and print it to stdout")
-    (display (any -> void)
-	     "to print the argument to stdout")
     (write (any -> void)
 	   "to print the argument to stdout"))
    
@@ -86,26 +85,6 @@
 		 "to update a vector")
     (vector? (any -> boolean)
 	     "to determine if a value is a vector"))
-
-   ("Higher-Order Functions"
-    (map ((X ... -> Z) (listof X) ... -> (listof Z))
-	 "to construct a new list by applying a function to each item on an existing existing") 
-    (for-each ((any ... -> any) (listof any) ... -> void)
-	      "to apply a function to each item on a list for effect only")
-    (filter ((X -> boolean) (listof X) -> (listof X))
-	    "to construct a list from all those items on  a list for which the predicate holds")
-    (foldr ((X Y -> Z) Y (listof X) -> Z)
-	   "(foldr f base (list x-1 ... x-n)) = (f x-1 ... (f x-n base))")
-    (foldl ((X Y -> Z) Y (listof X) -> Z)
-	   "(foldl f base (list x-1 ... x-n)) = (f x-n ... (f x-1 base))")
-    (build-list (nat (nat -> X) -> (listof X))
-		"(build-list n f) = (list (f 0) ... (f (- n 1)))")
-    (quicksort ((X X -> boolean) (listof X) -> (listof X))
-	       "to construct a list from all items on a list in an order according to a predicate")
-    (andmap ((X -> boolean) (listof X) -> boolean)
-	    "(andmap p (list x-1 ... x-n)) = (and (p x-1) (and ... (p x-n)))")
-    (ormap ((X -> boolean) (listof X) -> boolean)
-	   "(ormap p (list x-1 ... x-n)) = (or (p x-1) (and ... (p x-n)))"))
 
    ("Continuations"
     (call/cc ((cont -> any) -> any)
