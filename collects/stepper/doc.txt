@@ -78,6 +78,10 @@ A note about source locations: I'm using the "start" locations of sexps
 believe there are any instances where two expressions share a start 
 location.
 
+Later: this is now obsolete: I'm just storing the parsed zodiac 
+expressions.  Forget all of this source correlation crap. Zodiac does it 
+for me.
+
 *********
 
 Robby has a good point: Matthew's technique for detecting gaps in the 
@@ -96,7 +100,7 @@ uses of "invoke-unit/open."   Problem.
 
 So what the heck does a mark contain for the stepper? it looks like this:
 
-(lambda () (list <source-offset> <label> <var-list>))
+(lambda () (list <source-expr> <var-list>))
 
 with 
 
@@ -105,5 +109,20 @@ var-list = (list-of var)
 and
 
 var = (list <val> (make-varref <name> <top-level?>))
+
+*********
+
+Let me say a few words here about the overall structure of the 
+annotator/stepper combination. We have a choice when rebuilding the source: 
+we can follow the source itself, or we can follow the parsed expression 
+emitted by zodiac.  If our task is simply to spit out source code, then 
+it's clear that we should simply follow the source.  However, we need to 
+replace certain variables with the values of their bindings (in 
+particular, lambda-bound ones). Well, in beginner mode anyway...
+
+*******
+
+
+So, here's the next macro we need to handle: define-struct.
 
 

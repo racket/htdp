@@ -25,6 +25,7 @@
 		 (car matches))))))
 
   
+  
   (define (reconstruct-inner top-defs current-def mark-list so-far)
     
     (local
@@ -49,7 +50,17 @@
                   (map rectify-source-expr (cons (z:app-fun expr) (z:app-args expr)))]
                  
                  [(z:struct-form? expr)
-                  *
+                  (if (comes-from-define-struct expr)
+                      (e:internal-error expr "this expression should have been skipped during reconstruction")
+                      (let ([super-expr (z:struct-form-super expr)]
+                            [raw-type (read->raw (z:struct-form-type expr))]
+                            [raw-fields (map read->raw (z:struct-form-fields expr))])
+                        (if super-expr
+                            `(#%struct (,raw-type ,(rectify-source-expr super-expr))
+                              ,raw-fields)
+                            `(#%struct ,raw-type ,raw-fields))))]
+                 
+                 [
                  
                  
 
@@ -94,5 +105,23 @@
                    ; define-struct 
                    
                    [(z:struct-form? expr)
-                    (
+                    (if (comes-from-define-struct expr)
+                      so-far
+                      (let ([super-expr (z:struct-form-super expr)]
+                            [raw-type (read->raw (z:struct-form-type expr))]
+                            [raw-fields (map read->raw (z:struct-form-fields expr))])
+                        (if super-expr
+                            `(#%struct (,raw-type ,so-far)
+                              ,raw-fields)
+                            `(#%struct ,raw-type ,raw-fields))))]
                    
+                   ; if
+                   
+                   [(z:if-form? expr)
+                    (if (comes-from-cond? expr)
+                        
+                   
+                        
+                        
+                        
+                        
