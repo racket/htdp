@@ -25,18 +25,4 @@
     (lambda (x)
       (syntax-case x ()
         ((_ e1 ...)
-	 (syntax (tpromptfn (lambda () e1 ...)))))))
-)
-;  (define-macro split 
-;    (lambda (e . es)
-;      `(splitfn (lambda () (begin ,e ,@es)))))
-  
-;  (define-macro split* 
-;    (lambda (e . es)
-;      `(split*fn (list ,@(map (lambda (x) `(lambda () ,x)) (cons e es))))))
-  
-;  (define-macro tprompt
-;    (lambda es
-;      `(tpromptfn
-;	(lambda ()
-;	  ,@es))))
+	 (syntax (tpromptfn (lambda () e1 ...))))))))
