@@ -349,9 +349,9 @@
 	      (/ (unbox g-box) 255.0)
 	      (/ (unbox b-box) 255.0)))))
   
-  (define rgb-blue (lambda (rgb) (cadr (get-rgb-map rgb))))
+  (define rgb-blue (lambda (rgb) (caddr (get-rgb-map rgb))))
   (define rgb-red (lambda (rgb) (car (get-rgb-map rgb))))
-  (define rgb-green (lambda (rgb) (caddr (get-rgb-map rgb))))
+  (define rgb-green (lambda (rgb) (cadr (get-rgb-map rgb))))
   
   (define change-color
     (lambda (index color)
