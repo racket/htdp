@@ -374,7 +374,7 @@
        (cond
 	[(is-a? index wx:pen%) index]
 	[(or (string? index) (is-a? index wx:colour%))
-	 (make-object wx:pen% index 1 wx:const-solid)]
+	 (send wx:the-pen-list find-or-create-pen index 1 wx:const-solid)]
 	[else (vector-ref GLOBAL-PEN-VECTOR index)])))
 
    (define get-brush
@@ -382,7 +382,7 @@
        (cond
 	[(is-a? index wx:brush%) index]
 	[(or (string? index) (is-a? index wx:colour%))
-	 (make-object wx:brush% index wx:const-solid)]
+	 (send wx:the-brush-list find-or-create-brush index wx:const-solid)]
 	[else (vector-ref GLOBAL-BRUSH-VECTOR index)])))
 
    (define rgb? (lambda (object) (is-a? object wx:colour%)))
