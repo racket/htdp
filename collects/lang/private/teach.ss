@@ -625,12 +625,15 @@
 		(if (null? (cdr rest))
 		    "one"
 		    "at least one"))))
-	   (let ([to-define-names (let ([l (build-struct-names name fields #f (not setters?) stx)])
-				    (if struct-info-is-useful?
-					;; All names:
-					l
-					;; Skip `struct:' name:
-					(cdr l)))])
+	   (let* ([to-define-names (let ([l (build-struct-names name fields #f (not setters?) stx)])
+				     (if struct-info-is-useful?
+					 ;; All names:
+					 l
+					 ;; Skip `struct:' name:
+					 (cdr l)))]
+		  [proc-names (if struct-info-is-useful?
+				  (cdr to-define-names)
+				  to-define-names)])
 	     (with-syntax ([compile-info (if struct-info-is-useful?
 					     (build-struct-expand-info name fields #f (not setters?) #t null null)
 					     (syntax
@@ -647,21 +650,20 @@
                                               #t)
 			   #,(wrap-func-definitions 
 			      first-order? 
-			      ;; Only used when first-order?, so assume beginner-shaped list:
 			      (list* 'constructor 
 				     'predicate
-				     (map (lambda (x) 'selector) (cddr to-define-names)))
-			      to-define-names
+				     (map (lambda (x) 'selector) (cddr proc-names)))
+			      proc-names
 			      (list* (- (length to-define-names) 2)
 				     1
-				     (map (lambda (x) 1) (cddr to-define-names)))
-			      (lambda (def-to-define-names)
-				(with-syntax ([(def-to-define-name ...) def-to-define-names]
-					      [(to-define-name ...) to-define-names])
-				  (syntax-property #`(define-values (def-to-define-name ...)
+				     (map (lambda (x) 1) (cddr proc-names)))
+			      (lambda (def-proc-names)
+				(with-syntax ([(def-proc-name ...) def-proc-names]
+					      [(proc-name ...) proc-names])
+				  (syntax-property #`(define-values (def-proc-name ...)
 						       (let ()
 							 (define-struct name_ (field_ ...) (make-inspector))
-							 (values to-define-name ...)))
+							 (values proc-name ...)))
 						   'stepper-define-struct-hint
 						   stx))))))])
                  (check-definitions-new 'define-struct
