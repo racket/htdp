@@ -1040,6 +1040,11 @@
   ;                              `((before-after ((time (hilite ,h-p))) ((+ 3 4)) same (7))
   ;                                (before-after ((hilite ,h-p)) ((time 7)) same (7))
   ;                                (result (7))))
+  
+  
+  ; add image test: (image-width (filled-rect 10 10 'blue))
+  
+  
   ;  ;;;;;;;;;;;;;
   ;  ;;
   ;  ;;  TEACHPACK TESTS
