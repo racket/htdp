@@ -1,3 +1,5 @@
+(require-library "pretty.ss")
+
 (unit/sig stepper:reconstruct^
   (import [z : zodiac:system^]
           mzlib:function^
@@ -306,6 +308,13 @@
   ;((list-of z:parsed) (list-of mark) (list-of symbol) num -> 
   ; (list sexp sexp))
   
+  (define next-output-file
+    (let ([n 1])
+      (lambda ()
+        (begin0
+          (build-path "Cupertino:" "steps" (format "step~a" n))
+          (set! n (+ n 1))))))
+
   (define (reconstruct expr-list mark-list all-defs-list current-def-num break-kind returned-value-list)
     
     (local
@@ -521,21 +530,30 @@
                     (boolean? val)
                     (string? val)
                     (symbol? val))))
+
+         (define answer
+           (if (final-mark-list? mark-list)
+               (list old-defs null)
+               (let ([last-defs (last-defs-thunk)])
+                 (if (eq? break-kind 'result-break)
+                     (if (null? returned-value-list)
+                         (let* ([first-exp (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
+                                [so-far (if (heap-value? first-exp) first-exp highlight-placeholder)]
+                                [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
+                           (list (append old-defs (list current-def) last-defs) first-exp))
+                         (let* ([inner-value (rectify-value (car returned-value-list))]
+                                [so-far (if (heap-value? inner-value) inner-value highlight-placeholder)]
+                                [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
+                           (list (append old-defs (list current-def) last-defs) inner-value)))
+                     (begin
+                       (let ([current-def (current-def-rectifier  nothing-so-far mark-list #t)])
+                         (list (append old-defs (list current-def) last-defs) redex)))))))
+
          )
       
-      (if (final-mark-list? mark-list)
-          (list old-defs null)
-          (let ([last-defs (last-defs-thunk)])
-            (if (eq? break-kind 'result-break)
-                (if (null? returned-value-list)
-                    (let* ([first-exp (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
-                           [so-far (if (heap-value? first-exp) first-exp highlight-placeholder)]
-                           [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
-                      (list (append old-defs (list current-def) last-defs) first-exp))
-                    (let* ([inner-value (rectify-value (car returned-value-list))]
-                           [so-far (if (heap-value? inner-value) inner-value highlight-placeholder)]
-                           [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
-                      (list (append old-defs (list current-def) last-defs) inner-value)))
-                (begin
-                  (let ([current-def (current-def-rectifier  nothing-so-far mark-list #t)])
-                    (list (append old-defs (list current-def) last-defs) redex)))))))))
+      (call-with-output-file (next-output-file)
+        (lambda (port)
+          (write answer port))
+        'truncate 'text)
+      
+         answer)))
