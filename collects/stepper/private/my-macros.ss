@@ -79,13 +79,13 @@
   (define-syntax (let*-2vals stx)
     (syntax-case stx (let*-2vals)
       [(let*-2vals () . bodies)
-       (syntax (begin . bodies))]
+       (syntax/loc stx (begin . bodies))]
       [(let*-2vals ([(id-a id-b) rhs] binding ...) . bodies)  ; 2 values in a vector
-       (syntax (let* ([_a rhs] [id-a (vector-ref _a 0)] [id-b (vector-ref _a 1)])
-                 (let*-2vals (binding ...) . bodies)))]
+       (syntax/loc stx (let* ([_a rhs] [id-a (vector-ref _a 0)] [id-b (vector-ref _a 1)])
+                         (let*-2vals (binding ...) . bodies)))]
       [(let*-2vals ([id-a rhs] binding ...) . bodies)         ; just 1 value
-       (syntax (let* ([id-a rhs]) 
-                 (let*-2vals (binding ...) . bodies)))]))
+       (syntax/loc stx (let* ([id-a rhs]) 
+                         (let*-2vals (binding ...) . bodies)))]))
   
   (define-syntax (2vals-first stx)
     (syntax-case stx (2vals-first)
