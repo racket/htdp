@@ -25,7 +25,8 @@
 	  (lambda (stx) 
 	    (syntax-case stx () 
 	      [(contract function cnt) 
-	       (module-identifier=? #'contract language-level-contract)]
+	       (and (identifier? #'contract)
+		    (module-identifier=? #'contract language-level-contract))]
 	      [_ #f])))
 	
 					; pred: is this syntax obj a define-data?
@@ -33,7 +34,8 @@
 	  (lambda (stx)
 	    (syntax-case stx ()
 	      [(define-data name e1 e2 ...)
-	       (module-identifier=? #'define-data language-level-define-data)]
+	       (and (identifier? #'define-data)
+		    (module-identifier=? #'define-data language-level-define-data))]
 	      [_ #f])))
 	
 	;; takes a list of contract stx and a definitions stx and tells you if there is a contract defined for this function
