@@ -1,7 +1,10 @@
+;; TeachPack: dir.ss
+;; Language: Beginner 
+
 (define PLT (getenv "PLTHOME"))
 (current-directory PLT)
-(current-directory "lib")
-(current-directory "teach")
+(current-directory "teachpack")
+(current-directory "htdp")
 (printf "in: ~a~n" (current-directory))
 (define D (create-dir "."))
 

@@ -1,3 +1,6 @@
+;; TeachPack: graphing.ss
+;; Language: Intermediate
+
 ;; ------------------------------------------------------------------------
 
 (define (f x) 
