@@ -841,27 +841,19 @@
 				    (syntax->list
 				     (syntax
 				      (((define-syntaxes (def-id) 
-					  (make-undefined-check 
+					  (make-undefined-check
+					   (quote-syntax def-id)
 					   (quote-syntax check-not-undefined)
 					   (quote-syntax tmp-id)))
 					...)
 				       ...)))))])
-		     (syntax-property
-		      (syntax/loc stx
-			  (let ()
-			    mapping ...
-			    stx-def ...
-			    (define-values (tmp-id ...) def-expr)
-			    ...
-			    . exprs))
-		      'binding-in-source
-		      (apply list* 
-			     (map
-			      syntax-local-introduce
-			      (apply append 
-				     (map
-				      syntax->list
-				      (syntax->list (syntax ((def-id ...) ...))))))))))))))]
+		     (syntax/loc stx
+		       (let ()
+			 mapping ...
+			 stx-def ...
+			 (define-values (tmp-id ...) def-expr)
+			 ...
+			 . exprs))))))))]
 	[(_ def-non-seq . __)
 	 (teach-syntax-error
 	  'local
