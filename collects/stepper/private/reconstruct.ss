@@ -482,11 +482,13 @@
                                              (case (syntax-property var 'stepper-binding-type)
                                                ((lambda-bound) 
                                                 (recon-value (mark-binding-value (lookup-binding mark-list var))))
-                                               ((let-bound)
+                                               ((macro-bound)
                                                 ; for the moment, let-bound vars occur only in and/or :
                                                 (recon-value (mark-binding-value (lookup-binding mark-list var))))
                                                 ; (d->so (binding-lifted-name mark-list var)))
                                                ((top-level) var)
+                                               ((let-bound)
+                                                (error 'recon-source-expr "let-bound-variables not supported"))
                                                ((stepper-temp)
                                                 (error 'recon-source-expr "stepper-temp showed up in source?!?"))
                                                (else
@@ -555,7 +557,8 @@
                       (kernel:kernel-syntax-case (reconstruct-completed-procedure (car values)) #f
                         [(lambda (arg ...) body)
                          (syntax (define (name arg ...) body))]
-                        [else (error 'reconstruct "non-procedure as result of procedure definition")]))
+                        [else (error 'reconstruct "non-procedure as result of procedure definition: ~e\n"
+                                     (syntax-object->datum (reconstruct-completed-procedure (car values))))]))
                      ((non-lambda-define) 
                       (with-syntax ([source-name (car recon-vars)])
                         (syntax (define name source-name))))
@@ -568,7 +571,6 @@
   ; : (-> syntax? syntax? sexp?)
   ; DESPERATELY SEEKING ABSTRACTION
   (define (reconstruct-top-level source reconstructed)
-    (fprintf (current-error-port) "entering reconstruct-top-level with args: ~e\n" (map syntax-object->datum (list source reconstructed)))
     (cond 
       [(syntax-property source 'stepper-skipto) =>
        (lambda (skipto)
@@ -596,7 +598,7 @@
                  ((non-lambda-define) 
                   (with-syntax ([recon reconstructed])
                     (syntax (define name recon))))
-                 (else (error 'reconstruct-completed "unexpected stepper-define-hint: ~e\n" (syntax-property source 'stepper-define-hint))))))]
+                 (else (error 'reconstruct-top-level "unexpected stepper-define-hint: ~e\n" (syntax-property source 'stepper-define-hint))))))]
           [else
            reconstructed])]))
   
@@ -607,7 +609,7 @@
                                                  (lambda () 
                                                    (error 'reconstruct-completed "can't find user-defined proc in closure table: ~e\n" val)))]
            [mark (closure-record-mark closure-record)])
-      (recon-source-expr (mark-source mark) (list mark) null)))
+      (caar (unwind (list (recon-source-expr (mark-source mark) (list mark) null)) null))))
 
                                                                                                                 
                                                                                                                 

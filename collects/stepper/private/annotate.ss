@@ -156,7 +156,7 @@
        (let*-2vals ([kept-vars (binding-set-varref-set-intersect tail-bound free-vars)]
                     [let-bindings (filter (lambda (var) 
                                             (case (syntax-property var 'stepper-binding-type)
-                                              ((let-bound) #t)
+                                              ((let-bound macro-bound) #t)
                                               ((lambda-bound stepper-temp non-lexical) #f)
                                               (else (error 'make-debug-info 
                                                            "varref ~a's binding-type info was not recognized: ~a"
@@ -266,21 +266,28 @@
   ; with the syntax-property 'stepper-binding-type, which is set to either let-bound, lambda-bound, or non-lexical.
   
   (define (top-level-rewrite stx)
-    (let loop ([stx stx] [let-bound-bindings null] [cond-test (lx #f)] [and/or-test (lx #f)])
+    (let loop ([stx stx]
+               [let-bound-bindings null]
+               [macro-bound-bindings null]
+               [cond-test (lx #f)]
+               [and/or-test (lx #f)])
       (if (syntax-property stx 'stepper-skip-completely)
           stx
           (let* ([recur-regular 
                   (lambda (stx)
-                    (loop stx let-bound-bindings (lx #f) (lx #f)))]
+                    (loop stx let-bound-bindings macro-bound-bindings (lx #f) (lx #f)))]
                  [recur-with-bindings
                   (lambda (exp vars)
-                    (loop exp (append vars let-bound-bindings) (lx #f) (lx #f)))]
+                    (loop exp (append vars let-bound-bindings) macro-bound-bindings (lx #f) (lx #f)))]
+                 [recur-with-macro-bindings
+                  (lambda (exp vars)
+                    (loop exp let-bound-bindings (append vars macro-bound-bindings) (lx #f) (lx #f)))]
                  [recur-in-cond
                   (lambda (stx new-cond-test)
-                    (loop stx let-bound-bindings new-cond-test (lx #f)))]
+                    (loop stx let-bound-bindings macro-bound-bindings new-cond-test (lx #f)))]
                  [recur-in-and/or
                   (lambda (stx new-and/or-test new-bindings)
-                    (loop stx (append new-bindings let-bound-bindings) (lx #f) new-and/or-test))]
+                    (loop stx let-bound-bindings (append new-bindings macro-bound-bindings) (lx #f) new-and/or-test))]
                  [do-let/rec
                   (lambda (stx rec?)
                     (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
@@ -300,10 +307,10 @@
                   (lambda (new-and/or-test stx)
                     (kernel:kernel-syntax-case stx #f
                       [(let-values [((test-var) test-exp)] (if if-test then else))
-                       (let* ([new-test (syntax-property (recur-with-bindings (syntax if-test) (list (syntax test-var)))
+                       (let* ([new-test (syntax-property (recur-with-macro-bindings (syntax if-test) (list (syntax test-var)))
                                                          'stepper-skip-completely
                                                          #t)]
-                              [new-then-else (list (recur-with-bindings (syntax then) (list (syntax test-var)))
+                              [new-then-else (list (recur-with-macro-bindings (syntax then) (list (syntax test-var)))
                                                    (recur-in-and/or (syntax else) new-and/or-test (list (syntax test-var))))]
                               [new-if (syntax-property (rebuild-stx `(if ,new-test
                                                                          ,@new-then-else)
@@ -312,7 +319,7 @@
                                                        'comes-from-or)])
                          (syntax-property (rebuild-stx `(let-values ([(,(syntax-property (recur-regular (syntax test-var))
                                                                                          'stepper-binding-type
-                                                                                         'let-bound))
+                                                                                         'macro-bound))
                                                                       ,(recur-regular (syntax test-exp))])
                                                           ,new-if)
                                                        stx)
@@ -387,13 +394,17 @@
               [(letrec-values x ...) (do-let/rec stx #t)]
               [var
                (identifier? (syntax var))
-               (if (eq? (identifier-binding (syntax var)) 'lexical)
-                   (if (ormap (lambda (binding)
-                                (bound-identifier=? binding (syntax var)))
-                              let-bound-bindings)
-                       (syntax-property (syntax var) 'stepper-binding-type 'let-bound)
-                       (syntax-property (syntax var) 'stepper-binding-type 'lambda-bound))
-                   (syntax-property (syntax var) 'stepper-binding-type 'non-lexical))]
+               (syntax-property 
+                (syntax var) 
+                'stepper-binding-type
+                (if (eq? (identifier-binding (syntax var)) 'lexical)
+                    (cond [(ormap (lx (bound-identifier=? _ (syntax var))) let-bound-bindings)
+                           'let-bound]
+                          [(ormap (lx (bound-identifier=? _ (syntax var))) macro-bound-bindings)
+                           'macro-bound]
+                          [else
+                           'lambda-bound])
+                    'non-lexical))]
               [stx
                (let ([content (syntax-e (syntax stx))])
                  (if (pair? content)
@@ -1212,8 +1223,11 @@
                                                   (appropriate-wrap var free-varrefs)]
                                                  [foot-wrap? 
                                                   (case (syntax-property var 'stepper-binding-type)
-                                                    ((lambda-bound) (wcm-wrap (make-debug-info-normal free-varrefs) var))
-                                                    ((let-bound) (wcm-break-wrap (make-debug-info-normal free-varrefs) (return-value-wrap var)))
+                                                    ((lambda-bound macro-bound) 
+                                                     (wcm-wrap (make-debug-info-normal free-varrefs) var))
+                                                    ((let-bound) 
+                                                     (wcm-break-wrap (make-debug-info-normal free-varrefs)
+                                                                     (return-value-wrap var)))
                                                     ((non-lexical) (wcm-break-wrap (make-debug-info-normal free-varrefs)
                                                                                    (return-value-wrap var))))])
                                           free-varrefs))]
