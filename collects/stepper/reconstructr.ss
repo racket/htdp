@@ -225,13 +225,15 @@
             
             [(z:quote-form? expr)
              (let ([raw (read->raw (z:quote-form-expr expr))])
-               (cond [(or (string? raw)
-                          (number? raw)
-                          (boolean? raw)
-                          (s:image? raw))
-                      raw]
-                     [else
-                      `(quote ,raw)]))]
+               (rectify-value raw)
+;               (cond [(or (string? raw)
+;                          (number? raw)
+;                          (boolean? raw)
+;                          (s:image? raw))
+;                      raw]
+;                     [else
+;                      `(quote ,raw)])
+               )]
 
             [(z:case-lambda-form? expr)
              (let* ([arglists (z:case-lambda-form-args expr)]
