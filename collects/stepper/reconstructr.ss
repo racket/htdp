@@ -152,6 +152,8 @@
                                (eq? fun-val (s:get-vector))
                                (and (eq? fun-val void)
                                     (eq? (z:app-args expr) null))
+                               (struct-constructor-procedure? fun-val)
+                               ; this next clause may be obviated by the previous one.
                                (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
                                  (and closure-record
                                       (closure-record-constructor? closure-record))))))
