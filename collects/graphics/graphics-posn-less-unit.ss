@@ -176,13 +176,13 @@
         [the-world #f]
         ;; KeyEvent World -> Void
         [on-char-proc #f]
-        [the-time (new timer%
-                       [notify-callback 
-                        (lambda ()
-                          (set! the-world 
-                                (with-handlers ([exn:break? break-handler]
-                                                [exn? exn-handler])
-                                  (on-tick-proc the-world))))])]
+        [__set-up-the-timer__
+         (set! timer-callback 
+               (lambda ()
+                 (set! the-world 
+                       (with-handlers ([exn:break? break-handler]
+                                       [exn? exn-handler])
+                         (on-tick-proc the-world)))))]
         ;; World -> World 
         [on-tick-proc void]
         [exn-handler 
@@ -272,14 +272,21 @@
 	   (send press-queue flush))])))
   
   (define open-frames-timer (make-object mred:timer%))
+  
+  ;; --- timing events --- MF
+  [define the-time
+    (new timer% [notify-callback (lambda () (timer-callback))])]
+  [define timer-callback void]
+  ;; --- end timing --- 
 
   (define sixlib-frame%
     (class mred:frame%
       (rename [super-on-close on-close])
       (field [canvas #f])
       (define/public (set-canvas x) (set! canvas x))
-      (define/override (on-close)
+      (define/override (on-close)        
 	(close-viewport (send canvas get-viewport))
+        (send the-time stop)
 	(super-on-close))
       (super-instantiate ())))
   
