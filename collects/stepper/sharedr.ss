@@ -1,5 +1,3 @@
-(require-library "errortrace.ss" "errortrace")
-
 (unit/sig stepper:shared^
   (import [z : zodiac:system^]
 	  [e : stepper:error^])
@@ -46,11 +44,11 @@
       (lambda (arg-num)
 	(let ([arg-symbol (hash-table-get assoc-table arg-num (lambda () #f))])
 	  (if arg-symbol
-	      arg-symbol
+	      (z:create-lexical-varref arg-symbol)
 	      (begin
 		(let ([new-sym (gensym (string-append "arg" (number->string arg-num) "-"))])
 		  (hash-table-put! assoc-table arg-num new-sym)
-		  new-sym)))))))
+		  (z:create-lexical-varref new-sym))))))))
   
   ; test cases: (returns #t on success)
   #| (let ([arg3 (get-arg-symbol 3)]
@@ -90,4 +88,18 @@
   
   (define (flatten-take n a-list)
     (apply append (list-take n a-list)))
+  
+  (define make-improper
+    (lambda (combine)
+      (rec improper ;; `rec' is for the name in error messages
+	   (lambda (f list)
+	     (let improper-loop ([list list])
+	       (cond
+		 ((null? list) list)
+		 ((pair? list) (combine (f (car list))
+					(improper-loop (cdr list))))
+		 (else (f list))))))))
+  (define improper-map (make-improper cons))
+  (define improper-foreach (make-improper (lambda (x y) y)))
+  
 ) 
