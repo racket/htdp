@@ -7,6 +7,7 @@
            (lib "prim.ss" "lang")           
            (lib "unitsig.ss")
            (prefix mred: (lib "mred.ss" "mred"))
+           (lib "class.ss")
            (lib "mred-sig.ss" "mred")
            (lib "graphics-sig.ss" "graphics")
            (lib "graphics-posn-less-unit.ss" "graphics"))
@@ -286,6 +287,8 @@
       ((green)   (make-rgb 0 1.0 0))
       ((blue)    (make-rgb 0 0 1.0))
       ((black)   (make-rgb 0 0 0))
-      (else (error 'draw.ss "The symbol ~e is not a legal color in draw.ss." s)))))
-
-
+      (else
+       (let ([x (send mred:the-color-database find-color (symbol->string s))])
+         (if (rgb? x)
+             x
+             (error 'draw.ss "The symbol ~e is not a legal color in draw.ss." s)))))))
