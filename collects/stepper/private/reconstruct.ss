@@ -177,10 +177,13 @@
            (or (kernel:kernel-syntax-case expr #f
                   [id
                    (identifier? expr)
-                   (or (eq? (syntax-property expr 'stepper-binding-type) 'lambda-bound) ; don't halt for lambda-bound vars
-                       (let ([val (lookup-binding mark-list expr)]) 
-                         (and (procedure? val)
-                              (not (continuation? val)))))] ; don't halt for varrefs bound to non-continuation procedures
+                   (case (syntax-property expr 'stepper-binding-type)
+                     [(lambda-bound) #t]  ; don't halt for lambda-bound vars
+                     [(let-bound)
+                      (let ([val (lookup-binding mark-list expr)])
+                        (and (procedure? val)               ; don't halt for varrefs ...
+                             (not (continuation? val))      ; ... bound to non-continuation procedures ...
+                             (has-right-name expr val)))])] ; ... which already have the right name.
                   [(#%top . id-stx)
                    (let ([id (syntax id-stx)])
                      (with-handlers
@@ -188,15 +191,6 @@
                        (let ([val (global-lookup (syntax-e id))])
                          (or (and (procedure? val)                     ; don't halt for top-level procedure refs ...
                                   (eq? (syntax-e id) (object-name val)) ; with the right inferred name
-                                  
-                                  ; Do we need this stuff for lifted names? :
-                                  
-;                                  (or (not (closure-table-lookup val (lambda () #f))) ; that are primitives, or ...
-;                                      (and (not (continuation? val))
-;                                           (cond [(closure-table-lookup val (lambda () #f)) => ; are user fns with the right (original) name
-;                                                  (lambda (x)
-;                                                    (eq? id (syntax-e (closure-record-name x))))] ; has wrong name
-;                                                 [else #f])))
                                   )))))]
                   [(#%app . terms)
                    ; don't halt for proper applications of constructors
@@ -215,6 +209,25 @@
                                    (eq? (cdr (syntax->list (syntax terms))) null))
                               (struct-constructor-procedure? fun-val))))]
                  [else #f])))))
+  
+  ; has-right-name : (syntax? procedure? . -> . boolean?)
+  ; has-right-name takes a let-bound lexical identifier and a procedure value and returns true if the 
+  ; identifier would be rendered identically to the procedure value.
+  (define (has-right-name id val)
+    (let ([closure-record (closure-table-lookup val (lambda () #f))])     
+      (if closure-record
+          (let* ([mark (closure-record-mark closure-record)]
+                 [base-name (closure-record-name closure-record)])
+            (if base-name
+                (let* ([lifted-index (closure-record-lifted-index closure-record)]
+                       [name (if lifted-index
+                                 (construct-lifted-name base-name lifted-index)
+                                 base-name)])
+                  (eq? (syntax-e id) (syntax-e name)))
+                #f))
+          #f)))
+  
+  
   
   (define (find-special-value name valid-args)
     (let ([expanded (car (syntax-e (cdr (syntax-e (expand (cons name valid-args))))))])
@@ -591,19 +604,15 @@
                                (let* ([var (syntax var-stx)])
                                  (cond [(eq? (identifier-binding var) 'lexical)
                                         ; has this varref's binding not been evaluated yet?
-                                        (if (ormap (lambda (binding)
+                                        ; (and this varref isn't in the list of must-lookups?)
+                                        (if (and (ormap (lambda (binding)
                                                      (bound-identifier=? binding var))
                                                    dont-lookup)
-                                            ; is this a var we should look up a lifted name for?
-                                            (if (ormap (lambda (binding)
-                                                         (bound-identifier=? binding var))
-                                                       use-lifted-names)
-                                                (begin
-                                                  ;(printf "looking up lifted name for variable: ~a\n" (syntax-e var))
-                                                  (syntax-property var
-                                                                   'stepper-lifted-name
-                                                                   (binding-lifted-name mark-list var)))
-                                                (re-intern-identifier var))
+                                                 (not (ormap (lambda (binding)
+                                                               (bound-identifier=? binding var))
+                                                             use-lifted-names)))
+                                            (re-intern-identifier var)
+
                                             
                                             (case (syntax-property var 'stepper-binding-type)
                                               ((lambda-bound) 
@@ -807,7 +816,7 @@
                                                    (map reconstruct-remaining-def (cdr not-done-glumps))))
                                          null)]
                                     [recon-bindings (append before-bindings after-bindings)]
-                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list null render-settings))
+                                    [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list binding-list render-settings))
                                                            (syntax->list (syntax bodies)))])
                          (attach-info #`(label #,recon-bindings #,@rectified-bodies) expr))))])
              (kernel:kernel-syntax-case expr #f 
