@@ -70,18 +70,18 @@
   (define-struct test-struct () (make-inspector))
   
   (define (get-render-settings render-to-string render-to-sexp)
-    (let* ([true-false-printed/bool (string=? (render-to-string #t) "true")]
-           [constructor-style-printing/bool (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
+    (let* ([true-false-printed? (string=? (render-to-string #t) "true")]
+           [constructor-style-printing? (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
            [rendered-list (render-to-string '(3))]
            [rendered-list-substring (substring rendered-list 
                                                0 
                                                (min 5 (string-length rendered-list)))]
-           [abbreviate-cons-as-list/bool (and constructor-style-printing/bool
+           [abbreviate-cons-as-list? (and constructor-style-printing?
                                               (string=? rendered-list-substring "(list"))])
       (make-render-settings
-       (lambda () true-false-printed/bool)
-       (lambda () constructor-style-printing/bool)
-       (lambda () abbreviate-cons-as-list/bool)
+       true-false-printed?
+       constructor-style-printing?
+       abbreviate-cons-as-list?
        render-to-sexp)))
   
   (define (check-global-defined identifier)
