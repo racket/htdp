@@ -74,6 +74,8 @@
 		;; render-to-sexp : TST -> sexp
 		(define (render-to-sexp val)
 		  (set-print-settings
+                   language
+                   simple-settings
 		   (lambda () (simple-module-based-language-convert-value val simple-settings))))
 
 		(define view-history null)
@@ -285,13 +287,8 @@
 			  [show-sharing (drscheme:language:simple-settings-show-sharing simple-settings)])
 			 (print-convert value))]))
       
-      (unless (method-in-interface? 'render-value (object-interface language))
-	      (error 'stepper-tool "language object does not contain render-value method"))
-      (unless (method-in-interface? 'set-printing-parameters (object-interface language))
-	      (error 'stepper-tool "language object does not contain set-printing-parameters method"))
-      
-      ;; set-print-settings ; ( -> TST) -> TST
-      (define (set-print-settings thunk)
-	(unless (method-in-interface? 'set-printing-parameters (object-interface language))
-		(error 'stepper-tool "language object does not contain set-printing-parameters method"))
-	(send language set-printing-parameters thunk)))))
+      ;; set-print-settings ; settings ( -> TST) -> TST
+      (define (set-print-settings language simple-settings thunk)
+        (unless (method-in-interface? 'set-printing-parameters (object-interface language))
+          (error 'stepper-tool "language object does not contain set-printing-parameters method"))
+        (send language set-printing-parameters simple-settings thunk)))))

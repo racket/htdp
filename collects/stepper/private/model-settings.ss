@@ -55,8 +55,7 @@
   
   (define set-render-to-sexp!
     (contract
-     (-> (-> (-> any)
-             any)
+     (-> (-> any? any)
          void?)
      (lx (set! render-to-sexp _))
      'model-settings
@@ -88,10 +87,15 @@
     (contract
      (-> render-settings?)
      (lambda ()
+       (fprintf (current-error-port)
+                "true : ~e\n(make-test-struct) : ~e\n(substring (render-to-string '(3)) 0 5) : ~e\n"
+                (string=? (render-to-string #t) "true")
+                (render-to-string (make-test-struct))
+                (substring (render-to-string '(3)) 0 5))
        (let* ([true-false-printed/bool (string=? (render-to-string #t) "true")]
               [constructor-style-printing/bool (string=? (render-to-string (make-test-struct)) "(make-test-struct)")]
               [abbreviate-cons-as-list/bool (and constructor-style-printing/bool
-                                                 (string=? (substring (render-to-string '(3)) 0 5) "(cons"))])
+                                                 (string=? (substring (render-to-string '(3)) 0 5) "(list"))])
          (vector
           (lambda () true-false-printed/bool)
           (lambda () constructor-style-printing/bool)
@@ -113,7 +117,7 @@
   
   (define global-lookup
     (contract
-     (-> symbol? (lambda (x) #t))
+     (-> symbol? any)
      (lambda (identifier)
        (namespace-variable-value identifier))
      'model-settings
