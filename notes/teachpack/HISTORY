@@ -1,3 +1,8 @@
+VERSION 207  			          [Tue May  4 14:36:42 EDT 2004]
+
+* draw.ss now comes with functional callbacks for maintaining a visual
+  world: big-bang, on-key-event, on-tick, end-of-time 
+ 
 ------------------------------------------------------------------------
 VERSION 203  			          [Thu Dec  5 09:10:40 EST 2002]
 
