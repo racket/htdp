@@ -176,10 +176,13 @@
              (set! current-expr expanded)
              (fprintf (current-error-port) "about to perform eval~n")
              (let/ec k
+               (fprintf (current-error-port) "expression: ~a\n" (syntax-object->datum annotated))
                (let ([expression-result
                       (parameterize ([current-exception-handler (make-exception-handler k)])
                         (eval annotated))])
+                 (fprintf (current-error-port) "done with expression.~n")
                  (add-finished-expr expression-result)
+                 (fprintf (current-error-port) "done adding expression.~n")
                  (send-to-drscheme-eventspace expand-next-expression)))))
          
          (define (add-finished-expr expression-result)
@@ -206,12 +209,14 @@
         (lambda (error? expanded send-to-user-eventspace continue-thunk)
           (if error?
               (handle-exception (cadr expanded))
-              (begin
-                (send-to-user-eventspace
-                 (lambda ()
-                   (fprintf (current-error-port) "entering user eventspace~n")
-                   (queue-callback
-                    (lambda ()
-                      (fprintf (current-error-port) "callback triggered~n")
-                      (step-through-expression expanded continue-thunk))))))))))))    
+              (if (eof-object? expanded)
+                  (fprintf (current-error-port) "done with all evaluation...\n")
+                  (begin
+                    (send-to-user-eventspace
+                     (lambda ()
+                       (fprintf (current-error-port) "entering user eventspace~n")
+                       (queue-callback
+                        (lambda ()
+                          (fprintf (current-error-port) "callback triggered~n")
+                          (step-through-expression expanded continue-thunk)))))))))))))    
 

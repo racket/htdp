@@ -527,7 +527,7 @@
                       struct-proc-names)))
          
          (define (top-level-annotate/inner expr)
-           (annotate/inner expr 'all #f #t #f null))
+           (annotate/inner expr 'all #f #t #f))
          
          ; annotate/inner takes 
          ; a) an expression to annotate
@@ -567,29 +567,29 @@
                                                                                      
 	 (define annotate/inner 
            (checked-lambda ((expr SYNTAX-OBJECT) (tail-bound BINDING-SET) (pre-break? BOOLEAN) (top-level? BOOLEAN) 
-                            procedure-name-info (let-bound-bindings VARREF-SET))
+                            procedure-name-info)
 	   
-	   (let* ([tail-recur (lambda (expr) (annotate/inner expr tail-bound #t #f procedure-name-info let-bound-bindings))]
+	   (let* ([tail-recur (lambda (expr) (annotate/inner expr tail-bound #t #f procedure-name-info))]
                   [define-values-recur (lambda (expr name) 
-                                         (annotate/inner expr tail-bound #f #f name let-bound-bindings))]
-                  [non-tail-recur (lambda (expr) (annotate/inner expr null #f #f #f let-bound-bindings))]
-                  [result-recur (lambda (expr) (annotate/inner expr null #f #f procedure-name-info let-bound-bindings))]
-                  [set!-rhs-recur (lambda (expr name) (annotate/inner expr null #f #f name let-bound-bindings))]
+                                         (annotate/inner expr tail-bound #f #f name))]
+                  [non-tail-recur (lambda (expr) (annotate/inner expr null #f #f #f))]
+                  [result-recur (lambda (expr) (annotate/inner expr null #f #f procedure-name-info))]
+                  [set!-rhs-recur (lambda (expr name) (annotate/inner expr null #f #f name))]
                   [let-rhs-recur (lambda (expr binding-names dyn-index-syms bindings)
                                    (let* ([proc-name-info 
                                            (if (not (null? binding-names))
                                                (list (car binding-names) (car dyn-index-syms))
                                                #f)])
-                                     (annotate/inner expr null #f #f proc-name-info (binding-set-union (list let-bound-bindings bindings)))))]
-                  [lambda-body-recur (lambda (expr) (annotate/inner expr 'all #t #f #f let-bound-bindings))]
+                                     (annotate/inner expr null #f #f proc-name-info)))]
+                  [lambda-body-recur (lambda (expr) (annotate/inner expr 'all #t #f #f))]
                   ; note: no pre-break for the body of a let; it's handled by the break for the
                   ; let itself.
                   [let-body-recur (lambda (bindings)
                                     (lambda (expr) 
                                       (annotate/inner expr (binding-set-union (list tail-bound bindings)) #f 
-                                                      #f procedure-name-info (binding-set-union (list let-bound-bindings bindings)))))]
+                                                      #f procedure-name-info)))]
                   [cheap-wrap-recur (lambda (expr) (let-values ([(ann _) (tail-recur expr)]) ann))]
-                  [no-enclosing-recur (lambda (expr) (annotate/inner expr 'all #f #f #f let-bound-bindings))]
+                  [no-enclosing-recur (lambda (expr) (annotate/inner expr 'all #f #f #f))]
                   [make-debug-info-normal (lambda (free-bindings)
                                             (make-debug-info expr tail-bound free-bindings 'none foot-wrap?))]
                   [make-debug-info-app (lambda (tail-bound free-bindings label)
@@ -1075,8 +1075,8 @@
                    (ccond [(or cheap-wrap? ankle-wrap?)
                            (appropriate-wrap var free-varrefs)]
                           [foot-wrap?
-                           (wcm-wrap (make-debug-info-normal free-varrefs)
-                                     (var-break-wrap var))])
+                           (wcm-break-wrap (make-debug-info-normal free-varrefs)
+                                           (return-value-wrap var))])
                    free-varrefs))]
                
                [var-stx
@@ -1089,9 +1089,9 @@
                           [foot-wrap? 
                            (case (syntax-property var 'stepper-binding-type)
                              ((lambda-bound) (wcm-wrap (make-debug-info-normal free-varrefs) var))
-                             ((let-bound) (wcm-wrap (make-debug-info-normal free-varrefs) (var-break-wrap var)))
-                             ((non-lexical) (wcm-wrap (make-debug-info-normal free-varrefs)
-                                                            (var-break-wrap var))))])
+                             ((let-bound) (wcm-break-wrap (make-debug-info-normal free-varrefs) (return-value-wrap var)))
+                             ((non-lexical) (wcm-break-wrap (make-debug-info-normal free-varrefs)
+                                                            (return-value-wrap var))))])
                    free-varrefs))]
                
                [else ; require, require-for-syntax, define-syntaxes, module, provide

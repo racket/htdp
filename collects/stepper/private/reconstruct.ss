@@ -1,3 +1,8 @@
+; general assertions about reconstruction:
+; a varref can only occur at the top of a mark-list
+; a varref at the top of the mark-list must either be a top-level-variable
+;  or have a value in some mark somewhere (or both).
+
 (module reconstruct mzscheme
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
            (lib "list.ss")
@@ -145,11 +150,11 @@
         [closure-record
          (cond [(and (not (eq? hint 'let-rhs))
                      (closure-record-name closure-record)) =>
-                (lambda (name)
-                  (cond [(closure-record-lifted-name closure-record) =>
-                         (lambda (lifted-name)
-                           (d->so (construct-lifted-name name lifted-name)))]
-                        [else (d->so name)]))]
+                     (lambda (name)
+                       (cond [(closure-record-lifted-name closure-record) =>
+                              (lambda (lifted-name)
+                                (d->so (construct-lifted-name name lifted-name)))]
+                             [else (d->so name)]))]
                [else
                 (let ([mark (closure-record-mark closure-record)])
                   (recon-source-expr (mark-source mark) (list mark)))])]
@@ -550,9 +555,9 @@
      (kernel:kernel-syntax-case expr #f
          [(define-values vars-stx body)
           (let* ([vars (syntax->list (syntax vars-stx))]
-                 [values (map model-settings:global-lookup vars)]
+                 [values (map model-settings:global-lookup (map syntax-e vars))]
                  [recon-vars (map recon-value values)])
-            (attach-info (d->so `(define-values ,(syntax vars-stx) (values ,recon-vars))) expr))]
+            (attach-info (d->so `(define-values ,(syntax vars-stx) (values ,@recon-vars))) expr))]
          [else
           (recon-value value)])))
   
@@ -671,6 +676,12 @@
                 ; variable references
                 [id
                  (identifier? (syntax id))
+                 (so-far-only
+                  (if (eq? so-far nothing-so-far)
+                      (recon-source-current-marks expr)
+                      (error 'recon-inner "variable reference given as context: ~a" expr)))]
+                
+                [(#%top . id)
                  (so-far-only
                   (if (eq? so-far nothing-so-far)
                       (recon-source-current-marks expr)
@@ -801,8 +812,6 @@
                      (unless (null? after)
                        (error 'answer "non-empty 'after' defs in late-let-break: ~a" (map syntax-object->datum after)))
                      (list before)))
-                  ((var-break)
-                   (let ([current-defs (recon null nothing-so-far mark-list #t)];;; RIGHT HERE
                   (else
                    (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
 
