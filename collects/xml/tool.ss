@@ -281,11 +281,11 @@
                 (matching-xml x))))
       (send xml-keymap map-function ">" "matching-xml")
       
-      ;; The Scheme style list's Standard size changes
+      ;; The editor standard style list's Standard size changes
       ;; according to the font size preference. So,
       ;; we create an XML style based on that stule
       ;; for the XML boxes, so they change size too.
-      (let* ([style-list (scheme:get-style-list)]
+      (let* ([style-list (editor:get-standard-style-list)]
              [style (send style-list find-named-style "XML")]) 
         (unless style
           (let ([xml-delta (make-object style-delta% 'change-family 'default)])
@@ -295,7 +295,7 @@
                         xml-delta)))))
 
       (define xml-text-mixin
-        (mixin (editor:keymap<%> (class->interface text%)) ()
+        (mixin (editor:keymap<%> editor:standard-style-list<%> (class->interface text%)) ()
           (rename [super-get-keymaps get-keymaps])
           (define/override (get-keymaps)
             (cons xml-keymap (super-get-keymaps)))
@@ -317,7 +317,7 @@
           (super-instantiate ())
           
           (inherit set-style-list)
-          (set-style-list (scheme:get-style-list))))
+          ))
       
       (define get-xml-text%
 	(let ([xml-text% #f])

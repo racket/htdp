@@ -213,7 +213,7 @@
   ; there are four of them in the stepper window.
   
   (define stepper-sub-text%
-    (class f:text:basic% ()
+    (class f:text:standard-style-list% ()
       
       (init-field exps highlights highlight-color)
 
@@ -352,8 +352,7 @@
         (end-edit-sequence)
         (lock #t))
       
-      (super-instantiate ())
-      (set-style-list (f:scheme:get-style-list))))
+      (super-instantiate ())))
   
                                                    
                                                                   ;                                                                        ;;    ;
@@ -372,7 +371,7 @@
   ; it is used for error messages.
   
   (define stepper-sub-error-text%
-    (class f:text:basic% ()
+    (class f:text:standard-style-list% ()
   
       (init-field error-msg)
       
@@ -384,7 +383,6 @@
                   (set-max-width inner-width))])
       
       (super-instantiate ())
-      (set-style-list (f:scheme:get-style-list))
       (let ([before-error-msg (last-position)])
         (change-style (send (get-style-list) find-named-style "Standard"))
         (auto-wrap #t)
@@ -437,7 +435,7 @@
   ; redexes MUST NOT OVERLAP. all warranties void if this is violated.
   
   (define stepper-text%
-    (class f:text:basic% ()
+    (class f:text:standard-style-list% ()
       
       (init-field finished-exprs exps redex-list post-exps reduct-list error-msg after-exprs)
 
@@ -503,7 +501,6 @@
 
       (super-instantiate ())
       ;(hide-caret #t)
-      (set-style-list (f:scheme:get-style-list))
       (let ([before-position (last-position)])
         (for-each (lambda (x) (insert x)) (list top-defs-snip (string #\newline) horiz-separator-1
                                before-snip vert-separator 
