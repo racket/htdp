@@ -1,14 +1,15 @@
 
-(module intermediate mzscheme
+(module advanced mzscheme
   (require "private/teach.ss")
 
   ;; syntax:
-  (provide (rename beginner-define define)
-	   (rename beginner-define-struct define-struct)
-	   (rename beginner-lambda lambda)
-	   (rename beginner-app #%app)
+  (provide (rename advanced-define define)
+	   (rename advanced-define-struct define-struct)
+	   (rename advanced-lambda lambda)
+	   (rename #%app #%app)
 	   (rename intermediate-local local)
-	   (rename intermediate-let let)
+	   (rename advanced-let let)
+	   (rename advanced-recur recur)
 	   (rename intermediate-letrec letrec)
 	   (rename beginner-cond cond)
 	   (rename beginner-if if)
@@ -16,4 +17,7 @@
 	   (rename beginner-or or)
 	   (rename quote quote)
 	   (rename intermediate-time time)
+	   (rename begin begin)
+	   (rename set! set!)
+	   (rename delay delay)
 	   (rename #%module-begin #%plain-module-begin)))

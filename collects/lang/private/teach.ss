@@ -34,7 +34,14 @@
 	   
 	   intermediate-local
 	   intermediate-letrec
-	   intermediate-let)
+	   intermediate-let
+	   intermediate-time
+
+	   advanced-define
+	   advanced-lambda
+	   advanced-define-struct
+	   advanced-let
+	   advanced-recur)
   
   ;; verify-boolean is inserted to check for boolean results:
   (define (verify-boolean b where)
@@ -59,7 +66,7 @@
 	val))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; define
+  ;; define (beginner)
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (define-syntax (beginner-define stx)
@@ -179,7 +186,7 @@
        (bad-use-error 'define stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; lambda (only works with define)
+  ;; lambda (beginner; only works with define)
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (define-syntax (beginner-lambda stx)
@@ -503,7 +510,7 @@
       [_else (bad-use-error 'local stx)]))
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; letrec and let
+  ;; letrec and let (intermediate)
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (define-syntax (intermediate-letrec stx)
@@ -523,8 +530,14 @@
        (let ([names (syntax->list (syntax (name ...)))])
 	 (and (andmap identifier? names)
 	      (not (check-duplicate-identifier names))))
-       (syntax/loc stx
-	 (intermediate-local [(define-values (name ...) (values rhs-expr ...))] expr))]
+       (with-syntax ([(tmp ...)
+		      (generate-temporaries (syntax (name ...)))])
+	 (syntax/loc stx
+	   (let ([tmp rhs-expr]
+		 ...)
+	     ;; Use `local' to tell `#%app' about the bindings:
+	     (intermediate-local [(define-values (name ...) (values tmp ...))] 
+                expr))))]
       [_else (with-syntax ([stx stx])
 	       (syntax (bad-let-form let stx)))]))
 
@@ -589,14 +602,120 @@
 	    (teach-syntax-error
 	     who
 	     (syntax binding-non-seq)
-	     "expected a parenthesized sequence of local name definitions following ~a, but found ~a"
+	     "expected a parenthesized sequence of local name definitions after `~a', but found ~a"
 	     who
 	     (something-else (syntax binding-non-seq)))]
 	   [(_)
 	    (teach-syntax-error
 	     who
-	     (syntax binding-non-seq)
-	     "expected a sequence of local name definitions following ~a, but nothing's there"
+	     stx
+	     "expected a sequence of local name definitions after `~a', but nothing's there"
 	     who)]
 	   [_else
-	    (bad-use-error who stx)]))])))
+	    (bad-use-error who stx)]))]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; time
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (intermediate-time stx)
+    (syntax-case stx ()
+      [(_ . exprs)
+       (check-single-expression 'time 
+				"after `time'"
+				stx
+				(syntax->list (syntax exprs)))
+       (syntax/loc stx (time . exprs))]
+      [_else
+       (bad-use-error 'time stx)]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; define (advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (advanced-define stx)
+    ;; Handle the case that doesn't fit into beginner, then dispatch to beginner
+    (syntax-case stx ()
+      [(_ (name) expr)
+       (and (identifier? (syntax name))
+	    (memq (syntax-local-context) '(top-level module)))
+       (syntax/loc stx (define (name) expr))]
+      [(_ . rest)
+       (syntax/loc stx (beginner-define . rest))]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; lambda (advanced)
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (advanced-lambda stx)
+    (syntax-case stx ()
+      [(_  (name ...) . exprs)
+       (let ([names (syntax->list (syntax (name ...)))])
+	 (for-each (lambda (name)
+		     (unless (identifier? name)
+		       (teach-syntax-error
+			'lambda
+			name
+			"expected a name for an argument, but found ~a"
+			(something-else name))))
+		   names)
+	 (let ([dup (check-duplicate-identifier names)])
+	   (when dup
+	     (teach-syntax-error
+	      'lambda
+	      dup
+	      "found an argument name that is used more than once: ~a"
+	      (syntax-e dup))))
+	 (check-single-expression 'lambda 
+				  "after the argument-name sequence"
+				  stx
+				  (syntax->list (syntax exprs)))
+	 (syntax/loc stx (lambda (name ...) . exprs)))]
+      [(_ arg-non-seq . exprs)
+       (teach-syntax-error
+	'lambda
+	(syntax arg-non-seq)
+	"expected a parenthesized sequence of argument names after `lambda', but found ~a"
+	(something-else (syntax arg-non-seq)))]
+      [(_)
+       (teach-syntax-error
+	'lambda
+	stx
+	"expected a sequence of argument names after `lambda', but nothing's there")]
+      [_else
+       (bad-use-error 'lambda stx)]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; define-struct (advanced)         >> weak errors <<
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (advanced-define-struct stx)
+    (syntax-case stx ()
+      [(_ name/sup fields)
+       (syntax/loc stx (syntax (define-struct name/sup fields)))]))
+
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; let (advanced)       >> mz errors in named case <<
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (advanced-let stx)
+    (syntax-case stx ()
+      [(_ name . rest)
+       (identifier? (syntax name))
+       (syntax/loc stx (let name . rest))]
+      [(_ . rest)
+       (syntax/loc stx (intermediate-let . rest))]
+      [_else
+       (bad-use-error 'let stx)]))
+
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; recur (advanced)               >> let errors!! <<
+  ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define-syntax (advanced-recur stx)
+    (syntax-case stx ()
+      [(_ . rest)
+       (syntax/loc stx (advanced-let . rest))]
+      [_else
+       (bad-use-error 'recur stx)])))
