@@ -44,7 +44,8 @@
 	b
 	(raise
 	 (make-exn:fail:contract
-	  (format "~a: question result is not true or false: ~e" where b)
+	  (string->immutable-string
+	   (format "~a: question result is not true or false: ~e" where b))
 	  (current-continuation-marks)))))
 
   ;; Wrapped around uses of local-bound variables:
