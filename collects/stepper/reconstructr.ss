@@ -96,18 +96,7 @@
                (o-form-case-lambda->lambda 
                 (rectify-source-expr (mark-source mark) (list mark) null))))]
         [else
-         (parameterize
-             ([p:constructor-style-printing (s:get-constructor-style-printing)]
-              [p:abbreviate-cons-as-list (s:get-abbreviate-cons-as-list)]
-              [p:empty-list-name (s:get-empty-list-name)]
-              [p:show-sharing (s:get-show-sharing)]
-              [p:current-print-convert-hook 
-               (lambda (v basic-convert sub-convert)
-                 (if (s:image? v)
-                     v
-                     (basic-convert v)))]
-              [current-namespace (s:get-namespace)])
-           (p:print-convert val))])))
+         (s:print-convert val)])))
   
   (define (o-form-case-lambda->lambda o-form)
     (cond [(eq? (car o-form) 'lambda)
@@ -551,9 +540,9 @@
 
          )
       
-      (call-with-output-file (next-output-file)
-        (lambda (port)
-          (write answer port))
-        'truncate 'text)
+;      (call-with-output-file (next-output-file)
+;        (lambda (port)
+;          (write answer port))
+;        'truncate 'text)
       
          answer)))
