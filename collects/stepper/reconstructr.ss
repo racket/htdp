@@ -130,67 +130,60 @@
           (display k p)
           (not (not (regexp-match r (get-output-string p))))))))
   
-  (define (result-step-stop-here? mark-list)
-    (not (or (in-inserted-else-clause mark-list)
-             (and (pair? mark-list)
-                  (pair? (cdr mark-list))
-                  (let ([second-mark (cadr mark-list)])
-                    (and (z:app? (mark-source second-mark))
-                         (eq? (mark-label second-mark) 'called)))))))
+  (define (skip-result-step? mark-list)
+    (or (in-inserted-else-clause mark-list)
+        (and (pair? mark-list)
+             (pair? (cdr mark-list))
+             (let ([second-mark (cadr mark-list)])
+               (and (z:app? (mark-source second-mark))
+                    (eq? (mark-label second-mark) 'called))))))
   
-  (define (stop-here? mark-list)
-    (not (and (pair? mark-list)
-              (let ([expr (mark-source (car mark-list))])
-                (or (and (z:varref? expr)
-                         (printf "got to here.~n")
-                         (or (z:bound-varref? expr)
-                             (let ([var (z:varref-var expr)])
-                               (printf "got the varref.~n")
-                               (or (memq var (s:get-global-defined-vars))
-                                   (call-with-current-continuation
-                                    (lambda (k)
-                                      (with-handlers ([exn:variable?
-                                                       (lambda (exn) (k #f))])
-                                        (let ([_ (printf "about to find value of : ")]
-                                              [_2 (printf "~s~n" (z:varref-var expr))]
-                                              [val (mark-binding-value
-                                                    (find-var-binding mark-list (z:varref-var expr)))])
-                                          (printf "found value : ~s~n" val)
-                                          (and (procedure? val)
-                                               (printf "even deeper.~n")
-                                               (not (continuation? val))
-                                               (eq? var
-                                                    (closure-record-name 
-                                                     (closure-table-lookup val (lambda () (k #f))))))))))))))
-                    (and (z:app? expr)
-                         (let ([fun-val (mark-binding-value
-                                         (find-var-binding mark-list 
-                                                           (z:varref-var (get-arg-symbol 0))))])
-                           (and (procedure-arity-includes? 
-                                 fun-val
-                                 (length (z:app-args expr)))
-                                (or (and (s:get-constructor-style-printing)
-                                         (if (s:get-abbreviate-cons-as-list)
-                                             (eq? fun-val list)
-                                             (and (eq? fun-val (s:get-cons))
-                                                  (second-arg-is-list? mark-list))))
-                                    (eq? fun-val (s:get-vector))
-                                    (and (eq? fun-val void)
-                                         (eq? (z:app-args expr) null))
-                                    (struct-constructor-procedure? fun-val)
-                                    ; this next clause may be obviated by the previous one.
-                                    (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
-                                      (and closure-record
-                                           (closure-record-constructor? closure-record)))))))
-                    (in-inserted-else-clause mark-list))))))
+  (define (skip-redex-step? mark-list)
+    (and (pair? mark-list)
+         (let ([expr (mark-source (car mark-list))])
+           (or (and (z:varref? expr)
+                    (or (z:bound-varref? expr)
+                        (let ([var (z:varref-var expr)])
+                          (or (memq var (s:get-global-defined-vars))
+                              (call-with-current-continuation
+                               (lambda (k)
+                                 (with-handlers ([exn:variable?
+                                                  (lambda (exn) (k #f))])
+                                   (let ([val (mark-binding-value
+                                               (find-var-binding mark-list (z:varref-var expr)))])
+                                     (and (procedure? val)
+                                          (not (continuation? val))
+                                          (eq? var
+                                               (closure-record-name 
+                                                (closure-table-lookup val (lambda () (k #f))))))))))))))
+               (and (z:app? expr)
+                    (let ([fun-val (mark-binding-value
+                                    (find-var-binding mark-list 
+                                                      (z:varref-var (get-arg-symbol 0))))])
+                      (and (procedure-arity-includes? 
+                            fun-val
+                            (length (z:app-args expr)))
+                           (or (and (s:get-constructor-style-printing)
+                                    (if (s:get-abbreviate-cons-as-list)
+                                        (eq? fun-val list)
+                                        (and (eq? fun-val (s:get-cons))
+                                             (second-arg-is-list? mark-list))))
+                               (eq? fun-val (s:get-vector))
+                               (and (eq? fun-val void)
+                                    (eq? (z:app-args expr) null))
+                               (struct-constructor-procedure? fun-val)
+                               ; this next clause may be obviated by the previous one.
+                               (let ([closure-record (closure-table-lookup fun-val (lambda () #f))])
+                                 (and closure-record
+                                      (closure-record-constructor? closure-record)))))))
+               (in-inserted-else-clause mark-list)))))
   
   (define (second-arg-is-list? mark-list)
     (let ([arg-val (mark-binding-value (find-var-binding mark-list (z:varref-var (get-arg-symbol 2))))])
       (list? arg-val)))  
   
   (define (in-inserted-else-clause mark-list)
-    (and (not (or (null? mark-list)
-                 (eq? (mark-label (car mark-list)) 'guard-mark)))
+    (and (not (null? mark-list))
          (let ([expr (mark-source (car mark-list))])
            (or (and (z:zodiac? expr)
                     (not (z:if-form? expr))
@@ -411,6 +404,7 @@
                  ; applications
                  
                  [(z:app? expr)
+                  (printf "reconstructing app. label: ~s~n" (mark-label (car mark-list)))
                   (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
                          [arg-temps (build-list (length sub-exprs) get-arg-symbol)]
                          [arg-temp-syms (map z:varref-var arg-temps)]
@@ -508,11 +502,11 @@
          
          (define current-def-rectifier
            (lambda (so-far mark-list first)
-             (if (or (null? mark-list)
-                     (eq? (mark-label (car mark-list)) 'guard-mark))
+             (if (null? mark-list)
                  (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
                  (current-def-rectifier 
                   (let ([reconstructed (reconstruct-inner mark-list so-far)])
+                    (printf "current-def-rectifier rectified: ~n~s~n" reconstructed)
                     (when first
                       (set! redex reconstructed))
                     reconstructed)
@@ -525,19 +519,27 @@
                  ()
                  (map (lambda (expr) (rectify-top-level expr #f null)) 
                       (list-tail expr-list (+ current-def-num 1))))))
+         
+         (define (heap-value? val)
+           (not (or (number? val)
+                    (boolean? val)
+                    (string? val)
+                    (symbol? val))))
          )
       
-      (printf "finished evaluating local.~n")
       (if (final-mark-list? mark-list)
           (list old-defs null)
           (let ([last-defs (last-defs-thunk)])
             (if (eq? break-kind 'result-break)
                 (if (null? returned-value-list)
                     (let* ([first-exp (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
-                           [current-def (current-def-rectifier first-exp (cdr mark-list) #f)])
+                           [_ (printf "first-exp : ~s~n" first-exp)]
+                           [so-far (if (heap-value? first-exp) first-exp highlight-placeholder)]
+                           [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
                       (list (append old-defs (list current-def) last-defs) first-exp))
-                    (let* ([inner-value (rectify-value  (car returned-value-list))]
-                           [current-def (current-def-rectifier inner-value mark-list #f)])
+                    (let* ([inner-value (rectify-value (car returned-value-list))]
+                           [so-far (if (heap-value? inner-value) inner-value highlight-placeholder)]
+                           [current-def (current-def-rectifier so-far (cdr mark-list) #f)])
                       (list (append old-defs (list current-def) last-defs) inner-value)))
                 (begin
                   (printf "about to start reconstructing.~n")

@@ -56,6 +56,9 @@
 
   ; struct-flag : uninterned symbol
   (define struct-flag (gensym "struct-flag-"))
+  
+  ; highlight-placeholder : uninterned symbol
+  (define highlight-placeholder (gensym "highlight-placeholder"))
 
   ; make-gensym-source creates a pool of gensyms, indexed by arbitrary keys. These gensyms
   ; not eq? to any other symbols, but a client can always get the same symbol by
