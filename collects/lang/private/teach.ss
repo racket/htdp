@@ -330,7 +330,10 @@
                 stx
                 (syntax name)
                 (syntax-property
-                 (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...))
+                 (quasisyntax/loc stx (define name #,(syntax-property
+                                                      #`(lambda arg-seq make-lambda-generative lexpr ...)
+                                                      'stepper-hint
+                                                      'lambda-define-lam)))
                  'stepper-hint
                  'lambda-define))
                'stepper-skipto
@@ -343,7 +346,10 @@
                 stx
                 (syntax name)
                 (syntax-property
-                 (syntax/loc stx (define name expr))
+                 (quasisyntax/loc stx (define name #,(syntax-property 
+                                                      #'expr
+                                                      'stepper-hint
+                                                      'non-lambda-define-expr)))
                  'stepper-hint
                  'non-lambda-define))
                'stepper-skipto
@@ -395,7 +401,13 @@
              stx
              (car names)
              (syntax-property
-              (syntax/loc stx (define name-seq expr ...))
+              (with-syntax ([fn (car (syntax-e #'name-seq))] 
+                            [args (cdr (syntax-e #'name-seq))])
+                (quasisyntax/loc stx (define fn #,(syntax-property
+                                                   #`(lambda args expr ...)
+                                                   'stepper-hint
+                                                   'shortened-proc-define-lam))))
+              
               'stepper-hint
               'shortened-proc-define))
             'stepper-skipto
