@@ -166,15 +166,16 @@
        [on-char
 	(lambda (key-event)
           (let ([the-event (make-sixkey (send key-event get-key-code))])
+            ;; --- timing stuff : MF 4/4/2004
             (if (procedure? on-char-proc)
-                (set! the-world (on-char-proc the-event the-world))
+                (on-char-proc the-event)
                 (send press-queue add the-event))))])
       
       ;; --- timing stuff : MF 4/4/2004
       (private-field
         [the-world #f]
         ;; KeyEvent World -> Void
-        [on-char-proc void]
+        [on-char-proc #f]
         [the-time (new timer%
                        [notify-callback 
                         (lambda () (set! the-world (on-tick-proc the-world)))])]
@@ -184,9 +185,15 @@
       (public
         [set-on-char-proc 
          (lambda (f)
-           (if (eq? on-char-proc void)
-               (set! on-char-proc f)
-               (error 'on-event "the event action has been set already")))]
+           (let ([esp (current-eventspace)])
+             (if (procedure? on-char-proc)
+                 (set! on-char-proc 
+                       (lambda (e)
+                         (parameterize ([current-eventspace esp])
+                           (queue-callback 
+                            (lambda () (set! the-world (f e the-world)))
+                            #t))))
+                 (error 'on-event "the event action has been set already"))))]
         [set-on-tick-proc ;; Number [seconds] (World -> World) -> Void
          (lambda (delta f)
            (if (eq? on-tick-proc void)
