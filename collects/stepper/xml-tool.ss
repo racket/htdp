@@ -187,10 +187,7 @@
           (define/public (read-one-special index file line col pos)
             (scheme-read-one-special this file line col pos))
           
-          (define/override (make-editor)
-            (make-object ((drscheme:unit:get-program-editor-mixin)
-                          (add-file-keymap-mixin
-                           scheme:text%))))
+          (define/override (make-editor) (new (get-scheme-box-text%)))
           
           (define/override (make-snip) 
             (instantiate scheme-snip% () (splice? splice?)))
@@ -209,7 +206,22 @@
           (super-instantiate ())
           (show-border #t)
           (set-snipclass lib-scheme-snipclass)))
-      
+
+      (define scheme-box-text% #f)
+      (define (get-scheme-box-text%)
+        (unless scheme-box-text%
+          (set! scheme-box-text%
+                (class ((drscheme:unit:get-program-editor-mixin)
+                        (add-file-keymap-mixin
+                         scheme:text%))
+                  (inherit copy-self-to)
+                  (define/override (copy-self)
+                    (let ([t (new scheme-box-text%)])
+                      (copy-self-to t)
+                      t))
+                  (super-new))))
+        scheme-box-text%)
+        
       (define (add-file-keymap-mixin %)
         (class %
           (rename [super-get-keymaps get-keymaps])
@@ -314,10 +326,16 @@
 	(let ([xml-text% #f])
 	  (lambda ()
 	    (unless xml-text%
-	      (set! xml-text% ((drscheme:unit:get-program-editor-mixin)
-			       (xml-text-mixin
-				plain-text%))))
-	    xml-text%)))
+	      (set! xml-text% (class ((drscheme:unit:get-program-editor-mixin)
+                                      (xml-text-mixin
+                                       plain-text%))
+                                (inherit copy-self-to)
+                                (define/override (copy-self)
+                                  (let ([t (new xml-text%)])
+                                    (copy-self-to t)
+                                    t))
+                                (super-new))))
+            xml-text%)))
 
       ;; matching-xml : (is-a?/c text) -> void
       ;; inserts > and if there is an XML tag just
