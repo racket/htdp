@@ -1,9 +1,11 @@
-(require-library "error.ss" "htdp")
-
-(define-signature masterS (master))
-
-(define masterU
-  (unit/sig masterS (import errorS plt:userspace^)
+(module master mzscheme
+  (provide master)
+  
+  (require "error.ss"
+           (lib "class.ss")
+           (lib "class100.ss")
+           (lib "mred.ss" "mred")
+           (lib "etc.ss"))
     
     #| ------------------------------------------------------------------------
     The Basic Constants |#
@@ -83,14 +85,16 @@
     Some additional functionality |#
 
     (define colored-button%
-      (class button% (color:str parent call-back [width BUT-SIZE][hight BUT-SIZE])
+      (class100 button% (color:str parent call-back [_width BUT-SIZE] [_height BUT-SIZE])
+        (private-field (width _width)
+                       (height _height))
 	(private
 	  (make-colored-bm
 	    (lambda (color:str)
-	      (let* ([bm (make-object bitmap% width hight)]
+	      (let* ([bm (make-object bitmap% width height)]
 		     [dc (make-object bitmap-dc% bm)])
 		(send dc set-brush (make-object brush% color:str 'solid))
-		(send dc draw-rectangle 0 0 width hight)
+		(send dc draw-rectangle 0 0 width height)
 		(send dc set-bitmap #f)
 		bm))))
 	(public
@@ -164,11 +168,4 @@
     ;; ------------------------------------------------------------------------
     ;; Student Contribution
 
-    (define check-guess #f)))
-
-(compound-unit/sig
-  (import (PLT : plt:userspace^))
-  (link
-    (ERR  : errorS (errorU))
-    (DRAW : masterS (masterU ERR PLT)))
-  (export (open DRAW)))
+    (define check-guess #f))
