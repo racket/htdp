@@ -10,6 +10,7 @@
   (define-signature core-draw^
        (start 
         start/cartesian-plane
+        get-key-event
         stop 
         draw-circle draw-solid-disk draw-solid-rect draw-solid-line
         clear-circle clear-solid-disk clear-solid-rect clear-solid-line

@@ -30,6 +30,7 @@
 
   (define-primitive sleep-for-a-while sleep-for-a-while/proc)
   (define-primitive wait-for-mouse-click wait-for-mouse-click/proc)
+  (define-primitive get-key-event get-key-event/proc)     
   
   (define the-error
     (lambda x
@@ -65,6 +66,9 @@
   (define %wait-for-mouse-click the-error)
   (define (wait-for-mouse-click/proc) (%wait-for-mouse-click))
   
+  (define %get-key-event the-error)
+  (define (get-key-event/proc) (%get-key-event))
+       
   (define (make-true f) (lambda x (apply f x) #t))
   
   (define sleep-for-a-while/proc (make-true sleep))
@@ -140,6 +144,12 @@
             (lambda ()
               (mouse-click-posn
                (get-mouse-click @vp))))
+      
+      (set! %get-key-event
+            (lambda ()
+              (cond
+                [(ready-key-press @vp) => key-value]
+                [else false])))
 
       #t))
 
