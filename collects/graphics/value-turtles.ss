@@ -3,7 +3,7 @@
            (lib "class.ss")
            (lib "mred.ss" "mred")
            (lib "list.ss")
-           (lib "macro.ss" "framework"))
+           (lib "struct.ss"))
 
   (provide turtles move draw turn turn/radians merge clean)
 
