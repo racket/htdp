@@ -37,7 +37,8 @@
               (explore (map (lambda (x) (build-path d x)) ds))
               (map make-file
                    (map string->symbol fs)
-                   (map file-size (map (lambda (x) (build-path d x)) fs))
+                   (map (lambda (x) (if (file-exists? x) (file-size x) 0))
+			(map (lambda (x) (build-path d x)) fs))
                    (map (lambda (x) (if (link-exists? x) 'link null)) fs)))))
          dirs))
 
