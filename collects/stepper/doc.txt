@@ -122,6 +122,34 @@ particular, lambda-bound ones). Well, in beginner mode anyway...
 
 *******
 
+Okay, I'm about to extend the stepper significantly, and I want to do at
+least a little bit of design work first.  The concept is this: I want the
+stepper to stop _after_ each reduction, as well as before it.  One principal
+difference between the new and old step types is that in the new one,
+the continuation cannot be rectified entirely based upon the continuation
+marks; the value that is produced by the expression in question is also 
+needed.
+
+Here's a question: can I prove, for the setup I put together, that the part
+of the continuation _outside_ the highlighted region does not change? This
+should be the case; after all, the continuation itself does not change.
+
+Of course, there are some reductions which do not immediately produce a value;
+procedure applications, and ... uh oh, what about cond and if expressions?
+We want the stepper to use the appropriate "answer" as the "result" of
+the step.  So there's some context sensitivity here. 
+
+Wait, maybe not. It seems like _every_ expression  will have to have a "stop
+on entry" step. Further, these types of steps will _not_ have values associated
+with them. Hmmm....  
+
+Okay, this isn't that hard.  Yes, it's true that every expression that becomes
+... no, it's not obvious that the expression which is substituted ... jesus,
+it's not even always the case that a "substitution" occurs in the simplistic 
+sense I'm imagining.  Damn, I wish my reduction semantics were finished.
+
+
+
 
 So, here's the next macro we need to handle: define-struct.
 

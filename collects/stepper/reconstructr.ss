@@ -7,7 +7,7 @@
           [s : stepper:settings^]
 	  stepper:shared^)
 
-   (define nothing-so-far (gensym "nothing-so-far-"))
+  (define nothing-so-far (gensym "nothing-so-far-"))
   
   (define (mark-source mark)
     (car (mark)))
@@ -285,7 +285,7 @@
   ;((list-of z:parsed) (list-of mark) (list-of symbol) num -> 
   ; (list sexp sexp))
   
-  (define (reconstruct expr-list mark-list all-defs-list current-def-num)
+  (define (reconstruct expr-list mark-list all-defs-list current-def-num break-kind)
     
     (local
         ((define (rectify-source-top-marks expr)
@@ -375,10 +375,10 @@
                    (cond 
                      ; variable references
                      [(z:varref? expr)
-                      (if (not (eq? nothing-so-far so-far))
+                      (if (eq? so-far nothing-so-far)
+                          (rectify-source-current-marks expr)
                           (e:dynamic-error expr 
-                                           "variable reference given as context")
-                          (rectify-source-current-marks expr))]
+                                           "variable reference given as context"))]
                      
                      ; applications
                      
@@ -478,18 +478,17 @@
          
          (define redex #f)
          
-         (define current-def-thunk
-           (lambda ()
-             (let loop ([so-far nothing-so-far] [mark-list mark-list] [first #t])
-               (if (null? mark-list)
-                   (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
-                   (loop 
-                    (let ([reconstructed (reconstruct-inner mark-list so-far)])
-                      (when first
-                        (set! redex reconstructed))
-                      reconstructed)
-                    (cdr mark-list)
-                    #f)))))
+         (define current-def-rectifier
+           (lambda (so-far mark-list first)
+             (if (null? mark-list)
+                 (rectify-top-level (list-ref expr-list current-def-num) #t so-far)
+                 (current-def-rectifier 
+                  (let ([reconstructed (reconstruct-inner mark-list so-far)])
+                    (when first
+                      (set! redex reconstructed))
+                    reconstructed)
+                  (cdr mark-list)
+                  #f))))
          
          (define last-defs-thunk
            (lambda () 
@@ -501,6 +500,10 @@
       
       (if (final-mark-list? mark-list)
           (list old-defs null)
-          (list
-           (append old-defs (list (current-def-thunk)) (last-defs-thunk))
-           redex)))))
+          (let ([last-defs (last-defs-thunk)])
+            (if (eq? break-kind 'pre-break)
+                (let* ([first-exp (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
+                       [current-def (current-def-rectifier first-exp (cdr mark-list) #f)])
+                  (list (append old-defs (list current-def) last-defs) first-exp))
+                (let ([current-def (current-def-rectifier  nothing-so-far mark-list #t)])
+                  (list (append old-defs (list current-def) last-defs) redex))))))))
