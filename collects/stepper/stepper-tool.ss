@@ -8,6 +8,7 @@
            (lib "etc.ss")
            (lib "list.ss")
            (prefix model: "private/model.ss")
+	   "private/my-macros.ss"
            (prefix x: "private/mred-extensions.ss")
            "private/shared.ss"
            "private/model-settings.ss"
@@ -78,7 +79,7 @@
                   (lambda (expr basic-convert sub-convert)
                     (cond
                       [(is-a? expr snip%) 
-                       expr]
+                       (send expr copy)]
                       [((drscheme:rep:use-number-snip) expr)
                        (let ([number-snip-type (drscheme:language:simple-settings-fraction-style simple-settings)])
                          (cond
@@ -236,7 +237,8 @@
            (inherit get-button-panel get-interactions-text get-definitions-text)
            (rename [super-disable-evaluation disable-evaluation]
                    [super-enable-evaluation enable-evaluation]
-                   [super-can-close? can-close?])
+                   [super-can-close? can-close?]
+                   [super-on-close on-close])
            
            (super-instantiate ())
            
@@ -253,6 +255,7 @@
                                                   (send (get-definitions-text)
                                                         last-position)) 
                  (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))
+		 #f
                  (lambda ()
                    (init)
                    (drscheme:teachpack:install-teachpacks 
@@ -267,24 +270,9 @@
                (stepper-bitmap this)
                (get-button-panel)
                (lambda (button evt)
-                 (let* ([settings (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))]
-                        [language (drscheme:language-configuration:language-settings-language settings)]
-                        [language-level (car (last-pair (send language get-language-position)))])
-                   (if (or (string=? language-level (string-constant beginning-student))
-                           (string=? language-level (string-constant beginning-student/abbrev)))
-                       (begin
-                         (disable-evaluation)
-                         (set! stepper-frame (view-controller-go this program-expander)))
-                       (message-box "Stepper" 
-                                    (string-append "Language level is set to \"" 
-                                                           language-level
-                                                           "\". The stepper only works for the \""
-                                                           (string-constant beginning-student)
-                                                           "\" and the \""
-                                                           (string-constant beginning-student/abbrev)
-                                                           "\" language levels.")
-                                    #f 
-                                    '(ok)))))))
+                 (begin
+                   (disable-evaluation)
+                   (set! stepper-frame (view-controller-go this program-expander))))))
            
            (define/override (enable-evaluation)
              (send stepper-button enable #t)
@@ -307,11 +295,25 @@
                                 "You must close the stepper window before closing the DrScheme window.")
                    #f)
                  (super-can-close?)))
-
            
-           (send (get-button-panel) change-children
-                 (lambda (l)
-                   (cons stepper-button (remq stepper-button l)))))))
+           (define/override (on-close)
+             (callback-unregisterer)
+             (super-on-close))
+
+           (define (on-language-level-change pref-name new-settings)
+             (let* ([language (drscheme:language-configuration:language-settings-language new-settings)]
+                    [language-level (car (last-pair (send language get-language-position)))])
+                   (if (or (string=? language-level (string-constant beginning-student))
+                           (string=? language-level (string-constant beginning-student/abbrev)))
+                       (send (get-button-panel) change-children
+                             (lx (cons stepper-button (remq stepper-button _))))
+                       (send (get-button-panel) change-children
+                             (lx (remq stepper-button _)))))) 
+           
+           (define callback-unregisterer
+             (frame:preferences:add-callback (drscheme:language-configuration:get-settings-preferences-symbol) on-language-level-change))
+           (on-language-level-change (drscheme:language-configuration:get-settings-preferences-symbol) 
+                                     (frame:preferences:get (drscheme:language-configuration:get-settings-preferences-symbol))))))
 
 
       ;; COPIED FROM drscheme/private/language.ss

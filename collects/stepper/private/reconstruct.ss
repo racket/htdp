@@ -286,8 +286,6 @@
                                                                                                 ; 
 
   (define (unwind stx-list highlights)
-    ;(fprintf (current-error-port) "unwinding exprs: ~e\n" (map syntax-object->datum stx-list)) ; TEMP
-    ;(fprintf (current-error-port) "unwinding highlights: ~e\n" (map syntax-object->datum highlights))
     (local
         ((define highlight-queue-src (make-queue))
          (define highlight-queue-dest (make-queue))

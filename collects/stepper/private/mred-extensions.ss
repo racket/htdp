@@ -258,11 +258,11 @@
                                     1   ; if there was a good way to calculate a image widths ...
                                     #f)))]
                          [pretty-print-print-hook
+                          ; this print-hook is called for confusable highlights and for images.
                           (lambda (value display? port)
-                            (if (eq? value highlight-placeholder)
-                                (insert (format "~s" (car remaining-highlights)))
-                                ; next occurs if value is an image:
-                                (insert (send value copy))))]
+                            (cond [(image? value) (insert (send value copy))]
+                                  [(eq? value highlight-placeholder) (insert (format "~s" (car remaining-highlights)))]
+                                  [else (error 'stepper-GUI "pretty-print-print-hook: expected an image or a highlight-placeholder, got: ~e" value)]))]
                          [pretty-print-display-string-handler
                           (lambda (string port)
                             (insert string))]
