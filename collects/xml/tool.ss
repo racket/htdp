@@ -20,6 +20,16 @@
       (define scheme-splice-box-color "blue")
       (define scheme-box-color "purple")
 
+      ;; get-bm : string -> (union (is-a?/c bitmap%) false?)
+      (define (get-bm name)
+        (let ([bm (make-object bitmap% (build-path (collection-path "icons") name))])
+          (and (send bm ok?)
+               bm)))
+      
+      (define scheme-box-bm (get-bm "scheme-box.jpg"))
+      (define scheme-splice-box-bm (get-bm "scheme-splice-box.jpg"))
+      (define xml-box-bm (get-bm "xml-box.jpg"))
+      
       (define (make-string-snip obj)
         (let* ([str (format "~e" obj)]
                [sn (make-object string-snip% (string-length str))])
@@ -34,6 +44,9 @@
           [define pen (send the-pen-list find-or-create-pen color 1 'solid)]
           [define brush (send the-brush-list find-or-create-brush "BLACK" 'transparent)]
           
+          (define/public (get-corner-bitmap)
+            (error 'get-corner-bitmap "abstract method"))
+          
           (inherit get-extent get-inset)
           (rename [super-draw draw])
           (define/override draw
@@ -47,8 +60,19 @@
                 (get-extent dc x y bw bh #f #f #f #f)
                 (get-inset bl br bt bb)
                 (super-draw dc x y left top right bottom dx dy draw-caret)
-                (let ([old-pen (send dc get-pen)]
-                      [old-brush (send dc get-brush)])
+                (let* ([old-pen (send dc get-pen)]
+                       [old-brush (send dc get-brush)]
+                       [bm (get-corner-bitmap)]
+                       [bm-w (send bm get-width)]
+                       [bm-h (send bm get-height)])
+
+                  (send dc set-pen (send the-pen-list find-or-create-pen "black" 1 'solid))
+                  (send dc set-brush (send the-brush-list find-or-create-brush "black" 'solid))
+                  (send dc draw-bitmap
+                        bm
+                        (+ x (unbox bw) (- (unbox br)) (- bm-w) 1)
+                        (+ y (unbox bt) 1))
+                  
                   (send dc set-pen pen)
                   (send dc set-brush brush)
                   (send dc draw-rectangle
@@ -56,6 +80,8 @@
                         (+ y (unbox bt))
                         (- (unbox bw) (unbox bl) (unbox br))
                         (- (unbox bh) (unbox bt) (unbox bb)))
+                  
+                  
                   (send dc set-pen old-pen)
                   (send dc set-brush old-brush)))))
           
@@ -75,14 +101,28 @@
           
           (super-instantiate ()
             (editor (make-editor))
-            (with-border? #f))))
+            (with-border? #f)
+            (top-margin (+ 2 (send (get-corner-bitmap) get-height))))
+
+          (inherit set-min-width get-margin)
+          (let ([lb (box 0)]
+                [rb (box 0)])
+            (get-margin lb (box 0) rb (box 0))
+            (set-min-width 
+             (max 0
+                  (- (send (get-corner-bitmap) get-width)
+                     -1
+                     (unbox lb)
+                     (unbox rb)))))))
 
       (define xml-snip%
         (class* renderable-editor-snip% (drscheme:snip:special<%>) 
           (inherit get-editor)
           
           (define/override (make-editor) (make-object xml-text%))
-
+         
+          (define/override (get-corner-bitmap) xml-box-bm)
+          
           (define/public (read-special file line col pos)
             (let ([editor (get-editor)]
                   [old-locked #f])
@@ -188,6 +228,11 @@
           (init-field splice?)
           (define/public (get-splice?) splice?)
           
+          (define/override (get-corner-bitmap) 
+            (if splice? 
+                scheme-splice-box-bm
+                scheme-box-bm))
+
           (inherit get-editor)
           
           (define/public (read-special file line col pos)
@@ -258,9 +303,11 @@
           (set-styles-sticky #f)))
       
       (define xml-keymap (make-object keymap%))
-      (send xml-keymap add-function "matching-xml" (lambda (x e) 
-                                                 (when (is-a? x text%)
-                                                   (matching-xml x))))
+      (send xml-keymap add-function 
+            "matching-xml" 
+            (lambda (x e) 
+              (when (is-a? x text%)
+                (matching-xml x))))
       (send xml-keymap map-function ">" "matching-xml")
 
       (define xml-keymap-mixin
@@ -298,7 +345,9 @@
         ;; loop iterates backwards, searching for #\<
         ;; when it finds it, it gets the string starting
         ;; there, forwards to last-space (if there was a space)
-        ;; or start-1
+        ;; or start-1.
+        ;; If there is a #\/ or a #\> just after the #\<, return #f
+        ;; (in that case, they are typing a close tag or closing an empty tag)
         ;; this technique gleaned from the spec at:
         ;;  http://www.w3.org/TR/2000/REC-xml-20001006
         (let loop ([pos (- start 2)]
@@ -309,7 +358,11 @@
              (let ([char (send text get-character pos)])
                (case char
                  [(#\>) #f]
-                 [(#\<) (send text get-text (+ pos 1) (or last-space (- start 1)))]
+                 [(#\<) 
+                  (if (or (char=? (send text get-character (+ pos 1)) #\/)
+                          (char=? (send text get-character (+ pos 1)) #\>))
+                      #f
+                      (send text get-text (+ pos 1) (or last-space (- start 1))))]
                  [(#\space #\return #\newline #\tab)
                   (loop (- pos 1) pos)]
                  [else (loop (- pos 1) last-space)]))])))
