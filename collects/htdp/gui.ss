@@ -45,12 +45,14 @@
   ;; show-window : -> true
   ;; effect: to show the window
   (define (show-window w)
+    (check-arg 'show-window (window? w) "window" "its" w)
     (send ((window-get-frame w)) show true)
     true)
   
   ;; hide-window : X -> true
   ;; effect: to hide the window 
   (define (hide-window w)
+    (check-arg 'hide-window (window? w) "window" "its" w)
     (send ((window-get-frame w)) show false)
     true)
   
