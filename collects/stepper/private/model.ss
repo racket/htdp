@@ -43,24 +43,27 @@
                            (or (contains-highlight-placeholder (car expr))
                                (contains-highlight-placeholder (cdr expr)))
                            (eq? expr highlight-placeholder)))])
-             (let loop ([exprs exprs] [mode 'before])
-               (cond [(null? exprs) 
+             (let loop ([exprs-left exprs] [mode 'before])
+               (cond [(null? exprs-left) 
                       (if (eq? mode 'before)
-                          (error 'redivide "no sexp contained the highlight-placeholder.")
+                          (begin
+                            (fprintf (current-error-port) "no sexp contained the highlight-placeholder\n")
+                            (fprintf (current-error-port) "exprs: ~a\n" exprs)
+                            (error 'redivide "no sexp contained the highlight-placeholder."))
                           (values null null null))]
-                     [(contains-highlight-placeholder (car exprs))
+                     [(contains-highlight-placeholder (car exprs-left))
                       (if (eq? mode 'after)
                           (error 'redivide "highlighted sexp when already in after mode")
-                          (let-values ([(before during after) (loop (cdr exprs) 'during)])
-                            (values before (cons (car exprs) during) after)))]
+                          (let-values ([(before during after) (loop (cdr exprs-left) 'during)])
+                            (values before (cons (car exprs-left) during) after)))]
                      [else
                       (case mode
                         ((before) 
-                         (let-values ([(before during after) (loop (cdr exprs) 'before)])
-                           (values (cons (car exprs) before) during after)))
+                         (let-values ([(before during after) (loop (cdr exprs-left) 'before)])
+                           (values (cons (car exprs-left) before) during after)))
                         ((during after) 
-                         (let-values ([(before during after) (loop (cdr exprs) 'after)])
-                           (values before during (cons (car exprs) after)))))]))))
+                         (let-values ([(before during after) (loop (cdr exprs-left) 'after)])
+                           (values before during (cons (car exprs-left) after)))))]))))
 
          ;(redivide `(3 4 (+ (define ,highlight-placeholder) 13) 5 6))
          ;(values `(3 4) `((+ (define ,highlight-placeholder) 13)) `(5 6))
@@ -80,7 +83,6 @@
          
   
          (define (break mark-set key break-kind returned-value-list)
-           (fprintf (current-error-port) "entering (break) with break-kind: ~a~n" break-kind)
            (let* ([mark-list (continuation-mark-set->list mark-set key)])
              (let ([double-redivide
                     (lambda (finished-exprs new-exprs-before new-exprs-after)
@@ -102,8 +104,7 @@
                   (when (not (r:skip-redex-step? mark-list))
                     (let*-2vals ([(reconstructed redex-list) (reconstruct-helper)])
                       (set! held-expr-list reconstructed)
-                      (set! held-redex-list redex-list)))
-                  (fprintf (current-error-port) "finished with normal-break~n")]
+                      (set! held-redex-list redex-list)))]
                  
                  [(result-break)
                   (when (if (not (null? returned-value-list))
@@ -133,7 +134,6 @@
                                                              current reduct-list after)))])
                         (set! held-expr-list no-sexp)
                         (set! held-redex-list no-sexp)
-                        (fprintf (current-error-port) "finished reconstructing result-break~n")
                         (send-to-drscheme-eventspace
                          (lambda ()
                            (receive-result result user-computation-semaphore)))
@@ -150,7 +150,6 @@
                           (double-redivide finished-exprs 
                                            (list-ref reconstruct-quadruple 0) 
                                            (list-ref reconstruct-quadruple 2))])
-                      (fprintf (current-error-port) "finished reconstructing double-break~n")
                       (send-to-drscheme-eventspace
                        (lambda () 
                          (receive-result (make-before-after-result new-finished
@@ -167,22 +166,15 @@
                  [else (error 'break "unknown label on break")]))))
          
          (define (step-through-expression expanded expand-next-expression)
-           ; is there an eof test?
-           ; if so, here's the old thing to to do:
-           ; (receive-result (make-finished-result finished-exprs))
            (let*-values ([(annotated envs) (a:annotate expanded packaged-envs break 
                                                        'foot-wrap)])
              (set! packaged-envs envs)
              (set! current-expr expanded)
-             (fprintf (current-error-port) "about to perform eval~n")
              (let/ec k
-               (fprintf (current-error-port) "expression: ~a\n" (syntax-object->datum annotated))
                (let ([expression-result
                       (parameterize ([current-exception-handler (make-exception-handler k)])
                         (eval annotated))])
-                 (fprintf (current-error-port) "done with expression.~n")
                  (add-finished-expr expression-result)
-                 (fprintf (current-error-port) "done adding expression.~n")
                  (send-to-drscheme-eventspace expand-next-expression)))))
          
          (define (add-finished-expr expression-result)
@@ -210,13 +202,11 @@
           (if error?
               (handle-exception (cadr expanded))
               (if (eof-object? expanded)
-                  (fprintf (current-error-port) "done with all evaluation...\n")
+                  (receive-result (make-finished-result finished-exprs) user-computation-semaphore)
                   (begin
                     (send-to-user-eventspace
                      (lambda ()
-                       (fprintf (current-error-port) "entering user eventspace~n")
                        (queue-callback
                         (lambda ()
-                          (fprintf (current-error-port) "callback triggered~n")
-                          (step-through-expression expanded continue-thunk)))))))))))))    
+                          (step-through-expression expanded continue-thunk)))))))))))))
 

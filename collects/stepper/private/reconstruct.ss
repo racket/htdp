@@ -270,6 +270,7 @@
   ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
   (define (attach-info stx expr)
     (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
+           [it (syntax-property stx 'user-stepper-hint (syntax-property expr 'stepper-hint))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))                                                                                                  
@@ -296,6 +297,42 @@
 ;                    (comes-from-cond? expr))
 ;               (in-inserted-else-clause (cdr mark-list))))))
   
+  ; teach-name-substring: the name of the file containing the teaching macros. Yuck!
+  (define teach-name-substring "lang/private/teach.ss")
+  
+  ; teach-filter : (listof SYNTAX-OBJECT) -> (listof SYNTAX-OBJECT)
+  (define (teach-filter origins)
+    (filter (lambda (origin)
+              (let* ([origin-source (syntax-source origin)])
+                (and (string? origin-source)
+                     (let* ([origin-len (string-length origin-source)]
+                            [test-len (string-length teach-name-substring)])
+                       (and (>= origin-len test-len)
+                            (string=? teach-name-substring (substring origin-source (- origin-len test-len) origin-len)))))))
+            origins))
+    
+    
+  (define (unwind expr)
+    (let* ([origins (teach-filter (syntax-property expr 'user-origin))]
+           [stepper-hints (syntax-property expr 'user-stepper-hint)]
+           [_ (unless (= (length origins) (length stepper-hints))
+                (error 'unwind "length of origin-list (~a) <> length of stepper-hints (~a)" (length origins) (length stepper-hints)))]
+           [unwound (foldl unwind-once expr origins stepper-hints)])
+      ; now recur on pieces somehow
+      (syntax-object->datum unwound)))
+  
+  (define (unwind-once origin stepper-hint stx)
+    (case expansion-kind
+      ((define) 
+       (case (stepper-hint)
+         ((define-lambda)
+          (syntax-case stx ()
+            [(_ (name args ...) body ...)
+             (syntax (define name (lambda (args ...) body ...)))]))
+         ((define-constant)
+          stx)))       
+      (else (error 'unwind-once "unknown element in origin field: ~a\n" expansion-kind))))
+      
 ;;;;  
 ; (define comes-from-define?
 ;    (make-check-raw-first-symbol 'define))
@@ -800,6 +837,7 @@
                    (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
                                          (recon-source-expr (mark-source (car mark-list)) mark-list)
                                          (recon-value (car returned-value-list)))]
+                          [_ (unless (null? (cdr mark-list)) (fprintf (current-error-port) "next-to-top-mark: ~a\n" (syntax-object->datum (mark-source (cadr mark-list)))))]
                           [current-defs (recon null highlight-placeholder-stx (cdr mark-list) #f)])
                      (list current-defs (list innermost))))
                   ((normal-break)
