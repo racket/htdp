@@ -168,6 +168,7 @@
                       [else (basic-convert expr)])))
                 
                 (define drscheme-inspector (current-inspector))
+                
 		;; render-to-sexp : TST -> sexp
 		(define (render-to-sexp val)
                   (parameterize ([current-print-convert-hook (make-print-convert-hook simple-settings)])
@@ -181,6 +182,8 @@
                 (define view-channel (create-channel))
                 
                 ; the semaphore associated with the view at the end of the view-history
+                ; note that because these are fresh semaphores for every step, posting to a semaphore
+                ; multiple times is no problem.
                 (define release-for-next-step #f)
                 
                 ; the list of available views
@@ -228,7 +231,7 @@
                                  (error 'check-for-stepper-waiting "queue is empty, even though a step was just added."))
                                (set! stepper-is-waiting? #f)
                                (add-view-pair try-get)
-                               (update-view/existing (length view-history))))))
+                               (update-view/existing (- (length view-history) 1))))))
                       (semaphore-wait new-semaphore))))
 
                 (define (add-view-pair view-pair)
@@ -238,13 +241,12 @@
                 ; build gui object:
                 
                 (define (home)
-                  (unless stepper-is-waiting? ; check to be extra sure that other events didn't slip through.
-                    (update-view 0)))
+                  (when stepper-is-waiting?
+                    (set! stepper-is-waiting? #f))
+                  (update-view 0))
                 
                 (define (next)
-                  (unless stepper-is-waiting? ; check to be extra sure that other events didn't slip through.
-                    (disable-buttons)
-                    (update-view (+ view 1))))
+                  (update-view (+ view 1)))
                 
                 ; make this into a special last step
                 ;(message-box "Stepper"
@@ -253,8 +255,9 @@
                 ;              "available.  No further steps can be computed."))
                 
                 (define (previous)
-                  (unless stepper-is-waiting? ; check to be extra sure that other events didn't slip through.
-                    (update-view (- view 1))))
+                  (when stepper-is-waiting?
+                    (set! stepper-is-waiting? #f))
+                  (update-view (- view 1)))
                 
                 (define s-frame (make-object stepper-frame% drscheme-frame))
                 
@@ -275,18 +278,20 @@
                 ; of the list and display it.
                 
                 (define (update-view new-view)
-                  (set! view new-view)
-                  (if (= view (length view-history))
+                  (if (= new-view (length view-history))
                       (begin
                         (unless never-step-again
                           (semaphore-post release-for-next-step)
                           (let ([try-get (try-to-get-view-pair)])
-                            (when try-get       
-                              (add-view-pair try-get)
-                              (update-view/existing new-view)))))
+                            (if try-get
+                                (begin 
+                                  (add-view-pair try-get)
+                                  (update-view/existing new-view))
+                                (en/dis-able-buttons)))))
                       (update-view/existing new-view)))
                 
                 (define (update-view/existing new-view)
+                  (set! view new-view)                  
                   (let ([e (list-ref view-history view)])
                     (send canvas set-editor e)
                     (send e reset-width canvas)
@@ -296,18 +301,15 @@
                 (define (en/dis-able-buttons)
                   (send previous-button enable (not (zero? view)))
                   (send home-button enable (not (zero? view)))
-                  (send next-button enable (not (and never-step-again (= view (- (length view-history) 1))))))
-                
-                (define (disable-buttons)
-                  (send previous-button enable #f)
-                  (send home-button enable #f)
-                  (send next-button enable #f))
-                
+                  (send next-button enable (not (or stepper-is-waiting? (and never-step-again (= view (- (length view-history) 1)))))))
+
                 (define (print-current-view item evt)
                   (send (send canvas get-editor) print))
                 
                 (define (final-step? result)
-                  (ormap (lambda (fn) (fn result)) (list before-error-result? error-result? finished-result?)))
+                  #f
+                  ;(ormap (lambda (fn) (fn result)) (list before-error-result? error-result? finished-result?))
+                  )
                 
                 ; receive-result takes a result from the model and renders it on-screen
                 ; : (step-result -> void)
@@ -364,7 +366,7 @@
           (send button-panel stretchable-width #f)
           (send button-panel stretchable-height #f)
           (send canvas stretchable-height #t)
-          (disable-buttons)
+          (en/dis-able-buttons)
           (send (send s-frame edit-menu:get-undo-item) enable #f)
           (send (send s-frame edit-menu:get-redo-item) enable #f)
           (model:go program-expander-prime receive-result (get-render-settings render-to-string render-to-sexp #t))
