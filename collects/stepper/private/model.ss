@@ -64,7 +64,7 @@
 
   ; go starts a stepper instance
   ; see provide stmt for contract 
-  (define (go program-expander receive-result render-settings) 
+  (define (go program-expander receive-result render-settings)
     (local
         
         ((define finished-exprs null)
@@ -207,17 +207,20 @@
                                                        'foot-wrap)])
              (set! packaged-envs envs)
              (set! current-expr expanded)
+             (with-handlers ([(lambda (exn) #t) 
+                              (lambda (exn) 
+                                (err-handler (exn-message exn)))])
              (let ([expression-result
                     (parameterize ([current-eval basic-eval])
                       (eval annotated))])
                (add-finished-expr expression-result)
-               (expand-next-expression))))
+               (expand-next-expression)))))
          
          (define (add-finished-expr expression-result)
            (let ([reconstructed (r:reconstruct-completed current-expr expression-result render-settings)])
              (set! finished-exprs (append finished-exprs (list reconstructed)))))
          
-         (define (err-display-handler message exn)
+         (define (err-handler message)
            (if (not (eq? held-expr-list no-sexp))
                   (let*-values
                       ([(before current after) (redivide held-expr-list)])
@@ -226,8 +229,7 @@
                   (receive-result (make-error-result finished-exprs message)))))
       
       (program-expander
-       (lambda ()
-         (error-display-handler err-display-handler)) ; init
+       void ; empty init
        (lambda (expanded continue-thunk) ; iter
          (if (eof-object? expanded)
              (receive-result (make-finished-result finished-exprs))

@@ -49,14 +49,11 @@
                  (object-name val))
             (print-convert val)))))
     
-  (define (lt) #t)
-  (define (lf) #f)
-  
   (define fake-beginner-render-settings
-    (make-render-settings lt lt lf (make-fake-render-to-sexp #t #t #f)))
+    (make-render-settings #t #t #f (make-fake-render-to-sexp #t #t #f)))
   
   (define fake-beginner-wla-render-settings
-    (make-render-settings lt lt lt (make-fake-render-to-sexp #t #t #t)))
+    (make-render-settings #t #t #t (make-fake-render-to-sexp #t #t #t)))
   
   (define fake-intermediate-render-settings
     fake-beginner-wla-render-settings)
@@ -65,7 +62,7 @@
     fake-beginner-wla-render-settings)
   
   (define fake-mz-render-settings
-    (make-render-settings booleans-as-true/false constructor-style-printing abbreviate-cons-as-list print-convert))
+    (make-render-settings (booleans-as-true/false) (constructor-style-printing) (abbreviate-cons-as-list) print-convert))
   
   (define-struct test-struct () (make-inspector))
   
