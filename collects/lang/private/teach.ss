@@ -259,7 +259,7 @@
     ;; matching. The `where' argument is an English description
     ;; of the portion of the larger expression where a single
     ;; sub-expression was expected.
-    (define (check-single-expression who where stx exprs)
+    (define (check-single-expression who where stx exprs will-bind)
       (when (null? exprs)
 	(teach-syntax-error
 	 who
@@ -268,9 +268,14 @@
 	 "expected an expression ~a, but nothing's there"
 	 where))
       (unless (null? (cdr exprs))
-	;; In case it's erroneous, to ensure left-to-right reading:
-	(local-expand (car exprs) 'expression null)
-	;; First expression was ok, report an error for 2nd and later:
+	;; In case it's erroneous, to ensure left-to-right reading, let's
+	;;  try expanding the first expression. We have to use
+	;;  `will-bind' to avoid errors for unbound ids that will actually
+	;;  be bound. Since they're used as stopping points, we may miss
+	;;  some errors after all. It's worth a try, though.
+	(when will-bind
+	  (local-expand (car exprs) 'expression will-bind))
+	;; First expression seems ok, report an error for 2nd and later:
 	(teach-syntax-error
 	 who
 	 stx
@@ -281,11 +286,12 @@
 	     "one"
 	     "at least one"))))
 
-    (define (check-single-result-expr exprs where enclosing-expr)
+    (define (check-single-result-expr exprs where enclosing-expr will-bind)
       (check-single-expression where
 			       "for the function body"
 			       enclosing-expr
-			       exprs))
+			       exprs
+			       will-bind))
 
     (define keyword-list
       (append (syntax->list provided-identifiers)
@@ -437,7 +443,8 @@
 		(syntax-e dup))))
 	   (check-single-result-expr (syntax->list (syntax (expr ...)))
 				     #f
-				     stx)
+				     stx
+				     names)
 	   
            (check-definition-new 
             'define
@@ -464,7 +471,8 @@
 				    (format "after the defined name ~a"
 					    (syntax-e (syntax name)))
 				    stx
-				    exprs))]
+				    exprs
+				    (list (syntax name))))]
 	;; Bad name/header:
 	[(_ non-name expr ...)
 	 (teach-syntax-error
@@ -536,7 +544,8 @@
 		(syntax-e dup))))
 	   (check-single-result-expr (syntax->list (syntax (lexpr ...)))
 				     #f
-				     lam)
+				     lam
+				     args)
 	   'ok)]
 	;; Bad lambda because bad args:
 	[(beginner-lambda args . _)
@@ -1094,7 +1103,8 @@
 		 (check-single-expression 'local
 					  "after the local definition sequence"
 					  stx
-					  exprs))
+					  exprs
+					  (append val-ids stx-ids)))
 	       (with-syntax ([((d-v (def-id ...) def-expr) ...) val-defns]
 			     [(stx-def ...) stx-defns])
 		 (with-syntax ([((tmp-id ...) ...)
@@ -1280,7 +1290,8 @@
 						   (format "after the name `~a'"
 							   (syntax-e (syntax name)))
 						   binding
-						   (syntax->list (syntax exprs)))]
+						   (syntax->list (syntax exprs))
+						   #f)]
 			 [(something . exprs)
 			  (teach-syntax-error
 			   who
@@ -1314,7 +1325,8 @@
 	     (check-single-expression who 
 				      "after the name-defining sequence"
 				      orig-stx
-				      exprs)))]
+				      exprs
+				      #f)))]
 	[(_ binding-non-seq . __)
 	 (teach-syntax-error
 	  who
@@ -1422,7 +1434,8 @@
 	   (check-single-expression 'lambda
 				    "within lambda"
 				    stx
-				    (syntax->list (syntax (lexpr ...))))
+				    (syntax->list (syntax (lexpr ...)))
+				    args)
 	   (syntax/loc stx (lambda arg-seq lexpr ...)))]
 	;; Bad lambda because bad args:
 	[(_ args . __)
@@ -1453,7 +1466,8 @@
 	     (check-single-expression 'quote
 				      "after the `quote' keyword"
 				      stx
-				      (syntax->list (syntax (expr ...))))
+				      (syntax->list (syntax (expr ...)))
+				      null)
 	     (syntax (quote expr ...)))]
 	  [_else (bad-use-error 'quote stx)])))
 
@@ -1542,7 +1556,8 @@
 	 (check-single-expression 'time 
 				  "after `time'"
 				  stx
-				  (syntax->list (syntax exprs)))
+				  (syntax->list (syntax exprs))
+				  null)
 	 (syntax/loc stx (time . exprs))]
 	[_else
 	 (bad-use-error 'time stx)]))
@@ -1565,7 +1580,8 @@
 	[(_ (name) expr ...)
 	 (check-single-result-expr (syntax->list (syntax (expr ...)))
 				   #f
-				   stx)]
+				   stx
+				   (list #'name))]
 	[(_ . rest)
 	 ;; Call transformer beginner-define/proc.
 	 ;; Note that we call the transformer instead of producing
@@ -1604,7 +1620,8 @@
 	   (check-single-expression 'lambda 
 				    "after the argument-name sequence"
 				    stx
-				    (syntax->list (syntax exprs)))
+				    (syntax->list (syntax exprs))
+				    names)
 	   (syntax/loc stx (lambda (name ...) . exprs)))]
 	[(_ arg-non-seq . exprs)
 	 (teach-syntax-error
@@ -1675,7 +1692,8 @@
 	   (check-single-expression 'set!
 				    "for the new value"
 				    stx
-				    exprs)
+				    exprs
+				    null)
 	   (syntax/loc stx (set! id expr ...)))]
 	[(_ id . __)
 	 (teach-syntax-error
@@ -1707,7 +1725,8 @@
 					       (format "for the answer in `~a'"
 						       who)
 					       stx
-					       exprs)
+					       exprs
+					       null)
 		      (with-syntax ([who who]
 				    [target target-stx])
 			(syntax/loc stx (target (verify-boolean q 'who) expr ...))))]
@@ -1822,7 +1841,8 @@
 		     (check-single-expression 'case
 					      "for the answer in a case clause"
 					      clause
-					      answers)))]
+					      answers
+					      null)))]
 		[(choices answer ...)
 		 (let ([choices (syntax choices)]
 		       [answers (syntax->list (syntax (answer ...)))])
@@ -1855,7 +1875,8 @@
 		   (check-single-expression 'case
 					    "for the answer in a `case' clause"
 					    clause
-					    answers))]
+					    answers
+					    null))]
 		[()
 		 (teach-syntax-error
 		  'case
@@ -1898,7 +1919,8 @@
 	     (check-single-expression 'delay
 				      "after the `delay' keyword"
 				      stx
-				      (syntax->list (syntax (expr ...))))
+				      (syntax->list (syntax (expr ...)))
+				      null)
 	     (syntax (delay expr ...)))]
 	  [_else (bad-use-error 'delay stx)])))
 
@@ -1934,7 +1956,8 @@
 		   (check-single-expression 'shared
 					    "after the binding name"
 					    binding
-					    (syntax->list (syntax exprs)))]
+					    (syntax->list (syntax exprs))
+					    #f)]
 		  [(a . rest)
 		   (not (identifier/non-kw? (syntax a)))
 		   (teach-syntax-error
@@ -1960,7 +1983,8 @@
 	     (check-single-expression 'shared
 				      "after the bindings"
 				      stx
-				      (syntax->list (syntax exprs))))]
+				      (syntax->list (syntax exprs))
+				      #f))]
 	  [(_ bad-bind . exprs)
 	   (teach-syntax-error
 	    'shared
