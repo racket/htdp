@@ -8,7 +8,14 @@
            (lib "mz-testing.ss" "tests" "utils")) 
   
   (define-struct context-record (stx index kind))
+  
+  ; context-records are used to represent syntax context frames. That is,
+  ; a list of context records represents a path through a syntax tree
+  ; (to the highlight).
 
+  (define-struct try-record (index try-fn expr))
+  
+  ; try-records are 
   (provide/contract [lift (->* (syntax? syntax? boolean?)
                                ((listof syntax?) (listof syntax?)))] )
   
@@ -23,16 +30,18 @@
     (let/ec success-escape
       (local
           ((define (make-try-all-subexprs stx kind context-so-far)
-             (lambda (index-mangler list-of-subtries)
-               (let loop ([index 0] [remaining list-of-subtries])
+             (lambda (list-of-subtries-and-indices)
+               (let loop ([remaining list-of-subtries-and-indices])
                  (unless (null? remaining)
-                   ((caar remaining) (cadar remaining) (cons (make-context-record stx (index-mangler index) kind) context-so-far))
-                   (loop (+ index 1) (cdr remaining))))))
+                   (let* ([try (caar remaining)]
+                          [index (cadar remaining)])
+                   ((car try) (cadr try) (cons (make-context-record stx index kind) context-so-far))
+                   (loop (cdr remaining)))))))
            
            (define try->offset-try
              (lambda (try)
                (lambda (offset subtries)
-                 (try (lambda (index) (list (+ offset index))) subtries))))
+                 (try (map list (a...b offset (+ offset (length subtries))) subtries)))))
            
            (define (top-level-expr-iterator stx context-so-far)
              (let ([try (try->offset-try (make-try-all-subexprs stx 'top-level context-so-far))])
@@ -65,12 +74,13 @@
                  [(require-for-syntax . require-specs)
                   (void)]
                  [else
-                  (expr-iterator stx context-so-far)])))
+                  (e-xpr-iterator stx context-so-far)])))
            
            (define (expr-iterator stx context-so-far)
              (when (eq? stx highlight-placeholder-stx)
                (success-escape context-so-far))
              (let* ([try (make-try-all-subexprs stx 'expr context-so-far)]
+                    []
                     [try-exprs (lambda (index-mangler exprs) (try index-mangler (map (lambda (expr) `(,expr-iterator ,expr)) (syntax->list exprs))))]
                     [try-exprs-offset (try->offset-try try-exprs)] 
                     [let-values-abstraction
