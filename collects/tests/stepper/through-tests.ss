@@ -648,9 +648,17 @@
                                 `((before-after (,h-p) ((local ((define (a x) (+ x 9))) (a 6)))
                                                 (,h-p ,h-p) ((define (a_0 x) (+ x 9)) (a_0 6)))
                                   (before-after-finished ((define (a_0 x) (+ x 9)))
-                                                         (,h-p) ((a_0 6)) same (+ 6 9))
-                                  (before-after (,h-p) (+ 6 9) same (15))))
+                                                         (,h-p) ((a_0 6)) same ((+ 6 9)))
+                                  (before-after (,h-p) ((+ 6 9)) same (15))
+                                  (finished (15))))
     
+;  ;to try: 
+;  (error 'implement-test-cases! "")
+;  "(+ (+ 3 4) (local ((define a 13) (define (b x) x) (define c (lambda (x) x))) 8))"
+;  "(local ((define (a x) x) (define b (local ((define (a x) x) (define b (+ 3 4)) (define c (lambda (x) x))) c)) (define c (lambda (x) x))) (+ 3 4))"
+;  "(define (f x) (+ x 3)) (define g f) (+ 3 4)"
+;  "(define a (local ((define (f x) x)) f)) (+ 3 4)"
+  
 ;    (test-intermediate-sequence "(local ((define (a x) (+ x 13))) a)"
 ;                                `((before-after (,h-p) ((local ((define (a x) (+ x 13))) a))
 ;                                                (,h-p ,h-p) ((define (a_0 x) (+ x 13)) a_0))
