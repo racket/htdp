@@ -42,6 +42,16 @@
       (private [width 500]
 	       [height 1]
 	       [white-around 2])
+      (public
+        [reset-width 
+         (lambda ()
+           (let* ([admin (get-admin)]
+		  [reporting-media (send admin get-editor)]
+		  [reporting-admin (send reporting-media get-admin)]
+		  [widthb (box 0)])
+             (send reporting-admin get-view #f #f widthb #f)
+             (set! width (- (unbox widthb) 2))
+             (send admin resized this #t)))])
       (override
 	[write (lambda (s) 
 		 (send s put (char->integer #\r)))]
@@ -53,12 +63,6 @@
 	 (lambda (dc x y w-box h-box descent-box space-box lspace-box rspace-box)
 	   (for-each (lambda (box) (unless (not box) (set-box! box 0)))
 		     (list descent-box space-box lspace-box rspace-box))
-	   (let* ([admin (get-admin)]
-		  [reporting-media (send admin get-editor)]
-		  [reporting-admin (send reporting-media get-admin)]
-		  [widthb (box 0)])
-	     (send reporting-admin get-view #f #f widthb #f)
-	     (set! width (- (unbox widthb) 2)))
            (unless (not w-box)
 	     (set-box! w-box width))
 	   (unless (not h-box)
@@ -172,8 +176,7 @@
                  (begin-edit-sequence)
                  (let* ([style (send (get-style-list) find-named-style "Standard")]
                         [char-width (send style get-text-width (send canvas get-dc))]
-                        [min-columns 20]
-                        [width (max min-columns (floor (/ (- inner-width 18) char-width)))])
+                        [width (floor (/ (- inner-width 18) char-width))])
                    (reformat-sexp width)
                    (end-edit-sequence)))])
       
@@ -355,6 +358,8 @@
                        (send after-snip set-new-width l-r-box-widths canvas)
                        (send bottom-defs-snip set-new-width minus-cursor-margin canvas)
                        (coordinate-snip-sizes)
+                       (send horiz-separator-1 reset-width)
+                       (send horiz-separator-2 reset-width)
                        (end-edit-sequence)))))])
 
       (private [old-width #f]
@@ -391,7 +396,7 @@
       
 
       (sequence (super-init line-spacing tabstops)
-                (hide-caret #t)
+                ;(hide-caret #t)
                 (set-style-list (f:scheme:get-style-list))
                 (let ([before-position (last-position)])
                   (for-each insert (list top-defs-snip (string #\newline) horiz-separator-1
@@ -410,7 +415,7 @@
                           (make-object stepper-sub-error-text% error-msg)))
                 (send bottom-defs-snip set-editor
                       (make-object stepper-sub-text% after-exprs null #f))
-                (lock #t)
+                ;(lock #t)
                 )))
 
 ;  (define (stepper-text-test . args)
