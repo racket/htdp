@@ -1,0 +1,9 @@
+DrScholl
+--------
+
+Changes for v101:
+
+all steps scroll to bottom automatically.
+constants like 'pi' are explicitly expanded in a step.
+DrScholl uses fewer threads internally.
+
