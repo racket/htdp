@@ -904,7 +904,7 @@
 		       (send canvas set-geometry width height scale)
 		       (when show? 
 			     (send frame show #t)
-			     (send canvas set-focus))
+			     (send canvas focus))
 		       (set-text-foreground viewport black)
 		       (set-text-background viewport white)
 		       (set-viewport-background viewport white-brush)
