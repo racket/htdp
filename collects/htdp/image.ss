@@ -71,7 +71,7 @@ plt/collects/tests/mzscheme/image-test.ss
   (define (check-coordinate name val arg-posn) (check name number? val "number" arg-posn))
   (define (check-size name val arg-posn) (check name posi? val "positive exact integer" arg-posn))
   (define (check-image name val arg-posn) (check name image? val "image" arg-posn))
-  (define (check-color name val arg-posn) (check name image-color? val "color" arg-posn))
+  (define (check-image-color name val arg-posn) (check name image-color? val "image-color" arg-posn))
   (define (check-mode name val arg-posn) (check name mode? val mode-str arg-posn))
   
   (define (check-sizes who w h)
@@ -212,7 +212,7 @@ plt/collects/tests/mzscheme/image-test.ss
   (define (line x y color)
     (check-coordinate 'line x "first")
     (check-coordinate 'line y "second")
-    (check-color 'line color "third")
+    (check-image-color 'line color "third")
     (check-sizes 'line (+ x 1) (+ y 1))
     (let ([draw-proc (make-color-wrapper
                       color 'transparent 'solid
@@ -232,7 +232,7 @@ plt/collects/tests/mzscheme/image-test.ss
     (check-coordinate 'add-line pre-y1 "third")
     (check-coordinate 'add-line pre-x2 "fourth")
     (check-coordinate 'add-line pre-y2 "fifth")
-    (check-color 'add-line color-in "sixth")
+    (check-image-color 'add-line color-in "sixth")
     (let ([i (coerce-to-cache-image-snip raw-i)])
       (let-values ([(px py) (send i get-pinhole)]
                    [(iw ih) (send i get-size)]
@@ -275,7 +275,7 @@ plt/collects/tests/mzscheme/image-test.ss
   (define (text str size color-in)
     (check 'text string? str "string" "first")
     (check 'text (lambda (x) (and (integer? x) (<= 1 x 255))) size "integer between 1 and 255" "second")
-    (check-color 'text color-in "third")
+    (check-image-color 'text color-in "third")
     (let ([color (make-color% color-in)])
       (let-values ([(tw th) (get-text-size size str)])
         (let ([draw-proc
@@ -340,7 +340,7 @@ plt/collects/tests/mzscheme/image-test.ss
     (check-size 'rectangle w "first")
     (check-size 'rectangle h "second")
     (check-mode 'rectangle mode "third")
-    (check-color 'rectangle color "fourth")
+    (check-image-color 'rectangle color "fourth")
     (a-rect/circ 'rectangle
                  (lambda (dc dx dy) (send dc draw-rectangle dx dy w h))
                  w h color (mode->brush-symbol mode) (mode->pen-symbol mode)))
@@ -349,7 +349,7 @@ plt/collects/tests/mzscheme/image-test.ss
     (check-size 'ellipse w "first")
     (check-size 'ellipse h "second")
     (check-mode 'ellipse mode "third")
-    (check-color 'ellipse color "fourth")
+    (check-image-color 'ellipse color "fourth")
     (a-rect/circ 'ellipse
                  (lambda (dc dx dy) (send dc draw-ellipse dx dy w h))
                  w h color (mode->brush-symbol mode) (mode->pen-symbol mode)))
@@ -357,7 +357,7 @@ plt/collects/tests/mzscheme/image-test.ss
   (define (circle r mode color)
     (check-size 'circle r "first")
     (check-mode 'circle mode "second")
-    (check-color 'circle color "third")
+    (check-image-color 'circle color "third")
     (a-rect/circ 'circle
                  (lambda (dc dx dy) (send dc draw-ellipse dx dy (* 2 r) (* 2 r)))
                  (* 2 r) (* 2 r) color (mode->brush-symbol mode) (mode->pen-symbol mode)))
@@ -369,7 +369,7 @@ plt/collects/tests/mzscheme/image-test.ss
            "positive real number bigger than 2"
            "first")
     (check-mode 'triangle mode "second")
-    (check-color 'triangle color "third")
+    (check-image-color 'triangle color "third")
     (let* ([right (- size 1)]
            [bottom (inexact->exact (ceiling (* size (sin (* 2/3 pi)))))]
            [points (list (make-object point% 0 bottom)
