@@ -1,10 +1,10 @@
 (require-library "error.ss" "htdp")
 
 (define-signature guiS
-  (setup-gui show-gui hide-gui
+  (create-window show-window hide-window
    make-text make-choice make-button make-message
    text-contents choice-index draw-message
-   create-frame))
+   ))
   
 (define guessU
   (unit/sig guiS (import errorS plt:userspace^)
@@ -13,31 +13,23 @@
     ;; ----------------------------------------------------------------------------
 
     ;; the-frame : frame% 
-    (define the-frame (make-object frame% "title" false 10 10))
+    (define the-frame (make-object frame% "GUI" false 10 10))
 
-    ;; the-panel : pane% ; for arranging stacks of GUI elements 
+    ;; the-panel : pane% ; for arranging stacks of GUI items 
     (define the-panel (make-object vertical-pane% the-frame))
 
     ;; INFRASTRUCTURE OPERATIONS:
     ;; ----------------------------------------------------------------------------
 
-    ;; setup-gui : str num num -> true
-    ;; effect: to set up a frame of dimensons x and y, plus a panel
-    (define (setup-gui title x y)
-      (set! the-frame (make-object frame% title false x y))
-      (set! the-panel (make-object vertical-pane% the-frame))
+    ;; show-window : -> true
+    ;; effect: to show the window
+    (define (show-window)
       (send the-frame show true)
       true)
 
-    ;; show-gui : -> true
-    ;; effect: to show the frame
-    (define (show-gui)
-      (send the-frame show true)
-      true)
-
-    ;; hide-gui : -> true
-    ;; effect: to hide the frame 
-    (define (hide-gui . x)
+    ;; hide-window : -> true
+    ;; effect: to hide the window 
+    (define (hide-window . x)
       (send the-frame show false)
       true)
 
@@ -54,15 +46,15 @@
       (let ([C false])
 	(make-gui-item (lambda (p) (or C (begin (set! C (builder p)) C))))))
 
-    ;; create-frame : (listof gui-item) -> true
-    ;; to add gui-items to the frame and to show frame
-    (define (create-frame loi)
+    ;; create-window : (listof gui-item) -> true
+    ;; to add gui-items to the window and to show window
+    (define (create-window loi)
       (for-each (lambda (loi)
 		  (let ((p (make-object horizontal-pane% the-panel)))
 		    (send p set-alignment 'center 'center)
 		    (for-each (lambda (i) ((gui-item-builder i) p)) loi)))
 	loi)
-      (show-gui))
+      (show-window))
       
     ;; make-text : str -> gui-item
     ;; to create a text-item with label lbl
