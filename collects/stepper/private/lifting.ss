@@ -5,6 +5,9 @@
            (prefix kernel: (lib "kerncase.ss" "syntax"))
            (lib "match.ss")
            "shared.ss"
+           "testing-shared.ss"
+           "my-macros.ss"
+           (lib "sexp-diff.ss" "tests" "utils")
            (lib "mz-testing.ss" "tests" "utils")) 
   
   (define-struct context-record (stx index kind))
@@ -16,11 +19,15 @@
   (define-struct try-record (index try-fn expr))
   
   ; try-records are 
-  (provide/contract [lift (->* (syntax? syntax? boolean?)
-                               ((listof syntax?) (listof syntax?)))] )
+  (provide/contract [lift (syntax? ; syntax to perform lifiting in
+                           boolean? ; lift-at-highlight?
+                           . -> .
+                           (listof syntax?))]) ; result
+                          
   
-  (define (lift stx highlight lift-in-highlight?)
-    (lift-local-defs (find-highlight stx) highlight lift-in-highlight?))
+  (define (lift stx lift-in-highlight?)
+    (let*-2vals ([(context-records highlight) (find-highlight stx)])
+      (lift-local-defs context-records highlight lift-in-highlight?)))
   
   ; [find-highlight (-> syntax? (listof context-record?))]
 
@@ -75,8 +82,8 @@
                   (expr-iterator stx context-so-far)])))
            
            (define (expr-iterator stx context-so-far)
-             (when (eq? stx highlight-placeholder-stx)
-               (success-escape context-so-far))
+             (when (syntax-property stx 'stepper-highlight)
+               (success-escape (2vals context-so-far stx)))
              (let* ([try (make-try-all-subexprs stx 'expr context-so-far)]
                     [try-exprs (lambda (index-mangler exprs) (try index-mangler (map (lambda (expr) (list expr-iterator expr)) 
                                                                                      (syntax->list exprs))))]
@@ -133,18 +140,16 @@
                   (error 'expr-iterator "unknown expr: ~a" 
                          (syntax-object->datum stx))]))))
         
-        (if (eq? stx highlight-placeholder-stx)
-            null
-            (begin (top-level-expr-iterator stx null)
-                   (error 'find-highlight "couldn't find highlight-placeholder in expression: ~v" (syntax-object->datum stx)))))))
+        (begin (top-level-expr-iterator stx null)
+               (error 'find-highlight "couldn't find highlight-placeholder in expression: ~v" (syntax-object->datum stx))))))
 
   ; TESTING:
   
   (define-syntax (test-begin stx)
     (syntax-case stx ()
       [(_ expr ...)
-       ;#'(begin expr ...) ; testing version
-       #'(void) ; non-testing version
+       #'(begin expr ...) ; testing version
+       ;#'(void) ; non-testing version
        ]))
   
   (define (datum-ize-context-record cr)
@@ -157,32 +162,27 @@
   (test-begin
    ; TEST OF FIND-HIGHLIGHT
    
-   (define (sexp-shared a b)
-     (if (equal? a b)
-         a
-         (if (and (pair? a) (pair? b))
-             (cons
-              (sexp-shared (car a) (car b))
-              (sexp-shared (cdr a) (cdr b)))
-             'DIFFERENT)))
    
-   (define test-datum #`(define-values
-                                 (f)
-                                 (lambda (x)
-                                   (letrec-values (((a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))) 
-                                                   ((b) (lambda (x) (#%app #,highlight-placeholder-stx x)))) (let-values () (#%app a x))))))
+   (define test-datum (build-stx-with-highlight
+                       `(define (f x) (letrec ([a (lambda (x) (b (- x 1)))]
+                                               [b (lambda (x) ((hilite a) x))])
+                                        (a x)))))
 
-   (define expected (list (list `(#%app ,highlight-placeholder x) '(1) 'expr)
-                          (list `(lambda (x) (#%app ,highlight-placeholder x)) '(2) 'expr)
-                          (list `(letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))) '(1 1 1) 'expr)
-                          (list `(lambda (x) (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))) '(2) 'expr)                 
-                          (list `(define-values (f) (lambda (x) (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))))) '(2)
+   (define expected (list (list `(#%app a x) '(1) 'expr)
+                          (list `(lambda (x) (#%app a x)) '(2) 'expr)
+                          (list `(letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app a x))]) (#%app a x)) '(1 1 1) 'expr)
+                          (list `(lambda (x) (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app a x))]) (#%app a x))) '(2) 'expr)                 
+                          (list `(define-values (f) (lambda (x) (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app a x))]) (#%app a x)))) '(2)
                                                'general-top-level)))
    
-   (test expected map datum-ize-context-record (find-highlight test-datum))
-   ;(printf "shared: ~v\n" (sexp-shared actual expected))
+   (let*-2vals ([(context-records highlight) (find-highlight test-datum)])
+     (test expected map datum-ize-context-record context-records))
    
-   (test #t null? (find-highlight highlight-placeholder-stx)))
+   
+   (test null (lambda () 
+                (let*-2vals ([(context-records dc) 
+                              (find-highlight (build-stx-with-highlight`(hilite foo)))])
+                  context-records))))
   
   ; substitute-in-syntax takes a syntax expression (which must be a proper syntax list) and a path
   ; (represented by a list of numbers) and a syntax-expression to insert.  If the path is null, the

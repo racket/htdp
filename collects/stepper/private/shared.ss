@@ -41,8 +41,8 @@
    varref-set-remove-bindings
    binding-set-varref-set-intersect
    step-result?
-   (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs kind))
-   (struct before-error-result (finished-exprs exp redex err-msg after-exprs))
+   (struct before-after-result (finished-exprs exp post-exp after-exprs kind))
+   (struct before-error-result (finished-exprs exp err-msg after-exprs))
    (struct error-result (finished-exprs err-msg))
    (struct finished-result (finished-exprs))
    (struct finished-stepping ())
@@ -89,8 +89,8 @@
   ; or (make-error-result finished-exprs err-msg)
   ; or (make-finished-result finished-exprs)
   
-  (define-struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs kind) (make-inspector))
-  (define-struct before-error-result (finished-exprs exp redex err-msg after-exprs) (make-inspector))
+  (define-struct before-after-result (finished-exprs exp post-exp after-exprs kind) (make-inspector))
+  (define-struct before-error-result (finished-exprs exp err-msg after-exprs) (make-inspector))
   (define-struct error-result (finished-exprs err-msg) (make-inspector))
   (define-struct finished-result (finished-exprs) (make-inspector))
   (define-struct finished-stepping () (make-inspector))

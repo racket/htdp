@@ -17,11 +17,10 @@
 
   (provide/contract 
    [reconstruct-completed (-> mark-list? (listof any?) render-settings? 
-                              any?)]
+                              (listof syntax?))]
    [reconstruct-current (-> mark-list? symbol? (listof any?) render-settings?
-                            (union (listof any?)
-                                   (list/p any? any?)
-                                   (list/p any? any? any? any?)))]
+                            (union (list/p (listof syntax?))
+                                   (list/p (listof syntax?) (listof syntax?))))]
    [final-mark-list? (-> mark-list? boolean?)]
    [skip-step? (-> break-kind? (union mark-list? false?) render-settings? boolean?)]
    [step-was-app? (-> mark-list? boolean?)])
@@ -99,57 +98,6 @@
   
   
   
-;                                                                                          
-;                                                                                          
-;                                                                                          
-;                    ;                                                                     
-;                                                                                          
-;          ;                             ;                                                 
-;    ;;;  ;;;;  ; ;  ;   ; ;;           ;;;;   ;;;             ;;;    ;;;  ;     ;  ; ;;   
-;   ;      ;    ;;   ;   ;;  ;           ;    ;   ;           ;      ;   ;  ;   ;   ;;  ;  
-;   ;;     ;    ;    ;   ;    ;          ;   ;     ;          ;;    ;    ;   ; ;    ;    ; 
-;    ;;    ;    ;    ;   ;    ;  ;;;;;;  ;   ;     ;  ;;;;;;   ;;   ;;;;;;    ;     ;    ; 
-;      ;   ;    ;    ;   ;    ;          ;   ;     ;             ;  ;        ; ;    ;    ; 
-;      ;   ;    ;    ;   ;;  ;           ;    ;   ;              ;   ;      ;   ;   ;;  ;  
-;   ;;;     ;;  ;    ;   ; ;;             ;;   ;;;            ;;;     ;;;; ;     ;  ; ;;   
-;                        ;                                                          ;      
-;                        ;                                                          ;      
-;                        ;                                                          ;      
-
-  
-  ; strip-to-sexp transforms a syntax-object to an s-expression.  The reason we can't
-  ; just use syntax-object->datum for this is that certain syntax-objects must be
-  ; represented by a gensym'ed pointer into a table.
-                           
-  (define (strip-to-sexp stx)
-    (let ([highlight-table (make-hash-table 'weak)]
-          [xml-box-table (make-hash-table 'weak)])
-      (define (strip-regular stx)
-        (let* ([it (if (eq? syntax-property stx 'stepper-hint) 'from-xml)
-                   (strip-xml-stx stx highlight-table xml-box-table)
-                   stx]
-               [it
-                (cond [(pair? it)
-                       (cons (strip-regular (car it))
-                             (strip-regular (cdr it)))]
-                      [(syntax? it)
-                       (strip-regular (syntax-e it))]
-                      [else it])]
-               [it
-                (if (syntax-property stx 'stepper-highlight)
-                    (if (pair? it) 
-                        (begin 
-                          (hash-table-put! highlight-table recur-result non-confusable)
-                          recur-result)
-                        (let ([new-sym (gensym "-placeholder")])
-                          (hash-table-put! highlight-table new-sym recur-result)
-                          new-sym)))])
-          it))
-      
-      ; strip-xml attempts to undo the expansion of quasiquote.  
-      (define (strip-xml stx)
-        (if ()))))
-                                                                     
                                                      ;               
                                                      ;               
  ; ;;  ;;;    ;;;   ;;;   ; ;;         ;   ;   ;;;   ;  ;   ;   ;;;  
@@ -343,28 +291,22 @@
  ;   ;   ;   ;;;;;  ;;;  ;     ;;;        ;; ;  ;   ;   ;   ;   ;  ;   ;   ;;; ;  ;  ;   ;   ;; ; 
                                                                                                 ; 
   
-  ; unwind takes a syntax object with a single highlight-placeholder and a syntax object
-  ; that represents the highlight, and returns a list of syntax objects and a list of
-  ; highlights
-  ; (->* (sexp-with-highlights? sexp-without-highlights?)
-  ;      ((listof sexp-with-highlights) (listof sexp-without-highlights?)))
+  ; unwind takes a syntax object with a single highlight, 
+  ; and returns a list of syntax objects
   
-  (define (unwind stx highlight lift-at-highlight?)
-    (let*-values ([(stx-l-lst highlight-l-lst) (lift stx highlight lift-at-highlight?)])
-      (macro-unwind stx-l-lst highlight-l-lst)))
+  (define (unwind stx lift-at-highlight?)
+    (macro-unwind (lift stx lift-at-highlight?)))
   
   ; unwind-no-highlight is really just macro-unwind, but with the 'right' interface that
   ; makes it more obvious what it does.
   ; [unwind-no-highlight (-> syntax? (listof syntax?))]
   
   (define (unwind-no-highlight stx)
-    (let-values ([(stxs _) (macro-unwind (list stx) null)])
-      stxs))
+    (macro-unwind (list stx)))
   
   ; unwind-only-highlight : syntax? -> (listof syntax?)
   (define (unwind-only-highlight stx)
-    (let-values ([(dc_highlights unwounds) (unwind highlight-placeholder-stx stx #t)])
-      unwounds))
+    (unwind stx #t))
   
   (define (first-of-one x) 
     (unless (= (length x) 1)
@@ -391,64 +333,58 @@
   ;(->* (syntax? (listof syntax?)) 
   ;     (syntax? (listof syntax?)))
   
-  (define (macro-unwind stxs highlights)
+  (define (macro-unwind stxs)
     (local
-        ((define highlight-queue-src (make-queue))
-         (define highlight-queue-dest (make-queue))
-         
-         (define (recur-on-pieces stx)
+        ((define (recur-on-pieces stx)
            (if (pair? (syntax-e stx))
                (datum->syntax-object stx (syntax-pair-map (syntax-e stx) inner) stx stx)
                stx))
          
          (define (inner stx)
-           (if (eq? stx highlight-placeholder-stx)
-               (begin (queue-push highlight-queue-dest (inner (queue-pop highlight-queue-src)))
-                      highlight-placeholder-stx)
-               (let ([fall-through
-                      (lambda ()
-                        (kernel:kernel-syntax-case stx #f
-                          [id
-                           (identifier? stx)
-                           (or (syntax-property stx 'stepper-lifted-name)
-                               stx)]
-                          [(define-values dc ...)
-                           (unwind-define stx)]
-                          [(#%app exp ...)
-                           (recur-on-pieces #'(exp ...))]
-                          [(#%datum . datum)
-                           #'datum]
-                          [(let-values . rest)
-                           (unwind-mz-let stx)]
-                          [(letrec-values . rest)
-                           (unwind-mz-let stx)]
-                          [else
-                           (recur-on-pieces stx)]))])
-                 (if (syntax-property stx 'user-stepper-hint)
-                     (case (syntax-property stx 'user-stepper-hint)
-                       
-                       
-                       [(comes-from-cond) (unwind-cond stx 
-                                                       (syntax-property stx 'user-source)
-                                                       (syntax-property stx 'user-position))]
-                       
-                       [(comes-from-and) (unwind-and/or stx
-                                                        (syntax-property stx 'user-source)
-                                                        (syntax-property stx 'user-position)
-                                                        'and)]
-                       
-                       [(comes-from-or) (unwind-and/or stx
-                                                       (syntax-property stx 'user-source)
-                                                       (syntax-property stx 'user-position)
-                                                       'or)]
-                       
-                       [(comes-from-local)
-                        (unwind-local stx)]
-                       
-                        ;[(from-xml-box)]
-                       
-                       (else (fall-through)))
-                   (fall-through)))))
+           (let ([fall-through
+                  (lambda ()
+                    (kernel:kernel-syntax-case stx #f
+                      [id
+                       (identifier? stx)
+                       (or (syntax-property stx 'stepper-lifted-name)
+                           stx)]
+                      [(define-values dc ...)
+                       (unwind-define stx)]
+                      [(#%app exp ...)
+                       (recur-on-pieces #'(exp ...))]
+                      [(#%datum . datum)
+                       #'datum]
+                      [(let-values . rest)
+                       (unwind-mz-let stx)]
+                      [(letrec-values . rest)
+                       (unwind-mz-let stx)]
+                      [else
+                       (recur-on-pieces stx)]))])
+             (if (syntax-property stx 'user-stepper-hint)
+                 (case (syntax-property stx 'user-stepper-hint)
+                   
+                   
+                   [(comes-from-cond) (unwind-cond stx 
+                                                   (syntax-property stx 'user-source)
+                                                   (syntax-property stx 'user-position))]
+                   
+                   [(comes-from-and) (unwind-and/or stx
+                                                    (syntax-property stx 'user-source)
+                                                    (syntax-property stx 'user-position)
+                                                    'and)]
+                   
+                   [(comes-from-or) (unwind-and/or stx
+                                                   (syntax-property stx 'user-source)
+                                                   (syntax-property stx 'user-position)
+                                                   'or)]
+                   
+                   [(comes-from-local)
+                    (unwind-local stx)]
+                   
+                   ;[(from-xml-box)]
+                   
+                   (else (fall-through)))
+                 (fall-through))))
          
          (define (unwind-define stx)
            (kernel:kernel-syntax-case stx #f
@@ -474,7 +410,7 @@
                          [(lambda-define)
                           #`(define #,printed-name #,unwound-body)]
                          [else (error 'unwind-define "unknown value for syntax property 'user-stepper-define-type: ~e" define-type)])]
-                      [else (error 'unwind-define "expr with stepper-define-type is not a lambda: ~e" (syntax-object->datum ))])
+                      [else (error 'unwind-define "expr with stepper-define-type is not a lambda: ~e" (syntax-object->datum unwound-body))])
                     #`(define #,printed-name #,unwound-body)))]
              [else (error 'unwind-define "expression is not a define-values: ~e" (syntax-object->datum stx))]))
          
@@ -506,12 +442,12 @@
                   #`(local defns #,(inner #'body)))]
              [else (error 'unwind-local "expected a letrec-values, given: ~e" (syntax-object->datum stx))]))
          
-         (define (unwind-quasiquote-the-cons-application stx)
-           (syntax-case (recur-on-pieces stx) ()
-             [(#%app the-cons . rest)
-              (syntax (cons . rest))]
-             [else
-              (error 'reconstruct "unexpected result for unwinding the-cons application")]))
+         ;(define (unwind-quasiquote-the-cons-application stx)
+         ;  (syntax-case (recur-on-pieces stx) ()
+         ;    [(#%app the-cons . rest)
+         ;     (syntax (cons . rest))]
+         ;    [else
+         ;     (error 'reconstruct "unexpected result for unwinding the-cons application")]))
          
          (define (unwind-cond-clause stx test-stx result-stx)
            (with-syntax ([new-test (if (syntax-property stx 'user-stepper-else)
@@ -521,56 +457,47 @@
              #`(new-test result)))
          
          (define (unwind-cond stx user-source user-position)
-           (if (eq? stx highlight-placeholder-stx)
-               (begin (queue-push highlight-queue-dest (unwind-cond (queue-pop highlight-queue-src) user-source user-position))
-                      highlight-placeholder-stx)
-               (with-syntax ([clauses
-                              (let loop ([stx stx])
-                                (if (and (eq? user-source (syntax-property stx 'user-source))
-                                         (eq? user-position (syntax-property stx 'user-position)))
-                                    (syntax-case stx (if begin #%app)
-                                      [(if test result) ; the else clause disappears when it's a language-inserted else clause
-                                       (list (unwind-cond-clause stx #`test #`result))]
-                                      [(if test result else-clause)
-                                       (cons (unwind-cond-clause stx #`test #`result)
-                                               (loop (syntax else-clause)))]
-                                      [(begin . rest) ; else clause appears momentarily in 'before,' even though it's a 'skip-completely'
-                                       null]
-                                      [else-stx
-                                       (error 'unwind-cond "expected an if, got: ~e" (syntax-object->datum (syntax else-stx)))])
-                                    (error 'unwind-cond "expected a cond clause expansion, got: ~e" (syntax-object->datum stx))))])
-                 (syntax (cond . clauses)))))
+           (with-syntax ([clauses
+                          (let loop ([stx stx])
+                            (if (and (eq? user-source (syntax-property stx 'user-source))
+                                     (eq? user-position (syntax-property stx 'user-position)))
+                                (syntax-case stx (if begin #%app)
+                                  [(if test result) ; the else clause disappears when it's a language-inserted else clause
+                                   (list (unwind-cond-clause stx #`test #`result))]
+                                  [(if test result else-clause)
+                                   (cons (unwind-cond-clause stx #`test #`result)
+                                         (loop (syntax else-clause)))]
+                                  [(begin . rest) ; else clause appears momentarily in 'before,' even though it's a 'skip-completely'
+                                   null]
+                                  [else-stx
+                                   (error 'unwind-cond "expected an if, got: ~e" (syntax-object->datum (syntax else-stx)))])
+                                (error 'unwind-cond "expected a cond clause expansion, got: ~e" (syntax-object->datum stx))))])
+             (syntax (cond . clauses))))
          
          (define (unwind-and/or stx user-source user-position label)
-           (if (eq? stx highlight-placeholder-stx)
-               (begin (queue-push highlight-queue-dest (unwind-and/or (queue-pop highlight-queue-src) user-source user-position label))
-                      highlight-placeholder-stx)
-               (let ([clause-padder (case label
-                                      [(and) #`true]
-                                      [(or) #`false])])
-               (with-syntax ([clauses
-                              (append (build-list (syntax-property stx 'user-stepper-and/or-clauses-consumed) (lambda (dc) clause-padder))
-                                      (let loop ([stx stx])
-                                        (if (and (eq? user-source (syntax-property stx 'user-source))
-                                                 (eq? user-position (syntax-property stx 'user-position)))
-                                            (syntax-case stx (if let-values #%datum)
-                                              [(if part-1 part-2 part-3)
-                                               (cons (inner (syntax part-1))
-                                                     (case label
-                                                       ((and)
-                                                        (loop (syntax part-2)))
-                                                       ((or)
-                                                        (loop (syntax part-3)))
-                                                       (else
-                                                        (error 'unwind-and/or "unknown label ~a" label))))]
-                                              [else (error 'unwind-and/or "syntax: ~a does not match and/or patterns" (syntax-object->datum stx))])
-                                            null)))])
-                 #`(#,label . clauses))))))
+           (let ([clause-padder (case label
+                                  [(and) #`true]
+                                  [(or) #`false])])
+             (with-syntax ([clauses
+                            (append (build-list (syntax-property stx 'user-stepper-and/or-clauses-consumed) (lambda (dc) clause-padder))
+                                    (let loop ([stx stx])
+                                      (if (and (eq? user-source (syntax-property stx 'user-source))
+                                               (eq? user-position (syntax-property stx 'user-position)))
+                                          (syntax-case stx (if let-values #%datum)
+                                            [(if part-1 part-2 part-3)
+                                             (cons (inner (syntax part-1))
+                                                   (case label
+                                                     ((and)
+                                                      (loop (syntax part-2)))
+                                                     ((or)
+                                                      (loop (syntax part-3)))
+                                                     (else
+                                                      (error 'unwind-and/or "unknown label ~a" label))))]
+                                            [else (error 'unwind-and/or "syntax: ~a does not match and/or patterns" (syntax-object->datum stx))])
+                                          null)))])
+               #`(#,label . clauses)))))
       
-      (for-each (lambda (x) (queue-push highlight-queue-src x)) highlights)
-      (let* ([main (map inner stxs)]
-             [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (dc) (queue-pop highlight-queue-dest)))])
-        (values main new-highlights))))
+      (map inner stxs)))
   
   
                                                                        
@@ -779,25 +706,24 @@
          (lambda (define-struct-info)
            (syntax-object->datum (cadr define-struct-info)))]
         [else
-         (syntax-object->datum
-          (first-of-one (unwind-no-highlight
-                         (kernel:kernel-syntax-case expr #f
-                           [(define-values vars-stx body)
-                            (let* ([vars (syntax->list #'vars-stx)]
-                                   [recon-vals (map (lambda (val var) 
-                                                      (recon-value val render-settings (or (syntax-property var 'stepper-lifted-name) var))) 
-                                                    vals
-                                                    vars)])
-                              (if (= (length recon-vals) 1)
-                                  (attach-info #`(define-values vars-stx #,(car recon-vals)) expr)
-                                  (attach-info #'(define-values vars-stx (values #,@recon-vals)) expr)))]
-                           [else
-                            (let* ([recon-vals (map (lambda (val)
-                                                      (recon-value val render-settings))
-                                                    vals)])
-                              (if (= (length recon-vals) 1)
-                                  (attach-info (car recon-vals) expr)
-                                  (attach-info #`(values #,@recon-vals) expr)))]))))])))
+         (first-of-one (unwind-no-highlight
+                        (kernel:kernel-syntax-case expr #f
+                          [(define-values vars-stx body)
+                           (let* ([vars (syntax->list #'vars-stx)]
+                                  [recon-vals (map (lambda (val var) 
+                                                     (recon-value val render-settings (or (syntax-property var 'stepper-lifted-name) var))) 
+                                                   vals
+                                                   vars)])
+                             (if (= (length recon-vals) 1)
+                                 (attach-info #`(define-values vars-stx #,(car recon-vals)) expr)
+                                 (attach-info #'(define-values vars-stx (values #,@recon-vals)) expr)))]
+                          [else
+                           (let* ([recon-vals (map (lambda (val)
+                                                     (recon-value val render-settings))
+                                                   vals)])
+                             (if (= (length recon-vals) 1)
+                                 (attach-info (car recon-vals) expr)
+                                 (attach-info #`(values #,@recon-vals) expr)))])))])))
   
   ; : (-> syntax? syntax? syntax?)
   (define (reconstruct-top-level source reconstructed)
@@ -1016,9 +942,6 @@
                  'recon-inner
                  "stepper:reconstruct: unknown object to reconstruct: ~a" (syntax-object->datum expr))])))
          
-         
-         (define redex #f)
-         
          ; the main recursive reconstruction loop is in recon:
          ; recon : (syntax-object mark-list boolean -> syntax-object)
          
@@ -1035,9 +958,10 @@
                      (let ([reconstructed (recon-inner mark-list so-far)])
                        (recon
                         (if first
-                            (begin
-                              (set! redex reconstructed)
-                              highlight-placeholder-stx)
+                            (syntax-property 
+                             reconstructed
+                             'stepper-highlight
+                             #t)
                             reconstructed)
                         (cdr mark-list)
                         #f))])]))
@@ -1048,40 +972,31 @@
          ;                (syntax-object->datum (mark-source (car mark-list))))))
          
          (define answer
-           (map (lambda (x) (map syntax-object->datum x))
-                (case break-kind
-                  ((result-value-break result-exp-break)
-                   (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
-                                         (recon-source-expr (mark-source (car mark-list)) mark-list null null render-settings)
-                                         (recon-value (car returned-value-list) render-settings))]
-                          [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
-                     (let-values ([(a b) (unwind recon-expr innermost #f)])
-                       (list a b))))
-                  ((normal-break)
-                   (let ([recon-expr (recon nothing-so-far mark-list #t)])
-                     (let-values ([(a b) (unwind recon-expr redex #f)])
-                       (list a b))))
-                  ((double-break)
-                   (let* ([source-expr (mark-source (car mark-list))]
-                          [innermost-before (recon-source-expr source-expr mark-list null null render-settings)]
-                          [newly-lifted-bindings (syntax-case source-expr (letrec-values)
-                                                   [(letrec-values ([vars . rest] ...) . bodies)
-                                                    (apply append (map syntax->list (syntax->list #`(vars ...))))]
-                                                   [(let-values ([vars . rest] ...) . bodies)
-                                                    (apply append (map syntax->list (syntax->list #`(vars ...))))]
-                                                   [else (error 'reconstruct "expected a let-values as source for a double-break, got: ~e"
-                                                                (syntax-object->datum source-expr))])]
-                          [innermost-after (recon-source-expr (mark-source (car mark-list)) mark-list null newly-lifted-bindings render-settings)]
-                          [recon-rest (recon highlight-placeholder-stx (cdr mark-list) #f)])
-                     (let-values ([(before-stxs before-highlights) (unwind recon-rest innermost-before #f)]
-                                  [(after-stxs after-highlights) (unwind recon-rest innermost-after #t)])
-                       (list before-stxs before-highlights after-stxs after-highlights))))
-                  ((late-let-break)
-                   (let* ([one-level-recon (unwind-only-highlight (recon-inner mark-list nothing-so-far))])
-                     (list (sublist 0 (- (length one-level-recon) 1) one-level-recon))))
-                  (else
-                   (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
-         
-         )
+           (case break-kind
+             ((result-value-break result-exp-break)
+              (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
+                                    (recon-source-expr (mark-source (car mark-list)) mark-list null null render-settings)
+                                    (recon-value (car returned-value-list) render-settings))])
+                (unwind (recon innermost (cdr mark-list) #f) #f)))
+             ((normal-break)
+              (unwind (recon nothing-so-far mark-list #t) #f))
+             ((double-break)
+              (let* ([source-expr (mark-source (car mark-list))]
+                     [innermost-before (recon-source-expr source-expr mark-list null null render-settings)]
+                     [newly-lifted-bindings (syntax-case source-expr (letrec-values)
+                                              [(letrec-values ([vars . rest] ...) . bodies)
+                                               (apply append (map syntax->list (syntax->list #`(vars ...))))]
+                                              [(let-values ([vars . rest] ...) . bodies)
+                                               (apply append (map syntax->list (syntax->list #`(vars ...))))]
+                                              [else (error 'reconstruct "expected a let-values as source for a double-break, got: ~e"
+                                                           (syntax-object->datum source-expr))])]
+                     [innermost-after (recon-source-expr (mark-source (car mark-list)) mark-list null newly-lifted-bindings render-settings)])
+                (list (unwind (recon innermost-before (cdr mark-list) #f) #f)
+                      (unwind (recon innermost-after (cdr mark-list) #f) #t))))
+             ((late-let-break)
+              (let* ([one-level-recon (unwind-only-highlight (recon-inner mark-list nothing-so-far))])
+                (list (sublist 0 (- (length one-level-recon) 1) one-level-recon))))
+             (else
+              (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
       
       answer)))
