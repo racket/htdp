@@ -78,14 +78,14 @@
                 (when admin
                   (send admin resized this #t)))))
           
-          (define/public (read-one-special index file line col pos)
-            (xml-read-one-special eliminate-whitespace-in-empty-tags?
-                                  translate-xml-exn-to-rep-exn
-                                  this
-                                  file
-                                  line
-                                  col
-                                  pos))
+          (define/public (read-special file line col pos)
+            (xml-read-special eliminate-whitespace-in-empty-tags?
+			      translate-xml-exn-to-rep-exn
+			      this
+			      file
+			      line
+			      col
+			      pos))
           
           (define/override (write stream-out)
             (send stream-out put (if eliminate-whitespace-in-empty-tags?
@@ -184,8 +184,8 @@
           
           (inherit get-editor)
           
-          (define/public (read-one-special index file line col pos)
-            (scheme-read-one-special this file line col pos))
+          (define/public (read-special file line col pos)
+            (scheme-read-special this file line col pos))
           
           (define/override (make-editor) (new (get-scheme-box-text%)))
           
@@ -299,11 +299,11 @@
           
           (inherit begin-edit-sequence end-edit-sequence
                    change-style get-style-list)
-          (define/override (on-insert start rng)
-            (super on-insert start rng)
-            (begin-edit-sequence))
-          (define/override (after-insert start rng)
-            (super after-insert start rng)
+          (define/augment (on-insert start rng)
+            (begin-edit-sequence)
+            (inner (void) on-insert start rng))
+          (define/augment (after-insert start rng)
+            (inner (void) after-insert start rng)
             (change-style (send (get-style-list) find-named-style "XML")
                           start 
                           (+ start rng))

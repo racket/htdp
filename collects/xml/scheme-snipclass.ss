@@ -10,12 +10,12 @@
       (init-field splice?)
       (define/public (get-splice?) splice?)
 
-      (define/public (read-one-special index file line col pos)
-        (scheme-read-one-special this
-                                 file
-                                 line
-                                 col
-                                 pos))
+      (define/public (read-special file line col pos)
+        (scheme-read-special this
+			     file
+			     line
+			     col
+			     pos))
       
       (super-instantiate ())))
   

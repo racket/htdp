@@ -6,12 +6,12 @@
            (lib "class.ss")
            (lib "list.ss"))
   
-  (provide xml-read-one-special
+  (provide xml-read-special
            xml-snip<%>
-           scheme-read-one-special
+           scheme-read-special
            scheme-snip<%>)
   
-  (define (scheme-read-one-special snip file line col pos)
+  (define (scheme-read-special snip file line col pos)
     (let ([text (send snip get-editor)]
           [splice? (send snip get-splice?)])
       (when (= 0 (send text last-position))
@@ -30,9 +30,9 @@
                "read: bad syntax: empty scheme splice box"
                "read: bad syntax: empty scheme box")
            text 1 1 1 (send text last-position)))
-        (values stx 1 #t))))
+	stx)))
   
-  (define (xml-read-one-special eliminate-whitespace-in-empty-tags? translate-xml-exn-to-rep-exn snip file line col pos)
+  (define (xml-read-special eliminate-whitespace-in-empty-tags? translate-xml-exn-to-rep-exn snip file line col pos)
     (let ([editor (send snip get-editor)]
           [old-locked #f])
       (when (= 0 (send editor last-position))
@@ -100,14 +100,7 @@
                 [pos (wrapped-pos xexpr)]
                 [line (wrapped-line xexpr)]
                 [col (wrapped-col xexpr)]
-                [raw-stxs
-                 (let loop ([index 0])
-                   (let-values ([(stx wid done?)
-                                 (send snip read-one-special
-                                       index text line col pos)])
-                     (if done?
-                         (list stx)
-                         (cons stx (loop (+ index 1))))))])
+                [raw-stxs (list (send snip read-special text line col pos))])
            (with-syntax ([(stxs ...) raw-stxs])
              (if (and (is-a? snip scheme-snip<%>)
                       (send snip get-splice?))

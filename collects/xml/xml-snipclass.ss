@@ -9,14 +9,14 @@
     (class* editor-snip% (xml-snip<%> readable-snip<%>)
       (init-field eliminate-whitespace-in-empty-tags?)
       
-      (define/public (read-one-special index file line col pos)
-        (xml-read-one-special eliminate-whitespace-in-empty-tags?
-                              translate-xml-exn-to-rep-exn
-                              this
-                              file
-                              line
-                              col
-                              pos))
+      (define/public (read-special file line col pos)
+        (xml-read-special eliminate-whitespace-in-empty-tags?
+			  translate-xml-exn-to-rep-exn
+			  this
+			  file
+			  line
+			  col
+			  pos))
       
       (super-instantiate ())))
   

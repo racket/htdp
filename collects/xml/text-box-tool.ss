@@ -116,7 +116,7 @@
 		  (get-next port)
 		  v)))
           
-          (define/public (read-one-special index source line column position)
+          (define/public (read-special source line column position)
             (let* ((ed (get-editor))
                    (port (open-input-text-editor ed))
                    (str (let loop ((next (get-next port)))
@@ -125,13 +125,13 @@
                             ((char? next)
                              (cons next (loop (get-next port))))
                             (else (cons #`(marshall #,next) (loop (get-next port))))))))
-              (values #`(let ((marshall
-                               (lambda (s)
-                                 (let ((os (open-output-string)))
-                                   (with-handlers ((not-break-exn? (lambda (x) "")))
-                                     (display s os)
-                                     (get-output-string os))))))
-                          (string-append #,@(chunk-string str null))) 1 #t)))
+	      #`(let ((marshall
+		       (lambda (s)
+			 (let ((os (open-output-string)))
+			   (with-handlers ((not-break-exn? (lambda (x) "")))
+			     (display s os)
+			     (get-output-string os))))))
+		  (string-append #,@(chunk-string str null)))))
           
           (super-instantiate ())
           (inherit set-snipclass)
