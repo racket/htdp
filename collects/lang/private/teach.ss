@@ -1107,21 +1107,25 @@
 					  (append val-ids stx-ids)))
 	       (with-syntax ([((d-v (def-id ...) def-expr) ...) val-defns]
 			     [(stx-def ...) stx-defns])
-		 (with-syntax ([((tmp-id ...) ...)
+		 (with-syntax ([(((tmp-id def-id/prop) ...) ...)
 				;; Generate tmp-ids that at least look like the defined
 				;;  ids, for the purposes of error reporting, etc.:
 				(map (lambda (def-ids)
 				       (map (lambda (def-id)
-                                              (syntax-property
-                                               (datum->syntax-object
-                                                #f
-                                                (string->uninterned-symbol
-                                                 (symbol->string (syntax-e def-id))))
-                                               'stepper-orig-name
-                                               def-id))
+					      (list
+					       (syntax-property
+						(datum->syntax-object
+						 #f
+						 (string->uninterned-symbol
+						  (symbol->string (syntax-e def-id))))
+						'stepper-orig-name
+						def-id)
+					       (syntax-property
+						def-id
+						'bind-as-variable
+						#t)))
 					    (syntax->list def-ids)))
 				     (syntax->list (syntax ((def-id ...) ...))))])
-		   
                    (with-syntax ([(mapping ...)
 				  (apply
 				   append
@@ -1129,7 +1133,7 @@
 				    syntax->list
 				    (syntax->list
 				     (syntax
-				      (((define-syntaxes (def-id)
+				      (((define-syntaxes (def-id/prop)
                                           (make-undefined-check
                                             (quote-syntax check-not-undefined)
                                             (quote-syntax tmp-id)))
