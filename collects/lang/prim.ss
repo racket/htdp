@@ -15,6 +15,12 @@
 	   (syntax-case stx ()
 	     [(id . args)
 	      (syntax/loc stx (#%app implementation . args))]
+	     [id
+	      ;; HACK: we disable all checks if #%top is 
+	      ;; the usual one, which indicates that we're
+	      ;; not in beginner
+	      (module-identifier=? #'#%top (datum->syntax-object stx '#%top))
+	      (syntax/loc stx implementation)]
 	     [_else
 	      (raise-syntax-error
 	       #f
@@ -43,9 +49,7 @@
                                    #`(unless (and (identifier? (#,#'syntax #,new-arg))
                                                   (or
                                                    (not (identifier-binding (#,#'syntax #,new-arg)))
-                                                   ;; HACK: we disable all checks if #%top is 
-                                                   ;; the usual one, which indicates that we're
-                                                   ;; not in beginner
+						   ;; HACK - see note above
                                                    (module-identifier=? #'#%top 
                                                                         (datum->syntax-object 
                                                                          (#,#'syntax #,new-arg)
