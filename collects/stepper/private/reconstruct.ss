@@ -232,7 +232,9 @@
                               ;(model-settings:special-function? 'vector fun-val)
                               (and (eq? fun-val void)
                                    (eq? (cdr (syntax->list (syntax terms))) null))
-                              (struct-constructor-procedure? fun-val))))])))))
+                              (struct-constructor-procedure? fun-val))))]
+                  [else
+                   #f])))))
   
   (define (second-arg-is-list? mark-list)
     (let ([arg-val (mark-binding-value (lookup-binding mark-list (get-arg-var 2)))])
@@ -657,7 +659,6 @@
                    (lambda (expr)
                      (recon-source-expr expr mark-list))]
                   [top-mark (car mark-list)]
-                  [_ (fprintf (current-error-port) "about to retrieve source location\n")]
                   [expr (mark-source top-mark)]
 
                   [recon-let
@@ -770,17 +771,15 @@
                 
                 ; if
                 [(if test then else)
-                 (begin
-                   (fprintf (current-error-port) "it's an if!\n")
-                   (so-far-only
-                    (attach-info
-                     (let ([test-exp (if (eq? so-far nothing-so-far)
-                                         (recon-source-current-marks (syntax test))
-                                         so-far)])
-                       (d->so `(if ,test-exp 
-                                   ,(recon-source-current-marks (syntax then))
-                                   ,(recon-source-current-marks (syntax else)))))
-                     expr)))]
+                 (so-far-only
+                  (attach-info
+                   (let ([test-exp (if (eq? so-far nothing-so-far)
+                                       (recon-source-current-marks (syntax test))
+                                       so-far)])
+                     (d->so `(if ,test-exp 
+                                 ,(recon-source-current-marks (syntax then))
+                                 ,(recon-source-current-marks (syntax else)))))
+                   expr))]
                 
                 ; quote : there is no break on a quote.
                 
@@ -840,7 +839,6 @@
                    (let* ([innermost (if (null? returned-value-list) ; is it an expr -> expr reduction?
                                          (recon-source-expr (mark-source (car mark-list)) mark-list)
                                          (recon-value (car returned-value-list)))]
-                          [_ (unless (null? (cdr mark-list)) (fprintf (current-error-port) "next-to-top-mark: ~a\n" (syntax-object->datum (mark-source (cadr mark-list)))))]
                           [current-defs (recon null highlight-placeholder-stx (cdr mark-list) #f)])
                      (list current-defs (list innermost))))
                   ((normal-break)

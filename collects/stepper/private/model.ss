@@ -85,7 +85,6 @@
          
   
          (define (break mark-set key break-kind returned-value-list)
-           (fprintf (current-error-port) "entering break\n")
            (let* ([mark-list (continuation-mark-set->list mark-set key)])
              (let ([double-redivide
                     (lambda (finished-exprs new-exprs-before new-exprs-after)
@@ -175,9 +174,6 @@
                                                            'foot-wrap)])
                  (set! packaged-envs envs)
                  (set! current-expr expanded)
-                 (fprintf (current-error-port) "foo1\n")
-                 (eval (expand annotated))
-                 (fprintf (current-error-port) "foo2\n")
                  (let ([expression-result
                         (parameterize ([current-eval basic-eval])
                           (eval annotated))])
