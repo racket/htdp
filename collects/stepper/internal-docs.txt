@@ -67,12 +67,6 @@ stepper-hint :
 
 (Transferred.)
 
- ['comes-from-or] : this expression came from a use of 'or'. This tag
- is applied to the let's and also to the if's.
-
- ['comes-from-and] : similarly, this expression came from a use of
- 'and'.  This tag is applied to all the if's.
-
  [ 'comes-from-cond ] : similarly, this expression came from a use
  of 'cond'. This tag is applied to all the if's, but not to the else
  clause.
@@ -120,6 +114,14 @@ stepper-binding-type :
  [ 'macro-bound ] : this variable's binding was inserted by a macro
  [ 'let-bound ] : this variable's binding was in a let/*/rec
  [ 'lambda-bound ] : this variable's binding was in a lambda
+
+stepper-and/or-clauses-consumed : 
+ indicates the number of clauses to the left of the one associated
+ with a given 'if' in the expansion of an 'and' or 'or'.
+ This allows the stepper to reconstruct a partially evaluated
+ 'and' or 'or' with the right number of 'true's or 'false's 
+ in front.
+ (Transferred.)
 
 stepper-skipto : 
  this instructs the annotater to look inside the current expression

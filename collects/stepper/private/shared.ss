@@ -516,6 +516,7 @@
            [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
            [it (syntax-property it 'user-stepper-else (syntax-property expr 'stepper-else))]
            [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'stepper-define-type))]
+           [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'stepper-and/or-clauses-consumed))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))
@@ -525,6 +526,7 @@
            [it (syntax-property it 'user-stepper-hint (syntax-property expr 'user-stepper-hint))]
            [it (syntax-property it 'user-stepper-else (syntax-property expr 'user-stepper-else))]
            [it (syntax-property it 'user-stepper-define-type (syntax-property expr 'user-stepper-define-type))]
+           [it (syntax-property it 'user-stepper-and/or-clauses-consumed (syntax-property expr 'user-stepper-and/or-clauses-consumed))]
            [it (syntax-property it 'user-source (syntax-property expr 'user-source))]
            [it (syntax-property it 'user-position (syntax-property expr 'user-position))])
       it))
