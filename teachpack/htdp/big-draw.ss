@@ -1,4 +1,4 @@
-(require-library "error-sig.ss")
+(require-library "error-sig.ss" "htdp")
 (require-library "draw-sig.ss" "htdp")
 (require-library "graphics.ss" "graphics")
 

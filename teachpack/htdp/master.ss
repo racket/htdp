@@ -1,6 +1,6 @@
 (require-library "error.ss" "htdp")
 
-(define-signature masterS (repl))
+(define-signature masterS (master))
 
 (define (masterU N)
   (unit/sig masterS (import errorS plt:userspace^)
@@ -119,11 +119,11 @@
 			     (when (memq response STOPS) (add-winner!))))))))
 	  (make-object colored-button% color:str panel this))))
 
-    (define (repl cg)
+    (define (master cg)
       ;; --- error checks on arguments:
       (if (= N 2)
-	  (check-proc 'repl cg 4 'first 'arguments)
-	  (check-proc 'repl cg 2 'first 'arguments))
+	  (check-proc 'master cg 4 'first 'arguments)
+	  (check-proc 'master cg 2 'first 'arguments))
       ;; --- check-guess is a procedure of 4 arguments
       (set! check-guess cg)
 

@@ -88,7 +88,8 @@
 	      (else                  (display wrd the-port)
                                      (display #\SPACE the-port)
                                      (loop j (rest los)))))))
-      (close-output-port the-port))
+      (when (cons? file-name)
+	(close-output-port the-port)))
 
     ))
 
