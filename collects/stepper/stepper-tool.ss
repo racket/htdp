@@ -13,7 +13,8 @@
            "private/shared.ss"
            "private/model-settings.ss"
            (lib "pconvert.ss")
-           (lib "string-constant.ss" "string-constants"))
+           (lib "string-constant.ss" "string-constants")
+           (lib "channel.ss" "web-server"))
 
   ;; mflatt: MINOR HACK - work around temporary
   ;;         print-convert problems
@@ -173,7 +174,8 @@
                             (lambda () 
                               (simple-module-based-language-convert-value val simple-settings)))))
 
-		(define view-history (list x:blank-step))
+                (define view-channel (create-channel))
+                (define view-history (list x:blank-step))
                 (define view 0)
                 
                 ; build gui object:
@@ -207,6 +209,8 @@
                 
                 (define (update-view new-view)
                   (set! view new-view)
+                  (when (= view (length view-history))
+                    (set! view-history (append view-history (list (channel-get view-channel)))))
                   (let ([e (list-ref view-history view)])
                     (send canvas set-editor e)
                     (send e reset-width canvas)
@@ -216,13 +220,13 @@
                 (define (en/dis-able-buttons)
                   (send previous-button enable (not (zero? view)))
                   (send home-button enable (not (zero? view)))
-                  (send next-button enable (not (= view (- (length view-history) 1)))))
+                  (send next-button enable #t))
                 
                 (define (print-current-view item evt)
                   (send (send canvas get-editor) print))
                 
                 ; receive-result takes a result from the model and renders it on-screen
-                ; : (step-result semaphore -> void)
+                ; : (step-result -> void)
                 (define (receive-result result)
                   (let ([step-text
                          (cond [(before-after-result? result) 
@@ -261,8 +265,7 @@
                                   null
                                   #f
                                   null)])])
-                    (set! view-history (append view-history (list step-text)))
-                    (en/dis-able-buttons)))
+                    (channel-put step-text)))
                 
                 ; need to capture the custodian as the thread starts up:
                 (define (program-expander-prime init iter)
