@@ -18,24 +18,24 @@
       (number? (any -> boolean)
 	"to determine whether some value is a number")
       (= (num num num ... -> boolean)
-	 "to compare two numbers for equality")
+	 "to compare numbers for equality")
       (< (real real real ... -> boolean)
-	 "to compare two real numbers for less-than")
+	 "to compare real numbers for less-than")
       (> (real real real ... -> boolean)
-	 "to compare two real numbers for greater-than")
+	 "to compare real numbers for greater-than")
       (<= (real real real ... -> boolean)
-	  "to compare two real numbers for less-than or equality")
-      (>= (real real -> boolean)
-	  "to compare two real numbers for greater-than or equality")
+	  "to compare real numbers for less-than or equality")
+      (>= (real real ... -> boolean)
+	  "to compare real numbers for greater-than or equality")
     
       ((beginner-+ +) (num num num ... -> num)
        "to compute the sum of the input numbers")
       (- (num num ... -> num)
-	 "to compute the difference between the input numbers or to negate a number, if there is only one input")
+	 "to subtract the second (and following) number(s) from the first; negate the number if there is only one argument")
       ((beginner-* *) (num num num ... -> num)
        "to compute the product of all of the input numbers")
       ((beginner-/ /) (num num num ... -> num)
-       "to compute the rational quotient of its input."
+       "to divide the first by the second (and all following) number(s)"
        "None but the first number can be zero.")
       (max (real real ... -> real)
 	"to determine the largest number")
@@ -270,8 +270,8 @@
       (eighth ( (listof Y) -> Y ) ;  domain: (cons R (cons S (cons T (cons U (cons V (cons W (cons Z (cons Y (listof X)))))))))
 	"to select the eighth item of a non-empty list")    
     
-      (list-ref ((listof X) number -> X )
-	"to extract the i-th item from a list")
+      (list-ref ((listof X) natural-number -> X )
+	"to extract the indexed item from the list")
     
       (list (any ... -> (listof any)) "to construct a list of its arguments")
 
@@ -299,8 +299,8 @@
       (assq (X (listof (cons X Y)) -> (union false (cons X Y)))
 	"to determine whether some item is the first item of a pair"
 	"in a list of pairs")
-      (equal? (list list -> boolean)
-	"to determine whether two lists are equal"))
+      (equal? (any any -> boolean)
+	"to determine whether two values are structurally equal"))
 
     ("Posns"
       (make-posn (number number -> posn) "to construct a posn")
