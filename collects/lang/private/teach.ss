@@ -560,7 +560,7 @@
 					(cdr l)))])
 	     (with-syntax ([(to-define-name ...) to-define-names]
 			   [compile-info (if struct-info-is-useful?
-					     (build-struct-expand-info name fields #f (not setters?) null null)
+					     (build-struct-expand-info name fields #f (not setters?) #t null null)
 					     (syntax
 					      (lambda (stx)
 						(raise-syntax-error
