@@ -32,7 +32,7 @@
            text 1 1 1 (send text last-position)))
 	stx)))
   
-  (define (xml-read-special eliminate-whitespace-in-empty-tags? translate-xml-exn-to-rep-exn snip file line col pos)
+  (define (xml-read-special eliminate-whitespace-in-empty-tags? snip file line col pos)
     (let ([editor (send snip get-editor)]
           [old-locked #f])
       (when (= 0 (send editor last-position))
@@ -45,8 +45,7 @@
          (send editor lock #t))
        (lambda ()
          (let* ([port (open-input-text-editor editor 0 'end (xml-snip-filter editor))]
-                [xml (with-handlers ([exn:xml? (translate-xml-exn-to-rep-exn editor)])
-                       (read-xml port))]
+                [xml (read-xml port)]
                 [xexpr (xml->xexpr (document-element xml))]
                 [clean-xexpr (if eliminate-whitespace-in-empty-tags?
                                  (eliminate-whitespace-in-empty-tags xexpr)

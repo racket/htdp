@@ -80,7 +80,6 @@
           
           (define/public (read-special file line col pos)
             (xml-read-special eliminate-whitespace-in-empty-tags?
-			      translate-xml-exn-to-rep-exn
 			      this
 			      file
 			      line
@@ -102,21 +101,6 @@
           (super-instantiate ())
           (show-border #t)
           (set-snipclass lib-xml-snipclass)))
-      
-      ; translate-xml-exn-to-rep-exn : editor -> exn -> alpha
-      ; translates a xml exn to a drscheme:rep:make-exn:locs exn
-      ; using `editor' as the location. raises the exn.
-      (define (translate-xml-exn-to-rep-exn editor)
-        (lambda (exn)
-          (raise
-           (drscheme:rep:make-exn:locs
-            (exn-message exn)
-            (exn-continuation-marks exn)
-            (map (lambda (x) 
-                   (let ([start (car x)]
-                         [end (cadr x)])
-                     (list editor (- start 1) (- end 1))))
-                 (exn:xml-locs exn))))))
       
       (define xml-snipclass%
         (class decorated-editor-snipclass%
