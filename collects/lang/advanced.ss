@@ -37,7 +37,8 @@
   (provide-and-document
    procedures
 
-   (all-from beginner: (lib "beginner.ss" "lang") procedures)
+   (all-from-except intermediate: (lib "intermediate.ss" "lang") procedures
+		    cons list* append)
 
    ("Reading and Printing"
     (printf (string any ... -> void)
