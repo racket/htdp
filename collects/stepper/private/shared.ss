@@ -15,7 +15,8 @@
    [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
    [binding-set-varref-set-intersect (-> binding-set? varref-set? binding-set?)]
    [binding-set-union (-> (listof binding-set?) binding-set?)]
-   [varref-set-union (-> (listof varref-set?) varref-set?)])
+   [varref-set-union (-> (listof varref-set?) varref-set?)]
+   [in-closure-table (-> any? boolean?)])
   
   (provide
    step-result?
@@ -265,14 +266,22 @@
   (define (flatten-take n a-list)
     (apply append (list-take n a-list)))
   
-  (define-values (closure-table-put! closure-table-lookup)
+  (define-values (closure-table-put! closure-table-lookup in-closure-table)
     (let ([closure-table (make-hash-table 'weak)])
       (values
        (lambda (key value)
 	 (hash-table-put! closure-table key value)
 	 key)                                  ; this return allows a run-time-optimization
        (lambda args ; key or key & failure-thunk
-         (apply hash-table-get closure-table args)))))
+         (apply hash-table-get closure-table args))
+       (lambda (key)
+         (with-handlers ([exn:application:mismatch? (lambda (exn) #f)])
+           (hash-table-get closure-table key)
+           #t)))))
+  
+  ;(begin (closure-table-put! 'foo 'bar)
+  ;       (and (eq? (in-closure-table 'blatz) #f)
+  ;            (eq? (in-closure-table 'foo) #t)))
  
   ; insert-highlighted-value : sexp sexp -> sexp
   ; replaces highlight-placeholder in the first sexp with the second sexp

@@ -149,13 +149,13 @@
                      (lambda (name)
                        (cond [(closure-record-lifted-name closure-record) =>
                               (lambda (lifted-name)
-                                (d->so (construct-lifted-name name lifted-name)))]
-                             [else (d->so name)]))]
+                                #`#,(construct-lifted-name name lifted-name))]
+                             [else #`#,name]))]
                [else
                 (let ([mark (closure-record-mark closure-record)])
                   (recon-source-expr (mark-source mark) (list mark) null))])]
         [else
-         (d->so (render-to-sexp val))])))
+         #`#,(render-to-sexp val)])))
   
   (define (let-rhs-recon-value val)
     (recon-value val 'let-rhs))
@@ -457,7 +457,7 @@
                       [recon-basic
                        (lambda ()
                          (with-syntax ([(label . bodies) expr])
-                           (d->so `(,(syntax label) ,@(map recur (syntax->list (syntax bodies)))))))]
+                           #`(#,(syntax label) #,@(map recur (syntax->list (syntax bodies))))))]
                       [recon-let/rec
                        (lambda ()
                          (with-syntax ([(label  ((vars val) ...) body) expr])
@@ -480,12 +480,12 @@
                                ; lambda
                                [(lambda . clause-stx)
                                 (let* ([clause (recon-lambda-clause (syntax clause-stx))])
-                                  (d->so `(lambda ,@clause)))]
+                                  #`(lambda #,@clause))]
                                
                                ; case-lambda
                                [(case-lambda . clauses-stx)
                                 (let* ([clauses (map recon-lambda-clause (syntax->list (syntax clauses-stx)))])
-                                  (d->so `(case-lambda ,@clauses)))]
+                                  #`(case-lambda #,@clauses))]
                                
                                ; if, begin, begin0
                                [(if test then else) (recon-basic)]
@@ -509,7 +509,7 @@
                                
                                ; application
                                [(#%app . terms) 
-                                (d->so (map recur (syntax->list (syntax terms))))]
+                                #`#,(map recur (syntax->list (syntax terms)))]
                                
                                ; #%datum
                                [(#%datum . datum) (recon-value (syntax-e (syntax datum)))]
@@ -530,7 +530,7 @@
                                                ((macro-bound)
                                                 ; for the moment, let-bound vars occur only in and/or :
                                                 (recon-value (lookup-binding mark-list var)))
-                                                ; (d->so (binding-lifted-name mark-list var)))
+                                                ; #`#,(binding-lifted-name mark-list var))
                                                ((top-level) var)
                                                ((let-bound)
                                                 (error 'recon-source-expr "let-bound-variables not supported"))
@@ -741,10 +741,10 @@
                                        [recon-lifted-val
                                         (lambda (name val)
                                           (let ([rectified-val (let-rhs-recon-value val)])
-                                            (d->so `(,name ,rectified-val))))]
+                                            #`(#,name #,rectified-val)))]
                                        [recon-lifted 
                                         (lambda (names expr)
-                                          (d->so `(,names ,expr)))]
+                                          #`(#,names #,expr))]
                                        [before-bindings
                                         (multi-append
                                          (map
@@ -769,7 +769,7 @@
                                        [recon-bindings (append before-bindings after-bindings)]
                                        [rectified-bodies (map (lambda (body) (recon-source-expr body mark-list binding-list))
                                                               (syntax->list (syntax bodies)))])
-                                      (attach-info (d->so `(,(syntax label) ,recon-bindings ,@rectified-bodies)) expr))))])
+                                      (attach-info #`(#,(syntax label) #,recon-bindings #,@rectified-bodies) expr))))])
                 (kernel:kernel-syntax-case expr #f 
                   ; variable references
                   [id
@@ -796,17 +796,15 @@
                          (let*-2vals ([(evaluated unevaluated) (split-list (lambda (x) (eq? (cadr x) *unevaluated*))
                                                                            (zip sub-exprs arg-vals))]
                                       [rectified-evaluated (map recon-value (map cadr evaluated))])
-                                     (d->so
-                                      (if (null? unevaluated)
-                                          rectified-evaluated
-                                          `(,@rectified-evaluated
-                                            ,so-far 
-                                            ,@(map recon-source-current-marks (cdr (map car unevaluated))))))))
+                                     (if (null? unevaluated)
+                                         #`#,rectified-evaluated
+                                         #`(#,@rectified-evaluated
+                                            #,so-far 
+                                            #,@(map recon-source-current-marks (cdr (map car unevaluated)))))))
                         ((called)
-                         (d->so
-                          (if (eq? so-far nothing-so-far)
-                              `(...) ; in unannotated code
-                              `(... ,so-far ...))))
+                         (if (eq? so-far nothing-so-far)
+                              (datum->syntax-object #'here `(...)) ; in unannotated code
+                              (datum->syntax-object #'here `(... ,so-far ...))))
                         (else
                          (error "bad label in application mark in expr: ~a" expr))))
                     expr)]
@@ -830,9 +828,9 @@
                     (let ([test-exp (if (eq? so-far nothing-so-far)
                                         (recon-value (lookup-binding mark-list if-temp))
                                         so-far)])
-                      (d->so `(if ,test-exp 
-                                  ,(recon-source-current-marks (syntax then))
-                                  ,(recon-source-current-marks (syntax else)))))
+                      #`(if #,test-exp 
+                                   #,(recon-source-current-marks (syntax then))
+                                   #,(recon-source-current-marks (syntax else))))
                     expr)]
                   
                   ; quote : there is no break on a quote.
@@ -843,7 +841,7 @@
                   [(begin clause)
                    (attach-info
                     (if (eq? so-far nothing-so-far)
-                        (d->so `(begin ,(recon-source-current-marks (syntax clause))))
+                        #`(begin #,(recon-source-current-marks (syntax clause)))
                         (error 
                          'recon-inner
                          "stepper:reconstruct: one-clause begin appeared as context: ~a" (syntax-object->datum expr)))

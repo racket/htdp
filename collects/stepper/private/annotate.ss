@@ -21,7 +21,6 @@
     (->* (syntax?                               ; syntax to annotate
           annotate-environment?                 ; environment
           break-contract                        ; procedure for runtime break
-          (-> any? boolean?)                    ; check-annotated
           (symbols 'foot-wrap))                 ; wrap-kind
          annotate-opts-list?                    ; optional args
          (syntax? annotate-environment?))]      ; results
@@ -627,9 +626,6 @@
                                              simple-wcm-wrap)]
                                [wcm-break-wrap (lambda (debug-info expr)
                                                  (wcm-wrap debug-info (break-wrap expr)))]
-                               [expr-cheap-wrap (lambda (annotated) (cheap-wrap expr annotated))]
-                               [ankle-wcm-wrap (lambda (expr free-bindings)
-                                                 (simple-wcm-wrap (make-debug-info-normal free-bindings) expr))]
                                [inferred-name-patch (lambda (annotated)
                                                       (if (and procedure-name-info (not (memq 'no-closure-capturing wrap-opts)))
                                                           (let ([name (ccond [(symbol? procedure-name-info) procedure-name-info]
@@ -638,6 +634,12 @@
                                                                               (car procedure-name-info)])])
                                                             #`(let* ([#,name #,annotated]) #,name))
                                                           annotated))]
+                               
+                               [normal-bundle
+                                (lambda (free-vars annotated)
+                                  (2vals (wcm-wrap (make-debug-info-normal free-vars)
+                                                   annotated)
+                                         free-vars))]
                                
                                [lambda-clause-abstraction 
                                 (lambda (clause)
@@ -682,9 +684,7 @@
                                                   [else
                                                    #`(#,closure-storing-proc #,inferred-name-lambda #,closure-info)]))])
                                     
-                                    (2vals
-                                     (wcm-wrap (make-debug-info-normal free-varrefs) captured)
-                                     free-varrefs)))]
+                                    (normal-bundle free-varrefs captured)))]
                                
                                ; The let transformation is complicated.
                                ; here's a sample transformation (not including 'break's):
@@ -746,19 +746,19 @@
                                      
                                       (let* ([unevaluated-list (make-init-list binding-list)]
                                              [outer-initialization
-                                              (d->so `([,(append lifted-vars binding-list (list let-counter))
-                                                        (values ,@(append (map (lambda (binding)
-                                                                                 (d->so `(,binding-indexer))) 
-                                                                               binding-list)
-                                                                          unevaluated-list
-                                                                          (list 0)))]))]
+                                              #`([#,(append lifted-vars binding-list (list let-counter))
+                                                   (values #,@(append (map (lambda (binding)
+                                                                             #`(#,binding-indexer)) 
+                                                                           binding-list)
+                                                                      unevaluated-list
+                                                                      (list 0)))])]
                                              [counter-clauses (build-list 
                                                                (length binding-sets)
                                                                (lambda (num)
-                                                                 (d->so `(set! ,let-counter ,(+ num 1)))))]
+                                                                 #`(set! #,let-counter #,(+ num 1))))]
                                              [set!-clauses
                                               (map (lambda (binding-set val)
-                                                     (d->so `(set!-values ,binding-set ,val)))
+                                                     #`(set!-values #,binding-set #,val))
                                                    binding-sets
                                                    annotated-vals)]
                                              [interlaced-clauses
@@ -767,16 +767,15 @@
                                              ; time to work from the inside out again
                                              ; without renaming, this would all be much much simpler.
                                              [middle-begin
-                                              (double-break-wrap (d->so `(begin ,@interlaced-clauses 
-                                                                                ,(late-let-break-wrap binding-list
-                                                                                                      lifted-vars
-                                                                                                      tagged-body))))]
+                                              (double-break-wrap #`(begin #,@interlaced-clauses 
+                                                                          #,(late-let-break-wrap binding-list
+                                                                                                 lifted-vars
+                                                                                                 tagged-body)))]
                                              [wrapped-begin (wcm-wrap (make-debug-info-let free-varrefs
                                                                                            binding-list
                                                                                            let-counter) 
-                                                                      middle-begin)]
-                                             [whole-thing (d->so/user `(,output-identifier ,outer-initialization ,wrapped-begin))])
-                                        (2vals whole-thing free-varrefs)))))]
+                                                                      middle-begin)])
+                                        (2vals (quasisyntax/loc expr (#,output-identifier #,outer-initialization #,wrapped-begin)) free-varrefs)))))]
                                
                                ; if-abstraction: (-> syntax? syntax? (or/f false? syntax?) (values syntax? varref-set?))
                                [if-abstraction
@@ -794,14 +793,11 @@
                                                                           free-varrefs-then 
                                                                           free-varrefs-else))]
                                     [annotated-if 
-                                     (with-syntax ([test-stx annotated-test]
-                                                   [then-stx annotated-then]
-                                                   [else-stx annotated-else]
-                                                   [break-stx normal-break]
-                                                   [test-var if-temp])
-                                       (if else
-                                           (syntax/loc expr (begin (set! test-var test-stx) (break-stx) (if test-var then-stx else-stx)))
-                                           (syntax/loc expr (begin (set! test-var test-stx) (break-stx) (if test-var then-stx)))))]
+                                     #`(begin (set! #,if-temp #,annotated-test) 
+                                              (#,normal-break)
+                                              #,(if else
+                                                    (quasisyntax/loc expr (if #,if-temp #,annotated-then #,annotated-else))
+                                                    (quasisyntax/loc expr (if #,if-temp #,annotated-then))))]
                                     [wrapped (wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
                                                                             (varref-set-union (list free-varrefs (list if-temp)))
                                                                             'none)
@@ -845,40 +841,35 @@
                             
                             [(begin . bodies-stx)
                              (if top-level? 
-                                 (let*-2vals
-                                  ([(annotated-bodies free-varref-sets)
-                                    (2vals-map (lambda (expr)
-                                                 (top-level-annotate/inner expr)) 
-                                               (syntax->list (syntax bodies-stx)))])
-                                  (2vals (d->so/user `(begin ,@annotated-bodies))
-                                         (varref-set-union free-varref-sets)))
-                                 (let*-2vals 
-                                  ([bodies (syntax->list (syntax bodies-stx))]
-                                   [(all-but-last-body last-body-list) 
-                                    (list-partition bodies (- (length bodies) 1))]
-                                   [last-body (car last-body-list)]
-                                   [(annotated-a free-varrefs-a)
-                                    (2vals-map non-tail-recur all-but-last-body)]
-                                   [(annotated-final free-varrefs-final)
-                                    (tail-recur last-body)]
-                                   [free-varrefs (varref-set-union (cons free-varrefs-final free-varrefs-a))]
-                                   [debug-info (make-debug-info-normal free-varrefs)]
-                                   [annotated (d->so/user `(begin ,@(append annotated-a (list annotated-final))))])
-                                  (2vals (wcm-wrap debug-info annotated)
-                                         free-varrefs)))]
+                                    (let*-2vals
+                                        ([(annotated-bodies free-varref-sets)
+                                          (2vals-map (lambda (expr)
+                                                       (top-level-annotate/inner expr)) 
+                                                     (syntax->list (syntax bodies-stx)))])
+                                      (2vals (quasisyntax/loc expr (begin #,@annotated-bodies))
+                                             (varref-set-union free-varref-sets)))
+                                    (if (null? (syntax->list (syntax bodies-stx)))
+                                        (normal-bundle null expr)
+                                        (let*-2vals 
+                                            ([reversed-bodies (reverse (syntax->list (syntax bodies-stx)))]
+                                             [last-body (car reversed-bodies)]
+                                             [all-but-last (reverse (cdr reversed-bodies))]
+                                             [(annotated-a free-varrefs-a)
+                                              (2vals-map non-tail-recur all-but-last)]
+                                             [(annotated-final free-varrefs-final)
+                                              (tail-recur last-body)])
+                                          (normal-bundle (varref-set-union (cons free-varrefs-final free-varrefs-a))
+                                                         (quasisyntax/loc expr (begin #,@annotated-a #,annotated-final))))))]
                             
                             [(begin0 . bodies-stx)
                              (let*-2vals
-                              ([bodies (syntax->list (syntax bodies-stx))]
-                               [(annotated-first free-varrefs-first)
-                                (result-recur (car bodies))]
-                               [(annotated-bodies free-varref-sets)
-                                (2vals-map non-tail-recur (cdr bodies))]
-                               [free-varrefs (varref-set-union (cons free-varrefs-first free-varref-sets))]
-                               [debug-info (make-debug-info-normal free-varrefs)]
-                               [annotated (d->so/user `(begin0 ,annotated-first ,@annotated-bodies))])
-                              (2vals (wcm-wrap debug-info annotated)
-                                     free-varrefs))]
+                                 ([bodies (syntax->list (syntax bodies-stx))]
+                                  [(annotated-first free-varrefs-first)
+                                   (result-recur (car bodies))]
+                                  [(annotated-bodies free-varref-sets)
+                                   (2vals-map non-tail-recur (cdr bodies))])
+                               (normal-bundle (varref-set-union (cons free-varrefs-first free-varref-sets))
+                                              (quasisyntax/loc expr (begin0 #,annotated-first #,@annotated-bodies))))]
                             
                             [(let-values . _)
                              (let*-2vals ([collapsed (collapse-let-values expr)])
@@ -890,31 +881,23 @@
                             [(letrec-values . _)
                              (let-abstraction expr 
                                               'letrec-values
-                                              (lambda (bindings) (map d->so bindings)))]
+                                              (lambda (bindings) (map (lambda (b) #'#,b) bindings)))]
                             
                             [(set! var val)
                              (let*-2vals
-                              ([(annotated-val val-free-varrefs)
-                                (set!-rhs-recur (syntax val) (syntax-case (syntax var) (#%top)
-                                                               [(#%top . real-var) (syntax-e (syntax real-var))]
-                                                               [else (syntax var)]))]
-                               [free-varrefs (varref-set-union (list (list (syntax var))
-                                                                     val-free-varrefs))]
-                               [debug-info (make-debug-info-normal free-varrefs)]
-                               [annotated (d->so/user `(set! ,(syntax var) ,annotated-val))])
-                              (2vals (wcm-wrap (make-debug-info-normal free-varrefs) annotated)
-                                     free-varrefs))]
+                                 ([(annotated-val val-free-varrefs)
+                                   (set!-rhs-recur (syntax val) (syntax-case (syntax var) (#%top)
+                                                                  [(#%top . real-var) (syntax-e (syntax real-var))]
+                                                                  [else (syntax var)]))])
+                               (normal-bundle (varref-set-union (list (list (syntax var)) val-free-varrefs))
+                                              (quasisyntax/loc expr (set! #,(syntax var) #,annotated-val))))]
                             
                             
                             [(quote _)
-                             (2vals
-                              (wcm-wrap (make-debug-info-normal null) expr)
-                              null)]
+                             (normal-bundle null expr)]
                             
                             [(quote-syntax _)
-                             (2vals
-                              (wcm-wrap (make-debug-info-normal null) expr)
-                              null)]
+                             (normal-bundle null expr)]
                             
                             [(with-continuation-mark key mark body)
                              (let*-2vals ([(annotated-key free-varrefs-key)
@@ -925,8 +908,8 @@
                                            (result-recur (syntax body))])
                                (error 'annotate/inner "this region of code is still under construction")
                                
-                               ;                                       [annotated (d->so `(let-values ([key-temp ,*unevaluated*]
-                               ;                                             [mark-temp ,*unevaluated*])
+                               ;                                       [annotated #`(let-values ([key-temp #,*unevaluated*]
+                               ;                                             [mark-temp #,*unevaluated*]
                                )]
                             
                             ;                                  [foot-wrap? 
@@ -989,43 +972,30 @@
                                (let* ([arg-temps (build-list (length annotated-terms) get-arg-var)]
                                       [tagged-arg-temps (map (lambda (var) (syntax-property var 'stepper-binding-type 'stepper-temp))
                                                              arg-temps)]
-                                      [let-clauses (d->so `((,tagged-arg-temps 
-                                                             (values ,@(map (lambda (_) *unevaluated*) tagged-arg-temps)))))]
+                                      [let-clauses #`((#,tagged-arg-temps 
+                                                       (values #,@(map (lambda (_) *unevaluated*) tagged-arg-temps))))]
                                       [set!-list (map (lambda (arg-symbol annotated-sub-expr)
-                                                        (d->so `(set! ,arg-symbol ,annotated-sub-expr)))
+                                                        #`(set! #,arg-symbol #,annotated-sub-expr))
                                                       tagged-arg-temps annotated-terms)]
                                       [new-tail-bound (binding-set-union (list tail-bound tagged-arg-temps))]
                                       [app-debug-info (make-debug-info-app new-tail-bound tagged-arg-temps 'called)]
-                                      [app-term (d->so/user tagged-arg-temps)]
-                                      [final-app
-                                       3
-                                       ]
-                                      [final-app (break-wrap (simple-wcm-wrap 
-                                                              app-debug-info
-                                                              (let ([first-term (car (syntax->list (syntax terms)))])
-                                                                (if (syntax-case first-term (#%top let-values)
-                                                                      [(#%top . var)
-                                                                       (and (non-annotated-proc? first-term))]
-                                                                      [var
-                                                                       (identifier? (syntax var)) ; guard
-                                                                       (and (non-annotated-proc? first-term))]
-                                                                      [(let-values . stuff) ; presumably, the expansion of a teachpack primitive
-                                                                       #t]
-                                                                      [else #f])
-                                                                    (return-value-wrap app-term)
-                                                                    app-term))))]
+                                      [app-term (quasisyntax/loc expr #,tagged-arg-temps)]
                                       [debug-info (make-debug-info-app new-tail-bound
                                                                        (varref-set-union (list free-varrefs tagged-arg-temps)) ; NB using bindings as vars
                                                                        'not-yet-called)]
-                                      [let-body (wcm-wrap debug-info (d->so `(begin ,@set!-list ,final-app)))])
-                                 (d->so `(let-values ,let-clauses ,let-body)))
+                                      [let-body (wcm-wrap debug-info #`(begin #,@set!-list
+                                                                              #,(break-wrap
+                                                                                 (simple-wcm-wrap
+                                                                                  app-debug-info
+                                                                                  #`(if (#,in-closure-table #,(car tagged-arg-temps))
+                                                                                        #,app-term
+                                                                                        #,(return-value-wrap app-term))))))])
+                                 #`(let-values #,let-clauses #,let-body))
                                    ;)
                                free-varrefs))]   
                             
                             [(#%datum . _)
-                             (2vals
-                              (wcm-wrap (make-debug-info-normal null) expr)
-                              null)]
+                             (normal-bundle null expr)]
                             
                             [(define-values vars-stx body)
                              (let*-2vals
@@ -1035,7 +1005,7 @@
                                                                        (syntax-e (car vars))
                                                                        #f))])
                               (2vals
-                               (d->so/user `(define-values ,(syntax vars-stx) ,annotated-val))
+                               (quasisyntax/loc expr (define-values #,(syntax vars-stx) #,annotated-val))
                                free-varrefs-val))]
                             
                             
