@@ -1,163 +1,148 @@
 (module big-draw mzscheme
-  (provide bigDrawU bigDrawS drawU draw-from-user^)
-  
-  (require "error-sig.ss"
+  (require "error.ss"
            "draw-sig.ss"
+           (lib "teach.ss" "lang" "private") ;; posn struct
            (lib "unitsig.ss")
+           (prefix mred: (lib "mred.ss" "mred"))
            (lib "mred-sig.ss" "mred")
            (lib "graphics-sig.ss" "graphics")
            (lib "graphics-posn-less-unit.ss" "graphics"))
   
-  (define-signature draw-from-user^
-    (posn? make-posn posn-x posn-y))
+  (define-values/invoke-unit/sig graphics:posn-less^
+                                 graphics-posn-less@ #f 
+                                 (mred : mred^)
+                                 graphics:posn^)
   
-  (define drawU
-    (unit/sig coreDrawS
-      (import errorS draw-from-user^ graphics:posn-less^)
-      
-      (define the-error
-        (lambda x
-          (error "evaluate (start <num> <num>) first")))  
-      
-      (define %draw-solid-disk the-error)
-      (define draw-solid-disk (lambda a (apply %draw-solid-disk a)))
-      
-      (define %clear-solid-disk the-error)
-      (define clear-solid-disk (lambda a (apply %clear-solid-disk a)))
-      
-      (define %draw-circle the-error)
-      (define draw-circle (lambda a (apply %draw-circle a)))
-      
-      (define %clear-circle the-error)
-      (define clear-circle (lambda a (apply %clear-circle a)))
-      
-      (define %draw-solid-rect the-error)
-      (define draw-solid-rect (lambda a (apply %draw-solid-rect a)))
-      
-      (define %clear-solid-rect the-error)
-      (define clear-solid-rect (lambda a (apply %clear-solid-rect a)))
-      
-      (define %draw-solid-line the-error) 
-      (define draw-solid-line (lambda a (apply %draw-solid-line a)))
-      
-      (define %clear-solid-line the-error)
-      (define clear-solid-line (lambda a (apply %clear-solid-line a)))
-      
-      (define %clear-all the-error)
-      (define clear-all (lambda a (apply %clear-all a)))
-      
-      (define %wait-for-mouse-click the-error)
-      (define (wait-for-mouse-click) (%wait-for-mouse-click))
-      
-      (define (make-true f) (lambda x (apply f x) #t))
-      
-      (define sleep-for-a-while (make-true sleep))
-      
-    ;; i wish i could abstract these functions ...
-      (define (make-line name f)
-        (make-true
-         (lambda x
-           (check-arity name 2 x)
-           (apply (lambda (p1 p2 . c)
-                    (check-arg name (posn? p1) "posn" "first" p1)
-                    (check-arg name (posn? p2) "posn" "second" p2)
-                    (f p1 p2 (symbol->color (if (null? c) 'black (car c)))))
-                  x))))
-      
-      (define (make-rect name f)
-        (make-true
-         (lambda x
-           (check-arity name 3 x)
-           (apply (lambda (p w h . c)
-                    (check-arg name (posn? p) "posn" "first" p)
-                    (check-arg name (and (integer? w) (> w 0)) "positive integer" "second" w)
-                    (check-arg name (and (integer? h) (> h 0)) "positive integer" "third" h)
-                    (f p w h  (symbol->color (if (null? c) 'black (car c)))))
-                  x))))
-      
-      (define (make-circle name f)
-        (make-true
-         (lambda x
-           (check-arity name 2 x)
-           (apply (lambda (p r . c)
-                    (check-arg name (posn? p) "posn" "first" p)
-                    (check-arg name (and (integer? r) (> r 0)) "positive integer" "second" r)
-                    (let ((d (* r 2))
-                          (c (symbol->color (if (null? c) 'black (car c)))))
-                      (f (make-posn (- (posn-x p) r) (- (posn-y p) r)) d d c)))
-                  x))))
-      
-      (define (start WIDTH HEIGHT)
-        (check-arg 'start (and (integer? WIDTH) (> WIDTH 0)) "positive integer" "first" WIDTH)
-        (check-arg 'start (and (integer? HEIGHT) (> HEIGHT 0)) "positive integer" "second" HEIGHT)
-      ;; --- 
-        (open-graphics)
-        (let ((current-window (open-viewport "Canvas" WIDTH HEIGHT)))
-          (set! @VP current-window)
-          (set! %clear-all (clear-viewport current-window))
-          
-          (set! %draw-solid-line (make-line 'draw-solid-line (draw-line current-window)))
-          (set! %clear-solid-line
-                (make-line 'clear-solid-line
-                           (lambda (p1 p2 c)
-                             ((clear-line current-window) p1 p2))))
-          
-          (set! %draw-solid-rect (make-rect 'draw-solid-rect (draw-solid-rectangle current-window)))
-          (set! %clear-solid-rect
-                (make-rect 'clear-solid-rect
-                           (lambda (p w h c)
-                             ((clear-solid-rectangle current-window) p w h))))
-          
-          (set! %draw-solid-disk (make-circle 'draw-solid-disk (draw-solid-ellipse current-window)))
-          (set! %clear-solid-disk
-                (make-circle 'clear-solid-disk
-                             (lambda (p r1 r2 c)
-                               ((clear-solid-ellipse current-window) p r1 r2))))
-          
-          (set! %draw-circle (make-circle 'draw-circle (draw-ellipse current-window)))
-          (set! %clear-circle
-                (make-circle 'clear-circle
-                             (lambda (p r1 r2 c)
-                               ((clear-ellipse current-window) p r1 r2))))
-          
-          (set! %wait-for-mouse-click
-                (lambda ()
-                  (mouse-click-posn
-                   (get-mouse-click @VP))))
-          
-          ))
-      
-      (define (stop)
-        (close-graphics))
-      
-      (define @VP #f)
-      (define (get-@VP) @VP)
-      
-    ;; symbol->color : symbol -> color
-    ;; to convert symbol to 
-      (define (symbol->color s)
-        (check-arg 'draw.ss (symbol? s) "symbol" "first" s)
-        (case s 
-          ((white)   (make-rgb 1 1 1))
-          ((yellow)  (make-rgb 1 1 0))
-          ((red)     (make-rgb 1.0 0 0))
-          ((green)   (make-rgb 0 1.0 0))
-          ((blue)    (make-rgb 0 0 1.0))
-          ((black)   (make-rgb 0 0 0))
-          (else (error 'draw.ss "The symbol ~e is not a legal color in draw.ss." s))))
-      
-      ))
+  (provide-signature-elements graphics:posn-less^)
   
-  (define-signature bigDrawS
-    ((open coreDrawS)
-     (open graphics:posn-less^)))
+  (define the-error
+    (lambda x
+      (error "evaluate (start <num> <num>) first")))  
   
-  (define bigDrawU
-    (compound-unit/sig
-      (import (ERR : errorS) (user : draw-from-user^))
-      (link
-       (GRAPHICS : graphics:posn-less^ (graphics-posn-less@ (PLT : graphics:posn^)))
-       (DRAW : coreDrawS (drawU ERR user GRAPHICS)))
-      (export (open DRAW)
-              (open GRAPHICS)))))
+  (define %draw-solid-disk the-error)
+  (define draw-solid-disk (lambda a (apply %draw-solid-disk a)))
+  
+  (define %clear-solid-disk the-error)
+  (define clear-solid-disk (lambda a (apply %clear-solid-disk a)))
+  
+  (define %draw-circle the-error)
+  (define draw-circle (lambda a (apply %draw-circle a)))
+  
+  (define %clear-circle the-error)
+  (define clear-circle (lambda a (apply %clear-circle a)))
+  
+  (define %draw-solid-rect the-error)
+  (define draw-solid-rect (lambda a (apply %draw-solid-rect a)))
+  
+  (define %clear-solid-rect the-error)
+  (define clear-solid-rect (lambda a (apply %clear-solid-rect a)))
+  
+  (define %draw-solid-line the-error) 
+  (define draw-solid-line (lambda a (apply %draw-solid-line a)))
+  
+  (define %clear-solid-line the-error)
+  (define clear-solid-line (lambda a (apply %clear-solid-line a)))
+  
+  (define %clear-all the-error)
+  (define clear-all (lambda a (apply %clear-all a)))
+  
+  (define %wait-for-mouse-click the-error)
+  (define (wait-for-mouse-click) (%wait-for-mouse-click))
+  
+  (define (make-true f) (lambda x (apply f x) #t))
+  
+  (define sleep-for-a-while (make-true sleep))
+  
+  ;; i wish i could abstract these functions ...
+  (define (make-line name f)
+    (make-true
+     (lambda x
+       (check-arity name 2 x)
+       (apply (lambda (p1 p2 . c)
+                (check-arg name (posn? p1) "posn" "first" p1)
+                (check-arg name (posn? p2) "posn" "second" p2)
+                (f p1 p2 (symbol->color (if (null? c) 'black (car c)))))
+              x))))
+  
+  (define (make-rect name f)
+    (make-true
+     (lambda x
+       (check-arity name 3 x)
+       (apply (lambda (p w h . c)
+                (check-arg name (posn? p) "posn" "first" p)
+                (check-arg name (and (integer? w) (> w 0)) "positive integer" "second" w)
+                (check-arg name (and (integer? h) (> h 0)) "positive integer" "third" h)
+                (f p w h  (symbol->color (if (null? c) 'black (car c)))))
+              x))))
+  
+  (define (make-circle name f)
+    (make-true
+     (lambda x
+       (check-arity name 2 x)
+       (apply (lambda (p r . c)
+                (check-arg name (posn? p) "posn" "first" p)
+                (check-arg name (and (integer? r) (> r 0)) "positive integer" "second" r)
+                (let ((d (* r 2))
+                      (c (symbol->color (if (null? c) 'black (car c)))))
+                  (f (make-posn (- (posn-x p) r) (- (posn-y p) r)) d d c)))
+              x))))
+  
+  (define (start WIDTH HEIGHT)
+    (check-arg 'start (and (integer? WIDTH) (> WIDTH 0)) "positive integer" "first" WIDTH)
+    (check-arg 'start (and (integer? HEIGHT) (> HEIGHT 0)) "positive integer" "second" HEIGHT)
+    ;; --- 
+    (open-graphics)
+    (let ((current-window (open-viewport "Canvas" WIDTH HEIGHT)))
+      (set! @vp current-window)
+      (set! %clear-all (clear-viewport current-window))
+      
+      (set! %draw-solid-line (make-line 'draw-solid-line (draw-line current-window)))
+      (set! %clear-solid-line
+            (make-line 'clear-solid-line
+                       (lambda (p1 p2 c)
+                         ((clear-line current-window) p1 p2))))
+      
+      (set! %draw-solid-rect (make-rect 'draw-solid-rect (draw-solid-rectangle current-window)))
+      (set! %clear-solid-rect
+            (make-rect 'clear-solid-rect
+                       (lambda (p w h c)
+                         ((clear-solid-rectangle current-window) p w h))))
+      
+      (set! %draw-solid-disk (make-circle 'draw-solid-disk (draw-solid-ellipse current-window)))
+      (set! %clear-solid-disk
+            (make-circle 'clear-solid-disk
+                         (lambda (p r1 r2 c)
+                           ((clear-solid-ellipse current-window) p r1 r2))))
+      
+      (set! %draw-circle (make-circle 'draw-circle (draw-ellipse current-window)))
+      (set! %clear-circle
+            (make-circle 'clear-circle
+                         (lambda (p r1 r2 c)
+                           ((clear-ellipse current-window) p r1 r2))))
+      
+      (set! %wait-for-mouse-click
+            (lambda ()
+              (mouse-click-posn
+               (get-mouse-click @vp))))))
+  
+  (define (stop)
+    (close-graphics))
+  
+  (define @vp #f)
+  #cs(define (get-@VP) @vp)
+  
+  (provide-signature-elements draw^)
+
+  ;; symbol->color : symbol -> color
+  ;; to convert symbol to 
+  (define (symbol->color s)
+    (check-arg 'draw.ss (symbol? s) "symbol" "first" s)
+    (case s 
+      ((white)   (make-rgb 1 1 1))
+      ((yellow)  (make-rgb 1 1 0))
+      ((red)     (make-rgb 1.0 0 0))
+      ((green)   (make-rgb 0 1.0 0))
+      ((blue)    (make-rgb 0 0 1.0))
+      ((black)   (make-rgb 0 0 0))
+      (else (error 'draw.ss "The symbol ~e is not a legal color in draw.ss." s)))))
 

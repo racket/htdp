@@ -1,9 +1,9 @@
-(require-library "error.ss" "htdp")
+(module lkup-gui mzscheme
+  (require (lib "error.ss" "htdp")
+	   (lib "class.ss")
+	   (lib "mred.ss" "mred"))
 
-(define-signature lookupS (control view connect))
-
-(define lookupU
-  (unit/sig lookupS (import errorS plt:userspace^)
+  (provide control view connect)
 
     ;; ------------------------------------------------------------------------
     ;; Basic constants: 
@@ -54,11 +54,4 @@
     (define (view n)
       (check-arg 'view (symbol? n) "symbol" "first" n)
       (send result set-label (symbol->string n)))
-    ))
-
-(compound-unit/sig
-  (import (PLT : plt:userspace^))
-  (link
-    (LKU  : lookupS (lookupU ERR PLT))
-    (ERR  : errorS  (errorU)))
-  (export (open LKU)))
+    )

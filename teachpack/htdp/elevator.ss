@@ -1,16 +1,13 @@
-(require-library "graphicss.ss" "graphics")
-(require-library "error.ss" "htdp")
+(module elevator mzscheme
+  (require (lib "big-draw.ss" "htdp")
+	   (lib "error.ss" "htdp"))
 
-;; Implementation:
-;;   Stephanie Weirich (1994),
-;;   Mark Krentel (1995),
-;;   Matthias Felleisen (1996)
+  ;; Implementation:
+  ;;   Stephanie Weirich (1994),
+  ;;   Mark Krentel (1995),
+  ;;   Matthias Felleisen (1996)
 
-(define-signature elevatorS (run))
-
-(define elevatorU 
-  (unit/sig elevatorS
-    (import errorS plt:userspace^ graphics:posn-less^)
+  (provide run)
 
     ;;  There are really  three distinct levels: graphics, hardware,
     ;;  and software. Don't mix them!
@@ -812,15 +809,4 @@
 	(set! Next-Floor f)
 	(start-program)))
 
-    ))
-
-(compound-unit/sig
-  (import (PLT : plt:userspace^))
-  (link
-    (GRAPHICS : graphics:posn-less^ ((require-library "graphicspr.ss" "graphics")
-				     (PLT : mzlib:file^)
-				     (PLT : mred^)
-				     (PLT : graphics:posn^)))
-    (ERR  : errorS (errorU))
-    (DRAW : elevatorS (elevatorU ERR PLT GRAPHICS)))
-  (export (open DRAW))) 
+    )

@@ -1,10 +1,12 @@
-(require-library "error.ss" "htdp")
-(require-library "draw.ss" "htdp")
+(module hangman mzscheme
+  (require "error.ss"
+	   "draw-sig.ss"
+	   "big-draw.ss"
+	   (lib "class.ss")
+	   (lib "mred.ss" "mred"))
 
-(define-signature hangmanS (hangman hangman-list))
-
-(define hangmanU 
-  (unit/sig hangmanS (import errorS plt:userspace^)
+  (provide hangman hangman-list)
+  (provide-signature-elements draw^)
 
     #| ------------------------------------------------------------------------
     The Basic Constants |#
@@ -258,11 +260,4 @@
       (set! draw-next-part dr)
       (setup-gui status)
       (draw-next-part (select-piece!)))
-    ))
-
-(compound-unit/sig (import (PLT : plt:userspace^))
-  (link
-    [ERR   : errorS (errorU)]
-    [DRAW  : drawS  (bigDrawU ERR PLT)]
-    [HANG  : hangmanS (hangmanU ERR PLT)])
-  (export (open DRAW) (open HANG)))
+    )

@@ -1,14 +1,12 @@
-(require-library "error.ss" "htdp")
+(module gui mzscheme
+  (require (lib "error.ss" "htdp")
+	   (lib "mred.ss" "mred")
+	   (lib "class.ss"))
 
-(define-signature guiS
-  (create-window show-window hide-window
-   make-text make-choice make-button make-message
-   text-contents choice-index draw-message
-   ))
+  (provide create-window show-window hide-window
+	   make-text make-choice make-button make-message
+	   text-contents choice-index draw-message)
   
-(define guessU
-  (unit/sig guiS (import errorS plt:userspace^)
-
     ;; DEFAULT VALUES:
     ;; ----------------------------------------------------------------------------
 
@@ -138,11 +136,4 @@
       (check-arg 'choice-index (gui-item? a-choice) "gui-item" "first" a-choice)      
       (send ((gui-item-builder a-choice) #f) get-selection))
 
-    ))
-
-(compound-unit/sig
-  (import (PLT : plt:userspace^))
-  (link
-    (GUI  : guiS (guessU ERR PLT))
-    (ERR  : errorS  (errorU)))
-  (export (open GUI)))
+    )

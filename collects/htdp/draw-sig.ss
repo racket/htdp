@@ -3,17 +3,17 @@
 ;; calculus -- mf 
 
 (module draw-sig mzscheme
-  (provide coreDrawS drawS)
+  (provide core-draw^ draw^)
   (require (lib "unitsig.ss"))
   
-  (define-signature coreDrawS
-    (start stop 
-           draw-circle draw-solid-disk draw-solid-rect draw-solid-line
-           clear-circle clear-solid-disk clear-solid-rect clear-solid-line
-           clear-all
-           sleep-for-a-while
-           wait-for-mouse-click ; -> posn
-           ;WHITE YELLOW RED BLUE GREEN BLACK
-           get-@VP))
+  #cs(define-signature core-draw^
+       (start stop 
+              draw-circle draw-solid-disk draw-solid-rect draw-solid-line
+              clear-circle clear-solid-disk clear-solid-rect clear-solid-line
+              clear-all
+              sleep-for-a-while
+              wait-for-mouse-click ; -> posn
+              ;WHITE YELLOW RED BLUE GREEN BLACK
+              get-@VP))
   
-  (define-signature drawS coreDrawS))
+  (define-signature draw^ core-draw^))

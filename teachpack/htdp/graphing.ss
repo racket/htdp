@@ -1,11 +1,12 @@
-(require-library "error.ss" "htdp")
-(require-library "big-draw.ss" "htdp")
+(module graphing mzscheme
+  (require (lib "error.ss" "htdp")
+	   (lib "unitsig.ss")
+	   (lib "draw-sig.ss" "htdp")
+	   (lib "big-draw.ss" "htdp"))
 
-(define-signature graphS (graph-fun graph-line))
+  (provide-signature-elements draw^)
 
-(define graphU
-  (unit/sig graphS
-    (import errorS bigDrawS plt:userspace^)
+  (provide graph-fun graph-line)
 
     ;; make-graph : sym -> void
     ;; effect: set up pasteboard for drawing functions 
@@ -64,13 +65,4 @@
     (define DELTA .1)
     (define DOT   1)
     
-    (make-graph 'ok)))
-
-(compound-unit/sig (import (PLT : plt:userspace^))
-  (link
-    [ERR   : errorS (errorU)]   
-    [DRAW  : bigDrawS  (bigDrawU ERR PLT)]
-    [PINGP : graphS (graphU ERR DRAW PLT)])
-  (export
-    (open DRAW)
-    (open PINGP)))
+    (make-graph 'ok))

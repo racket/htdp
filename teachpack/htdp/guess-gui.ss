@@ -1,9 +1,9 @@
-(require-library "error.ss" "htdp")
+(module guess-gui mzscheme
+  (require (lib "error.ss" "htdp")
+	   (lib "mred.ss" "mred")
+	   (lib "class.ss"))
 
-(define-signature guessS (connect control view))
-
-(define guessU
-  (unit/sig guessS (import errorS plt:userspace^)
+  (provide connect control view)
 
     ;; ------------------------------------------------------------------------
     ;; Basic constants: 
@@ -65,11 +65,4 @@
     ;; view : X -> void
     ;; effect: to display n in the message panel 
     (define (view n) (send message-field set-label (format VIEW-fmt n)))
-    ))
-
-(compound-unit/sig
-  (import (PLT : plt:userspace^))
-  (link
-    (GU   : guessS (guessU ERR PLT))
-    (ERR  : errorS  (errorU)))
-  (export (open GU)))
+    )

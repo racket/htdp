@@ -1,15 +1,12 @@
-(module arrow mzshceme
+(module arrow mzscheme
 
   (require (lib "error.ss" "htdp")
-           (lib "draw.ss" "htdp"))
+           (lib "big-draw.ss" "htdp")
+           (lib "etc.ss")
+           (lib "class.ss")
+           (lib "mred.ss" "mred"))
 
-(define-signature arrowS (control control-up-down control-left-right))
-
-(define arrowU
-  (unit/sig arrowS
-    (import errorS plt:userspace^)
-
-    ; (require-library "macro.ss")
+  (provide control control-up-down control-left-right)
 
     ;; CONSTANTS ---------------------------------------------------------------
     (define MY-ICONS "/home/matthias/icons/")
@@ -117,13 +114,4 @@
     ;; effect: create a window from which a user can control moves
     (define (control shape delta lr ud draw)
       (make-controller 'control FOUR shape delta lr ud draw))
-    ))
-
-
-(compound-unit/sig
-  (import (PLT : plt:userspace^))
-  (link
-    (XXX : arrowS (arrowU ERR PLT))
-    [DRAW  : bigDrawS  (bigDrawU ERR PLT)]
-    (ERR : errorS (errorU)))
-  (export (open (DRAW : drawS)) (open XXX))))
+    )
