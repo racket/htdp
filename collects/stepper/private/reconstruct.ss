@@ -174,6 +174,24 @@
       [(expr-finished-break) #f]))  
   
   (define (skip-redex-step? mark-list render-settings)
+    
+    (define (varref-skip-step? id varref)
+      (let ([val (lookup-binding mark-list varref)])
+        (equal? (syntax-object->datum (recon-value val render-settings))
+                (syntax-object->datum (case (syntax-property varref 'stepper-binding-type)
+                                        ([let-bound]
+                                         (binding-lifted-name mark-list varref))
+                                        ([non-lexical]
+                                         varref)
+                                        (else
+                                         (error 'varref-skip-step? "unexpected value for stepper-binding-type: ~e for variable: ~e\n"
+                                                (syntax-property varref 'stepper-binding-type)
+                                                varref)))))
+        ;(and (procedure? val)               ; don't halt for varrefs ...
+        ;     (not (continuation? val))      ; ... bound to non-continuation procedures ...
+        ;     (has-right-name id val))
+        ))
+    
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
            (or (kernel:kernel-syntax-case expr #f
@@ -181,18 +199,12 @@
                    (identifier? expr)
                    (case (syntax-property expr 'stepper-binding-type)
                      [(lambda-bound) #t]  ; don't halt for lambda-bound vars
-                     [(let-bound non-lexical)
-                      (let ([val (lookup-binding mark-list expr)])
-                        (and (procedure? val)               ; don't halt for varrefs ...
-                             (not (continuation? val))      ; ... bound to non-continuation procedures ...
-                             (has-right-name (binding-lifted-name mark-list expr) 
-                                             val)))])]      ; ... which already have the right name.
+                     [(let-bound)
+                      (varref-skip-step? (binding-lifted-name mark-list expr) expr)]
+                     [(non-lexical)
+                      (varref-skip-step? expr expr)])]
                   [(#%top . id-stx)
-                   (let ([val (lookup-binding mark-list #`id-stx)])
-                     (and (procedure? val)               ; don't halt for varrefs ...
-                          (not (continuation? val))      ; ... bound to non-continuation procedures ...
-                          (has-right-name #`id-stx 
-                                          val)))]        ; ... which already have the right name.
+                   (varref-skip-step? #`id-stx #`id-stx)]
                   [(#%app . terms)
                    ; don't halt for proper applications of constructors
                    (let ([fun-val (lookup-binding mark-list (get-arg-var 0))])

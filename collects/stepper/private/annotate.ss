@@ -912,5 +912,5 @@
          ; body of local
          ;(printf "input: ~a\n" (syntax-object->datum expr))
          (let* ([annotated-expr (annotate/top-level expr)])
-           (printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
+           ;(printf "annotated: \n~a\n" (syntax-object->datum annotated-expr))
            annotated-expr))))
