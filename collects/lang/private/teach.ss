@@ -785,8 +785,25 @@
 
   (define-syntax (advanced-define-struct stx)
     (syntax-case stx ()
+      [(_ name fields)
+       (identifier? (syntax name))
+       (syntax/loc stx (define-struct name fields))]
+      [(_ (name sup) fields)
+       (and (identifier? (syntax name))
+	    (identifier? (syntax sup)))
+       (syntax/loc stx (define-struct (name sup) fields))]
       [(_ name/sup fields)
-       (syntax/loc stx (define-struct name/sup fields))]))
+       (teach-syntax-error
+	'define-struct
+	(syntax name/sup)
+	"expected a name or parenthesized name--supername sequence after `define-struct', but found ~a"
+	(something-else (syntax name/sup)))]
+      [(_ . rest)
+       (teach-syntax-error
+	'define-struct
+	stx
+	"expected two parts after `define-struct'")]
+      [_else (bad-use-error 'define-struct stx)]))
 
 
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
