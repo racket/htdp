@@ -304,17 +304,17 @@
                             (let ([snip (make-obj)])
                               (send editor insert snip)
                               (send editor set-caret-owner snip 'display))))))))])
-        (make-object menu-item% "Modern Constant Snip" menu
+        (make-object menu:can-restore-menu-item% "Modern Constant Snip" menu
           (lambda (menu evt)
             (insert-snip
              (lambda () (make-object constant-snip% 'modern))))
           #\m)
-        (make-object menu-item% "Roman Constant Snip" menu
+        (make-object menu:can-restore-menu-item% "Roman Constant Snip" menu
           (lambda (menu evt)
             (insert-snip 
              (lambda () (make-object constant-snip% 'roman))))
           #\r)
-        (make-object menu-item% "Evaluated Snip" menu
+        (make-object menu:can-restore-menu-item% "Evaluated Snip" menu
           (lambda (menu evt)
             (insert-snip 
              (lambda () (make-object evaluated-snip%))))))
