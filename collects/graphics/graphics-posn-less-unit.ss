@@ -35,7 +35,8 @@
   (define global-pen-vector (make-vector 300 #f))
   (define global-brush-vector (make-vector 300 #f))
   (define default-font (make-object mred:font% 12 'roman 'normal 'normal))
-  
+  (define black-color (make-object mred:color% "BLACK"))
+
   (define sixlib-canvas%
     (class100-asi mred:canvas% 
       (inherit get-parent
@@ -1006,10 +1007,10 @@
 	c)))
 
   (define draw-pixmap-posn
-    (opt-lambda (filename [type 'unknown])
+    (opt-lambda (filename [type 'unknown/mask])
       (check 'draw-pixmap-posn
 	     (andp string? file-exists?) filename "filename"
-	     (lambda (x) (memq x '(gif xbm xpm bmp pict unknown))) type "file type symbol")
+	     (lambda (x) (memq x '(gif xbm xpm bmp pict unknown unknown/mask gif/mask))) type "file type symbol")
       (let* ([bitmap (make-object mred:bitmap% filename type)])
 	(lambda (viewport)
 	  (check 'draw-pixmap-posn
@@ -1022,8 +1023,8 @@
 	      (set-viewport-pen viewport (get-color color)))
 	    (let ([x (posn-x posn)]
 		  [y (posn-y posn)])
-	      (send (viewport-dc viewport) draw-bitmap bitmap x y)
-	      (send (viewport-buffer-dc viewport) draw-bitmap bitmap x y)))))))
+	      (send (viewport-dc viewport) draw-bitmap bitmap x y 'solid black-color (send bitmap get-loaded-mask))
+	      (send (viewport-buffer-dc viewport) draw-bitmap bitmap x y 'solid black-color (send bitmap get-loaded-mask))))))))
   
   (define draw-pixmap
     (lambda (viewport)
