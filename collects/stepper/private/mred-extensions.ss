@@ -4,7 +4,9 @@
            (prefix f: (lib "framework.ss" "framework"))
            (lib "pretty.ss")
            "highlight-placeholder.ss"
-	   (lib "string-constant.ss" "string-constants"))
+           "testing-shared.ss"
+	   (lib "string-constant.ss" "string-constants")
+           (lib "xml-snipclass.ss" "xml"))
 
   (provide
    stepper-canvas%
@@ -226,8 +228,14 @@
                   (let* ([style (send (get-style-list) find-named-style "Standard")]
                          [char-width (send style get-text-width (send canvas get-dc))]
                          [width (floor (/ (- inner-width 18) char-width))])
+                    (printf "formatting exps: ~v\n" exps)
                     (reformat-sexp width)
                     (end-edit-sequence)))])
+      
+      (define highlight-table (make-hash-table 'weak))
+      
+      (define stripped-exps
+        (map (lambda (exp) (strip-to-sexp exp highlight-table)) exps))
       
       (define pretty-printed-width #f)
       (define clear-highlight-thunks null)
@@ -244,93 +252,66 @@
           (format-whole-step)))
                
       (define highlight-begin #f)
-      (define remaining-highlights null)
-      (define (highlight-pop)
-        (if (null? remaining-highlights)
-            (error 'highlight-pop "no highlighted region to match placeholder")
-            (begin0 (car remaining-highlights) 
-                    (set! remaining-highlights (cdr remaining-highlights))
-                    (stack-top-decide))))
-      (define next-is-placeholder? #f)
-      (define (stack-top-decide)
-        (set! next-is-placeholder?
-              (or (null? remaining-highlights)
-                  (confusable-value? (car remaining-highlights)))))
                
       (inherit get-dc)
+      
       (define (format-sexp sexp)
-        (let ([real-print-hook (pretty-print-print-hook)])
-          (parameterize ([pretty-print-columns pretty-printed-width]
-                         [pretty-print-size-hook
-                          (lambda (value display? port)
+        (parameterize ([pretty-print-columns pretty-printed-width]
+                       
+                       ; the pretty-print-size-hook decides whether this object should be printed by the new pretty-print-hook
+                       [pretty-print-size-hook
+                        (lambda (value display? port)
+                          (let ([looked-up (hash-table-get highlight-table value (lambda () #f))])
                             (cond
-                              [(eq? value highlight-placeholder) ; must be a confusable value
-                               (string-length (format "~s" (car remaining-highlights)))]
                               [(is-a? value snip%) 
                                (let ([dc (get-dc)]
                                      [wbox (box 0)])
                                  (send value get-extent dc 0 0 wbox #f #f #f #f #f)
-                                 (let-values ([(xw xh xa xd) (send dc get-text-extent "x")])
+                                 (let-values ([(xw dc dc2 dc3) (send dc get-text-extent "x")])
                                    (max 1 (inexact->exact (ceiling (/ (unbox wbox) xw))))))]
-                              [else #f]))]
-                         [pretty-print-print-hook
-                          ; this print-hook is called for confusable highlights and for images.
-                          (lambda (value display? port)
+                              [(and looked-up (not (eq? looked-up 'non-confusable)))
+                               (string-length (format "~s" (car looked-up)))]
+                              [else #f])))]
+                       
+                       [pretty-print-print-hook
+                        ; this print-hook is called for confusable highlights and for images.
+                        (lambda (value display? port)
+                          (let ([looked-up (hash-table-get highlight-table value (lambda () #f))])
                             (cond [(is-a? value snip%) (insert (send value copy)) (set-last-style)]
-                                  [(eq? value highlight-placeholder) (insert (format "~s" (car remaining-highlights)))]
-                                  [else (error 'stepper-GUI "pretty-print-print-hook: expected an image or a highlight-placeholder, got: ~e" value)]))]
-                         [pretty-print-display-string-handler
-                          (lambda (string port)
-                            (insert string))]
-                         [pretty-print-print-line
-                          (lambda (number port old-length dest-columns)
-                            (when (and number (not (eq? number 0)))
-                              (insert #\newline))
-                            0)]
-                         [pretty-print-pre-print-hook
-                          (lambda (value p)
-                            (when (or (and (not next-is-placeholder?)
-                                           (not (null? remaining-highlights))
-                                           (eq? value (car remaining-highlights)))
-                                      (eq? value highlight-placeholder))
-                              (set! highlight-begin (get-start-position))))]
-                         [pretty-print-post-print-hook
-                          (lambda (value p)
-                            (when (or (and (not next-is-placeholder?)
-                                           (not (null? remaining-highlights))
-                                           (eq? value (car remaining-highlights)))
-                                      (eq? value highlight-placeholder))
-                              (highlight-pop)
-                              (let ([highlight-end (get-start-position)])
-                                (unless highlight-begin
-                                  (error 'format-whole-step "no highlight-begin to match highlight-end"))
-                                (set! clear-highlight-thunks
-                                      (cons (highlight-range highlight-begin highlight-end highlight-color #f #f)
-                                            clear-highlight-thunks))
-                                (set! highlight-begin #f))))]
-			 ;; mflatt: MAJOR HACK - this setting needs to come from the language
-			 ;;  somehow
-			 [read-case-sensitive #t])
-            (pretty-print sexp))))
-               
-      (define (advance-substitute exp)
-        (letrec ([stack-copy remaining-highlights]
-                 [stack-pop (lambda () 
-                              (if (null? stack-copy)
-                                  (error 'advance-substitute "no highlighted region to fill placeholder")
-                                  (begin0 (car stack-copy) (set! stack-copy (cdr stack-copy)))))]
-                 [substitute
-                  (lambda (exp)
-                    (cond [(eq? exp highlight-placeholder)
-                           (let ([popped (stack-pop)])
-                             (if (confusable-value? popped)
-                                 highlight-placeholder
-                                 popped))]
-                          [(pair? exp)
-                           (cons (substitute (car exp)) (substitute (cdr exp)))]
-                          [else
-                           exp]))])
-          (substitute exp)))
+                                  [looked-up (insert (format "~s" (car looked-up)))]
+                                  [else (error 'stepper-GUI "pretty-print-print-hook: expected an image or a highlight-placeholder, got: ~e" value)])))]
+                       [pretty-print-display-string-handler
+                        (lambda (string port)
+                          (insert string))]
+                       [pretty-print-print-line
+                        (lambda (number port old-length dest-columns)
+                          (when (and number (not (eq? number 0)))
+                            (insert #\newline))
+                          0)]
+                       [pretty-print-pre-print-hook
+                        (lambda (value p)
+                          (printf "pretty-print-pre-print-hook called with value: ~v\n" value)
+                          (when (hash-table-get highlight-table value (lambda () #f))
+                            (printf "old highlight-begin: ~v\n" highlight-begin)
+                            (set! highlight-begin (get-start-position))
+                            (printf "new highlight-begin: ~v\n" highlight-begin)))]
+                       [pretty-print-post-print-hook
+                        (lambda (value p)
+                          (printf "pretty-print-post-print-hook called with value: ~v\n" value)
+                          (when (hash-table-get highlight-table value (lambda () #f))
+                            (let ([highlight-end (get-start-position)])
+                              (printf "highlight-end: ~v\n" highlight-end)
+                              (unless highlight-begin
+                                (error 'format-whole-step "no highlight-begin to match highlight-end"))
+                              (set! clear-highlight-thunks
+                                    (cons (highlight-range highlight-begin highlight-end highlight-color #f #f)
+                                          clear-highlight-thunks))
+                              (set! highlight-begin #f)
+                              (printf "highlight-begin value: ~v\n" highlight-begin))))]
+                       ;; mflatt: MAJOR HACK - this setting needs to come from the language
+                       ;;  somehow
+                       [read-case-sensitive #t])
+          (pretty-print sexp)))
                
       (define (format-whole-step)
         (lock #f)
@@ -340,15 +321,11 @@
         (select-all)
         (clear)
         (reset-style)
-        (set! remaining-highlights highlights)
-        (stack-top-decide)
-        (let loop ([remaining exps] [first #t])
+        (let loop ([remaining stripped-exps] [first #t])
           (unless (null? remaining)
             (unless first (insert #\newline))
-            (format-sexp (advance-substitute (car remaining)))
+            (format-sexp (car remaining))
             (loop (cdr remaining) #f)))
-        (unless (null? remaining-highlights)
-          (error 'format-whole-step "leftover highlights"))
         (end-edit-sequence)
         (lock #t))
       
@@ -430,14 +407,14 @@
   ; the stepper-text% is the principal inhabitant of the stepper window. It keeps
   ; track of all of the sexps & error messages in a given step, reformatting as necessary.
   
-  ; constructor : ((listof sexp) (listof sexp) (listof sexp) (listof sexp) (listof sexp) (union string #f) (listof sexp) -> )
+  ; constructor : ((listof sexp) (listof sexp) (listof sexp) (union string #f) (listof sexp) -> )
   
   ; redexes MUST NOT OVERLAP. all warranties void if this is violated.
   
   (define stepper-text%
     (class f:text:standard-style-list% ()
       
-      (init-field finished-exprs exps redex-list post-exps reduct-list error-msg after-exprs)
+      (init-field finished-exprs exps post-exps error-msg after-exprs)
 
       (inherit find-snip insert change-style highlight-range last-position lock erase auto-wrap
                begin-edit-sequence end-edit-sequence get-start-position get-style-list set-style-list
@@ -506,16 +483,16 @@
                                horiz-separator-2 bottom-defs-snip))
         (change-style snip-delta before-position (last-position)))
       (send top-defs-snip set-editor 
-            (make-object stepper-sub-text% finished-exprs null #f))
+            (make-object stepper-sub-text% finished-exprs #f))
       (send before-snip set-editor
-            (make-object stepper-sub-text% exps redex-list redex-highlight-color))
+            (make-object stepper-sub-text% exps redex-highlight-color))
       (if (eq? error-msg #f)
           (send after-snip set-editor
-                (make-object stepper-sub-text% post-exps reduct-list reduct-highlight-color))
+                (make-object stepper-sub-text% post-exps reduct-highlight-color))
           (send after-snip set-editor
                 (make-object stepper-sub-error-text% error-msg)))
       (send bottom-defs-snip set-editor
-            (make-object stepper-sub-text% after-exprs null #f))
+            (make-object stepper-sub-text% after-exprs #f))
       ;(lock #t)
       ))
   
@@ -552,7 +529,7 @@
         (let ([dc (get-dc)])
           (send dc set-font warning-font) 
           (let-values ([(cw ch) (get-client-size)]
-                       [(tw th ta td) (send dc get-text-extent warning-str)])
+                       [(tw th dc dc2) (send dc get-text-extent warning-str)])
             (send dc set-pen (send the-pen-list find-or-create-pen warning-color 1 'solid))
             (send dc set-brush (send the-brush-list find-or-create-brush warning-color 'solid))
             (send dc draw-rectangle 0 0 cw ch)
@@ -563,7 +540,7 @@
       
       (super-instantiate ())
       (inherit min-width min-height stretchable-height)
-      (let-values ([(tw th ta td) (send (get-dc) get-text-extent warning-str warning-font)])
+      (let-values ([(tw th dc dc2) (send (get-dc) get-text-extent warning-str warning-font)])
         (min-width (+ 2 (inexact->exact (ceiling tw))))
         (min-height (+ 2 (inexact->exact (ceiling th)))))
       
@@ -592,56 +569,60 @@
   ; just use syntax-object->datum for this is that certain syntax-objects must be
   ; represented by a gensym'ed pointer into a table.
                            
-  (define (strip-to-sexp stx)
-    (let ([highlight-table (make-hash-table 'weak)]
-          [xml-box-table (make-hash-table 'weak)])
-      (define (strip-regular stx)
-        (let* ([it (if (eq? syntax-property stx 'stepper-hint) 'from-xml)
-                   (strip-xml-stx stx highlight-table xml-box-table)
-                   stx]
-               [it
-                (cond [(pair? it)
-                       (cons (strip-regular (car it))
-                             (strip-regular (cdr it)))]
-                      [(syntax? it)
-                       (strip-regular (syntax-e it))]
-                      [else it])]
-               [it
-                (if (syntax-property stx 'stepper-highlight)
-                    (if (pair? it) 
-                        (begin 
-                          (hash-table-put! highlight-table recur-result non-confusable)
-                          recur-result)
-                        (let ([new-sym (gensym "-placeholder")])
-                          (hash-table-put! highlight-table new-sym recur-result)
-                          new-sym)))])
-          it))
-      
-      ; strip-xml attempts to undo the expansion of quasiquote.  
-      (define (strip-xml stx)
-        (if ()))))
+  (define (strip-to-sexp stx highlight-table)
+    (define (strip-regular stx)
+      (let* ([it (if (and (syntax? stx)
+                          (eq? (syntax-property stx 'stepper-hint) 'from-xml))
+                     (strip-xml stx)
+                     stx)]
+             [it
+              (cond [(pair? it)
+                     (cons (strip-regular (car it))
+                           (strip-regular (cdr it)))]
+                    [(syntax? it)
+                     (strip-regular (syntax-e it))]
+                    [else it])]
+             [it
+              (if (and (syntax? stx)
+                       (syntax-property stx 'stepper-highlight))
+                  (if (pair? it) 
+                      (begin
+                        (hash-table-put! highlight-table it 'non-confusable)
+                        it)
+                      (let ([new-sym (gensym "-placeholder")])
+                        (hash-table-put! highlight-table new-sym (list it))
+                        new-sym))
+                  it)])
+        it))
+    
+    ; strip-xml attempts to undo the expansion of quasiquote.  
+    (define (strip-xml stx)
+      ; we'll work on this later.
+      "<xml box here>"
+      ;(instantiate xml-snip% () [eliminate-whitespace-in-tags? #t])
+      )
+    
+    (strip-regular stx))
                                                                      
 
   
-;  (define (stepper-text-test . args)
-;  (let* ([new-frame (make-object frame% "test-frame")]
-;         [new-text (apply make-object stepper-text% args)]
-;         [new-canvas (make-object stepper-canvas% new-frame new-text)])
-;    (send new-canvas min-width 500)
-;    (send new-canvas min-height 100)
-;    (send new-frame show #t)
-;    (send new-text reset-width new-canvas)
-;    new-canvas))
-;  
-;  (define a
-;  (stepper-text-test `((define x 3) 14)
-;                     `((* 13 ,highlight-placeholder))
-;                     `((* 15 16))
-;                     `(,highlight-placeholder (define y 4) 13 (+ ,highlight-placeholder ,highlight-placeholder) 13
-;                       298 (+ (x 398 ,highlight-placeholder) ,highlight-placeholder) ,highlight-placeholder)
-;                     `((+ 3 4) 13 #f (+ x 398) (x 398 (+ x 398)) #f)
-;                     #f
-;                     `((define y (+ 13 14)) 80)))
+  (define (stepper-text-test . args)
+    (let* ([new-frame (make-object frame% "test-frame")]
+           [new-text (apply make-object stepper-text% args)]
+           [new-canvas (make-object stepper-canvas% new-frame new-text)])
+      (send new-canvas min-width 500)
+      (send new-canvas min-height 100)
+      (send new-frame show #t)
+      (send new-text reset-width new-canvas)
+      new-canvas))
+  
+  (define a
+  (stepper-text-test (build-stx-with-highlight `((define x 3) 14))
+                     (build-stx-with-highlight `((* 13 (hilite (* 15 16)))))
+                     (build-stx-with-highlight `((hilite (+ 3 4)) (define y 4) 13 (+  (hilite 13) (hilite #f)) 13
+                                                      298 (+ (x 398 (hilite (+ x 398))) (hilite (x 398 (+ x 398)))) (hilite #f)))
+                     #f
+                     (build-stx-with-highlight `((define y (+ 13 14)) 80))))
   
 ;  (stepper-text-test `()
 ;                     `('uninteresting)

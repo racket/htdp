@@ -161,10 +161,10 @@
    ; TEST OF FIND-HIGHLIGHT
    
    
-   (define test-datum (car (build-stx-with-highlight
-                            `((define (f x) (letrec ([a (lambda (x) (b (- x 1)))]
-                                                     [b (lambda (x) ((hilite a) x))])
-                                              (a x)))))))
+   (define test-datum (expand (car (build-stx-with-highlight
+                                    `((define (f x) (letrec ([a (lambda (x) (b (- x 1)))]
+                                                             [b (lambda (x) ((hilite a) x))])
+                                                      (a x))))))))
 
    (define expected (list (list `(#%app a x) '(1) 'expr)
                           (list `(lambda (x) (#%app a x)) '(2) 'expr)
