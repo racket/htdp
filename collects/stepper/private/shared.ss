@@ -22,16 +22,15 @@
    binding-indexer 
    binding-index-reset
    get-lifted-var
+   get-arg-var
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
-   ; get-arg-binding
    ; get-lifted-gensym
    ; expr-read
    ; set-expr-read!
    )
   
-
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
   ; or (make-before-error-result finished-exprs exp redex err-msg)
@@ -130,6 +129,8 @@
   (define get-lifted-var
     (make-binding-source "lifter-" next-lifted-symbol (lambda (stx) (format "~a" (syntax-object->datum stx)))))
 
+  (define (get-arg-var n)
+    (datum->syntax-object #f (string->symbol (format "arg-temp-~a" n))))
   
   ; gensyms needed by many modules:
 

@@ -39,8 +39,36 @@
               ;       ;                                                                               
               ;       ;                                                                               
                                                                                                       
-              
- 
+       
+  ;; syntax->ilist : turns an (possibly improper) syntax list into a (possibly improper list of syntax objects
+
+(define (syntax->ilist stx-ilist)
+    (let loop ([ilist (syntax-e stx-ilist)])
+      (cond [(cons? ilist) 
+             (unless (syntax? (car ilist))
+               (error 'syntax->ilist "argument is not a syntax-ilist: ~a~n" stx-ilist))
+             (cons (car ilist)
+                   (loop (cdr ilist)))]
+            [(null? ilist) null]
+            [else
+             (unless (syntax? ilist)
+               (error 'syntax->ilist "argument is not a syntax-ilist: ~a~n" stx-ilist))
+             (if (cons? (syntax-e ilist))
+                 (loop (syntax-e ilist))
+                 ilist)])))
+
+  ;  test cases:
+  ;  
+  ;  (equal? (map syntax-e (syntax->ilist #'(a b c)))
+  ;          '(a b c))
+  ;  (equal? (map syntax-e (syntax->ilist #'(a . (b c))))
+  ;          '(a b c))
+  ;  (equal? (let ([result (syntax->ilist #' (a b . c))])
+  ;            (list (syntax-e (car result))
+  ;                  (syntax-e (cadr result))
+  ;                  (syntax-e (cddr result))))
+  ;          '(a b c))    
+  
   ;; this looks wrong...
   (define (internal-error . x)
     (error 'annotater-internal-error "~s" x))
@@ -142,9 +170,6 @@
            (error 'varref-set-remove-bindings "binding-set 'all passed as second argument, first argument was: ~s" varrefs)]
           [else (remove* bindings varrefs bound-identifier=?)]))
       
-  (define (get-arg-var n)
-    (string->symbol (format "arg-temp-~a" n)))
-  
   ; WARNING: because of how syntax-property works, these properties will have a default value of #f.
   ; that's what we want, in this case.
   
@@ -168,6 +193,11 @@
   (define (closure-key-maker closure)
     closure)
 
+  (define (contract-check-BINDING-SET? arg var-name)
+    (unless (or (eq? arg 'all)
+                (andmap syntax? arg))
+      (error 'contract-check "arg ~s is not a BINDING-SET: ~a" (symbol->string var-name) arg)))
+            
   ;;;;;;;;;;
   ;;
   ;; make-debug-info builds the thunk which will be the mark at runtime.  It contains 
@@ -177,6 +207,10 @@
   ;;;;;;;;;;
      
   (define (make-debug-info source tail-bound free-bindings advance-warning label lifting?)
+    ; CONTRACT CHECK:
+    (contract-check-BINDING-SET? tail-bound 'tail-bound)
+    (contract-check-BINDING-SET? free-bindings 'free-bindings)
+    (contract-check-BINDING-SET? advance-warning 'advance-warning)
     (let* ([kept-bindings (if (eq? tail-bound 'all)
                               free-bindings
                               (binding-set-varref-set-intersect tail-bound
@@ -529,11 +563,12 @@
                   [lambda-clause-abstraction 
                    (lambda (clause)
                      (with-syntax ([(args body ...) clause])
-                       (utils:improper-foreach mark-never-undefined (syntax args))
-                       (let*-2vals ([(annotated-bodies free-varref-sets)
+                       (let*-2vals ([flattened-args (syntax->ilist (syntax args))]
+                                    [_ (for-each mark-never-undefined flattened-args)]
+                                    [(annotated-bodies free-varref-sets)
                                      (2vals-map lambda-body-recur (syntax->list (syntax (body ...))))]
                                     [new-free-varrefs (varref-set-remove-bindings (varref-set-union free-varref-sets)
-                                                                                  (syntax args))])
+                                                                                  flattened-args)])
                          (with-syntax ([annotated-bodies annotated-bodies])
                            (2vals (syntax/loc clause (args . annotated-bodies)) free-varref-sets)))))]
                   

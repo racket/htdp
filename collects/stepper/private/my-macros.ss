@@ -2,7 +2,7 @@
 
   ;;;;;;;;;;
   ;;
-  ;;  2vals implementation
+  ;;  ccond implementation
   ;; 
   ;;;;;;;;;;
   
@@ -16,6 +16,47 @@
           (question answer) ...
           (else (error 'ccond "fell off end of cond expression"))))]))
   
+  ;;;;;;;;;;
+  ;;
+  ;;  make-contract-checker
+  ;;
+  ;;;;;;;;;;
+  
+  (provide make-contract-checker checked-lambda)
+  
+  (define (datum->syntax-object stx (string->symbol (string-append "contract-check-" 
+                                                                                         (symbol->string (syntax-e (syntax name)))
+                                                                                         "?"))))
+           
+  (define-syntaxes (make-contract-checker checked-lambda)
+     
+  (define-syntax (make-contract-checker stx)
+    (syntax-case stx (make-contract-checker)
+      [(make-contract-checker name pred)
+       (identifier? (syntax name))
+       (let* ([new-binding-name ])
+         (with-syntax ([checker-name new-binding-name])
+           (syntax/loc stx (define (checker-name arg var-name)
+                             (unless (pred arg)
+                               (error 'checker-name "contract violation: arg ~s with value ~a does not satisfy the ~s predicate"
+                                      var-name arg 'name))))))]
+      [else (error 'make-contract-checker "bad syntax in ~a" stx)]))
+  
+  (define-syntax (checked-lambda stx)
+    (syntax-case stx (checked-lambda)
+      [(checked-lambda bindings . bodies)
+       (let* ([bindings (syntax->list (syntax bindings))]
+              [raw-bindings (datum->syntax-object bindings (map (lambda (binding) 
+                                                                  (if (pair? (syntax-e binding))
+                                                                      (car (syntax-e binding))
+                                                                      binding))
+                                                                bindings))]
+              [checked-bindings (filter (lambda (binding) (pair? (syntax-e binding))) bindings)]
+              [contract-checks (map (lambda (stx)
+                                      (with-syntax ([(var-name contract-name) stx])
+                                        (let ([checker-name
+                                        (syntax/loc
+              
   
   ;;;;;;;;;;
   ;;
@@ -61,5 +102,9 @@
 ;   a
 ;   c)
 ; 4)
-
-
+;
+;(make-contract-checker my-type (lambda (x) (= x 3)))
+;
+;(contract-check-my-type? 3 'second-arg)
+;(contract-check-my-type? 14 'first-arg)
+;
