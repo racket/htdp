@@ -198,8 +198,7 @@
           (define/override (make-editor)
             (make-object ((drscheme:unit:get-program-editor-mixin)
                           (add-file-keymap-mixin
-                           (scheme:text-mixin 
-                            (editor:keymap-mixin text:basic%))))))
+                           scheme:text%))))
           
           (define/override (make-snip) 
             (instantiate scheme-snip% () (splice? splice?)))
