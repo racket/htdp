@@ -802,18 +802,6 @@
                                 (2vals-map non-tail-recur (syntax->list (syntax terms)))]
                                [free-varrefs (varref-set-union free-varrefs-terms)])
                               (2vals
-                               ;(if (and ankle-wrap?
-                               ;         (memq 'no-temps-for-varrefs wrap-opts)
-                               ;         (andmap term-is-reduced
-                               ;                 (syntax->list (syntax terms))))
-                                   
-                                   ; this is the no-temps optimization:
-                                   ; (won't work for stepper unless no reductions happen on the vars in the app
-                                   ; oh! what if they're all lambda-bound vars? some other day, perhaps.
-                                   
-                                   ;(let ([debug-info (make-debug-info-app tail-bound free-varrefs 'called)])
-                                   ;  (wcm-break-wrap debug-info annotated-terms))
-                                   
                                (let* ([arg-temps (build-list (length annotated-terms) get-arg-var)]
                                       [tagged-arg-temps (map (lambda (var) (syntax-property var 'stepper-binding-type 'stepper-temp))
                                                              arg-temps)]
