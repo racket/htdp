@@ -171,9 +171,9 @@
      (-> break-kind? mark-list? boolean?)
      (lambda (break-kind mark-list)
        (case break-kind
-         ((result-value-break)
+         ((result-value-break result-exp-break)
           #f)
-         ((normal-break result-exp-break)
+         ((normal-break)
           (skip-redex-step? mark-list))
          ((double-break late-let-break)
           (error 'answer "lifting turned off"))))
@@ -200,6 +200,10 @@
                          ([exn:variable? (lambda args #f)]) ; DO halt for unbound top-level varrefs
                        (let ([val (model-settings:global-lookup (syntax-e id))])
                          (or (and (procedure? val)                     ; don't halt for top-level procedure refs ...
+                                  (eq? (syntax-e id) (object-name val)) ; with the right inferred name
+                                  
+                                  ; Do we need this stuff for lifted names? :
+                                  
                                   (or (not (closure-table-lookup val (lambda () #f))) ; that are primitives, or ...
                                       (and (not (continuation? val))
                                            (cond [(closure-table-lookup val (lambda () #f)) => ; are user fns with the right (original) name
