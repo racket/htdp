@@ -97,7 +97,7 @@
                 [pos (wrapped-pos xexpr)]
                 [line (wrapped-line xexpr)]
                 [col (wrapped-col xexpr)]
-                [stxs
+                [raw-stxs
                  (let loop ([index 0])
                    (let-values ([(stx wid done?)
                                  (send snip read-one-special
@@ -105,11 +105,11 @@
                      (if done?
                          (list stx)
                          (cons stx (loop (+ index 1))))))])
-           (with-syntax ([(stxs ...) stxs])
+           (with-syntax ([(stxs ...) raw-stxs])
              (if (and (is-a? snip scheme-snip<%>)
                       (send snip get-splice?))
                  (with-syntax ([err (syntax/loc 
-                                     (syntax stx)
+                                     (car (last-pair raw-stxs))
                                      (error 'scheme-splice-box "expected a list, found: ~e" lst))])
                    (syntax ,@(let ([lst (begin stxs ...)])
                                (if (list? lst)
