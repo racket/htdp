@@ -147,7 +147,9 @@
                             (length (z:app-args expr)))
                            (or (and (s:constructor-style-printing?)
                                     (if (s:abbreviate-cons-as-list?)
-                                        (eq? fun-val list) ; that needs exporting too.
+                                        (or (s:user-list? fun-val)
+                                            (and (s:user-cons? fun-val)
+                                                 (second-arg-is-list? mark-list)))    
                                         (and (s:user-cons? fun-val)
                                              (second-arg-is-list? mark-list))))
                                (s:user-vector? fun-val)
@@ -162,8 +164,8 @@
   
   (define (second-arg-is-list? mark-list)
     (let ([arg-val (mark-binding-value (lookup-binding mark-list (get-arg-binding 2)))])
-      (list? arg-val)))  
-  
+      (list? arg-val)))
+    
   (define (in-inserted-else-clause mark-list)
     (and (not (null? mark-list))
          (let ([expr (mark-source (car mark-list))])
@@ -489,6 +491,8 @@
            (let* ([rectify-source-current-marks 
                    (lambda (expr)
                      (rectify-source-expr expr mark-list null))]
+                  [top-mark (car mark-list)]
+                  [expr (mark-source top-mark)]
                   [rectify-let 
                    (lambda (letrec? binding-sets vals body)
                      (let+ ([val binding-list (apply append binding-sets)]
@@ -505,43 +509,54 @@
                                                (binding-lifted-name mark-list binding))
                                              binding-set))
                                       binding-sets)]
+                            [_ (printf "raw: ~s~n" (memoized-read->raw (expr-read expr)))]
+                            [val raw-sources (if (comes-from-local? expr)
+                                                 (cadr (memoized-read->raw (expr-read expr)))
+                                                 (build-list (length vals) (lambda (x) #f)))]
                             [val (values before-defs after-defs)
                                  (let loop ([rhs-vals rhs-vals]
                                             [rhs-sources vals]
-                                            [rhs-lifted-name-sets rhs-lifted-name-sets])
+                                            [rhs-lifted-name-sets rhs-lifted-name-sets]
+                                            [raw-local-sources raw-sources])
                                    (cond [(null? rhs-lifted-name-sets) (values null null)]
                                          [(eq? (car rhs-vals) (if letrec?
                                                                   the-undefined-value
                                                                   *unevaluated*))
-                                          (let ([reconstructed-rest-thunk
-                                                 (lambda (name-sets sources)
-                                                   (map (lambda (rhs-lifted-name-set rhs-source)
-                                                          (reconstruct-lifted rhs-lifted-name-set 
-                                                                              (rectify-source-expr rhs-source
-                                                                                                   mark-list
-                                                                                                   null)))
-                                                        name-sets
-                                                        sources))])
+                                          (let ([reconstruct-rest
+                                                 (lambda (rhs-lifted-name-set rhs-source raw-local-source)
+                                                   (if (and raw-local-source (eq? (car raw-local-source) 'define-struct))
+                                                       raw-local-source
+                                                       (reconstruct-lifted rhs-lifted-name-set 
+                                                                           (rectify-source-expr rhs-source
+                                                                                                mark-list
+                                                                                                null))))])
                                             (values null
                                                     (if (eq? so-far nothing-so-far)
-                                                        (reconstructed-rest-thunk rhs-lifted-name-sets
-                                                                                  rhs-sources)
+                                                        (map reconstruct-rest 
+                                                             rhs-lifted-name-sets
+                                                             rhs-sources
+                                                             raw-local-sources)
                                                         (cons (reconstruct-lifted (car rhs-lifted-name-sets) so-far)
-                                                              (reconstructed-rest-thunk (cdr rhs-lifted-name-sets)
-                                                                                        (cdr rhs-sources))))))]
+                                                              (map reconstruct-rest 
+                                                                   (cdr rhs-lifted-name-sets)
+                                                                   (cdr rhs-sources)
+                                                                   (cdr raw-local-sources))))))]
                                          [else
                                           (let*-values ([(first-set) (car rhs-lifted-name-sets)]
                                                         [(set-vals remaining) (list-partition rhs-vals (length first-set))]
-                                                        [(reconstructed) (map reconstruct-lifted-val first-set set-vals)]
+                                                        [(reconstructed) 
+                                                         (if (and (car raw-local-sources)
+                                                                  (eq? (caar raw-local-sources) 'define-struct))
+                                                             (list (car raw-local-sources))
+                                                             (map reconstruct-lifted-val first-set set-vals))]
                                                         [(before after) (loop remaining
                                                                               (cdr rhs-sources)
-                                                                              (cdr rhs-lifted-name-sets))])
+                                                                              (cdr rhs-lifted-name-sets)
+                                                                              (cdr raw-local-sources))])
                                             (values (append reconstructed before)
                                                     after))]))]
                             [val rectified-body (rectify-source-expr body mark-list null)])
-                       (values before-defs after-defs rectified-body)))]
-                  [top-mark (car mark-list)]
-                  [expr (mark-source top-mark)])
+                       (values before-defs after-defs rectified-body)))])
              (cond 
                ; variable references
                [(z:varref? expr)
@@ -705,7 +720,7 @@
                   (error 'answer "non-empty 'after' defs in late-let-break"))
                 before))
              (else
-              (e:internal-error 'reconstruct-current-def "unknown break kind: " break-kind))))
+              (error 'reconstruct-current-def "unknown break kind: " break-kind))))
 
          )
       

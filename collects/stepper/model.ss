@@ -38,6 +38,11 @@
   (define (user-cons? val)
     (eq? val par-cons))
   
+  (define par-list #f)
+  (define (user-list? val)
+    (eq? val par-list))
+  
+  
   (define par-vector #f)
   (define (user-vector? val)
     (eq? val par-vector))
@@ -133,6 +138,7 @@
      (set! par-constructor-style-printing (p:constructor-style-printing))
      (set! par-abbreviate-cons-as-list (p:abbreviate-cons-as-list))
      (set! par-cons (global-defined-value 'cons))
+     (set! par-list (global-defined-value 'list))
      (set! par-vector (global-defined-value 'vector))
      (semaphore-post stepper-return-val-semaphore)))
   (semaphore-wait stepper-return-val-semaphore)
