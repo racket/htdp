@@ -2,9 +2,6 @@
 ; Simple graphics routines for MrEd
 ; Originally written by Johnathan Franklin
 
-(plt:require-library "graphics.ss")
-
-(define graphics@
   (unit/sig
    graphics^
    (import)
@@ -926,4 +923,4 @@
 	     (send snip set-bitmap new-bitmap)
 	     snip)))))
    
-   (create-cmap)))
+   (create-cmap))
