@@ -104,6 +104,19 @@
 (test 19 (let ([f (lambda (x) (+ x 10))]) f) 9)
 (test 16 'let (let ([f (lambda (x) (+ x 10))]) (f 6)))
 
+(syntax-test #'(recur name))
+(syntax-test #'(recur name 10))
+(syntax-test #'(recur name ([x 1])))
+(syntax-test #'(recur name ([x]) 1))
+(syntax-test #'(recur name ([x 10] 2) 1))
+(syntax-test #'(recur name ([11 10]) 1))
+(syntax-test #'(recur name ([x 10]) 1 2))
+(syntax-test #'(recur name ([x 10][x 11]) 1))
+(test 18 'lookup (recur name ([x 18]) x))
+(test 1024 'loop (recur loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
+(test 13 'loop (recur f ([f 13]) f))
+(test 14 'loop (let ([f 14]) (recur f ([f f]) f)))
+
 (test 7779 'time (time 7779))
 (syntax-test #'(time (define x 5)))
 

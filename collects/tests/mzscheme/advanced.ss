@@ -7,6 +7,20 @@
 ;; Don't need these:
 (define no-extra-if-tests? #t)
 
+;; Check export names:
+(require (lib "docprovide.ss" "syntax"))
+(let ([docs (lookup-documentation '(lib "advanced.ss" "lang") 'procedures)])
+  (for-each
+   (lambda (row)
+     (for-each
+      (lambda (doc)
+	(let ([v (dynamic-require '(lib "advanced.ss" "lang") (car doc))])
+	  (when (and (procedure? v)
+		     (not (eq? v call/cc)))
+	    (test (car doc) object-name v))))
+      (cdr row)))
+   docs))
+
 (require (lib "advanced.ss" "lang"))
 
 (load-relative "beg-adv.ss")
@@ -73,16 +87,7 @@
 (test 10 'lookup (let name () 10))
 (test 1024 'loop (let loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
 
-(syntax-test #'(recur name))
-(syntax-test #'(recur name 10))
-(syntax-test #'(recur name ()))
-(syntax-test #'(recur name ([x]) 1))
-(syntax-test #'(recur name ([x 10] 2) 1))
-(syntax-test #'(recur name ([11 10]) 1))
-(syntax-test #'(recur name ([x 10]) 1 2))
-(syntax-test #'(recur name ([x 10][x 11]) 1))
-(test 10 'lookup (recur name () 10))
-(test 1024 'loop (recur loop ([n 10]) (if (zero? n) 1 (* 2 (loop (sub1 n))))))
+(test 19 'lookup (recur empty-f () 19))
 
 (syntax-test #'shared)
 (syntax-test #'(shared))

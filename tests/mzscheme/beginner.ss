@@ -19,6 +19,19 @@
 (define (do-report-errs ignored)
   (report-errs))
 
+;; Check export names:
+(require (lib "docprovide.ss" "syntax"))
+(let ([docs (lookup-documentation '(lib "beginner.ss" "lang") 'procedures)])
+  (for-each
+   (lambda (row)
+     (for-each
+      (lambda (doc)
+	(let ([v (dynamic-require '(lib "beginner.ss" "lang") (car doc))])
+	  (when (procedure? v)
+	    (test (car doc) object-name v))))
+      (cdr row)))
+   docs))
+
 (require (lib "beginner.ss" "lang"))
 
 (load-relative "beg-adv.ss")
