@@ -7,12 +7,13 @@
   (require (prefix kernel: (lib "kerncase.ss" "syntax"))
            (lib "list.ss")
            (lib "etc.ss")
+	   (lib "contracts.ss")
            "marks.ss"
            "model-settings.ss"
            "shared.ss"
            "highlight-placeholder.ss"
            "my-macros.ss"
-	   (lib "contracts.ss"))
+           "lifting.ss")
 
   (provide/contract 
    [reconstruct-completed (-> syntax? any? render-settings? any)]
@@ -248,34 +249,6 @@
   (define (binding-lifted-name mark-list binding)
       (construct-lifted-name binding (lookup-binding mark-list (get-lifted-var binding))))
 
-;                                                                
-;                                                                
-;                                                                
-;   ;                       ;   ;    ;;;      ;                  
-;   ;                       ;       ;                            
-;   ;          ;            ;       ;    ;                       
-;   ;    ;;;  ;;;;          ;   ;  ;;;; ;;;;  ;   ; ;;     ;; ;  
-;   ;   ;   ;  ;            ;   ;   ;    ;    ;   ;;  ;   ;  ;;  
-;   ;  ;    ;  ;            ;   ;   ;    ;    ;   ;   ;  ;    ;  
-;   ;  ;;;;;;  ;    ;;;;;;  ;   ;   ;    ;    ;   ;   ;  ;    ;  
-;   ;  ;       ;            ;   ;   ;    ;    ;   ;   ;  ;    ;  
-;   ;   ;      ;            ;   ;   ;    ;    ;   ;   ;   ;  ;;  
-;   ;    ;;;;   ;;          ;   ;   ;     ;;  ;   ;   ;    ;; ;  
-;                                                             ;  
-;                                                        ;    ;  
-;                                                         ;;;;   
-
-  ;(-> mz-syntax?
-  ;    (listof sexp-with-highlights?))
-  
-  ; find-highlight will search a syntax object for the highlight-placeholder, and return an inside-out 
-  ; list of context frames leading down to that highlight-placeholder
-  (define (find-highlight stx)
-    (let loop ([stx stx])
-      ))
-  
-  
-  
                                                                 ;              ;  ;               
                                                                                ;                  
  ; ;;; ;;    ;;;    ;;;  ; ;;  ;;;       ;   ;  ; ;;  ;   ;   ; ;  ; ;;    ;;; ;  ;  ; ;;    ;; ; 
@@ -287,10 +260,31 @@
  ;   ;   ;   ;;;;;  ;;;  ;     ;;;        ;; ;  ;   ;   ;   ;   ;  ;   ;   ;;; ;  ;  ;   ;   ;; ; 
                                                                                                 ; 
   
-  ;(->* ((listof sexp-with-highlights) (listof sexp-without-highlights)) 
-  ;     ((listof sexp-with-highlights) (listof sexp-without-highlights)))
+  ; unwind takes a syntax object with a single highlight-placeholder and a syntax object
+  ; that represents the highlight, and returns a list of syntax objects and a list of
+  ; highlights
+  ; (->* (sexp-with-highlights? sexp-without-highlights?)
+  ;      ((listof sexp-with-highlights) (listof sexp-without-highlights?)))
   
-  (define (unwind stx highlights)
+  (define (unwind stx highlight lift-at-highlight?)
+    (let*-values ([(stx-a highlight-a-lst) (macro-unwind stx (list highlight))])
+      (unless (= (length highlight-a-lst) 1)
+        (error 'unwind "macro-unwind returned a list of highlights not of length 1: ~v\n" 
+               (map syntax-object->datum highlight-a-lst)))
+      (lift stx-a (car highlight-a-lst) lift-at-highlight?)))
+  
+  ; unwind-no-highlight is really just macro-unwind, but with the 'right' interface that
+  ; makes it more obvious what it does.
+  ; [unwind-no-highlight (-> syntax? syntax?)]
+  
+  (define (unwind-no-highlight stx)
+    (macro-unwind stx null))
+  
+  
+  (->* (syntax? (listof syntax?)) 
+       (syntax? (listof syntax?)))
+  
+  (define (macro-unwind stx highlights)
     
     (local
         ((define highlight-queue-src (make-queue))
@@ -662,7 +656,7 @@
                                                  (lambda () 
                                                    (error 'reconstruct-completed "can't find user-defined proc in closure table: ~e\n" val)))]
            [mark (closure-record-mark closure-record)])
-      (caar (unwind (recon-source-expr (mark-source mark) (list mark) null render-settings) null))))
+      (caar (unwind-no-highlight (recon-source-expr (mark-source mark) (list mark) null render-settings)))))
 
                                                                                                                 
                                                                                                                 
@@ -908,20 +902,22 @@
                                          (recon-source-expr (mark-source (car mark-list)) mark-list null render-settings)
                                          (recon-value (car returned-value-list) render-settings))]
                           [recon-expr (recon highlight-placeholder-stx (cdr mark-list) #f)])
-                     (unwind recon-expr (list innermost))))
+                     (let-values ([(a b) (unwind recon-expr innermost #f)])
+                       (list a b))))
                   ((normal-break)
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
-                     (unwind recon-expr (list redex))))
+                     (let-values ([(a b) (unwind recon-expr redex #f)])
+                       (list a b)))))
                   ((double-break late-let-break)
                    (let ([recon-expr (recon nothing-so-far mark-list #t)])
-                     (unwind recon-expr (list redex))))
-                  ;                  ((double-break)
-                  ;                   (rectify-let-values-step))
-                  ;                  ((late-let-break)
-                  ;                   (let-values ([(before after junk) (recon-inner mark-list nothing-so-far)])
-                  ;                     (unless (null? after)
-                  ;                       (error 'answer "non-empty 'after' defs in late-let-break: ~a" (map syntax-object->datum after)))
-                  ;                     (list before)))
+                     (let-values ([(before-stxs before-highlights) (unwind recon-expr redex #f)]
+                                  [(after-stxs after-highlights) (unwind recon-expr redex #t)])
+                       (list before-stxs before-highlights after-stxs after-highlights))))
+                  ((late-let-break)
+                   (let-values ([(before after junk) (recon-inner mark-list nothing-so-far)])
+                     (unless (null? after)
+                       (error 'answer "non-empty 'after' defs in late-let-break: ~a" (map syntax-object->datum after)))
+                     (list before)))
                   (else
                    (error 'reconstruct-current-def "unknown break kind: " break-kind)))))
          

@@ -2,15 +2,22 @@
   (require "highlight-placeholder.ss"
            (lib "etc.ss")
            (lib "contracts.ss")
-           (prefix kernel: (lib "kerncase.ss" "syntax"))) 
+           (prefix kernel: (lib "kerncase.ss" "syntax"))
+           (lib "match.ss")
+           "shared.ss") 
   
   (define-struct context-record (stx index kind))
 
-  (provide/contract [find-highlight (-> syntax? (listof context-record?))])
+  (provide/contract [lift (->* (syntax? syntax?)
+                               ((listof syntax?) (listof syntax?)))] )
+  
+  (define (lift stx highlight lift-in-highlight?)
+    (lift-local-defs (find-highlight stx) highlight lift-in-highlight?))
   
   ; the success of this approach is predicated on the fact that all of the primitive forms of mzscheme are
   ; proper syntax-lists.  That is, none of them are improper lists. Consider myself warned.
-  
+  ; [find-highlight (-> syntax? (listof context-record?))]
+
   (define (find-highlight stx)
     (let/ec success-escape
       (local
@@ -207,6 +214,89 @@
         (define actual (syntax-object->datum (substitute-in-syntax #'(let-values ([(a) (lambda (x) 'foo)]) (a)) '(1 0 1 2 1) #'bar))))
      (printf "equal? ~v\n" (equal? expected actual))))
   
-  )
-
-
+  
+  ; lift-local-defs takes a list of contexts and an instruction and works its way out, reconstructing the expression.
+  ; the main action of lift-local-defs is on let-values and letrec-values, where (after performing the substitution)
+  ; the binding clauses are lifted into top-level defs.
+  ; [lift-local-defs (->* ((listof context-record?) syntax?)
+  ;                       ((listof syntax?) (listof syntax?)))]
+  
+  (define (lift-local-defs ctx-list highlighted lift-in-highlighted?)
+    (let-values ([(highlighted-defs highlighted-body) (if lift-in-highlighted?
+                                                          (lift-helper highlighted #f null)
+                                                          (values null highlighted))])
+      (let loop ([ctx-list ctx-list] [so-far-defs (map (lambda (x) highlight-placeholder) highlighted-defs)] [body highlight-placeholder])
+        (if (null? ctx-list)
+            (values (append so-far-defs (list body)) (append highlighted-defs (list highlighted-body)))
+            (let*-values ([(ctx) (car ctx-list)]
+                          [(index) (context-record-index ctx)]
+                          [(next-defs next-body) 
+                           (lift-helper (substitute-in-syntax (context-record-stx ctx) index body)
+                                        index
+                                        so-far-defs)])
+              (loop (cdr ctx-list) next-defs next-body))))))
+  
+  ; lift-helper takes a syntax object and a split path and a list of syntax objects and breaks it up
+  ; iff its a let/rec, wrapping those before the split and those after the split around the list of syntax
+  ; objects
+  ;  (->* (syntax? (or/f false? (listof number?)) (listof syntax?)) ((listof syntax?) syntax?))
+  (define (lift-helper stx path so-far-defs)
+    (let* ([lift
+            (lambda ()
+              (kernel:kernel-syntax-case stx #f
+                [(tag ([(var ...) rhs] ...) body ...)
+                 (let* ([defns (syntax->list #'((define-values (var ...) rhs) ...))]
+                        [bodies-list (syntax->list #'(body ...))]
+                        [body (if (= (length bodies-list) 1) ; as far as I can tell, this source info is comprehensively lost.
+                                  (car bodies-list)
+                                  #'(values body ...))])
+                   (cond [(or (not path) (and (= (length path) 1)
+                                              (> (car path) 1)))
+                          (values (append defns so-far-defs) body)]
+                         [(match path [`(1 ,n 1) n]) =>
+                          (lambda (n)
+                            (values (append (sublist 0 n defns) so-far-defs (sublist n (length defns) defns))
+                                    body))]))]
+                [else (error 'lift-helper "let or letrec does not have expected shape: ~v\n" (syntax-object->datum stx))]))])
+    (kernel:kernel-syntax-case stx #f
+      [(let-values . dc)
+       (lift)]
+      [(letrec-values . dc)
+       (lift)]
+      [else (values so-far-defs stx)])))
+  
+  (test-begin
+   (local 
+       ((define-values (actual-stxs actual-stx-highlights)
+          (lift-local-defs
+            (list (make-context-record #'(dc 14) '(0) 'expr)
+                  (make-context-record #'(letrec-values ([(a) 3] [(b) dc] [(c) 5]) (+ 3 4)) '(1 1 1) 'expr)
+                  (make-context-record #'(f dc) '(1) 'expr))
+            #'(let-values ([(a) 4] [(b) 9] [(c) 12]) (p q))
+            #t))
+ 
+        (define (so->d stx) 
+          (if (syntax? stx)
+              (syntax-object->datum stx)
+              stx))
+        
+        (define actual-sexps (map so->d actual-stxs))
+        (define actual-highlights (map so->d actual-stx-highlights))
+        
+        (define expected-sexps
+          (list '(define-values (a) 3)
+                highlight-placeholder
+                highlight-placeholder
+                highlight-placeholder
+                `(define-values (b) (,highlight-placeholder 14))
+                '(define-values (c) 5)
+                '(f (+ 3 4))))
+        
+        (define expected-highlights 
+          '((define-values (a) 4) (define-values (b) 9) (define-values (c) 12) (p q))))
+     
+     (printf "equal?: ~v\n" (equal? actual-sexps expected-sexps))
+     (printf "equal?: ~v\n" (equal? actual-highlights expected-highlights))
+     ;(printf "shared: ~v\n" (sexp-shared actual expected))
+     )))
+ 

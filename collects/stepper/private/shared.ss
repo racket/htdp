@@ -16,7 +16,8 @@
    [binding-set-varref-set-intersect (-> binding-set? varref-set? binding-set?)]
    [binding-set-union (-> (listof binding-set?) binding-set?)]
    [varref-set-union (-> (listof varref-set?) varref-set?)]
-   [in-closure-table (-> any? boolean?)])
+   [in-closure-table (-> any? boolean?)]
+   [sublist (-> number? number? list? list?)])
   
   (provide
    step-result?
@@ -489,6 +490,17 @@
     (cond [(eq? bindings 'all)
            (error 'varref-set-remove-bindings "binding-set 'all passed as second argument, first argument was: ~s" varrefs)]
           [else (remove* bindings varrefs bound-identifier=?)]))
+  
+  ; sublist returns the list beginning with element <begin> and ending just before element <end>.
+  ; (-> number? number? list? list?)
+  (define (sublist begin end lst) 
+    (if (= end 0) 
+        null
+        (if (= begin 0)
+            (cons (car lst)
+                  (sublist 0 (- end 1) (cdr lst)))
+            (sublist (- begin 1) (- end 1) (cdr lst)))))
+  
   )
   
 ; test cases

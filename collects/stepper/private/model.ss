@@ -98,15 +98,6 @@
                            (sublist split-point-a split-point-b exprs) ; during
                            (sublist split-point-b list-length exprs)))))) ; after
 
-         ; sublist returns the list beginning with element <begin> and ending just before element <end>.
-         ; (-> number? number? list? list?)
-         (define (sublist begin end lst) 
-           (if (= end 0) 
-               null
-               (if (= begin 0)
-                   (cons (car lst)
-                         (sublist 0 (- end 1) (cdr lst)))
-                   (sublist (- begin 1) (- end 1) (cdr lst)))))
          
 ;         (redivide `(3 4 (+ (define ,highlight-placeholder) 13) 5 6))
 ;         (values `(3 4) `((+ (define ,highlight-placeholder) 13)) `(5 6))
