@@ -57,12 +57,12 @@
 (htdp-test #t 'image? (image? (filled-rect 10 10 'blue)))
 (htdp-test #f 'image? (image? 5))
 
-(define red (make-color 248 0 0)) ; (define red (make-color 248 20 64))
-(define blue (make-color 0 0 248)) ; (define blue (make-color 80 80 248))
+(define red (make-color 255 0 0))
+(define blue (make-color 0 0 255))
 (define black (make-color 0 0 0))
 (define white (make-color 255 255 255))
-(htdp-top (define red (make-color 248 0 0))) ; (htdp-top (define red (make-color 248 20 64)))
-(htdp-top (define blue (make-color 0 0 248))) ; (htdp-top (define blue (make-color 80 80 248)))
+(htdp-top (define red (make-color 255 0 0)))
+(htdp-top (define blue (make-color 0 0 255)))
 (htdp-top (define black (make-color 0 0 0)))
 (htdp-top (define white (make-color 255 255 255)))
 
@@ -340,8 +340,8 @@
 (check-on-bitmap 'filled-triangle (htdp-eval (filled-triangle 10 'red)))
 (check-on-bitmap 'outline-triangle (htdp-eval (outline-triangle 10 'red)))
 (check-on-bitmap 'line (htdp-eval (line 10 7 'red)))
-(check-on-bitmap 'text (htdp-eval (text "XX" 'red)))
-(check-on-bitmap 'anti-alias-text (htdp-eval (anti-alias-text "XX" 'red)))
+(check-on-bitmap 'text (htdp-eval (text "XX" 12 'red)))
+(check-on-bitmap 'anti-alias-text (htdp-eval (anti-alias-text "XX" 9 'red)))
 (check-on-bitmap 'image+ (htdp-eval (image+ (filled-rect 1 4 'blue) (filled-rect 4 1 'green))))
 (check-on-bitmap 'image+ (htdp-eval (offset-image+ (filled-rect 4 4 'blue)
                                                    2 2
@@ -360,5 +360,10 @@
                     3
                     3))))
 
+(check-on-bitmap 'mask-color-lists2
+                 (htdp-eval
+                  (mask-color-lists->image
+                   (list (make-color 200 100 0)) (list (make-color 0 100 200))
+                   1 1)))
 
 (report-errs)
