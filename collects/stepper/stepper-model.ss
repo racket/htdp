@@ -1,3 +1,6 @@
+(require-library "errortrace.ss" "errortrace")
+
+
 (unit/sig stepper:model^
   (import [i : stepper:model-input^]
           mred^
@@ -62,6 +65,7 @@
          
   ;; user eventspace management
   (define stepper-semaphore (make-semaphore))
+  (define stepper-return-val-semaphore (make-semaphore))
   (define stepper-awaken-arg #f)
   (define eval-depth 0)
   
@@ -71,7 +75,9 @@
       [(eq? stepper-awaken-arg 'step)
        (void)]
       [(procedure? stepper-awaken-arg)
+       (set! eval-depth (+ eval-depth 1))
        (stepper-awaken-arg)
+       (set! eval-depth (- eval-depth 1))
        (suspend-user-computation)]))
 
   (define (continue-user-computation)
@@ -85,8 +91,7 @@
   ;; start user thread going
   (send-to-other-eventspace
    user-eventspace
-   (lambda ()
-     
+   suspend-user-computation)
 
   (define user-primitive-eval #f)
   (define user-vocabulary #f)
@@ -95,8 +100,10 @@
     (z:read i:text-stream
             (z:make-location 1 1 0 "stepper-text")))
   
+  (printf "preparing to initialize~n")
   (send-to-user-eventspace 
    (lambda ()
+     (printf "in the user's eventspace~n")
      (set! user-primitive-eval (current-eval))
      (d:basis:initialize-parameters (make-custodian) i:settings)
      (d:rep:invoke-library)
@@ -112,19 +119,13 @@
         (if (image? v)
             v
             (basic-convert v))))
-     (semaphore-post stepper-semaphore)))
+     (printf "finished initialization~n")
+     (semaphore-post stepper-return-val-semaphore)
+     (printf "released semaphore~n"))
+   (printf "now waiting for semaphore~n")
+   (semaphore-wait stepper-return-val-semaphore)
+   (printf "semaphore released~n"))
   
-  (semaphore-wait stepper-semaphore)
-
-  (define terminate-user-thread-continuation #f)
-  (send-to-user-eventspace
-   (lambda ()
-     (let/cc k
-       (set! terminate-user-thread-continuation k)
-       (semaphore-post stepper-semaphore))))
-  
-  (semaphore-wait stepper-semaphore)
-
   (define print-convert
     (let ([print-convert-result 'not-a-real-value])    
       (lambda (val)
@@ -132,8 +133,8 @@
          (lambda ()
            (set! print-convert-result
                  (p:print-convert val))
-           (semaphore-post stepper-semaphore)))
-        (semaphore-wait stepper-semaphore)
+           (semaphore-post stepper-return-val-semaphore)))
+        (semaphore-wait stepper-return-val-semaphore)
         print-convert-result)))
   
   (define (read-next-expr)
@@ -196,18 +197,6 @@
   (define held-redex no-sexp)
   (define user-process-held-continuation #f)
   
-  (define (suspend-user-computation)
-    (let/cc k;; this one absolutely must be a cc, not an ec.
-      (set! user-process-held-continuation k)
-      (terminate-user-thread-continuation 'ignored)))  ;; this doesn't return
-  
-  (define (restart-user-computation)
-    (send-to-user-eventspace
-     (lambda ()
-       (if user-process-held-continuation
-           (user-process-held-continuation 'also-ignored)
-           (read-next-expr)))))
-
   (define (break mark-list break-kind returned-value-list)
     (let ([reconstruct-helper
            (lambda (finish-thunk)
@@ -228,7 +217,7 @@
             (lambda (reconstructed redex)
               (set! held-expr reconstructed)
               (set! held-redex redex)
-              (restart-user-computation)))
+              (continue-user-computation)))
            (suspend-user-computation))]
         [(result-break)
          (when (if (not (null? returned-value-list))
@@ -263,4 +252,4 @@
   ; result of invoking stepper-instance : ((stepper-text-args ->) ->)
   (lambda (return-thunk)
     (set! stored-return-thunk return-thunk)
-    (restart-user-computation)))
+    (read-next-expr)))
