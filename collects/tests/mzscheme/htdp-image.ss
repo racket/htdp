@@ -70,12 +70,12 @@
 	   'color-list
 	   (image->color-list (filled-rect 1 1 'red)))
 
-(htdp-test (list red blue black white)
+(htdp-test (list (list red) (list blue) (list black) (list white))
 	   'colors-set-up-properly
-	   (map car (list (image->color-list (filled-rect 1 1 'red))
-                          (image->color-list (filled-rect 1 1 'black))
-                          (image->color-list (filled-rect 1 1 'blue))
-                          (image->color-list (filled-rect 1 1 'white)))))
+	   (list (image->color-list (filled-rect 1 1 'red))
+                 (image->color-list (filled-rect 1 1 'blue))
+                 (image->color-list (filled-rect 1 1 'black))
+                 (image->color-list (filled-rect 1 1 'white))))
 
 (htdp-test (list blue blue blue blue)
 	   'color-list
