@@ -323,3 +323,95 @@ Oh yes, another major change was that evaluation is now strictly on a one-
 expression-at-a-time basis.  The read, parse, and step are now done indiv-
 idually for each expression.  This has the ancillary benefit that there's no
 longer any need to reconstruct _all_ of the old expressions at every step.
+
+************
+
+You know, I should never have started that ******** divider.  I have no idea how
+many stars are supposed to be there.  Oh well.
+
+************
+
+The version for DrS-101 is out, and I've restructured the stepper into a
+"model/view/controller" architecture, primarily to ease testing.  Of course,
+I haven't actually written the tester yet. So now, the view and controller are
+combined in stepper-view-controller.ss, and the model (instantiated once per
+step-process) is in stepper-model.ss.  In fact, the view-controller is also 
+instantiated once per step-process, so I'm not utilizing the division in that
+way, but the tester will definitely want to instantiate the model repeatedly.
+
+***********
+
+I also want to comment a little bit on some severe ugliness regarding pretty-
+printing.  The real problem is how to use the existing pretty-print code, while
+still having enough control to highlight in the right locations.  
+
+Okay, let me explain this one step at a time.
+
+The way the pretty-printer currently works is this: there are four hooks into
+the pretty-printing process.  The first one is used to determine the width of
+an element.  The result of this procedure is used to decide whether a line
+break is necessary.  However, this hook is _also_ used to determine whether
+or not the pretty-printer will try to print the string itself or hand off 
+responsibility to the display-handler hook.  In other words, if the width-
+hook procedure returns a non-false value, then the display-handler will be
+called to print the actual string.  The other pair of hook procedures is 
+first, a procedure which is called _before_ display of any subexpression,
+and one which is called _after_ display of any subexpression.
+
+So how does the stepper use this to do its work?  Well, the stepper has two
+tricky tasks to accomplish.  First, it must highlight some subexpression.
+Second, it must manually insert elements (i.e. images) which the pretty-printer
+does not handle.
+
+Let's talk about images first.  In order to display images, the width-hook
+procedure detects images and (if one is encountered) returns a width 
+explicitly. (Currently that width is always one, which can lead to display 
+errors, but let's leave that for later.)  Remember, whenever the width returned
+by this hook is non-false, the display handler will be called to insert the
+object.  That's perfect: the display hander inserts the image just fine.
+
+One down, one to go.
+
+The stepper needs to detect the beginning of the (let's call it the) redex. 
+The obvious way to do this is (almost) the right way: the before-printing
+handler checks to see whether the element about to be printed is the redex
+(by an eq?-test).  If so, it sets the beginning of the highlight region.
+A corresponding test determines the end of the highlight region.  When the
+pretty-printing is complete, we highlight the desired region.  Fine. 
+
+BUT, sometimes we want to highlight things like numbers and symbols;  in other
+words, non-heap values.  For instance, suppose I tell you that the expression
+that we're printing is (if #t #t #t) and that you're supposed to be highlight-
+ing the #t.  Well, I can't tell which of the #t's you want to highlight.  So
+this isn't enough information.  
+
+To solve this problem, the result of the reconstructor is split up into two
+pieces: the reconstructed stuff outside the box, with a special gensym 
+occurring where the redex should be, and a separate expression containing
+the redex.  Now at least the displayer has enough information to do its job.
+
+Now, what happens is that when the width-hook runs into the special gensym,
+it knows that it must insert the redex.  Well, that's fine, but remember,
+if this procedure wants to take control of the printing process, it must do
+so by returning the width of the printed object, and then this object must
+be printed by the display-hook.  The problem here is that neither of these
+procedures have the faintest idea about line-breaks; that's the pretty-
+printer's job.  In other words, this solution only works for things (like
+numbers, symbols and booleans) which cannot be split across lines. What
+do we do?
+
+Well, the solution is ugly.  Remember, the only reason we had to resort to
+this baroque solution in the first place is that values like numbers, symbols,
+and booleans couldn't be identified uniquely by eq?.  So we take a two-
+pronged approach.  For non-confusable values, we insert them in place 
+of the gensym before doing the printing.  For confusable values, we leave
+the placeholder in and take control of the printing process manually.
+
+In other words, the _only_ reason this solution works is because of the
+chance overlap between confusable values and non-breakable values.  To
+be more precise, it just so happens that all confusable values are non-
+line-breakable.
+
+Lucky.
+
+And Ugly.

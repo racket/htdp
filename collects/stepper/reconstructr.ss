@@ -196,7 +196,7 @@
              (cond [(memq (z:varref-var expr) lexically-bound-vars)
                     (z:binding-orig-name (z:bound-varref-binding expr))]
                    [(z:top-level-varref? expr)
-                    (string->uninterned-symbol (symbol->string (z:varref-var expr)))]
+                    (z:varref-var expr)]
                    [else
                     (rectify-value (mark-binding-value (find-var-binding mark-list 
                                                                          (z:varref-var expr))))])]
@@ -329,6 +329,8 @@
                              ,(if (= (length values) 1)
                                   (car rectified-vars)
                                   `(values ,@rectified-vars)))])))]
+            [(z:begin-form? expr) ; hack for xml stuff
+             (utils:read->raw (expr-read expr))]
             [else
              (let ([value (s:global-lookup (top-level-exp-gensym-source expr))])
                (rectify-value value))]))
