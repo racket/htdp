@@ -55,10 +55,11 @@ constrained as follows:
   sends the suspender's page to the browser and waits for the browser's request.
 
   <li><code>send/finish : Response -> Void</code> <br />
-  sends the response to the browser
+  sends the response to the browser and terminates the servlet (and the
+  REPL,  when used inside of DrScheme).
 
   <li><code>initial-request : Request</code> <br /> a fictitious request
-  that looks like a browser initially requested the servlet's URL
+  that looks like a browser initially requested the servlet's URL.
 
   <li><code>extract-binding/single : Symbol Env -> string</code><br>
   consumes the name of an HTML form field and a bindings environment.  It
