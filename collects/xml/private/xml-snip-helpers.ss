@@ -87,6 +87,7 @@
   ;; expand-embedded : xexpr -> xexpr
   ;; constructs a new xexpr that has the embedded snips expanded 
   ;; and wrapped with unquotes
+  ;; CRUCIAL INVARIANT: an expression must not receive both 'from-xml-box and 'from-scheme/splice-box tags.
   (define (expand-embedded _xexpr)
     (let loop ([xexpr _xexpr])
       (cond
@@ -113,17 +114,15 @@
                  (with-syntax ([err (syntax/loc 
                                      (car (last-pair raw-stxs))
                                      (error 'scheme-splice-box "expected a list, found: ~e" lst))])
-                   (syntax-property
-                    (syntax ,@(let ([lst (begin stxs ...)])
-                               (if (list? lst)
-                                   lst
-                                   err)))
-                    'stepper-from-splice-box
-                    #t))
-                 (syntax-property
-                  (syntax ,(begin stxs ...))
-                  'stepper-from-scheme-box
-                  #t))))]
+                   #`,@#,(syntax-property #`(let ([lst (begin stxs ...)])
+                                              (if (list? lst)
+                                                  lst
+                                                  err))
+                                          'stepper-hint
+                                          'from-splice-box))
+                 #`,#,(syntax-property #`(begin stxs ...) 
+                                       'stepper-hint
+                                       'from-scheme-box))))]
         [else xexpr])))
   
   ;; eliminate-whitespace-in-list (listof xexpr) -> (listof xexpr)
