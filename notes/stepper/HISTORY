@@ -11,3 +11,7 @@ Changes for v102:
 
 Stepper handles intermediate level.
 UI redesigned to use "side-by-side" reduction.
+
+Changes for v103:
+
+PRs fixed: 1564, 1277, 1536, 1500, 1561, 1468, 1599, 
