@@ -1,4 +1,21 @@
 ------------------------------------------------------------------------
+VERSION 201  			          [Wed Jul 24 22:44:19 EDT 2002]
+
+* added servlet.ss and servlet2.ss 
+
+* all exported functions are primitive operators or higher order primitives
+  this improves error reporting behavior in the Beginner languages (before
+  higher-order functions are introduced)
+
+* removed: 
+  pingp-play.ss   
+  pingp.ss        
+  protect-play.ss 
+  rectangle.ss    
+  these teachpacks aren't mentioned in htdp, and aren't used for any 
+  of the additional exercises
+
+------------------------------------------------------------------------
 VERSION 200alpha1			  [Wed Nov 21 13:07:43 EST 2001]
 
 * Robby converted to modules 
