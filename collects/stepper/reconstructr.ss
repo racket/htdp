@@ -3,11 +3,6 @@
           mzlib:function^
 	  [e : stepper:error^]
 	  stepper:shared^)
-
-  (define (list-take n a-list)
-    (if (= n 0)
-        null
-        (cons (car a-list) (list-take (- n 1) (cdr a-list)))))
     
   (define nothing-so-far (gensym "nothing-so-far-"))
   
@@ -118,7 +113,7 @@
                  (z:binding-orig-name (z:bound-varref-binding expr))
                  (let* ([var-record (find-var-binding mark-list (z:varref-var expr))]
                         [var-val-thunk (car var-record)]
-                        [var-top-level? (z:top-level-varref? (cadr var-record))])
+                        [var-top-level? (z:top-level-varref? expr)])
                    (if var-top-level?
                        (z:varref-var expr)
                        (begin

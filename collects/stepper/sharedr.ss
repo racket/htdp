@@ -2,7 +2,6 @@
   (import [z : zodiac:system^]
 	  [e : stepper:error^])
   
-  
   ; copied from aries
   
   (define read->raw
@@ -43,6 +42,14 @@
             ()
             (cons new-expr (read-loop (reader)))))))
 
+  ; the closure record is placed in the closure table
+
+  (define (make-closure-record a b)
+    (list a b))
+  
+  (define closure-record-name car)
+  (define closure-record-mark cadr)
+  
   ; bogus-varref is used so that we can create legal zodiac varrefs for temporary variables
   
   (define (create-bogus-bound-varref name)
@@ -99,12 +106,11 @@
        (lambda (parsed) (getter (z:parsed-back parsed)))
        (lambda (parsed read) (setter (z:parsed-back parsed) read)))))
   
+ 
   (define (list-take n a-list)
-    (if (= 0 n)
+    (if (= n 0)
         null
-        (cons (car a-list)
-              (list-take (- n 1)
-                         (cdr a-list)))))
+        (cons (car a-list) (list-take (- n 1) (cdr a-list)))))
   
   (define (flatten-take n a-list)
     (apply append (list-take n a-list)))
