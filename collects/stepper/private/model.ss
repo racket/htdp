@@ -67,6 +67,7 @@
          
          (define held-expr-list no-sexp)
          (define held-redex-list no-sexp)
+         (define held-step-was-app? #f)
          
          (define basic-eval (current-eval))
          
@@ -134,7 +135,8 @@
                      [(normal-break)
                       (let*-2vals ([(reconstructed redex-list) (reconstruct-helper)])
                         (set! held-expr-list reconstructed)
-                        (set! held-redex-list redex-list))]
+                        (set! held-redex-list redex-list)
+                        (set! held-step-was-app? (r:step-was-app? mark-list)))]
                      
                      [(result-exp-break result-value-break)
                       (if (eq? held-expr-list skipped-step)
@@ -156,16 +158,21 @@
                             ;  (error 'reconstruct-helper
                             ;         "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
                             ;         held-expr-list reconstructed))
-                            (let ([result
-                                   (if (not (eq? held-expr-list no-sexp))
-                                       (let*-values 
-                                           ([(new-finished current-pre current-post after) 
-                                             (double-redivide finished-exprs held-expr-list reconstructed)])
-                                         (make-before-after-result new-finished current-pre held-redex-list current-post reduct-list after))
-                                       (let*-values
-                                           ([(before current after) (redivide reconstructed)])
-                                         (make-before-after-result (append finished-exprs before) `(,highlight-placeholder) `(...)
-                                                                   current reduct-list after)))])
+                            (let* ([result
+                                    (if (not (eq? held-expr-list no-sexp))
+                                        (let*-values 
+                                            ([(step-kind) (if (and held-step-was-app?
+                                                                   (eq? break-kind 'result-exp-break))
+                                                              'user-application
+                                                              'normal)]
+                                             [(new-finished current-pre current-post after) 
+                                              (double-redivide finished-exprs held-expr-list reconstructed)])
+                                          (make-before-after-result new-finished current-pre held-redex-list current-post reduct-list after step-kind))
+                                        
+                                        (let*-values
+                                            ([(before current after) (redivide reconstructed)])
+                                          (make-before-after-result (append finished-exprs before) `(,highlight-placeholder) `(...)
+                                                                    current reduct-list after 'normal)))])
                               (set! held-expr-list no-sexp)
                               (set! held-redex-list no-sexp)
                               (receive-result result))))]
@@ -186,7 +193,8 @@
                                                                     (list-ref reconstruct-quadruple 1)
                                                                     current-post
                                                                     (list-ref reconstruct-quadruple 3)
-                                                                    after))))]
+                                                                    after
+                                                                    'normal))))]
                      [(late-let-break)
                       (let ([new-finished (car (r:reconstruct-current mark-list break-kind returned-value-list render-settings))])
                         (set! finished-exprs (append finished-exprs new-finished)))]

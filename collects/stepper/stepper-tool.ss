@@ -195,8 +195,6 @@
         ; possible values: #f, 'waiting-for-any-step, 'waiting-for-application
         (define stepper-is-waiting? 'waiting-for-any-step)
         
-        (define never-step-again #f)
-        
         ; hand-off-and-block : (-> text%? boolean? void?)
         ; hand-off-and-block generates a new semaphore, hands off a thunk to drscheme's eventspace,
         ; and blocks on the new semaphore.  The thunk adds the text% to the waiting queue, and checks
@@ -210,20 +208,19 @@
             (parameterize ([current-eventspace drscheme-eventspace])
               (queue-callback
                (lambda ()
-                 (when end-of-stepping?
-                   (set! never-step-again #t))
                  (async-channel-put view-channel (list step-text new-semaphore step-kind))
                  (when stepper-is-waiting?
                    (let ([try-get (async-channel-try-get view-channel)])
                      (unless try-get
                        (error 'check-for-stepper-waiting "queue is empty, even though a step was just added."))
                      (add-view-triple try-get)
-                     (if (or (right-kind-of-step? (caddr try-get))
-                             end-of-stepping?)
+                     (if (right-kind-of-step? (caddr try-get))
                          (begin 
                            (set! stepper-is-waiting? #f)
                            (update-view/existing (- (length view-history) 1)))
-                         (semaphore-post new-semaphore))))))
+                         (begin
+                           (en/dis-able-buttons)
+                           (semaphore-post new-semaphore)))))))
               (semaphore-wait new-semaphore))))
         
         ; right-kind-of-step? : (boolean? . -> . boolean?)
@@ -231,13 +228,26 @@
         (define (right-kind-of-step? step-kind)
           (case stepper-is-waiting?
             [(waiting-for-any-step) #t]
-            [(waiting-for-application) (eq? step-kind 'user-application)]
+            [(waiting-for-application) (or (eq? step-kind 'user-application)
+                                           (eq? step-kind 'finished-stepping))]
             [(#f) (error 'right-kind-of-step "this code should be unreachable with stepper-is-waiting? set to #f")]
             [else (error 'right-kind-of-step "unknown value for stepper-is-waiting?: ~a" stepper-is-waiting?)]))
         
         (define (add-view-triple view-triple)
           (set! release-for-next-step (cadr view-triple))
           (set! view-history (append view-history (list (list (car view-triple) (caddr view-triple))))))
+        
+        (define (find-later-application-step n)
+          (let ([history-length (length view-history)])
+            (let loop ([step (+ n 1)])
+              (cond [(>= step history-length) #f]
+                    [(application-step? (list-ref view-history step)) step]
+                    [else (loop (+ step 1))]))))
+        
+        (define (application-step? history-entry)
+          (case (cadr history-entry)
+            [(user-application finished stepping) #t]
+            [else #f]))
         
         ; build gui object:
         
@@ -250,45 +260,39 @@
           (let ([new-view (+ view 1)])
             (if (< new-view (length view-history))
                 (update-view/existing new-view)
-                (if never-step-again
-                    (en/dis-able-buttons)
-                    (begin
-                      (semaphore-post release-for-next-step) ; each step has its own semaphore, so releasing one twice is no problem.
-                      (when stepper-is-waiting?
-                        (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
-                      (let ([try-get (async-channel-try-get view-channel)])
-                        (if try-get
-                            (begin 
-                              (add-view-triple try-get)
-                              (update-view/existing new-view))
-                            (begin
-                              (set! stepper-is-waiting? 'waiting-for-any-step)
-                              (en/dis-able-buttons)))))))))
+                (begin
+                  (semaphore-post release-for-next-step) ; each step has its own semaphore, so releasing one twice is no problem.
+                  (when stepper-is-waiting?
+                    (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
+                  (let ([try-get (async-channel-try-get view-channel)])
+                    (if try-get
+                        (begin 
+                          (add-view-triple try-get)
+                          (update-view/existing new-view))
+                        (begin
+                          (set! stepper-is-waiting? 'waiting-for-any-step)
+                          (en/dis-able-buttons))))))))
         
         (define (next-application)
-          (let loop ([new-view (+ view 1)])
-            (if (= new-view (length view-history))
-                (if never-step-again
-                    (update-view/existing (- new-view 1))
-                    (begin
-                      (semaphore-post release-for-next-step) ; each step has its own semaphore, so releasing one twice is no problem.
-                      (when stepper-is-waiting?
-                        (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
-                      (let ([try-get (async-channel-try-get view-channel)])
-                        (if try-get
-                            (begin
-                              (add-view-triple try-get)
-                              (if (eq? (caddr try-get) 'user-application)
-                                  (update-view/existing new-view)
-                                  (begin
-                                    (set! stepper-is-waiting? 'waiting-for-application)
-                                    (en/dis-able-buttons))))
-                            (begin
-                              (set! stepper-is-waiting? 'waiting-for-application)
-                              (en/dis-able-buttons))))))
-                (if (eq? (cadr (list-ref view-history new-view)) 'user-application)
-                    (update-view/existing new-view)
-                    (loop (+ new-view 1))))))
+          (let ([next-application-step (find-later-application-step view)])
+            (if next-application-step
+                (update-view/existing next-application-step)
+                (begin
+                  (semaphore-post release-for-next-step) ; each step has its own semaphore, so releasing one twice is no problem.
+                  (when stepper-is-waiting?
+                    (error 'try-to-get-view "try-to-get-view should not be reachable when already waiting for new step"))
+                  (let ([try-get (async-channel-try-get view-channel)])
+                    (if try-get
+                        (begin
+                          (add-view-triple try-get)
+                          (if (application-step? (list-ref view-history (+ view 1)))
+                              (update-view/existing (+ view 1))
+                              (begin
+                                (set! stepper-is-waiting? 'waiting-for-application)
+                                (en/dis-able-buttons))))
+                        (begin
+                          (set! stepper-is-waiting? 'waiting-for-application)
+                          (en/dis-able-buttons))))))))
         
         ; make this into a special last step
         ;(message-box "Stepper"
@@ -299,17 +303,36 @@
         (define (previous)
           (when stepper-is-waiting?
             (set! stepper-is-waiting? #f))
+          (when (= view 0)
+            (error 'previous-application "previous-step button should not be enabled in view zero."))
           (update-view/existing (- view 1)))
+        
+        (define (previous-application)
+          (when stepper-is-waiting?
+            (set! stepper-is-waiting? #f))
+          (when (= view 0)
+            (error 'previous-application "previous-application button should not be enabled in view zero."))
+          (let loop ([new-view (- view 1)])
+            (cond [(= new-view 0)
+                   (update-view/existing new-view)]
+                  [(application-step? (list-ref view-history new-view))
+                   (update-view/existing new-view)]
+                  [else
+                   (loop (- new-view 1))])))
         
         (define s-frame (make-object stepper-frame% drscheme-frame))
         
         (define button-panel (make-object horizontal-panel% (send s-frame get-area-container)))
         (define home-button (make-object button% "Home" button-panel
                               (lambda (_1 _2) (home))))
-        (define previous-button (make-object button% "<< Previous" button-panel
+        (define previous-application-button (make-object button% "|< Application" button-panel
+                                              (lambda (dc-1 dc-2) (previous-application))))
+        (define previous-button (make-object button% "< Step" button-panel
                                   (lambda (_1 _2) (previous))))
-        (define next-button (make-object button% "Next >>" button-panel (lambda
-                                                                            (_1 _2) (next))))
+        (define next-button (make-object button% "Step >" button-panel 
+                              (lambda (_1 _2) (next))))
+        (define next-application-button (make-object button% "Application >|" button-panel
+                                          (lambda (dc-1 dc-2) (next-application))))
         
         (define canvas (make-object x:stepper-canvas% (send s-frame get-area-container)))
         
@@ -324,17 +347,15 @@
           (en/dis-able-buttons))
         
         (define (en/dis-able-buttons)
-          (send previous-button enable (not (zero? view)))
-          (send home-button enable (not (zero? view)))
-          (send next-button enable (not (or stepper-is-waiting? (and never-step-again (= view (- (length view-history) 1)))))))
+          (let* ([can-go-back? (> view 0)])
+          (send previous-button enable can-go-back?)
+          (send previous-application-button enable can-go-back?)
+          (send home-button enable can-go-back?)
+          (send next-button enable (not (and (= view (- (length view-history) 1)) stepper-is-waiting?)))
+          (send next-application-button enable (or (find-later-application-step view) (not stepper-is-waiting?)))))
         
         (define (print-current-view item evt)
           (send (send canvas get-editor) print))
-        
-        (define (final-step? result)
-          #f
-          ;(ormap (lambda (fn) (fn result)) (list before-error-result? error-result? finished-result?))
-          )
         
         ; receive-result takes a result from the model and renders it on-screen
         ; : (step-result -> void)
@@ -378,9 +399,11 @@
                           null)]
                        [(finished-stepping? result)
                         x:finished-text])]
-                [step-kind (and (before-after-result? result)
-                                (before-after-result-kind result))])
-            (hand-off-and-block step-text (final-step? result) step-kind)))
+                [step-kind (or (and (before-after-result? result)
+                                    (before-after-result-kind result))
+                               (and (finished-stepping? result)
+                                    'finished-stepping))])
+            (hand-off-and-block step-text #f step-kind)))
         
         ; need to capture the custodian as the thread starts up:
         (define (program-expander-prime init iter)

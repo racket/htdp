@@ -23,7 +23,8 @@
                                    (list/p any? any?)
                                    (list/p any? any? any? any?)))]
    [final-mark-list? (-> mark-list? boolean?)]
-   [skip-step? (-> break-kind? (union mark-list? false?) render-settings? boolean?)])
+   [skip-step? (-> break-kind? (union mark-list? false?) render-settings? boolean?)]
+   [step-was-app? (-> mark-list? boolean?)])
   
   (define the-undefined-value (letrec ([x x]) x))
   
@@ -270,6 +271,15 @@
     (lambda (mark-list binding)
       (construct-lifted-name binding (lookup-binding mark-list (get-lifted-var binding)))))
 
+  
+  (define (step-was-app? mark-list)
+    (and (not (null? mark-list))
+         (syntax-case (mark-source (car mark-list)) (#%app)
+           [(#%app . rest)
+            #t]
+           [else
+            #f])))
+  
                                                                 ;              ;  ;               
                                                                                ;                  
  ; ;;; ;;    ;;;    ;;;  ; ;;  ;;;       ;   ;  ; ;;  ;   ;   ; ;  ; ;;    ;;; ;  ;  ; ;;    ;; ; 
