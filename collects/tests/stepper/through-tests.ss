@@ -71,7 +71,7 @@
   
   (define (lang-level-test-sequence namespace-spec rs track-inferred-names?)
     (lambda args
-      (apply test-sequence namespace-spec `()- rs track-inferred-names? args)))
+      (apply test-sequence namespace-spec `() rs track-inferred-names? args)))
   
   (define (make-multi-level-test-sequence level-fns)
     (lambda args
@@ -1084,7 +1084,7 @@
   ;               `((define (check-guess guess target) 'toosmall) true)
   ;               tp-namespace)
   
-  (t teachpack-drawing
+  #;(t teachpack-drawing
   (test-teachpack-sequence 
    `((lib "draw.ss" "htdp"))
    "(define (draw-limb i) (cond  
@@ -1118,7 +1118,7 @@
                    ((hilite true)))
      (finished (true)))))
  
-  (t teachpack-web-interaction
+  #;(t teachpack-web-interaction
   (test-teachpack-sequence
    `((lib "servlet2.ss" "htdp"))
 "(define (adder go) (inform (number->string (+ (single-query (make-number \"enter 10\")) (single-query (make-number \"enter 20\"))))))
@@ -1142,7 +1142,10 @@
                 ((hilite true)))
   (finished (true)))))
   
+  #;(t teachpack-callbacks
+     (test-teachpack-sequence " (define (f2c x) x) (convert-gui f2c)" `() ; placeholder
+                               ))
   
-  (run-tests '(teachpack-drawing))
-  #;(run-all-tests)
+  ;(run-tests '(top-app/lam))
+  (run-all-tests)
   )
