@@ -195,7 +195,7 @@
          ((double-break late-let-break)
           (error 'answer "lifting turned off"))))
      'reconstruct-module
-     'caller))
+     'caller))  
   
   (define (skip-redex-step? mark-list)
     (and (pair? mark-list)
@@ -233,8 +233,8 @@
                            (length (cdr (syntax->list (syntax terms)))))
                           (or (and (constructor-style-printing?)
                                    (if (abbreviate-cons-as-list?)
-                                       (eq? fun-val (global-lookup 'list))    
-                                       (and (eq? fun-val (global-lookup 'cons))
+                                       (eq? fun-val (find-special-value 'list '(3)))    
+                                       (and (eq? fun-val (find-special-value 'cons '(3 null)))
                                             (second-arg-is-list? mark-list))))
                               ;(model-settings:special-function? 'vector fun-val)
                               (and (eq? fun-val void)
@@ -242,6 +242,12 @@
                               (struct-constructor-procedure? fun-val))))]
                   [else
                    #f])))))
+  
+  (define (find-special-value name valid-args)
+    (let ([expanded (car (syntax-e (cdr (syntax-e (expand (cons name valid-args))))))])
+      (fprintf (current-error-port) "identifier-binding: ~e\n" 
+               (identifier-binding expanded))
+      (eval expanded)))
   
   (define (second-arg-is-list? mark-list)
     (let ([arg-val (mark-binding-value (lookup-binding mark-list (get-arg-var 2)))])

@@ -150,7 +150,8 @@
                     (set-print-settings
                             language
                             simple-settings
-                            (lambda () (simple-module-based-language-convert-value val simple-settings)))))
+                            (lambda () 
+                              (simple-module-based-language-convert-value val simple-settings)))))
 
 		(define view-history null)
                 (define view-currently-updating #f)
