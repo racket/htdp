@@ -378,7 +378,9 @@
   (define (rgb-green rgb) (/ (send rgb green) 255))
   
   (define rgb? (lambda (object) (is-a? object mred:color%)))
-  (define color? rgb?)
+  (define (color? x)
+    (or (rgb? x)
+	(not (not (send mred:the-color-database find-color x)))))
   
   (define change-color
     (lambda (index color)
@@ -995,14 +997,17 @@
 
   (define draw-pixmap-posn
     (opt-lambda (filename [type 'unknown])
-      (let* ([type
-	      (case type
-		[(gif xbm xpm bmp pict unknown) type]
-		[else 
-		 (error 'pixmap "unrecognized file type: ~e~n" type)])]
-	     [bitmap (make-object mred:bitmap% filename type)])
+      (check 'draw-pixmap-posn
+	     (andp string? file-exists?) filename "filename"
+	     (lambda (x) (memq x '(gif xbm xpm bmp pict unknown))) type "file type")
+      (let* ([bitmap (make-object mred:bitmap% filename type)])
 	(lambda (viewport)
+	  (check 'draw-pixmap-posn
+		 viewport? viewport "viewport")
 	  (opt-lambda (posn [color #f])
+	    (check 'draw-pixmap-posn
+		   posn? posn "posn"
+		   (orp not color?) color (format "color or ~e" #f))
 	    (when color
 	      (set-viewport-pen viewport (get-color color)))
 	    (let ([x (posn-x posn)]
@@ -1011,12 +1016,21 @@
 	      (send (viewport-buffer-dc viewport) draw-bitmap bitmap x y)))))))
   
   (define draw-pixmap
-    (lambda (pixmap)
+    (lambda (viewport)
+      (check 'draw-pixmap
+	     viewport? viewport "viewport")
       (opt-lambda (filename p [color #f])
-	(((draw-pixmap-posn filename 'unknown) pixmap) p color))))
+	(check 'draw-pixmap
+	       (andp string? file-exists?) filename "filename"
+	       posn? p "posn"
+	       (orp not color?) color (format "color or ~e" #f))
+	(((draw-pixmap-posn filename 'unknown) viewport) p color))))
   
   (define copy-viewport 
     (lambda (source target)
+      (check 'copy-viewport
+	     viewport? source "viewport"
+	     viewport? target "viewport")
       (let* ([source-bitmap (viewport-bitmap source)]
 	     [target-dc (viewport-dc target)]
 	     [target-buffer-dc (viewport-buffer-dc target)])
@@ -1160,4 +1174,8 @@
   (define (orp . preds)
     (lambda (TST)
       (ormap (lambda (p) (p TST)) preds)))
+
+  (define (andp . preds)
+    (lambda (TST)
+      (andmap (lambda (p) (p TST)) preds)))
   )
