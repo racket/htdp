@@ -4,14 +4,15 @@ languages for other modules (i.e., as the initial import):
 
  * _r5rs.ss_ - provides R5RS Scheme
 
- * _htdp-full-text.ss_ - provides MzScheme plus the
+ * _plt-pretty-big-text.ss_ - provides MzScheme plus the
    following MzLib libraries: etc.ss, file.ss, list.ss,
    class.ss, unit.ss, unitsig.ss, include.ss, defmacro.ss,
    pretty.ss, string.ss, thread.ss, math.ss, match.ss, and
    shared.ss
 
- * _htdp-full-graphics.ss_ - provides big.ss
-    plus the MrEd classes
+ * _plt-pretty-big.ss_ - provides plt-pretty-big-text.ss
+    plus the MrEd classes. This corresponds to the
+    _Pretty Big Scheme_ language in DrScheme.
 
  * _htdp-beginner.ss_ - provides Beginning Student
 
