@@ -33,8 +33,8 @@
 (eq? (check-guess3 1 3 6 631) 'Perfect)
 
 ;; Test with GUI: set lib to guess-lib.ss
-; (repl3 check-guess3)
+(guess-with-gui-3 check-guess3)
 
 ;; (test-error (repl3 list))
-(test-error (repl first))
+(test-error (guess-with-gui-3 first))
        

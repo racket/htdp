@@ -18,8 +18,8 @@
 (eq? (check-guess 5631 5631) 'Perfect)
 
 ;; Test with GUI lib: set lib to guess-lib.ss
-(repl check-guess)
+(guess-with-gui check-guess)
 
-(test-error (repl list))
-(test-error (repl first))
+(test-error (guess-with-gui list))
+(test-error (guess-with-gui first))
 

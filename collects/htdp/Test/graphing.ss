@@ -1,5 +1,5 @@
 ;; TeachPack: graphing.ss
-;; Language: Intermediate
+;; Language: Intermediate with Lambda
 
 ;; ------------------------------------------------------------------------
 
@@ -29,10 +29,10 @@
 ; (graph-line (posns-line (make-posn 3 (f 3)) (make-posn 5 (f 5))) BLUE)
 ; (graph-line (posns-line (make-posn 3.5 (f 3.5)) (make-posn 4.5 (f 4.5))) GREEN)
 ; (graph-line (posns-line (make-posn 3.9 (f 3.9)) (make-posn 4.1 (f 4.1))) RED)
-(graph-fun (lambda (x) (+ (* +1 x) 4)) RED)
-(graph-fun (lambda (x) (+ (* -1 x) 4)) BLUE)
-(graph-line (lambda (x) (+ (* +1 x) 10)) BLACK)
-(graph-line (lambda (x) (+ (* -1 x) 10)) GREEN)
+(graph-fun (lambda (x) (+ (* +1 x) 4)) 'red)
+(graph-fun (lambda (x) (+ (* -1 x) 4)) 'blue)
+(graph-line (lambda (x) (+ (* +1 x) 10)) 'black)
+(graph-line (lambda (x) (+ (* -1 x) 10)) 'green)
 
 ;; \scheme{d/dx : (num -> num) -> (num -> num)}
 (define (d/dx f)
@@ -42,4 +42,3 @@
 	  (define $\eps$ .0001))
     fprime))
 
-(define f (lambda (x) (+ (* (- x 3) (- x 1)) 4)))

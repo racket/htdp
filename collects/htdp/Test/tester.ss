@@ -1,29 +1,16 @@
-(require-library "core.ss")
-
-#|
-  (test-error <expression>)
-  elaborates to 
-  (with-handlers ([exn? (lambda (e) 
-                             (printf "~e~n" (exn-message e))
-                             #t)])
-       ,<expression>)
-
-|#
-(define (test-error-transform form)
-  `(with-handlers ([exn? (lambda (e) 
-                           (printf "~a~n" (exn-message e))
-                           #t)])
-     ,form
-     #f))
-
-(define-macro test-error test-error-transform)
-
-#| Tests: 
-(equal? (test-error-transform '<expression>)
-        '(with-handlers ([exn? (lambda (e) 
+(define-syntax test-error 
+  (lambda (stx)
+    (syntax-case stx ()
+      [(_ form ...)
+       (syntax
+        (with-handlers ([exn? (lambda (e) 
                                 (printf "~a~n" (exn-message e))
                                 #t)])
-          <expression>
-           #f))
+          form ...
+          #f))])))
 
+
+#| Tests: 
+(not (test-error 1 2 3))
+(test-error (/ 1 0) 2 3)
 |#

@@ -37,7 +37,7 @@
 (eq? (check-guess-for-list (cons 1 (cons 3 (cons 6 empty))) 631) 'Perfect)
 
 ;; Test with GUI: set lib to guess-lib.ss
-(repl-for-list 2 check-guess-for-list)
+(guess-with-gui-list 2 check-guess-for-list)
 
 (test-error (repl-for-list check-guess-for-list))
 (test-error (repl-for-list 'abc check-guess-for-list))

@@ -30,7 +30,6 @@
   
   ;; explore : (listof String[directory-names]) -> (listof Directory)
   (define (explore dirs)
-    (printf "hello: ~a~n" dirs)
     (map (lambda (d) 
            (let-values ([(fs ds) (pushd d directory-files&directories)]) 
              (make-dir

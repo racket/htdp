@@ -52,6 +52,8 @@
 
 #| Tests ----------------------------------------------------------
 
+
+
 (start 200 400)
 (sleep-for-a-while 1)
 (draw-next-part 'noose)
@@ -67,8 +69,9 @@
 (draw-next-part 'left-leg)
 (sleep-for-a-while 1)
 (draw-next-part 'right-leg)
-|#
+(stop)
 
 (load "tester.ss")
 (start 200 400)
 (test-error (draw-solid-line 'a 'b 'c))
+|#

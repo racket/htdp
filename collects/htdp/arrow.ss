@@ -84,13 +84,13 @@
 		(lambda (x y)
 		  (evcase an-item
 		    (UP-ARROW
-		      (set! shape (up-down-action (- delta) shape)))
+		      (set! shape (up-down-action shape (- delta))))
 		    (DOWN-ARROW
-		      (set! shape (up-down-action delta shape)))
+		      (set! shape (up-down-action shape delta)))
 		    (LEFT-ARROW
-		      (set! shape (left-right-action (- delta) shape)))
+		      (set! shape (left-right-action shape (- delta))))
 		    (RIGHT-ARROW
-		      (set! shape (left-right-action delta shape))))
+		      (set! shape (left-right-action shape delta))))
 		  (draw-shape shape))))
 	(make-button-table panel control layout)
 	(send frame show #t)
@@ -100,7 +100,7 @@
 
     (define (void2 x y) (void))
 
-    ;; control-left-right : X number (number X -> true) (X -> true) -> true
+    ;; control-left-right : XShape number (number XShape -> XShape) (XShape -> true) -> true
     ;; effect: create a window from which a user can control L/R moves
     (define (control-left-right shape delta lr draw)
       (make-controller 'control-left-right LEFT-RIGHT shape delta lr void2 draw))
