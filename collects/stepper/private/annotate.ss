@@ -577,12 +577,14 @@
                   
                   [lambda-clause-abstraction 
                    (lambda (clause)
-                     (with-syntax ([(args-stx body ...) clause])
+                     (with-syntax ([(args-stx . bodies) clause])
                        (let*-2vals ([args (syntax->ilist (syntax args-stx))]
                                     [marked-args (ilist-map mark-lambda-bound-var args)]
                                     [tagged-args (ilist-map mark-never-undefined marked-args)]
                                     [(annotated-body free-varrefs)
-                                     (lambda-body-recur (syntax (begin body ...)))]
+                                     (if (= (length (syntax->list (syntax bodies))) 1)
+                                         (lambda-body-recur (car (syntax->list (syntax bodies))))
+                                         (lambda-body-recur (syntax (begin . bodies))))]
                                     [tagged-body (syntax-property annotated-body 'stepper-info 'lambda-body-begin)]
                                     [new-free-varrefs (varref-set-remove-bindings free-varrefs
                                                                                   (ilist-flatten tagged-args))])
@@ -665,7 +667,7 @@
                   
                   [let-abstraction
                    (lambda (stx output-identifier check-fn make-init-list)
-                     (with-syntax ([(_ ([var val] ...) . body ...) stx]
+                     (with-syntax ([(_ ([var val] ...) . bodies) stx]
                                    [(_a (binding ...) . _b) stx])
                        (let*-2vals
                            ([binding-sets (map syntax->list (syntax->list (syntax (var ...))))]
@@ -678,12 +680,16 @@
                             [(annotated-vals free-varref-sets-vals)
                              (2vals-map let-rhs-recur vals binding-name-sets lifted-var-sets)]
                             [(annotated-body free-varrefs-body)
-                             ((let-body-recur binding-list) (syntax (begin body ...)))]
+                             ((let-body-recur binding-list) 
+                              (if (= (length (syntax->list (syntax bodies))) 1)
+                                  (car (syntax->list (syntax bodies)))
+                                  (syntax (begin . bodies))))]
                             [tagged-body (syntax-property annotated-body 'stepper-info 'let-body-begin)]
                             [free-bindings (varref-set-remove-bindings 
                                             (varref-set-union (cons free-varrefs-body
                                                                     free-varref-sets-vals)) 
                                             binding-list)])
+                         
                        (ccond [cheap-wrap?
                                (let* ([bindings
                                        (map (lambda (binding-loc bindings val)
@@ -703,7 +709,7 @@
                                                         (values ,@(append (map (lambda (binding)
                                                                                    (d->so `(,binding-indexer))) 
                                                                                  binding-list)
-                                                                            unevaluated-list))])))]
+                                                                          unevaluated-list))])))]
                                       [set!-clauses
                                        (map (lambda (binding-set val)
                                               (d->so `(set!-values ,binding-set ,val)))
@@ -713,10 +719,9 @@
                                       ; without renaming, this would all be much much simpler.
                                       [middle-begin
                                        (double-break-wrap (datum->syntax-object expr `(begin ,@set!-clauses 
-                                                                              ,(late-let-break-wrap binding-list
-                                                                                                    lifted-vars
-                                                                                                    (car annotated-bodies))
-                                                                              ,@(cdr annotated-bodies))))]
+                                                                                             ,(late-let-break-wrap binding-list
+                                                                                                                   lifted-vars
+                                                                                                                   tagged-body))))]
                                       [wrapped-begin
                                        (wcm-wrap (make-debug-info expr 
                                                                   (binding-set-union (list tail-bound binding-list))
@@ -806,7 +811,7 @@
                       (2vals (datum->syntax-object expr `(begin ,@annotated-bodies))
                              (varref-set-union free-varref-sets)))
                     (let*-2vals 
-                        ([bodies (syntax->list (syntax bodies))]
+                        ([bodies (syntax->list (syntax bodies-stx))]
                          [(all-but-last-body last-body-list) 
                           (list-partition bodies (- (length bodies) 1))]
                          [last-body (car last-body-list)]

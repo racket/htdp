@@ -164,7 +164,7 @@
   
   (define (list-partition lst n)
     (if (= n 0)
-        (values null lst)
+        (2vals null lst)
         (if (null? lst)
             (list-ref lst 0) ; cheap way to generate exception
             (let*-2vals ([(first rest) (list-partition (cdr lst) (- n 1))])
