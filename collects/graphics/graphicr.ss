@@ -17,9 +17,7 @@
   (define GLOBAL-BRUSH-VECTOR (make-vector 300))
   
   (define-values (FRAME-W-DELTA FRAME-H-DELTA CANVAS-W-DELTA CANVAS-H-DELTA)
-    (if (eq? wx:window-system 'xt)
-	(values 16 16 12 12)
-	(values 0 0 0 0)))
+    (values 0 0 0 0))
   
   (define wx:sixlib-canvas%
     (class-asi wx:canvas% 
