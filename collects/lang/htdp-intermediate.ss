@@ -16,7 +16,7 @@
 	   (rename intermediate-let let)
 	   (rename intermediate-let* let*)
 	   (rename intermediate-letrec letrec)
-	   (rename intermediate-recur recur)
+	   ; (rename intermediate-recur recur)
 	   (rename beginner-cond cond)
 	   (rename beginner-else else)
 	   (rename beginner-if if)
