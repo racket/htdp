@@ -75,11 +75,13 @@
           (super-instantiate ()
             (editor (make-editor))
             (with-border? #f))))
-      
+
       (define xml-snip%
         (class* renderable-editor-snip% (drscheme:snip:special<%>) 
           (inherit get-editor)
           
+          (define/override (make-editor) (make-object xml-text%))
+
           (define/public (read-special file line col pos)
             (let ([editor (get-editor)]
                   [old-locked #f])
@@ -170,7 +172,7 @@
       (send xml-snipclass set-version 1)
       (send xml-snipclass set-classname "drscheme:xml-snip")
       (send (get-the-snip-class-list) add xml-snipclass)
-      
+
       (define evaluated-snip%
         (class* renderable-editor-snip% (drscheme:snip:special<%>)
           (inherit get-editor)
@@ -233,6 +235,64 @@
           (inherit set-styles-sticky)
           (super-instantiate ())
           (set-styles-sticky #f)))
+      
+      (define xml-keymap (make-object keymap%))
+      (send xml-keymap add-function "matching-xml" (lambda (x e) 
+                                                 (when (is-a? x text%)
+                                                   (matching-xml x))))
+      (send xml-keymap map-function ">" "matching-xml")
+
+      (define xml-keymap-mixin
+        (mixin (editor:keymap<%>) ()
+          (rename [super-get-keymaps get-keymaps])
+          (define/override (get-keymaps)
+            (cons xml-keymap (super-get-keymaps)))
+          (super-instantiate ())))
+      
+      (define xml-text%
+        (drscheme:unit:program-editor-mixin 
+         (xml-keymap-mixin
+          plain-text%)))
+
+      ;; matching-xml : (is-a?/c text) -> void
+      ;; inserts > and if there is an XML tag just
+      ;; before the caret, inserts the corresponding
+      ;; close XML tag after the caret.
+      (define (matching-xml text)
+        (send text begin-edit-sequence)
+        (send text insert ">")
+        (let* ([start (send text get-start-position)]
+               [tagname (find-tag text start)])
+          (when tagname
+            (send text insert "</")
+            (send text insert tagname)
+            (send text insert ">")
+            (send text set-position start)))
+        (send text end-edit-sequence))
+      
+      ;; find-tag : (is-a?/c text%) number? -> (union false? string?)
+      ;; finds the name of the XML tag just before `start' in `text'.
+      ;; returns the tag name, with no trailing space of > or anything like that.
+      (define (find-tag text start)
+        ;; loop iterates backwards, searching for #\<
+        ;; when it finds it, it gets the string starting
+        ;; there, forwards to last-space (if there was a space)
+        ;; or start-1
+        ;; this technique gleaned from the spec at:
+        ;;  http://www.w3.org/TR/2000/REC-xml-20001006
+        (let loop ([pos (- start 2)]
+                   [last-space #f])
+          (cond
+            [(< pos 0) #f]
+            [else
+             (let ([char (send text get-character pos)])
+               (case char
+                 [(#\>) #f]
+                 [(#\<) (send text get-text (+ pos 1) (or last-space (- start 1)))]
+                 [(#\space #\return #\newline #\tab)
+                  (loop (- pos 1) pos)]
+                 [else (loop (- pos 1) last-space)]))])))
+      
       
 
                                                                       
