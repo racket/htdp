@@ -6,6 +6,11 @@
           [b : userspace:basis^]
 	  stepper:shared^)
     
+  (define beginner-level-defined-vars
+    (list first second third fourth fifth sixth seventh eighth rest cons? empty empty?
+          boolean=? identity compose foldl foldr last-pair remv remq remove remv* remq* remove*
+          assf memf filter build-string build-vector build-list quicksort loop-until ignore-errors))
+  
   (define nothing-so-far (gensym "nothing-so-far-"))
   
   (define (mark-source mark)
@@ -111,13 +116,19 @@
     (and (not (null? mark-list)) (eq? (mark-label (car mark-list)) 'final)))
  
   (define (stop-here? mark-list all-defs)
-    (not(and (pair? mark-list)
-             (let ([expr (mark-source (car mark-list))])
-               (and (z:varref? expr)
-                    (or (z:bound-varref? expr)
-                        (not (memq (z:varref-var expr) (apply append all-defs)))
-                        (procedure? (mark-binding-value
-                                     (find-var-binding mark-list (z:varref-var expr))))))))))
+    (not (and (pair? mark-list)
+              (let ([expr (mark-source (car mark-list))])
+                (and (z:varref? expr)
+                     (or (z:bound-varref? expr)
+                         (let ([var (z:varref-var expr)])
+                           (or (built-in-name var)
+                               (memq var beginner-level-defined-vars)
+                               (call-with-current-continuation
+                                (lambda (k)
+                                  (with-handlers ([exn:variable?
+                                                   (lambda (exn) (k #f))])
+                                    (procedure? (mark-binding-value
+                                                 (find-var-binding mark-list (z:varref-var expr)))))))))))))))
   
   (define (rectify-source-expr expr mark-list lexically-bound-vars)
     (let ([recur (lambda (expr) (rectify-source-expr expr mark-list lexically-bound-vars))])
