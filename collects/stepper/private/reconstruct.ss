@@ -336,21 +336,21 @@
                       highlight-placeholder-stx)
                (with-syntax ([clauses
                               (let loop ([stx stx])
-                                (cond [(syntax-property stx 'user-stepper-else) 
-                                       (if (syntax-property stx 'user-stepper-inserted-else)
-                                           null
-                                           (cons (with-syntax ([stx (inner stx)])
-                                                   (syntax (else stx)))
-                                                 null))]
-                                      [(and (eq? user-source (syntax-property stx 'user-source))
-                                             (eq? user-position (syntax-property stx 'user-position))) 
-                                       (syntax-case stx (if begin)
-                                         [(if test result else)
-                                          (cons (inner (syntax (test result)))
-                                                (loop (syntax else)))]
-                                         [else-stx
-                                          (error 'unwind-cond "expected an if, got: ~e" (syntax-object->datum (syntax else-stx)))])]
-                                      [else (error 'unwind-cond "expected a cond clause expansion, got: ~e" (syntax-object->datum (syntax stx)))]))])
+                                (if (and (eq? user-source (syntax-property stx 'user-source))
+                                         (eq? user-position (syntax-property stx 'user-position)))
+                                    (syntax-case stx (if begin #%app)
+                                      [(if test result else-clause)
+                                       (with-syntax ([new-test (if (syntax-property (syntax test) 'user-stepper-else)
+                                                               (syntax else)
+                                                               (inner (syntax test)))]
+                                                     [result (inner (syntax result))])
+                                         (cons (syntax (new-test result))
+                                               (loop (syntax else-clause))))]
+                                      [(error . args)
+                                       null]
+                                      [else-stx
+                                       (error 'unwind-cond "expected an if or a begin, got: ~e" (syntax-object->datum (syntax else-stx)))])
+                                    (error 'unwind-cond "expected a cond clause expansion, got: ~e" (syntax-object->datum stx))))])
                  (syntax (cond . clauses)))))
          
          (define (unwind-and/or stx user-source user-position label)
@@ -415,7 +415,6 @@
     (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
            [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
            [it (syntax-property it 'user-stepper-else (syntax-property expr 'stepper-else))]
-           [it (syntax-property it 'user-stepper-inserted-else (syntax-property expr 'stepper-inserted-else))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))                                                                                                  

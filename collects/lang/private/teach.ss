@@ -736,8 +736,8 @@
 			     clause
 			     "found an `else' clause that isn't the last clause ~
                                     in its `cond' expression"))
-                          (with-syntax ([true (syntax-property (syntax #t) 'stepper-else #t)])
-                            (syntax/loc clause (true answer))))]
+                          (with-syntax ([new-test (syntax-property (syntax #t) 'stepper-else #t)])
+                            (syntax-property (syntax/loc clause (new-test answer)) 'foo 14)))]
 		       [(question answer)
                         (with-syntax ([verified (syntax-property (syntax (verify-boolean question 'cond)) 'stepper-skipto (list syntax-e cdr syntax-e cdr car))])
                           (syntax/loc clause (verified answer)))]
@@ -783,8 +783,8 @@
              ;; Add `else' clause for error (always):
              (let ([clauses (append checked-clauses 
                                     (list 
-                                     (syntax/loc stx
-                                       [else (error 'cond "all question results were false")])))])
+                                     (with-syntax ([error-call (syntax/loc stx (error 'cond "all question results were false"))])
+                                       (syntax [else error-call]))))])
 	       (with-syntax ([clauses clauses])
 		 (syntax/loc stx (cond . clauses))))))]
 	[_else (bad-use-error 'cond stx)]))

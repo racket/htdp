@@ -85,16 +85,8 @@ stepper-skipto :
  elements are car, cdr, or syntax-e. (Not transferred)
 
 stepper-else : 
- [ #t ] : this expression is the else clause of a cond.  It may be
- from user code, or it may have been inserted
- automatically. (Transferred.)
-
-stepper-inserted-else :
- [ #t ] : this expression was inserted as an else clause for a 'cond'
- that didn't have one. Why do we need this one and also stepper-else?
- Because the two are added by totally different code.  This one comes
- in during expansion of the beginner 'cond', stepper-else comes in
- during the top-level-rewrite. (Transferred)
+ [ #t ] : this `if' expression comes from a user program's 
+ `cond'. (Transferred.)
 
 stepper-define-hint :
  What kind of a source expression did this 'define' come from? (Not
