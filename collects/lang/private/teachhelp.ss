@@ -21,9 +21,14 @@
 	    (syntax-property
 	     (datum->syntax-object
 	      check-proc
-	      (cons (list check-proc 
+	      (cons (syntax-property
+		     (datum->syntax-object
+		      check-proc
+		      (list check-proc 
 			  (list 'quote (syntax id))
-			  tmp-id)
+			  tmp-id))
+		     'stepper-skipto
+		     (list syntax-e cdr syntax-e cdr cdr car))
 		    (syntax args)))
 	     'bound-in-source
 	     (cons (syntax-local-introduce

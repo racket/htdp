@@ -962,7 +962,8 @@
                                                 (symbol->string (syntax-e def-id)))))
 					    (syntax->list def-ids)))
 				     (syntax->list (syntax ((def-id ...) ...))))])
-		   (with-syntax ([(mapping ...)
+		   
+                   (with-syntax ([(mapping ...)
 				  (apply
 				   append
 				   (map
@@ -971,9 +972,9 @@
 				     (syntax
 				      (((define-syntaxes (def-id)
                                           (make-undefined-check
-					   (quote-syntax def-id)
-					   (quote-syntax check-not-undefined)
-					   (quote-syntax tmp-id)))
+                                            (quote-syntax def-id)
+                                            (quote-syntax check-not-undefined)
+                                            (quote-syntax tmp-id)))
 					...)
 				       ...)))))])
                      (syntax-property
