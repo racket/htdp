@@ -245,7 +245,7 @@
   ; lift-helper takes a syntax object and a split path and a list of syntax objects and breaks it up
   ; iff its a let/rec, wrapping those before the split and those after the split around the list of syntax
   ; objects
-  ;  (->* (syntax? (or/f false? (listof number?)) (listof syntax?)) ((listof syntax?) syntax?))
+  ;  (->* (syntax? (union false? (listof number?)) (listof syntax?)) ((listof syntax?) syntax?))
   (define (lift-helper stx path so-far-defs)
     (let* ([lift
             (lambda ()

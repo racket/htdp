@@ -11,7 +11,7 @@
   ; CONTRACTS
   
   (define annotate-opts-list?
-    (and/f (listof (listof symbol?)) (lx (<= (length _) 1))))
+    (and/c (listof (listof symbol?)) (lx (<= (length _) 1))))
   (define-struct annotate-environment (struct-proc-names pre-defined-names binding-index))
   
   ; PROVIDE

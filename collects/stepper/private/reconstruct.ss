@@ -19,10 +19,10 @@
   (provide/contract 
    [reconstruct-completed (-> syntax? any? render-settings? any)]
    [reconstruct-current (-> syntax? mark-list? symbol? (listof any?) render-settings?
-       (or/f (listof exp-without-holes?)
-             (list/p (listof exp-with-holes?) (listof exp-without-holes?))
-             (list/p (listof exp-with-holes?) (listof exp-without-holes?) 
-                     (listof exp-with-holes?) (listof exp-without-holes?))))]
+                            (union (listof exp-without-holes?)
+                                   (list/p (listof exp-with-holes?) (listof exp-without-holes?))
+                                   (list/p (listof exp-with-holes?) (listof exp-without-holes?) 
+                                           (listof exp-with-holes?) (listof exp-without-holes?))))]
    [final-mark-list? (-> mark-list? boolean?)]
    [skip-step? (-> break-kind? mark-list? render-settings? boolean?)])
   
@@ -244,7 +244,7 @@
 ;                      new-index)]))))
   
   ; construct-lifted-name 
-  ; (-> syntax? (or/f false? num?) symbol?)
+  ; (-> syntax? (union false? num?) symbol?)
   
   (define (construct-lifted-name binding dynamic-index)
     (if dynamic-index

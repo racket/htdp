@@ -15,9 +15,9 @@
     (or (null? v)
         (identifier? v)
         (and (pair? v)
-             ((flat-named-contract-predicate (cons/p identifier? arglist?)) v))        
+             ((flat-contract-predicate (cons/p identifier? arglist?)) v))        
         (and (syntax? v) 
-             ((flat-named-contract-predicate (cons/p identifier? arglist?)) (syntax-e v)))))
+             ((flat-contract-predicate (cons/p identifier? arglist?)) (syntax-e v)))))
   
   (provide/contract
    ;[varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
