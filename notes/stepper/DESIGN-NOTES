@@ -703,6 +703,10 @@ Ditto for quote-syntax
 
 2002-01-08
 
+[Later Note: This is preposterous.  Of course I need a wcm there,
+to replace an existing one if necessary.  Maybe if it's in
+non-tail position...]
+
 ***********
 
 Here's a nice optimization I'm not taking advantage of: the application
@@ -748,3 +752,13 @@ which the rhs evaluates to the undefined value.
 Well, I guess I'm going to have to fix this the right way, by adding a
 counter to every let which is incremented explicitly after the
 evaluation of each rhs. Yikes.
+
+********
+
+Ha! Did I actually say "right way?" This is totally the _wrong_
+way; keeping information about the continuation by mutating the
+store is guaranteed to fail when continuations are invoked.
+
+2002-06-21
+
+

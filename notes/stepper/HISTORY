@@ -15,3 +15,9 @@ UI redesigned to use "side-by-side" reduction.
 Changes for v103:
 
 PRs fixed: 1564, 1277, 1536, 1500, 1561, 1468, 1599, 1631
+
+Changes for v200:
+
+Total rewrite for new syntax. Addition of test suites.
+Addition of somewhat more systematic macro unwinding.
+Lots of bug fixes.
