@@ -1,3 +1,3 @@
-(module info (lib "setup.ss" "info.ss")
+(module info (lib "infotab.ss" "setup")
   (define name "HtDP Languages")
   (define tools (list "htdp-langs.ss")))
