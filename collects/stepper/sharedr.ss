@@ -3,30 +3,6 @@
 	  [e : stepper:error^]
           stepper:zodiac-client-procs^)
   
-  ; copied from aries
-  
-  (define read->raw
-    (lambda (read)
-      (if (z:zodiac? read)
-	  (z:sexp->raw read)
-	  read)))
- 
-  (define arglist->ilist
-    (lambda (arglist)
-      (cond
-	((z:list-arglist? arglist)
-	 (z:arglist-vars arglist))
-	((z:ilist-arglist? arglist)
-	 (let loop ((vars (z:arglist-vars arglist)))
-	   (if (null? (cddr vars))
-	       (cons (car vars) (cadr vars))
-	       (cons (car vars) (loop (cdr vars))))))
-	((z:sym-arglist? arglist)
-	 (car (z:arglist-vars arglist)))
-	(else
-	 (e:internal-error arglist
-			   "Given to arglist->ilist")))))
-  
   (define (read-exprs text)
     (let ([reader (z:read (open-input-string text) 
                           (z:make-location 1 1 0 "stepper-string"))])
@@ -127,26 +103,10 @@
   (define (flatten-take n a-list)
     (apply append (list-take n a-list)))
   
-  (define make-improper
-    (lambda (combine)
-      (rec improper ;; `rec' is for the name in error messages
-	   (lambda (f list)
-	     (let improper-loop ([list list])
-	       (cond
-		 ((null? list) list)
-		 ((pair? list) (combine (f (car list))
-					(improper-loop (cdr list))))
-		 (else (f list))))))))
-  (define improper-map (make-improper cons))
-  (define improper-foreach (make-improper (lambda (x y) y)))
-  
   (define-values (closure-table-put! closure-table-lookup)
     (let ([closure-table (make-hash-table-weak)])
       (values
        (lambda (key value)
 	 (hash-table-put! closure-table key value))
        (lambda args ; key or key & failure-thunk
-         (apply hash-table-get closure-table args)))))
-  
-  
-) 
+         (apply hash-table-get closure-table args)))))) 

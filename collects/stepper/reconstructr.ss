@@ -2,6 +2,7 @@
   (import [z : zodiac:system^]
           mzlib:function^
 	  [e : stepper:error^]
+          [utils : cogen-utils^]
           [b : userspace:basis^]
           [s : stepper:settings^]
 	  stepper:shared^)
@@ -205,8 +206,8 @@
              (if (comes-from-define-struct? expr)
                  (e:internal-error expr "this expression should have been skipped during reconstruction")
                  (let ([super-expr (z:struct-form-super expr)]
-                       [raw-type (read->raw (z:struct-form-type expr))]
-                       [raw-fields (map read->raw (z:struct-form-fields expr))])
+                       [raw-type (utils:read->raw (z:struct-form-type expr))]
+                       [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
                    (if super-expr
                        `(struct (,raw-type ,(recur super-expr))
                                 ,raw-fields)
@@ -226,7 +227,7 @@
                      ,(recur (z:if-form-else expr)))])]
             
             [(z:quote-form? expr)
-             (let ([raw (read->raw (z:quote-form-expr expr))])
+             (let ([raw (utils:read->raw (z:quote-form-expr expr))])
                (rectify-value raw)
 ;               (cond [(or (string? raw)
 ;                          (number? raw)
@@ -242,8 +243,8 @@
                     [bodies (z:case-lambda-form-bodies expr)]
                     [o-form-arglists
                      (map (lambda (arglist) 
-                            (improper-map z:binding-orig-name
-                                          (arglist->ilist arglist)))
+                            (utils:improper-map z:binding-orig-name
+                                              (utils:arglist->ilist arglist)))
                           arglists)]
                     [var-form-arglists
                      (map (lambda (arglist)
@@ -306,7 +307,7 @@
   (define (reconstruct-completed expr)    
       (cond [(z:define-values-form? expr)
              (if (comes-from-define-struct? expr)
-                 (read->raw (expr-read expr))
+                 (utils:read->raw (expr-read expr))
                  (let* ([vars (map z:varref-var (z:define-values-form-vars expr))]
                         [values (map s:global-lookup vars)]
                         [rectified-vars (map rectify-value values)])
@@ -354,8 +355,8 @@
                  (cond [(comes-from-define-struct? expr)
                         (let* ([struct-expr val]
                                [super-expr (z:struct-form-super struct-expr)]
-                               [raw-type (read->raw (z:struct-form-type struct-expr))]
-                               [raw-fields (map read->raw (z:struct-form-fields struct-expr))])
+                               [raw-type (utils:read->raw (z:struct-form-type struct-expr))]
+                               [raw-fields (map utils:read->raw (z:struct-form-fields struct-expr))])
                           `(define-struct
                             ,(if super-expr
                                  (list raw-type so-far)
@@ -377,7 +378,7 @@
                        
                        [else
                         `(define-values 
-                           ,(map read->raw vars)
+                           ,(map utils:read->raw vars)
                            ,(rectify-source-top-marks val))]))
                so-far))
          
@@ -439,8 +440,8 @@
                   (if (comes-from-define-struct? expr)
                       so-far
                       (let ([super-expr (z:struct-form-super expr)]
-                            [raw-type (read->raw (z:struct-form-type expr))]
-                            [raw-fields (map read->raw (z:struct-form-fields expr))])
+                            [raw-type (utils:read->raw (z:struct-form-type expr))]
+                            [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
                         (if super-expr
                             `(struct (,raw-type ,so-far)
                                      ,raw-fields)
