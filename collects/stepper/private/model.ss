@@ -211,6 +211,7 @@
            (if (not (eq? held-expr-list no-sexp))
                   (let*-values
                       ([(before current after) (redivide held-expr-list)])
+                    (set! held-expr-list no-sexp)
                     (receive-result (make-before-error-result (append finished-exprs before) 
                                                               current held-redex-list message after)))
                   (receive-result (make-error-result finished-exprs message)))))
