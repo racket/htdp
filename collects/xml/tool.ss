@@ -16,8 +16,9 @@
       (define (phase1) (void))
       (define (phase2) (void))
       
-      (define xml-box-color "purple")
-      (define scheme-box-color "blue")
+      (define xml-box-color "green")
+      (define scheme-splice-box-color "blue")
+      (define scheme-box-color "purple")
 
       (define (make-string-snip obj)
         (let* ([str (format "~e" obj)]
@@ -158,7 +159,9 @@
                     [col (wrapped-col xexpr)])
                (let-values ([(stx wid) (send snip read-special text line col pos)])
                  (with-syntax ([stx stx])
-                   (syntax (unquote stx)))))]
+                   (if (is-a? snip wrapped-snip%)
+                       (syntax ,@stx)
+                       (syntax ,stx)))))]
             [else xexpr])))
       
       (define xml-snipclass%
@@ -173,8 +176,11 @@
       (send xml-snipclass set-classname "drscheme:xml-snip")
       (send (get-the-snip-class-list) add xml-snipclass)
 
-      (define evaluated-snip%
+      (define scheme-snip%
         (class* renderable-editor-snip% (drscheme:snip:special<%>)
+          (init-field splice?)
+          (define/public (get-splice?) splice?)
+          
           (inherit get-editor)
           
           (define/public (read-special file line col pos)
@@ -192,27 +198,29 @@
             (make-object (drscheme:unit:program-editor-mixin 
                           (scheme:text-mixin (editor:keymap-mixin text:basic%)))))
           
-          (define/override (make-snip) (make-object evaluated-snip%))
+          (define/override (make-snip) (make-object scheme-snip%))
           
           (inherit show-border set-snipclass)
           (super-instantiate () 
-            (color scheme-box-color))
+            (color (if splice?
+                       scheme-box-color
+                       scheme-box-color)))
           (show-border #t)
-          (set-snipclass evaluated-snipclass)))
+          (set-snipclass scheme-snipclass)))
       
-      (define evaluated-snipclass%
+      (define scheme-snipclass%
         (class snip-class%
           (define/override (read stream-in)
-            (let* ([snip (make-object evaluated-snip%)]
+            (let* ([snip (make-object scheme-snip%)]
                    [editor (send snip get-editor)])
               (send editor read-from-file stream-in)
               snip))
           (super-instantiate ())))
       
-      (define evaluated-snipclass (make-object evaluated-snipclass%))
-      (send evaluated-snipclass set-version 1)
-      (send evaluated-snipclass set-classname "robby:evaluated-snip")
-      (send (get-the-snip-class-list) add evaluated-snipclass)
+      (define scheme-snipclass (make-object scheme-snipclass%))
+      (send scheme-snipclass set-version 1)
+      (send scheme-snipclass set-classname "drscheme:scheme-snip")
+      (send (get-the-snip-class-list) add scheme-snipclass)
       
       (define plain-text%
         (class text:keymap% 
@@ -311,7 +319,7 @@
       
       (define (transformable? snip)
         (or (is-a? snip xml-snip%)
-            (is-a? snip evaluated-snip%)))
+            (is-a? snip scheme-snip%)))
       
       (define (xml-box-frame-extension super%)
         (class super%
@@ -339,7 +347,11 @@
             (make-object menu:can-restore-menu-item% (string-constant xml-tool-scheme-box) menu
               (lambda (menu evt)
                 (insert-snip 
-                 (lambda () (make-object evaluated-snip%))))))
+                 (lambda () (instantiate scheme-snip% () (splice? #f))))))
+            (make-object menu:can-restore-menu-item% (string-constant xml-tool-scheme-splice-box) menu
+              (lambda (menu evt)
+                (insert-snip
+                 (lambda () (instantiate scheme-snip% () (splice? #t)))))))
           
           (frame:reorder-menus this)))
       
