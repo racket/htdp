@@ -706,7 +706,7 @@
 			      (cond
 			       [(null? clauses)
 				(list
-                                 (with-syntax ([err (syntax-property (syntax (error 'cond "all question results were false")) 'stepper-hint 'inserted-else)])
+                                 (with-syntax ([err (syntax-property (syntax (error 'cond "all question results were false")) 'stepper-inserted-else #t)])
                                    (syntax/loc stx
                                      [else err])))]
 			       [(syntax-case (car clauses) (else)

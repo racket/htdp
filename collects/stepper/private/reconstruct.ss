@@ -331,20 +331,20 @@
                       highlight-placeholder-stx)
                (with-syntax ([clauses
                               (let loop ([stx stx])
-                                (if (or (and (eq? user-source (syntax-property stx 'user-source))
-                                             (eq? user-position (syntax-property stx 'user-position)))
-                                        (syntax-property stx 'user-stepper-else))
-                                    (syntax-case stx (if begin)
-                                      [(if test result else)
-                                       (cons (inner (syntax (test result)))
-                                             (loop (syntax else)))]
-                                      [else-stx
-                                       ; source or synthesized else?
-                                       (if (eq? 'inserted-else (syntax-property (syntax else-stx) 'user-stepper-hint))
+                                (cond [(syntax-property stx 'user-stepper-else) 
+                                       (if (syntax-property (syntax else-stx) 'user-stepper-inserted-else)
                                            null
                                            (cons (inner (syntax (else else-stx)))
-                                                 null))])
-                                    (error 'unwind-cond "unexpected source for cond element ~a\n" (syntax-object->datum stx))))])
+                                                 null))]
+                                      [(and (eq? user-source (syntax-property stx 'user-source))
+                                             (eq? user-position (syntax-property stx 'user-position))) 
+                                       (syntax-case stx (if begin)
+                                         [(if test result else)
+                                          (cons (inner (syntax (test result)))
+                                                (loop (syntax else)))]
+                                         [else-stx
+                                          (error 'unwind-cond "expected an if, got: ~e" (syntax-object->datum (syntax else-stx)))])]
+                                      [else (error 'unwind-cond "expected a cond clause expansion, got: ~e" (syntax-object->datum (syntax stx)))]))])
                  (syntax (cond . clauses)))))
          
          (define (unwind-and/or stx user-source user-position label)
@@ -384,6 +384,24 @@
              [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
         (list main new-highlights))))
   
+  
+                                                                       
+                                                                       
+                                                                       
+                                ;              ;             ;;        
+                                ;                           ;          
+        ;    ;                  ;                           ;          
+  ;;;  ;;;; ;;;;   ;;;    ;;;;  ; ;;;          ;   ; ;;;   ;;;   ;;;;  
+ ;   ;  ;    ;    ;   ;  ;      ;;   ;         ;   ;;   ;   ;   ;    ; 
+     ;  ;    ;        ;  ;      ;    ;         ;   ;    ;   ;   ;    ; 
+  ;;;;  ;    ;     ;;;;  ;      ;    ;  ;;;;;  ;   ;    ;   ;   ;    ; 
+ ;   ;  ;    ;    ;   ;  ;      ;    ;         ;   ;    ;   ;   ;    ; 
+ ;   ;  ;    ;    ;   ;  ;      ;    ;         ;   ;    ;   ;   ;    ; 
+  ;;;;;  ;;   ;;   ;;;;;  ;;;;  ;    ;         ;   ;    ;   ;    ;;;;  
+                                                                       
+                                                                       
+                                                                       
+
   ; attach-info : SYNTAX-OBJECT SYNTAX-OBJECT -> SYNTAX-OBJECT
   ; attach-info attaches to a generated piece of syntax the origin & source information of another.
   ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
@@ -391,6 +409,7 @@
     (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
            [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
            [it (syntax-property it 'user-stepper-else (syntax-property expr 'stepper-else))]
+           [it (syntax-property it 'user-stepper-inserted-else (syntax-property expr 'stepper-inserted-else))]
            [it (syntax-property it 'user-source (syntax-source expr))]
            [it (syntax-property it 'user-position (syntax-position expr))])
       it))                                                                                                  
