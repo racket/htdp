@@ -124,7 +124,9 @@
 	
 	[on-char
 	 (lambda (key-event)
-	   (send press-queue add (make-sixkey (send key-event key-code))))]
+	   (send press-queue add (make-sixkey (send key-event key-code)))
+	   (when event-sema 
+		 (semaphore-post event-sema)))]
 	
 	[get-click
 	 (lambda ()
