@@ -50,7 +50,7 @@
 		"(build-list n f) = (list (f 0) ... (f (- n 1)))")
     (build-string (nat (nat -> char) -> string)
 		  "(build-string n f) = (string (f 0) ... (f (- n 1)))")
-    (quicksort ((X X -> boolean) (listof X) -> (listof X))
+    (quicksort ((listof X) (X X -> boolean) -> (listof X))
 	       "to construct a list from all items on a list in an order according to a predicate")
     (andmap ((X -> boolean) (listof X) -> boolean)
 	    "(andmap p (list x-1 ... x-n)) = (and (p x-1) (and ... (p x-n)))")
