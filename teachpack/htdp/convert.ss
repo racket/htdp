@@ -96,7 +96,7 @@
     (define (in-slider-range x)
       (cond
         [(<= SLI-MIN x SLI-MAX) (/ (- x SLI-MIN) (- SLI-MAX SLI-MIN))]
-        [else (error 'convert-gui "result out of range for Celsius slider")]))
+        [else (error 'convert-gui "result out of range for Celsius display")]))
     
     ;; to-string : number[0.,1.] -> number[SLI-MIN,SLI-MAX]
     (define (to-string x)
@@ -134,6 +134,7 @@
     ;; sliderF : slider% 
     ;; to display the Fahrenheit temperature 
     (define sliderF (make-object slider% #f -50 250 panel void F-SLI-0))
+    (send sliderF min-width (- 250 -50))
     
     ;; sliderC : slider% 
     ;; to display the Celsius temperature 
