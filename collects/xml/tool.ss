@@ -16,7 +16,7 @@
       (define (phase1) (void))
       (define (phase2) (void))
       
-      (define xml-box-color "green")
+      (define xml-box-color "forest green")
       (define scheme-splice-box-color "blue")
       (define scheme-box-color "purple")
 
@@ -159,8 +159,15 @@
                     [col (wrapped-col xexpr)])
                (let-values ([(stx wid) (send snip read-special text line col pos)])
                  (with-syntax ([stx stx])
-                   (if (is-a? snip wrapped-snip%)
-                       (syntax ,@stx)
+                   (if (and (is-a? snip scheme-snip%)
+                            (send snip get-splice?))
+                       (with-syntax ([err (syntax/loc 
+                                           (syntax stx)
+                                           (error 'scheme-splice-box "expected a list, found: ~e" lst))])
+                         (syntax ,@(let ([lst stx])
+                                     (if (list? lst)
+                                         lst
+                                         err))))
                        (syntax ,stx)))))]
             [else xexpr])))
       
@@ -198,12 +205,17 @@
             (make-object (drscheme:unit:program-editor-mixin 
                           (scheme:text-mixin (editor:keymap-mixin text:basic%)))))
           
-          (define/override (make-snip) (make-object scheme-snip%))
+          (define/override (make-snip) 
+            (instantiate scheme-snip% () (splice? splice?)))
+          
+          (define/override (write stream-out)
+            (send stream-out put (if splice? 0 1))
+            (send (get-editor) write-to-file stream-out 0 'eof))
           
           (inherit show-border set-snipclass)
           (super-instantiate () 
             (color (if splice?
-                       scheme-box-color
+                       scheme-splice-box-color
                        scheme-box-color)))
           (show-border #t)
           (set-snipclass scheme-snipclass)))
@@ -211,14 +223,15 @@
       (define scheme-snipclass%
         (class snip-class%
           (define/override (read stream-in)
-            (let* ([snip (make-object scheme-snip%)]
+            (let* ([splice? (zero? (send stream-in get-exact))]
+                   [snip (instantiate scheme-snip% () (splice? splice?))]
                    [editor (send snip get-editor)])
               (send editor read-from-file stream-in)
               snip))
           (super-instantiate ())))
       
       (define scheme-snipclass (make-object scheme-snipclass%))
-      (send scheme-snipclass set-version 1)
+      (send scheme-snipclass set-version 2)
       (send scheme-snipclass set-classname "drscheme:scheme-snip")
       (send (get-the-snip-class-list) add scheme-snipclass)
       
@@ -328,30 +341,53 @@
           (super-instantiate ())
           
           (let* ([menu (get-special-menu)]
+                 [find-insertion-point ;; -> (union #f editor<%>)
+                  ;; returns the editor (if there is one) with the keyboard focus
+                  (lambda ()
+                    (let ([editor (get-edit-target-object)])
+                      (and editor
+                           (is-a? editor editor<%>)
+                           (let loop ([editor editor])
+                             (let ([focused (send editor get-focus-snip)])
+                               (if (and focused
+                                        (is-a? focused editor-snip%))
+                                   (loop (send focused get-editor))
+                                   editor))))))]
                  [insert-snip
                   (lambda (make-obj)
-                    (let ([editor (get-edit-target-object)])
+                    (let ([editor (find-insertion-point)])
                       (when editor
-                        (let loop ([editor editor])
-                          (let ([focused (send editor get-focus-snip)])
-                            (if (and focused
-                                     (is-a? focused editor-snip%))
-                                (loop (send focused get-editor))
-                                (let ([snip (make-obj)])
-                                  (send editor insert snip)
-                                  (send editor set-caret-owner snip 'display))))))))])
-            (make-object menu:can-restore-menu-item% (string-constant xml-tool-xml-box) menu
-              (lambda (menu evt)
-                (insert-snip
-                 (lambda () (make-object xml-snip%)))))
-            (make-object menu:can-restore-menu-item% (string-constant xml-tool-scheme-box) menu
-              (lambda (menu evt)
-                (insert-snip 
-                 (lambda () (instantiate scheme-snip% () (splice? #f))))))
-            (make-object menu:can-restore-menu-item% (string-constant xml-tool-scheme-splice-box) menu
-              (lambda (menu evt)
-                (insert-snip
-                 (lambda () (instantiate scheme-snip% () (splice? #t)))))))
+                        (let ([snip (make-obj)])
+                          (send editor insert snip)
+                          (send editor set-caret-owner snip 'display)))))]
+                 [demand-callback ;; : menu-item% -> void
+                  ;; enables the menu item when there is an editor available.
+                  (lambda (item)
+                    (send item enable (find-insertion-point)))])
+            (instantiate menu:can-restore-menu-item% ()
+              (label (string-constant xml-tool-xml-box))
+              (parent menu)
+              (demand-callback demand-callback)
+              (callback
+               (lambda (menu evt)
+                 (insert-snip
+                  (lambda () (make-object xml-snip%))))))
+            (instantiate menu:can-restore-menu-item% ()
+              (label (string-constant xml-tool-scheme-box))
+              (parent menu)
+              (demand-callback demand-callback)
+              (callback 
+               (lambda (menu evt)
+                 (insert-snip 
+                  (lambda () (instantiate scheme-snip% () (splice? #f)))))))
+            (instantiate menu:can-restore-menu-item% ()
+              (label (string-constant xml-tool-scheme-splice-box))
+              (parent menu)
+              (demand-callback demand-callback)
+              (callback
+               (lambda (menu evt)
+                 (insert-snip
+                  (lambda () (instantiate scheme-snip% () (splice? #t))))))))
           
           (frame:reorder-menus this)))
       
