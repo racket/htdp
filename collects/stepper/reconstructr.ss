@@ -111,15 +111,19 @@
                               ([exn:variable? (lambda args #f)])
                             (or (and (s:check-pre-defined-var var)
                                      (or (procedure? (s:global-lookup var))
+                                         (and (s:true-false-printed?)
+                                              (or (eq? var 'true)
+                                                  (eq? var 'false)))
                                          (eq? var 'empty)))
                                 (let ([val (if (z:top-level-varref? expr)
                                                (s:global-lookup var)
                                                (lookup-binding mark-list (z:bound-varref-binding expr)))])
                                   (and (procedure? val)
                                        (not (continuation? val))
-                                       (eq? var
-                                            (closure-record-name 
-                                             (closure-table-lookup val (lambda () #f)))))))))))
+                                       (cond [(closure-table-lookup val (lambda () #f)) =>
+                                              (lambda (x)
+                                                (eq? var (closure-record-name x)))]
+                                             [else #f]))))))))
                (and (z:app? expr)
                     (let ([fun-val (mark-binding-value
                                     (lookup-binding mark-list (get-arg-binding 0)))])
@@ -245,9 +249,7 @@
                     [binding-names (map (lambda (b-list) (map z:binding-orig-name b-list)) bindings)]
                     [right-sides (map recur (z:let-values-form-vals expr))]
                     [must-be-values? (ormap (lambda (n-list) (not (= (length n-list) 1))) binding-names)]
-                    [_ (printf "about to first-time rectify body~n")]
-                    [rectified-body (let-recur (z:let-values-form-body expr) binding-list)]
-                    [_2 (printf "finished first-time rectify body~n")])
+                    [rectified-body (let-recur (z:let-values-form-body expr) binding-list)])
                (if must-be-values?
                    `(let-values ,(map list binding-names right-sides) ,rectified-body)
                    `(let ,(map list (map car binding-names) right-sides) ,rectified-body)))]
@@ -362,7 +364,7 @@
       ((1) `(define ,(car names) ,sexp))
       (else `(define-values ,names ,sexp))))
   
-  (define (so-far-only so-far) (values so-far null null))
+  (define (so-far-only so-far) (values null null so-far))
     
   ; reconstruct-current : takes a parsed expression, a list of marks, the kind of break, and
   ; any values that may have been returned at the break point. It produces a list containing the
@@ -428,51 +430,51 @@
                             [val dummy-var-list (if letrec?
                                                     binding-list
                                                     (build-list (length binding-list) get-arg-binding))]
-                            [_ (printf "about to look up rhs-vals~n")]
                             [val rhs-vals (map (lambda (arg-binding) 
                                                  (mark-binding-value (lookup-binding mark-list arg-binding)))
                                                dummy-var-list)]
-                            [_ (printf "finished looking up rhs-vals~n")]
                             [val rhs-lifted-name-sets
                                  (map (lambda (binding-set)
                                         (map (lambda (binding)
                                                (binding-lifted-name mark-list binding))
                                              binding-set))
                                       binding-sets)]
-                            [_ (printf "finished looking up dynamic indices~n")]
                             [val (values before-defs after-defs)
                                  (let loop ([rhs-vals rhs-vals]
                                             [rhs-sources vals]
                                             [rhs-lifted-name-sets rhs-lifted-name-sets])
-                                   (cond [(null? binding-sets) (values null null)]
+                                   (cond [(null? rhs-lifted-name-sets) (values null null)]
                                          [(eq? (car rhs-vals) (if letrec?
                                                                   the-undefined-value
                                                                   *unevaluated*))
-                                          (values null
-                                                  (cons (reconstruct-lifted (car rhs-lifted-name-sets) so-far)
-                                                        (map (lambda (rhs-lifted-name-set rhs-source)
-                                                               (reconstruct-lifted rhs-lifted-name-set 
-                                                                                   (rectify-source-expr expr
-                                                                                                        mark-list
-                                                                                                        (if letrec?
-                                                                                                            binding-list
-                                                                                                            null))))
-                                                             (cdr rhs-lifted-name-sets)
-                                                             (cdr rhs-sources))))]
+                                          (let ([reconstructed-rest-thunk
+                                                 (lambda (name-sets sources)
+                                                   (map (lambda (rhs-lifted-name-set rhs-source)
+                                                          (reconstruct-lifted rhs-lifted-name-set 
+                                                                              (rectify-source-expr rhs-source
+                                                                                                   mark-list
+                                                                                                   null)))
+                                                        name-sets
+                                                        sources))])
+                                            (values null
+                                                    (if (eq? so-far nothing-so-far)
+                                                        (reconstructed-rest-thunk rhs-lifted-name-sets
+                                                                                  rhs-sources)
+                                                        (cons (reconstruct-lifted (car rhs-lifted-name-sets) so-far)
+                                                              (reconstructed-rest-thunk (cdr rhs-lifted-name-sets)
+                                                                                        (cdr rhs-sources))))))]
                                          [else
                                           (let*-values ([(first-set) (car rhs-lifted-name-sets)]
                                                         [(set-vals remaining) (list-partition rhs-vals (length first-set))]
                                                         [(reconstructed) (map reconstruct-lifted
-                                                                              rhs-lifted-name-sets
+                                                                              (map list first-set)
                                                                               (map rectify-value set-vals))]
                                                         [(before after) (loop remaining
                                                                               (cdr rhs-sources)
                                                                               (cdr rhs-lifted-name-sets))])
                                             (values (append reconstructed before)
                                                     after))]))]
-                            [_ (printf "about to rectify body~n")]
-                            [val rectified-body (rectify-source-expr body mark-list binding-list)]
-                            [_ (printf "finished rectifying body~n")])
+                            [val rectified-body (rectify-source-expr body mark-list null)])
                        (values before-defs after-defs rectified-body)))]
                   [top-mark (car mark-list)]
                   [expr (mark-source top-mark)])
@@ -517,7 +519,7 @@
                           `(...) ; in unannotated code
                           `(... ,so-far ...)))
                      (else
-                      (e:static-error "bad label in application mark: ~s" expr)))))]
+                      (e:internal-error expr "bad label in application mark")))))]
                
                ; define-struct 
                
@@ -609,8 +611,8 @@
          (define (rectify-let-values-step)
            (let*-values ([(redex) (rectify-source-expr (mark-source (car mark-list)) mark-list null)]
                          [(before-step) (current-def-rectifier null highlight-placeholder (cdr mark-list) #f)]
-                         [(r-before r-after reduct) (rectify-inner mark-list #f)]
-                         [(new-defs (append r-before r-after))]
+                         [(r-before r-after reduct) (rectify-inner mark-list nothing-so-far)]
+                         [(new-defs) (append r-before r-after)]
                          [(after-step) (current-def-rectifier (build-list (length new-defs) 
                                                                           (lambda (x) highlight-placeholder))
                                                               highlight-placeholder
@@ -619,30 +621,24 @@
              (list before-step (list redex)
                    after-step (append new-defs (list reduct)))))
            
-           
-         ;         (define (confusable-value? val)
-         ;           (not (or (number? val)
-         ;                    (boolean? val)
-         ;                    (string? val)
-         ;                    (symbol? val))))
-         
          (define answer
            (case break-kind
              ((result-break)
               (let* ([innermost (if (null? returned-value-list)
                                     (rectify-source-expr (mark-source (car mark-list)) mark-list null)
                                     (rectify-value (car returned-value-list)))]
-                     [current-def (current-def-rectifier null highlight-placeholder (cdr mark-list) #f)])
-                (list current-def (list innermost))))
+                     [current-defs (current-def-rectifier null highlight-placeholder (cdr mark-list) #f)])
+                (list current-defs (list innermost))))
              ((normal-break)
-              (let ([current-def (current-def-rectifier null nothing-so-far mark-list #t)])
-                  (list current-def (list redex))))
+              (let ([current-defs (current-def-rectifier null nothing-so-far mark-list #t)])
+                  (list current-defs (list redex))))
              ((double-break)
               (rectify-let-values-step))
              ((late-let-break)
-              (let ([reconstructed (rectify-inner mark-list #f)])
-                (let loop ([first (car reconstructed)] [rest (cdr reconstructed)]) ; take all but last
-                  (if (null? rest) null (cons first (loop (car rest) (cdr rest)))))))
+              (let-values ([(before after junk) (rectify-inner mark-list nothing-so-far)])
+                (unless (null? after)
+                  (error 'answer "non-empty 'after' defs in late-let-break"))
+                before))
              (else
               (e:internal-error 'reconstruct-current-def "unknown break kind: " break-kind))))
 

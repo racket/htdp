@@ -20,6 +20,10 @@
   (define (send-to-drscheme-eventspace thunk)
     (send-to-other-eventspace drscheme-eventspace thunk))
   
+  (define par-true-false-printed 'no-value)
+  (define (true-false-printed?)
+    par-true-false-printed)
+  
   (define par-constructor-style-printing #f)
   (define (constructor-style-printing?)
     par-constructor-style-printing)
@@ -123,6 +127,7 @@
      (set! user-namespace (current-namespace))
      (set! user-pre-defined-vars (map car (make-global-value-list)))
      (set! user-vocabulary (d:basis:current-vocabulary))
+     (set! par-true-false-printed (p:booleans-as-true/false))
      (set! par-constructor-style-printing (p:constructor-style-printing))
      (set! par-abbreviate-cons-as-list (p:abbreviate-cons-as-list))
      (set! par-cons (global-defined-value 'cons))
@@ -188,7 +193,7 @@
       (when (z:define-values-form? expr)
         (for-each (lambda (name) 
                     (when (check-global-defined name)
-                      (e:static-error expr
+                      (e:static-error "define" 'kwd:define expr
                                       "name is already bound: ~s" name)))
                   (map z:varref-var (z:define-values-form-vars expr))))))
   
@@ -196,10 +201,10 @@
     (let ([reconstructed (r:reconstruct-completed current-expr expression-result)])
       (set! finished-exprs (append finished-exprs (list reconstructed)))))
   
-  (define held-expr no-sexp)
-  (define held-redex no-sexp)
+  (define held-expr-list no-sexp)
+  (define held-redex-list no-sexp)
   
-  ; if there's a sexp which _doesnt_ contain a highlight in between two that do, we're in trouble.
+  ; if there's a sexp which _doesn't_ contain a highlight in between two that do, we're in trouble.
   
   (define (redivide exprs)
     (letrec ([contains-highlight-placeholder
@@ -208,23 +213,41 @@
                     (or (contains-highlight-placeholder (car expr))
                         (contains-highlight-placeholder (cdr expr)))
                     (eq? expr highlight-placeholder)))])
-      (let loop ([exprs exprs] [mode 'before] [before-accum (lambda (x) x)]
-                 [during-accum (lambda (x) x)] [after-accum (lambda (x) x)])
-        (let ([increase-thunk 
-               (lambda (thunk)
-                 (lambda (x) (thunk (cons (car exprs) x))))])
-          (cond [(null? exprs) 
-                 (if (eq? mode 'before)
-                     (error 'redivide "no sexp contained the highlight-placeholder.")
-                     (values (before-accum null) (during-accum null) (after-accum null)))]
-                [(contains-highlight-placeholder (car exprs))
-                 (if (eq? mode 'after)
-                     (error 'redivide "highlighted sexp when already in after mode")
-                     (loop (cdr exprs) 'during before-accum (increase-thunk during-accum) after-accum))]
-                [else
-                 (case mode
-                   ((before) (loop (cdr exprs) 'before (increase-thunk before-accum) during-accum after-accum))
-                   ((during after) (loop (cdr exprs) mode before-accum during-accum (increase-thunk after-accum))))]))))) 
+      (let loop ([exprs exprs] [mode 'before])
+        (cond [(null? exprs) 
+               (if (eq? mode 'before)
+                   (error 'redivide "no sexp contained the highlight-placeholder.")
+                   (values null null null))]
+              [(contains-highlight-placeholder (car exprs))
+               (if (eq? mode 'after)
+                   (error 'redivide "highlighted sexp when already in after mode")
+                   (let-values ([(before during after) (loop (cdr exprs) 'during)])
+                     (values before (cons (car exprs) during) after)))]
+              [else
+               (case mode
+                 ((before) 
+                  (let-values ([(before during after) (loop (cdr exprs) 'before)])
+                    (values (cons (car exprs) before) during after)))
+                 ((during after) 
+                  (let-values ([(before during after) (loop (cdr exprs) 'after)])
+                    (values before during (cons (car exprs) after)))))]))))
+
+;(redivide `(3 4 (+ (define ,highlight-placeholder) 13) 5 6))
+;(values `(3 4) `((+ (define ,highlight-placeholder) 13)) `(5 6))
+;
+;(redivide `(,highlight-placeholder 5 6))
+;(values `() `(,highlight-placeholder) `(5 6))
+;
+;(redivide `(4 5 ,highlight-placeholder ,highlight-placeholder))
+;(values `(4 5) `(,highlight-placeholder ,highlight-placeholder) `())
+;
+;(printf "will be errors:~n")
+;(equal? (redivide `(1 2 3 4))
+;        error-value)
+;
+;(equal? (redivide `(1 2 ,highlight-placeholder 3 ,highlight-placeholder 4 5))
+;        error-value)
+ 
   
   (define (break mark-list break-kind returned-value-list)
     (let ([double-redivide
@@ -233,8 +256,6 @@
                            [(before-2 current-2 after-2) (redivide new-exprs-after)]
                            [(_) (unless (and (equal? before before-2)
                                              (equal? after after-2))
-                                  (printf "before: ~a~nbefore-2: ~a~nafter: ~a~nafter-2: ~a~n"
-                                          before before-2 after after-2)
                                   (error 'break "reconstructed before or after defs are not equal."))])
                (values (append finished-exprs before) current current-2 after)))]
           [reconstruct-helper
@@ -251,14 +272,15 @@
          (when (not (r:skip-redex-step? mark-list))
            (reconstruct-helper 
             (lambda (reconstructed redex-list)
-              (set! held-expr reconstructed)
+              (set! held-expr-list reconstructed)
               (set! held-redex-list redex-list)
               (continue-user-computation)))
            (suspend-user-computation))]
         [(result-break)
-         (when (not (or (r:skip-redex-step? mark-list)
-                        (and (null? returned-value-list)
-                             (eq? held-expr no-sexp))))
+         (when (if (not (null? returned-value-list))
+                   (not (r:skip-redex-step? mark-list))
+                   (and (not (eq? held-expr-list no-sexp))
+                        (not (r:skip-result-step? mark-list))))
            (reconstruct-helper 
             (lambda (reconstructed reduct-list)
               ;              ; this invariant (contexts should be the same)
@@ -267,38 +289,37 @@
               ;              ; (... <body-of-my-proc> ...), where the context of the first one is
               ;              ; empty and the context of the second one is (... ...).
               ;              ; so, I'll just disable this invariant test.
-              ;              (when (not (equal? reconstructed held-expr))
+              ;              (when (not (equal? reconstructed held-expr-list))
               ;                (error 'reconstruct-helper
               ;                                  "pre- and post- redex/uct wrappers do not agree:~nbefore: ~a~nafter~a"
-              ;                                  held-expr reconstructed))
-              (let*-values 
-                  ([(new-finished current-pre current-post after) (double-redivide finished-exprs held-expr reconstructed)]
-                   [(result) (make-before-after-result new-finished
-                                                       current-pre
-                                                       held-redex-list
-                                                       current-post
-                                                       reduct-list
-                                                       after)])
-                (set! held-expr no-sexp)
+              ;                                  held-expr-list reconstructed))
+              (let ([result
+                     (if (not (eq? held-expr-list no-sexp))
+                         (let*-values 
+                             ([(new-finished current-pre current-post after) 
+                               (double-redivide finished-exprs held-expr-list reconstructed)])
+                           (make-before-after-result new-finished current-pre held-redex-list current-post reduct-list after))
+                         (let*-values
+                             ([(before current after) (redivide reconstructed)])
+                           (make-before-after-result (append finished-exprs before) `(,highlight-placeholder) `(...)
+                                                     current reduct-list after)))])
+                (set! held-expr-list no-sexp)
                 (set! held-redex-list no-sexp)
                 (i:receive-result result))))
            (suspend-user-computation))]
         [(double-break)
          ; a double-break occurs at the beginning of a let's evaluation.
-         (printf "entering double-break~n")
          (send-to-drscheme-eventspace
           (lambda ()
             (let* ([reconstruct-quadruple
                     (r:reconstruct-current current-expr mark-list break-kind returned-value-list)])
-              (when (not (eq? held-expr no-sexp))
+              (when (not (eq? held-expr-list no-sexp))
                 (error 'break-reconstruction
-                       "held-expr not empty when a double-break occurred"))
+                       "held-expr-list not empty when a double-break occurred"))
               (let*-values 
                   ([(new-finished current-pre current-post after) (double-redivide finished-exprs 
                                                                                    (list-ref reconstruct-quadruple 0) 
                                                                                    (list-ref reconstruct-quadruple 2))])
-                (unless (eq? current-post highlight-placeholder)
-                  (error 'break "current-post should have been highlight-placeholder"))
                 (i:receive-result (make-before-after-result new-finished
                                                             current-pre
                                                             (list-ref reconstruct-quadruple 1)
@@ -316,11 +337,11 @@
         [else (error 'break "unknown label on break")])))
   
   (define (handle-exception exn)
-    (if (not (eq? held-expr no-sexp))
+    (if (not (eq? held-expr-list no-sexp))
         (let*-values
-            ([(before current after) (redivide held-expr)])
+            ([(before current after) (redivide held-expr-list)])
           (i:receive-result (make-before-error-result (append finished-exprs before) 
-                                                      held-expr held-redex (exn-message exn) after)))
+                                                      current held-redex-list (exn-message exn) after)))
         (begin
           (i:receive-result (make-error-result finished-exprs (exn-message exn))))))
   
