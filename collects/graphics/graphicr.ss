@@ -680,7 +680,7 @@
   
   (define make-do-pixel
     (lambda (go)
-      (let ([f (make-draw-proc 'draw-point'get-pen 'set-pen  
+      (let ([f (make-draw-proc 'draw-point 'get-pen 'set-pen  
 			       'get-current-pen set-viewport-pen white-pen)])
 	(lambda (viewport)
 	  (let ([f (f viewport)])
