@@ -270,7 +270,7 @@
   ; I'm not yet sure whether or not 'vars' must be supplied or whether they can be derived
   ; from the expression itself.
   
-  (define (reconstruct-completed expr)    
+  (define (reconstruct-completed expr value)    
       (cond [(z:define-values-form? expr)
              (if (comes-from-define-struct? expr)
                  (utils:read->raw (expr-read expr))
@@ -296,8 +296,7 @@
             [(z:begin-form? expr) ; hack for xml stuff
              (utils:read->raw (expr-read expr))]
             [else
-             (let ([value (s:global-lookup (top-level-exp-gensym-source expr))])
-               (rectify-value value))]))
+             (rectify-value value)]))
     
   ; reconstruct-current : takes a parsed expression, a list of marks, the kind of break, and
   ; any values that may have been returned at the break point. It produces a list containing the

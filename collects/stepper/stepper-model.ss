@@ -182,11 +182,12 @@
                (lambda ()
                  (let/ec k
                    (current-exception-handler (make-exception-handler k))
-                   (user-primitive-eval annotated)
-                   (send-to-drscheme-eventspace
-                    (lambda ()
-                      (add-finished-expr)
-                      (read-next-expr)))))))))))
+                   (let ([expression-result
+                          (user-primitive-eval annotated)])
+                     (send-to-drscheme-eventspace
+                      (lambda ()
+                        (add-finished-expr expression-result)
+                        (read-next-expr))))))))))))
          
          
   (define (check-for-repeated-names expr exn-handler)
@@ -199,8 +200,8 @@
                              "name is already bound: ~s" name)))
                   (map z:varref-var (z:define-values-form-vars expr))))))
          
-  (define (add-finished-expr)
-    (let ([reconstructed (r:reconstruct-completed current-expr)])
+  (define (add-finished-expr expression-result)
+    (let ([reconstructed (r:reconstruct-completed current-expr expression-result)])
       (set! finished-exprs (append finished-exprs (list reconstructed)))))
   
   (define held-expr no-sexp)
