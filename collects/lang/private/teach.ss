@@ -1972,9 +1972,10 @@
 			       (syntax/loc stx
 				 [else (error 'cases "the expression matched none of the choices")]))]
 			     [(syntax-case (car clauses) (beginner-else)
-				[(beginner-else . _) #t]
+				[(beginner-else . _) (syntax/loc (car clauses) (else . _))]
 				[_else #f])
-			      clauses]
+			      => 
+			      (lambda (x) (cons x (cdr clauses)))]
 			     [else (cons (car clauses) (loop (cdr clauses)))]))])
 	     (with-syntax ([clauses clauses])
 	       (syntax/loc stx (case v-expr . clauses)))))]
