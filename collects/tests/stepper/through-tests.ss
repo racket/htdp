@@ -4,51 +4,44 @@
            (lib "private/model-settings.ss" "stepper")
            (lib "private/highlight-placeholder.ss" "stepper")
            (lib "match.ss")
+           (lib "sexp-diff.scm" "tests" "utils")
            "tests-common.ss")
-  
-  (define test-directory (build-path (collection-path "mzlib")  'up 'up))
   
   (reset-namespaces)
   
   (define (test-sequence namespace render-settings exp-str expected-steps)
-    (let ([filename (build-path test-directory "stepper-test")])
-      (call-with-output-file filename
-        (lambda (port)
-          (fprintf port "~a" exp-str))
-        'truncate)
-      (printf "testing string: ~v\n" exp-str)
-      (let* ([current-error-display-handler (error-display-handler)]) 
-        (let/ec escape
-          (parameterize ([current-namespace namespace]
-                         [error-escape-handler (lambda () (escape (void)))])
-            (let* ([expanded-steps
-                    (append (map expand-test-spec expected-steps) 
-                            '((finished-stepping)))]
-                   [receive-result
-                    (lambda (result)
-                      (if (null? expanded-steps)
-                          (printf "test-sequence: ran out of expected steps. Given result: ~v\n" result)
-                          (begin
-                            (unless (compare-steps result (car expanded-steps))
-                              (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expanded-steps)))
-                            (set! expanded-steps (cdr expanded-steps)))))]
-                   [expand-in-namespace
-                    (lambda (sexp)
-                      (expand sexp))]
-                   [program-expander
-                    (lambda (init iter)
-                      (call-with-input-file filename
-                        (lambda (input-port)
-                          (letrec ([read-and-deliver
-                                    (lambda ()
-                                      (let ([new-exp (read-syntax filename input-port)])
-                                        (if (eof-object? new-exp)
-                                            (iter new-exp void)
-                                            (iter (expand-in-namespace new-exp) read-and-deliver))))])
-                          (init)
-                          (read-and-deliver)))))])
-              (go program-expander receive-result render-settings)
-              (error-display-handler current-error-display-handler)))))))
+    (printf "testing string: ~v\n" exp-str)
+    (let* ([current-error-display-handler (error-display-handler)]) 
+      (let/ec escape
+        (parameterize ([current-namespace namespace]
+                       [error-escape-handler (lambda () (escape (void)))])
+          (let* ([expanded-steps
+                  (append (map expand-test-spec expected-steps) 
+			  '((finished-stepping)))]
+                 [receive-result
+                  (lambda (result)
+                    (if (null? expanded-steps)
+                        (printf "test-sequence: ran out of expected steps. Given result: ~v\n" result)
+                        (begin
+                          (unless (compare-steps result (car expanded-steps))
+                            (printf "test-sequence: steps do not match.\ngiven: ~v\nexpected: ~v\n" result (car expanded-steps)))
+                          (set! expanded-steps (cdr expanded-steps)))))]
+                 [expand-in-namespace
+                  (lambda (sexp)
+                    (expand sexp))]
+                 [program-expander
+                  (lambda (init iter)
+                    (letrec ([input-port (open-input-string exp-str)]
+                             [read-and-deliver
+                              (lambda ()
+                                (let ([new-exp (read-syntax "test-input" input-port)])
+                                  (if (eof-object? new-exp)
+                                      (iter new-exp void)
+                                      (iter (expand-in-namespace new-exp) read-and-deliver))))])
+                      (init)
+                      (read-and-deliver)))])
+            (go program-expander receive-result render-settings)
+            (error-display-handler current-error-display-handler))))))
   
   (define (lang-level-test-sequence ns rs)
     (lambda args
@@ -101,7 +94,9 @@
   
   ; (-> before-after-result? (list/p sexp-with-highlights? sexp-without-highlights? sexp-with-highlights? sexp-without-highlights?) boolean?))
   (define (compare-before-after actual meat-list)
-    (andmap (lambda (fn expected) (equal? (fn actual) expected))
+    (andmap (lambda (fn expected) (if (equal? (fn actual) expected)
+                                      #t
+                                      (begin (printf "~e is not equal? to ~e\nhere's the diff: ~e\n" (fn actual) expected (sexp-diff (fn actual) expected)))))
             (list before-after-result-exp
                   before-after-result-redex
                   before-after-result-post-exp
@@ -276,23 +271,6 @@
 ;                       (before-after (,h-p) ((and true true false)) same ((and true false)))
 ;                       (before-after (,h-p) ((and true false)) same (false))
 ;                       (finished (false))))
-;  
-;  ;;;;;;;;;;;;;
-;  ;;
-;  ;;  NOT
-;  ;;
-;  ;;;;;;;;;;;;;
-;  
-;  (test-upto-int/lam "(not (not #t))"
-;                     `((before-after ((not ,h-p)) ((not true))
-;                                     same (false))
-;                       (before-after (,h-p) ((not false))
-;                                     same (true))
-;                       (finished (true))))
-;  
-;  (test-upto-int/lam "(not 5)"
-;                     `((before-error (,h-p) ((not 5))
-;                                    "not: expected either true or false; given 5")))
 ;  
 ;  ;;;;;;;;;;;;;
 ;  ;;
@@ -487,29 +465,29 @@
 ;                                (before-after ((cons 3 ,h-p)) ((append (list 7 5) (list 6))) same ((list 7 5 6)))
 ;                                (before-after (,h-p) ((cons 3 (list 7 5 6))) same ((list 3 7 5 6)))
 ;                                (finished ((list 3 7 5 6)))))
-;  
-;  ;;;;;;;;;;;;;
-;  ;;
-;  ;;  LET
-;  ;;
-;  ;;;;;;;;;;;;;
-;  
-;    (test-mz-sequence "(let ([a 3]) 4)"
-;  		    `((before-after (,h-p) ((let-values ([(a) 3]) 4))
-;  				    same (4)))) 
-;    
-;    (test-mz-sequence "(let ([a (+ 4 5)] [b (+ 9 20)]) (+ a b))"
-;                      `((before-after ((let-values ([(a) ,h-p] [(b) (+ 9 20)]) (+ a b))) ((+ 4 5))
-;  				    same (9))
-;  		      (before-after ((let-values ([(a) 9] [(b) ,h-p]) (+ a b))) ((+ 9 20))
-;  				    same (29))
-;  		      (before-after (,h-p) ((let-values ([(a) 9] [(b) 29]) (+ a b)))
-;  				    same (+ 9 29))
-;  		      (before-after (,h-p) ((+ 9 29))
-;  				    same (38))
-;  		      (finished (38))))
-;  
-;  
+  
+  ;;;;;;;;;;;;;
+  ;;
+  ;;  LET
+  ;;
+  ;;;;;;;;;;;;;
+  
+  ;  (test-mz-sequence "(let ([a 3]) 4)"
+  ;		    `((before-after (,h-p) ((let-values ([(a) 3]) 4))
+  ;				    same (4)))) 
+  ;  
+  ;  (test-mz-sequence "(let ([a (+ 4 5)] [b (+ 9 20)]) (+ a b))"
+  ;                    `((before-after ((let-values ([(a) ,h-p] [(b) (+ 9 20)]) (+ a b))) ((+ 4 5))
+  ;				    same (9))
+  ;		      (before-after ((let-values ([(a) 9] [(b) ,h-p]) (+ a b))) ((+ 9 20))
+  ;				    same (29))
+  ;		      (before-after (,h-p) ((let-values ([(a) 9] [(b) 29]) (+ a b)))
+  ;				    same (+ 9 29))
+  ;		      (before-after (,h-p) ((+ 9 29))
+  ;				    same (38))
+  ;		      (finished (38))))
+  
+  
 ;    (test-intermediate-sequence "(define a12 3) (define c12 19) (let ([a12 13] [b12 a12]) (+ b12 a12 c12))"
 ;                                `((before-after-finished ((define a12 3) (define c12 19))
 ;                                                         (,h-p) ((let ([a12 13] [b12 a12]) (+ b12 a12 c12))) 
@@ -523,21 +501,21 @@
 ;                                  (before-after (,h-p) ((+ 3 13 19)) same (35))
 ;                                  (finished (35))))
 ;    
-;    (test-intermediate-sequence "(let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
-;                                `((before-after (,h-p) ((let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
-;                                                (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
-;                                  (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
-;                                                         ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
-;                                  (finished ((define b_1 7) 9))))
-;    
-;    (test-intermediate-sequence "(define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
-;                                `((before-after-finished ((define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
-;                                                         ((define gprime ,h-p)) ((f cos))
-;                                                         same ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
-;                                  (before-after ((define gprime ,h-p)) ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
-;                                                (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
-;                                  (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
-;    
+  ;  (test-intermediate-sequence "(let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+  ;                              `((before-after (,h-p) ((let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)) 
+  ;                                              (,h-p ,h-p ,h-p) ((define a_0 (lambda (x) (+ x 14))) (define b_1 (+ 3 4)) 9))
+  ;                                (before-after-finished ((define a_0 (lambda (x) (+ x 14))))
+  ;                                                       ((define b_1 ,h-p) 9) ((+ 3 4)) same (7))
+  ;                                (finished ((define b_1 7) 9))))
+  ;  
+  ;  (test-intermediate-sequence "(define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)) (define gprime (f cos))"
+  ;                              `((before-after-finished ((define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) eps))]) gp)))
+  ;                                                       ((define gprime ,h-p)) ((f cos))
+  ;                                                       same ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp)))
+  ;                                (before-after ((define gprime ,h-p)) ((let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))]) gp))
+  ;                                              (,h-p (define gprime ,h-p)) ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) gp_0))
+  ;                                (finished ((define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) eps))) (define gprime gp_0)))))
+  ;  
   ;  ;;;;;;;;;;;;;
   ;  ;;
   ;  ;;  LET*
@@ -636,51 +614,44 @@
   ;  ;;
   ;  ;;;;;;;;;;;;;
   ;  
-  
-;    (test-intermediate-sequence "(local () (+ 3 4))"
-;                                `((before-after (,h-p) ((local () (+ 3 4)))
-;                                                (,h-p) ((+ 3 4)))
-;                                  (before-after (,h-p) ((+ 3 4))
-;                                                (,h-p) (7))
-;                                  (finished (7))))
-;    
+  ;
+  ;  (test-intermediate-sequence "(local () (+ 3 4))"
+  ;                              `((before-after (,h-p) ((local () (+ 3 4)))
+  ;                                              (,h-p) ((+ 3 4)))
+  ;                                (before-after (,h-p) ((+ 3 4))
+  ;                                              (,h-p) (7))
+  ;                                (finished (7))))
+  ;  
     (test-intermediate-sequence "(local ((define (a x) (+ x 9))) (a 6))"
                                 `((before-after (,h-p) ((local ((define (a x) (+ x 9))) (a 6)))
-                                                (,h-p ,h-p) ((define (a_0 x) (+ x 9)) (a_0 6)))
+                                                (,h-p ,h-p) ((define (a x) (+ x 9)) (a 6)))
                                   (before-after-finished ((define (a_0 x) (+ x 9)))
                                                          (,h-p) ((a_0 6)) same ((+ 6 9)))
-                                  (before-after (,h-p) ((+ 6 9)) same (15))
+                                  (before-after (,h-p) (+ 6 9) same (15))
                                   (finished (15))))
     
-;  ;to try: 
-;  (error 'implement-test-cases! "")
-;  "(+ (+ 3 4) (local ((define a 13) (define (b x) x) (define c (lambda (x) x))) 8))"
-;  "(local ((define (a x) x) (define b (local ((define (a x) x) (define b (+ 3 4)) (define c (lambda (x) x))) c)) (define c (lambda (x) x))) (+ 3 4))"
-;  "(define (f x) (+ x 3)) (define g f) (+ 3 4)"
-;  "(define a (local ((define (f x) x)) f)) (+ 3 4)"
-  
-;    (test-intermediate-sequence "(local ((define (a x) (+ x 13))) a)"
-;                                `((before-after (,h-p) ((local ((define (a x) (+ x 13))) a))
-;                                                (,h-p ,h-p) ((define (a_0 x) (+ x 13)) a_0))
-;                                  (finished ((define (a_0 x) (+ x 13)) a_0))))
-;  
-;    (test-intermediate-sequence "(local ((define (a x) (+ x 9)) (define b a)) (b 1))"
-;                                `((before-after (,h-p) ((local ((define (a x) (+ x 9)) (define b a)) (b 1)))
-;                                                (,h-p ,h-p ,h-p) ((define (a_0 x) (+ x 9)) (define b_1 a_0) (b_1 1)))
-;                                  (before-after-finished ((define (a_0 x) (+ x 9)) (define b_1 a_0))
-;                                                         (,h-p) ((b_1 1)) same ((a_0 1)))
-;                                  (before-after (,h-p) ((a_0 1)) same ((+ 1 9)))
-;                                  (before-after (,h-p) ((+ 1 9)) same (10))
-;                                  (finished (10))))
-;    
-;      (test-intermediate-sequence "(define (f g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) eps)]) gp)) (define gprime (f cos))"
-;                                `((before-after-finished ((define (f g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) eps)]) gp)))
-;                                                         ((define gprime ,h-p)) ((f cos))
-;                                                         same ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) eps)]) gp)))
-;                                  (before-after ((define gprime ,h-p)) ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) eps)]) gp))
-;                                                (,h-p (define gprime ,h-p)) ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) eps)) gp_0))
-;                                  (finished ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) eps)) (define gprime gp_0)))))
-    
+  ;  (test-intermediate-sequence "(local ((define (a x) (+ x 13))) a)"
+  ;                              `((before-after (,h-p) ((local ((define (a x) (+ x 13))) a))
+  ;                                              (,h-p ,h-p) ((define (a_0 x) (+ x 13)) a_0))
+  ;                                (finished ((define (a_0 x) (+ x 13)) a_0))))
+  ;
+  ;  (test-intermediate-sequence "(local ((define (a x) (+ x 9)) (define b a)) (b 1))"
+  ;                              `((before-after (,h-p) ((local ((define (a x) (+ x 9)) (define b a)) (b 1)))
+  ;                                              (,h-p ,h-p ,h-p) ((define (a_0 x) (+ x 9)) (define b_1 a_0) (b_1 1)))
+  ;                                (before-after-finished ((define (a_0 x) (+ x 9)) (define b_1 a_0))
+  ;                                                       (,h-p) ((b_1 1)) same ((a_0 1)))
+  ;                                (before-after (,h-p) ((a_0 1)) same ((+ 1 9)))
+  ;                                (before-after (,h-p) ((+ 1 9)) same (10))
+  ;                                (finished (10))))
+  ;  
+  ;    (test-intermediate-sequence "(define (f g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) eps)]) gp)) (define gprime (f cos))"
+  ;                              `((before-after-finished ((define (f g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) eps)]) gp)))
+  ;                                                       ((define gprime ,h-p)) ((f cos))
+  ;                                                       same ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) eps)]) gp)))
+  ;                                (before-after ((define gprime ,h-p)) ((local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) eps)]) gp))
+  ;                                              (,h-p (define gprime ,h-p)) ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) eps)) gp_0))
+  ;                                (finished ((define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) eps)) (define gprime gp_0)))))
+  ;  
   ;  ;;;;;;;;;;;;;
   ;  ;;
   ;  ;;  TIME
@@ -712,12 +683,12 @@
         (namespace-require '(lib "servlet2.ss" "htdp"))
         new-namespace)))
   
-;  (define test-teachpack-sequence (lambda args
-;                                    (let ([new-custodian (make-custodian)])
-;                                      (parameterize ([current-custodian new-custodian])
-;                                        (apply (lang-level-test-sequence tp-namespace fake-beginner-render-settings) args))
-;                                      (custodian-shutdown-all new-custodian))))
-;  
+  (define test-teachpack-sequence (lambda args
+                                    (let ([new-custodian (make-custodian)])
+                                      (parameterize ([current-custodian new-custodian])
+                                        (apply (lang-level-test-sequence tp-namespace fake-beginner-render-settings) args))
+                                      (custodian-shutdown-all new-custodian))))
+  
     
     ; uses set-render-settings!
     ;(reconstruct:set-render-settings! fake-beginner-render-settings)
@@ -757,7 +728,7 @@
 ;   (before-after (,h-p) ((draw-solid-line (make-posn 11 10) (make-posn 10 100) 'red)) same (true))
 ;   (finished (true))))
 ; 
- 
+; 
 ;  (test-teachpack-sequence
 ;"(define (adder go) (inform (number->string (+ (single-query (make-number \"enter 10\")) (single-query (make-number \"enter 20\"))))))
 ;(adder true)"

@@ -360,6 +360,7 @@
                    (fall-through)))))
          
          (define (unwind-define stx)
+           (printf "unwind-define called on expression: ~e\n" (syntax-object->datum stx))
            (kernel:kernel-syntax-case stx #f
              [(define-values (name . others) body)
               (unless (null? (syntax-e #'others))
@@ -367,7 +368,10 @@
               (let* ([orig-name (or (syntax-property #'name 'stepper-orig-name)
                                     #'name)]
                      [lifted-name (if (syntax-property stx 'stepper-lifted-name)
-                                      (construct-lifted-name orig-name (syntax-property #'name 'stepper-lifted-name))
+                                      (begin (printf "lifted name \"~e\" constructed for identifier: ~e\n" 
+                                                     (syntax-object->datum (construct-lifted-name orig-name (syntax-property #'name 'stepper-lifted-name)))
+                                                     (syntax-object->datum orig-name))
+                                        (construct-lifted-name orig-name (syntax-property #'name 'stepper-lifted-name)))
                                       orig-name)]
                      [unwound-body (inner #'body)]
                      [define-type (syntax-property unwound-body 'user-stepper-define-type)]) ; see notes in internal-docs.txt
@@ -579,7 +583,6 @@
                                               ((macro-bound)
                                                ; for the moment, let-bound vars occur only in and/or :
                                                (recon-value (lookup-binding mark-list var) render-settings))
-                                              ; #`#,(binding-lifted-name mark-list var))
                                               ((top-level) var)
                                               ((let-bound)
                                                (syntax-property var
@@ -742,8 +745,9 @@
                                      (map (lambda (binding-set rhs)
                                             (make-let-glump
                                              (map (lambda (binding)
-                                                   (syntax-property binding
-                                                                    'stepper-lifted-name
+                                                    (printf "binding \"~e\" has lifted name \"~e\"\n" (syntax-object->datum binding) (binding-lifted-name mark-list binding))
+                                                    (syntax-property binding
+                                                                     'stepper-lifted-name
                                                                      (binding-lifted-name mark-list binding)))
                                                  binding-set)
                                              rhs
