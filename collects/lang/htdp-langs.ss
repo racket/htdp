@@ -128,9 +128,9 @@ tracing todo:
                    (lambda (val port)
                      (and (let ([rep (drscheme:rep:current-rep)])
                             (and rep
-                                 (not (eq? port (send rep get-this-result)))
-                                 (not (eq? port (send rep get-this-out)))
-                                 (not (eq? port (send rep get-this-err)))))
+                                 (not (eq? port (send rep get-value-port)))
+                                 (not (eq? port (send rep get-out-port)))
+                                 (not (eq? port (send rep get-err-port)))))
                           (or (is-a? val image-snip%)
                               (is-a? val cache-image-snip%))))])
               (parameterize ([pc:booleans-as-true/false #t]
@@ -555,6 +555,7 @@ tracing todo:
       ;;    (string (union TST exn) -> void) -> string exn -> void
       ;; adds in the bug icon, if there are contexts to display
       (define (teaching-languages-error-display-handler msg exn)
+        #;
         (let ([src 
                (cond
                  [(exn:fail:syntax? exn) 
@@ -578,7 +579,7 @@ tracing todo:
           (let ([rep (drscheme:rep:current-rep)])
             (when (and rep
                        mf-note
-                       (eq? (current-error-port) (send rep get-this-err))
+                       (eq? (current-error-port) (send rep get-err-port))
                        (mf-bday?))
               (send rep queue-output
                     (lambda ()
@@ -654,7 +655,7 @@ tracing todo:
                    (number? start-position)
                    (number? span))
               (with-syntax ([expr expr]
-                            [mark (et:make-st-mark `(,source ,(- start-position 1) . ,span))]
+                            [mark (et:make-st-mark source-stx)]
                             [cm-key cm-key])
                 #`(with-continuation-mark
                       'cm-key
