@@ -1,5 +1,7 @@
-(require-library "error.ss" "htdp")
-(require-library "draw.ss" "htdp")
+(module arrow mzshceme
+
+  (require (lib "error.ss" "htdp")
+           (lib "draw.ss" "htdp"))
 
 (define-signature arrowS (control control-up-down control-left-right))
 
@@ -124,4 +126,4 @@
     (XXX : arrowS (arrowU ERR PLT))
     [DRAW  : bigDrawS  (bigDrawU ERR PLT)]
     (ERR : errorS (errorU)))
-  (export (open (DRAW : drawS)) (open XXX)))
+  (export (open (DRAW : drawS)) (open XXX))))
