@@ -312,8 +312,8 @@
           (define/override (reset-console)
             (super-reset-console)
             (parameterize ([current-namespace (get-user-namespace)])
-              (namespace-variable-binding 'single-bracket 'single-bracket)
-              (namespace-variable-binding 'double-bracket 'double-bracket)
+              (namespace-set-variable-value! 'single-bracket 'single-bracket)
+              (namespace-set-variable-value! 'double-bracket 'double-bracket)
               ))
           
           (super-instantiate ())))
