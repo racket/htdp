@@ -51,7 +51,7 @@
 		  new-sym)))))))
   
   ; test cases: (returns #t on success)
-  (let ([arg3 (get-arg-symbol 3)]
+  #| (let ([arg3 (get-arg-symbol 3)]
         [arg2 (get-arg-symbol 2)]
         [arg1 (get-arg-symbol 1)]
         [arg2p (get-arg-symbol 2)])
@@ -61,6 +61,7 @@
          (not (eq? arg2 arg1))
          (eq? arg2 arg2p)
          (not (eq? arg1 arg2p))))
+  |#
   
   ; the varref structure contains a name and a boolean which indicates whether the reference
   ; is a top-level (substitutable) one (this includes unit-bound and class-bound, but _not_
@@ -69,46 +70,11 @@
   (define-struct varref (var top-level?))
     
   ; source correlation stuff:
-  
-  (define source-table (make-hash-table-weak))
 
-  (define (register-source key value)
-    (hash-table-put! source-table key value))
+  ; I'm officially mothballing the entire source-correlation package, because
+  ; I don't need it.  Why? Because I'm just going to store the post-parsed expressions
+  ; in the source position of the continuation marks.  DUH!
   
-  (define (find-source-expr key offset)
-    (let search-exprs ([exprs (hash-table-get key)])
-      (let ([expr 
-	     (car (filter 
-		   (lambda (expr) 
-		     (< offset (z:location-offset (z:zodiac-finish expr))))
-		   exprs))])
-	(if (= offset (z:location-offset (z:zodiac-start expr)))
-	    expr
-	    (cond
-	      ((z:scalar? expr) (e:static-error "starting offset inside scalar:" offset))
-	      ((z:sequence? expr) 
-	       (let ([object (z:read-object expr)])
-		 (cond
-		   ((z:list? expr) (search-exprs object))
-		   ((z:vector? expr) 
-		    (search-exprs (vector->list object))) ; can source exprs be here?
-		   ((z:improper-list? expr)
-		    (search-exprs (search-exprs object))) ; can source exprs be here?
-		   (else (e:static-error "unknown expression type in sequence" expr)))))
-	      (else (e:static-error "unknown read type" expr)))))))
   
-  ; label structures are used to communicate information to the reconstructor
-  ; about what part of a macro this particular expression comes from.
-  
-  (define-struct label)
-  
-  ; no-label : used when there is no label to apply.
-  
-  (define-struct (no-label struct:label) ())
-  
-  ; cond-label: the cond-label structure holds a natural number, and indicates
-  ; which branch of a cond a given if was generated from.
-  
-  (define-struct (cond-label struct:label) (clause-num))
   
 ) 

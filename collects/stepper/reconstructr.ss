@@ -23,35 +23,43 @@
 		 (error matches "more than one variable binding found"))
 		(else ; (length matches) = 1
 		 (car matches))))))
-	  
+
   
-  (define (reconstruct key mark-list)
+  (define (reconstruct mark-list)
     
-    (define (reconstruct/inner mark-list so-far)
-      (if (null? mark-list)
-	  so-far
-	  (let* ([top-mark (car mark-list)]
-		 [mark-source (car top-mark)]
-		 [expr (find-source-expr key mark-source)])
-	    (cond (
-		   ; variable references
-		   
-		   (z:scalar expr)
-		   (cond ((not (null? so-far))
-			  (e:dynamic-error expr 
-					   "scalar expression given as context"))
-			 ((not (z:symbol expr))
-			  (e:dynamic-error expr
-					   "non-symbol given as evaluated expression"))
-			 (else
-			  (let* ([var-record (find-var-binding mark-list (z:object expr))]
-				 [var-val (car var-record)]
-				 [var-top-level? (varref-top-level? (cadr var-record))])
-			    (if var-top-level?
-				(z:object expr)
-				var-val)))))
-		  
-		  
-					
+    (letrec
+        ([reconstruct/inner
+          (lambda (mark-list so-far)
+            (if (null? mark-list)
+                so-far
+                (let* ([top-mark (car mark-list)]
+                       [expr (car top-mark)])
+                  (cond 
+                    ; variable references
+                    ((z:varref? expr)
+                     (cond ((not (null? so-far))
+                            (e:dynamic-error expr 
+                                             "variable reference given as context"))
+                           (else
+                            (let* ([var-record (find-var-binding mark-list (z:varref-var expr))]
+                                   [var-val (car var-record)]
+                                   [var-top-level? (varref-top-level? (cadr var-record))])
+                              (if var-top-level?
+                                  (z:binding-orig-name
+                                   (z:bound-varref-binding expr))
+                                  var-val)))))
+                    
+                    ; applications
+                    
+                    ((z:app? expr)
+                     (let* ([sub-exprs (cons (z:app-fun expr) (z:app-args expr))]
+                            [arg-sym-list (build-list (length sub-exprs) get-arg-symbol)]
+                            [arg-vals (map (lambda (arg-sym) 
+                                             (car (find-var-binding mark-list arg-sym)
+                     
+                     
+                     
+                     
+                     
   
     
