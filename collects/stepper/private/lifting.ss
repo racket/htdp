@@ -22,26 +22,24 @@
   (define (lift stx highlight lift-in-highlight?)
     (lift-local-defs (find-highlight stx) highlight lift-in-highlight?))
   
-  ; the success of this approach is predicated on the fact that all of the primitive forms of mzscheme are
-  ; proper syntax-lists.  That is, none of them are improper lists. Consider myself warned.
   ; [find-highlight (-> syntax? (listof context-record?))]
 
   (define (find-highlight stx)
     (let/ec success-escape
       (local
           ((define (make-try-all-subexprs stx kind context-so-far)
-             (lambda (list-of-subtries-and-indices)
-               (let loop ([remaining list-of-subtries-and-indices])
+             (lambda (index-mangler list-of-subtries)
+               (let loop ([index 0] [remaining list-of-subtries])
                  (unless (null? remaining)
-                   (let* ([try (caar remaining)]
-                          [index (cadar remaining)])
-                   ((car try) (cadr try) (cons (make-context-record stx index kind) context-so-far))
-                   (loop (cdr remaining)))))))
+                   (let* ([try (car remaining)]
+                          [corrected-index (index-mangler index)])
+                   ((car try) (cadr try) (cons (make-context-record stx corrected-index kind) context-so-far))
+                   (loop (+ index 1) (cdr remaining)))))))
            
            (define try->offset-try
              (lambda (try)
                (lambda (offset subtries)
-                 (try (map list (a...b offset (+ offset (length subtries))) subtries)))))
+                 (try (lambda (index) (list (+ offset index))) subtries))))
            
            (define (top-level-expr-iterator stx context-so-far)
              (let ([try (try->offset-try (make-try-all-subexprs stx 'top-level context-so-far))])
@@ -74,14 +72,14 @@
                  [(require-for-syntax . require-specs)
                   (void)]
                  [else
-                  (e-xpr-iterator stx context-so-far)])))
+                  (expr-iterator stx context-so-far)])))
            
            (define (expr-iterator stx context-so-far)
              (when (eq? stx highlight-placeholder-stx)
                (success-escape context-so-far))
              (let* ([try (make-try-all-subexprs stx 'expr context-so-far)]
-                    []
-                    [try-exprs (lambda (index-mangler exprs) (try index-mangler (map (lambda (expr) `(,expr-iterator ,expr)) (syntax->list exprs))))]
+                    [try-exprs (lambda (index-mangler exprs) (try index-mangler (map (lambda (expr) (list expr-iterator expr)) 
+                                                                                     (syntax->list exprs))))]
                     [try-exprs-offset (try->offset-try try-exprs)] 
                     [let-values-abstraction
                      (lambda (stx)
@@ -102,7 +100,9 @@
                   (try-exprs-offset 2 #'bodies)]
                  [(case-lambda (vars . bodies) ...)
                   (let loop ([count 1] [clauses (syntax->list #'(bodies ...))])
-                    (try-exprs (lambda (index) (list count (+ index 1))) (car clauses)))]
+                    (unless (null? clauses)
+                      (try-exprs (lambda (index) (list count (+ index 1))) (cdar clauses))
+                      (loop (+ count 1) (cdr clauses))))]
                  [(if test then)
                   (try-exprs-offset 1 #'(test then))]
                  [(if test then else)
@@ -143,8 +143,8 @@
   (define-syntax (test-begin stx)
     (syntax-case stx ()
       [(_ expr ...)
-       #'(begin expr ...) ; testing version
-       ;#'(void) ; non-testing version
+       ;#'(begin expr ...) ; testing version
+       #'(void) ; non-testing version
        ]))
   
   (define (datum-ize-context-record cr)
@@ -169,16 +169,15 @@
    (define test-datum #`(define-values
                                  (f)
                                  (lambda (x)
-                                   (let-values ()
-                                     (letrec-values (((a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))) 
-                                                     ((b) (lambda (x) (#%app #,highlight-placeholder-stx x)))) (let-values () (#%app a x)))))))
+                                   (letrec-values (((a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))) 
+                                                   ((b) (lambda (x) (#%app #,highlight-placeholder-stx x)))) (let-values () (#%app a x))))))
 
-   (define expected (list (list `(#%app ,highlight-placeholder x) '(0) 'expr)
+   (define expected (list (list `(#%app ,highlight-placeholder x) '(1) 'expr)
                           (list `(lambda (x) (#%app ,highlight-placeholder x)) '(2) 'expr)
                           (list `(letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))) '(1 1 1) 'expr)
-                          (list `(let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))) '(2) 'expr)
-                          (list `(lambda (x) (let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))))) '(2) 'expr)                 
-                          (list `(define-values (f) (lambda (x) (let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))))) '(2)
+                          ;(list `(let-values () (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))) '(2) 'expr)
+                          (list `(lambda (x) (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x)))) '(2) 'expr)                 
+                          (list `(define-values (f) (lambda (x) (letrec-values ([(a) (lambda (x) (#%app b (#%app (#%top . -) x (#%datum . 1))))] [(b) (lambda (x) (#%app ,highlight-placeholder x))]) (let-values () (#%app a x))))) '(2)
                                                'general-top-level)))
    
    (test expected map datum-ize-context-record (find-highlight test-datum))

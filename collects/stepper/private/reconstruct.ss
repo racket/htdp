@@ -395,7 +395,9 @@
            (kernel:kernel-syntax-case stx #f
              [(letrec-values ([(var) exp] ...) body) ; at least through intermediate, define-values may not occur in local.
               (with-syntax ([(exp2 ...) (map inner (syntax->list #'(exp ...)))])
-                #`(local ((define var exp2) ...) #,(inner #'body)))]))        
+                #`(local ((define var exp2) ...) #,(inner #'body)))]
+             [(define-values (var) body)
+              #`(define (var) body)]))
          
          (define (unwind-quasiquote-the-cons-application stx)
            (syntax-case (recur-on-pieces stx) ()
