@@ -35,12 +35,17 @@
                   (when (and (number? number)
                              (exact? number)
                              (real? number))
-                    (let* ([whole (floor number)]
+                    (let* ([whole (if (number . < . 0)
+                                      (ceiling number)
+                                      (floor number))]
+                           [fractional-part (- (abs number) (floor (abs number)))]
+                           [num (numerator fractional-part)]
+                           [den (denominator fractional-part)]
                            [wholes (if (and (zero? whole) (not (zero? number)))
                                        ""
                                        (number->string whole))]
-                           [nums (number->string (numerator (- number whole)))]
-                           [dens (number->string (denominator (- number whole)))])
+                           [nums (number->string num)]
+                           [dens (number->string den)])
                       (let-values ([(ww wh wa wd) (send dc get-text-extent wholes)]
                                    [(nw nh na nd) (send dc get-text-extent nums)]
                                    [(dw dh da dd) (send dc get-text-extent dens)])
