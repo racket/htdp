@@ -576,7 +576,7 @@
 	 'define-struct
 	 stx
 	 #f
-	 "expected an expression, but found a definition that is not at the top level"))
+	 "found a definition that is not at the top level"))
       
       (syntax-case stx ()
 	;; First, check for a struct name:

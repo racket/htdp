@@ -16,9 +16,9 @@
 	      (syntax-property
 	       (syntax (set! tmp-id expr))
 	       'bound-in-source
-	       (cons (syntax-local-introduce
-		      (syntax id))
-		     orig-id)))]
+	       (cons orig-id
+		     (syntax-local-introduce
+		      (syntax id)))))]
 	   [(id . args)
 	    (syntax-property
 	     (datum->syntax-object
@@ -33,9 +33,9 @@
 		     (list syntax-e cdr syntax-e cdr cdr car))
 		    (syntax args)))
 	     'bound-in-source
-	     (cons (syntax-local-introduce
-		    (syntax id))
-		   orig-id))]
+	     (cons orig-id
+		   (syntax-local-introduce
+		    (syntax id))))]
 	   [id
             (syntax-property
              (syntax-property
@@ -45,9 +45,9 @@
                      (list 'quote (syntax id))
                      tmp-id))
               'bound-in-source
-              (cons (syntax-local-introduce
-                     (syntax id))
-                    orig-id))
+              (cons orig-id
+                    (syntax-local-introduce
+                     (syntax id))))
              'stepper-skipto
              (list syntax-e cdr syntax-e cdr cdr car))]))))) ; this may make other stepper-skipto annotations obsolete.
 
