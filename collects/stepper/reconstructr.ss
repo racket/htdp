@@ -23,6 +23,12 @@
   (define (mark-binding-varref mark-binding)
     (cadr mark-binding))
   
+  (define (expose-mark-list mark-list)
+    (map (lambda (mark)
+           (list (mark-label mark)
+                 (mark-source mark)))
+         mark-list))
+  
   (define (find-var-binding mark-list var)
     (if (null? mark-list)
         ; must be a primitive
