@@ -339,15 +339,20 @@
                                         'comes-from-and)]))])
             (kernel:kernel-syntax-case stx #f
               
-              ; define-lambda : INSERT RECURRENCES
-              [(define-values names (begin name-check (lambda args make-gen-lam body)))
+              ; define-lambda :
+              [(define-values names (lambda args make-gen-lam body))
                (eq? (syntax-property stx 'stepper-define-hint) 'lambda-define)
                (with-syntax ([lambda-body
                               (syntax-property
-                               (syntax (begin make-gen-lam body))
+                               (with-syntax ([new-body (recur-regular (syntax body))])
+                                 (syntax (begin make-gen-lam new-body)))
                                'stepper-skipto
-                               (list syntax-e cdr syntax-e cdr car))])
-               (datum->syntax-object stx (cons 'define (syntax (names (begin name-check (lambda args make-gen-lam new-body
+                               (list syntax-e cdr cdr car))])
+               (datum->syntax-object stx 
+                                     ; this is a funny hack to avoid assigning syntax info to the expr:
+                                     (cons #'define-values (syntax (names (lambda args lambda-body))))
+                                     stx
+                                     stx))]
               ; or :
               [(let-values x ...)
                (let ([origin (syntax-property stx 'origin)])
