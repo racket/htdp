@@ -1,3 +1,15 @@
+------------------------------------------------------------------------
+VERSION 200alpha1			  [Wed Nov 21 13:07:43 EST 2001]
+
+* Robby converted to modules 
+
+* Fixed bug in convert.ss 
+
+------------------------------------------------------------------------
+VERSION 103				  []
+
+* modified draw.ss interface so that colors are symbols
+  use 'red instead of RED 
 
 ------------------------------------------------------------------------
 VERSION 102				  [Thu Jun 22 18:22:48 CDT 2000]
