@@ -8,21 +8,22 @@
            "my-macros.ss"
            (prefix beginner-defined: "beginner-defined.ss"))
 
-  (provide
-   make-initial-env-package ; : -> annotate-environment
-   annotate ; : annotate-contract
-   top-level-rewrite
-   )
- 
+  ; CONTRACTS
   
   (define annotate-opts-list?
     (and/f (listof (listof symbol?)) (lx (<= (length _) 1))))
   (define-struct annotate-environment (struct-proc-names pre-defined-names binding-index))
   
   (define annotate-contract
+
+  ; PROVIDE
+  (provide/contract
+   [make-initial-env-package (-> annotate-environment)]
+   [annotate
     (->* (syntax? annotate-environment? break-contract (symbols 'foot-wrap)) ; required args
          annotate-opts-list?                                                 ; optional args
-         (syntax? annotate-environment?)))                                   ; results
+         (syntax? annotate-environment?))]                                   ; results
+   [top-level-rewrite (-> syntax? syntax?)])
  
   ;;                                              ;;;;                          ;                     
  ;  ;                                     ;       ;                         ;                         
@@ -68,57 +69,6 @@
                           (values (cons a a-rest) (cons b b-rest) (cons c c-rest)))))])
       (apply inr lsts)))
 
-  ; note: a BINDING-SET which is not 'all may be used as a VARREF-SET.
-  ; this is because they both consist of syntax objects, and a binding
-  ; answers true to bound-identifier=? with itself, just like a varref
-  ; in the scope of that binding would.
-  
-  ; binding-set-union: (listof BINDING-SET) -> BINDING-SET
-  ; varref-set-union: (listof VARREF-SET) -> VARREF-SET
-  
-  (define-values (binding-set-union
-                  varref-set-union)
-    (local ((define (set-pair-union a-set b-set comparator)
-              (append (remove* a-set b-set comparator) a-set))
-            
-            (define (varref-set-pair-union a-set b-set)
-              (set-pair-union a-set b-set free-identifier=?))
-            
-            (define (binding-set-pair-union a-set b-set)
-              (cond [(eq? a-set 'all) 'all]
-                    [(eq? b-set 'all) 'all]
-                    [else (set-pair-union a-set b-set eq?)]))
-            
-            (define (pair-union->many-union fn)
-              (lambda (args)
-                (foldl fn null args)))
-            
-            (define binding-set-union
-              (pair-union->many-union binding-set-pair-union))
-            
-            (define varref-set-union
-              (pair-union->many-union varref-set-pair-union)))
-      (values binding-set-union
-              varref-set-union)))
-
-  ; binding-set-varref-set-intersect : BINDING-SET VARREF-SET -> BINDING-SET
-  ; return the subset of varrefs that appear in the bindings
-  
-  (define (binding-set-varref-set-intersect bindings varrefs)
-    (cond [(eq? bindings 'all) varrefs]
-          [else (filter (lambda (varref)
-                          (ormap (lambda (binding)
-                                   (bound-identifier=? binding varref))
-                                 bindings))
-                        varrefs)]))
-  
-  ; varref-set-remove-bindings : VARREF-SET (BINDING-SET - 'all) -> VARREF-SET
-  ; remove bindings from varrefs
-  
-  (define (varref-set-remove-bindings varrefs bindings)
-    (cond [(eq? bindings 'all)
-           (error 'varref-set-remove-bindings "binding-set 'all passed as second argument, first argument was: ~s" varrefs)]
-          [else (remove* bindings varrefs bound-identifier=?)]))
       
   (define (interlace a b)
     (foldr (lambda (a b built)
@@ -129,33 +79,6 @@
         
   (define (closure-key-maker closure)
     closure)
-  
-  ;;;;;;;;;;
-  ;;
-  ;; make-debug-info builds the thunk which will be the mark at runtime.  It contains 
-  ;; a source expression and a set of binding/value pairs.
-  ;; (syntax-object BINDING-SET VARREF-SET symbol boolean) -> debug-info)
-  ;;
-  ;;;;;;;;;;
-     
-  (define make-debug-info
-    (contract 
-     (-> syntax? binding-set? varref-set? symbol? boolean? any?)
-     (lambda (source tail-bound free-vars label lifting?)
-       (let*-2vals ([kept-vars (binding-set-varref-set-intersect tail-bound free-vars)]
-                    [let-bindings (filter (lambda (var) 
-                                            (case (syntax-property var 'stepper-binding-type)
-                                              ((let-bound macro-bound) #t)
-                                              ((lambda-bound stepper-temp non-lexical) #f)
-                                              (else (error 'make-debug-info 
-                                                           "varref ~a's binding-type info was not recognized: ~a"
-                                                           (syntax-e var)
-                                                           (syntax-property var 'stepper-binding-type)))))
-                                          kept-vars)]
-                    [lifter-syms (map get-lifted-var let-bindings)])
-                   (make-full-mark source label (append kept-vars (if lifting? lifter-syms null)))))
-     'make-debug-info
-     'caller))
   
   ; cheap-wrap for non-debugging annotation
   

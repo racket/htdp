@@ -67,7 +67,10 @@
       (parameterize ([booleans-as-true/false true/false]
                      [constructor-style-printing constructor-style]
                      [abbreviate-cons-as-list abbreviate])
-        (print-convert val))))
+        ;; duplication of hack inserted by matthew flatt for 201 release:
+        (or (and (procedure? val)
+                 (object-name val))
+            (print-convert val)))))
     
   (define fake-beginner-render-settings
     (contract

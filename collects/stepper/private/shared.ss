@@ -2,8 +2,25 @@
   
   (require "my-macros.ss"
 	   "highlight-placeholder.ss"
-	   (lib "contracts.ss"))
+	   (lib "contracts.ss")
+           (lib "etc.ss")
+           (lib "list.ss"))
 
+  ; CONTRACTS
+  
+  (define varref-set? (listof identifier?))
+  (define binding-set? (or/f varref-set? (symbols 'all)))
+  ; varref-set-remove-bindings : VARREF-SET (BINDING-SET - 'all) -> VARREF-SET
+  ; binding-set-varref-set-intersect : BINDING-SET VARREF-SET -> BINDING-SET
+  ; binding-set-union: (listof BINDING-SET) -> BINDING-SET
+  ; varref-set-union: (listof VARREF-SET) -> VARREF-SET
+  
+  (provide/contract
+   [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
+   [binding-set-varref-set-intersect (-> binding-set? varref-set? binding-set?)]
+   [binding-set-union (-> (listof binding-set?) binding-set?)]
+   [varref-set-union (-> (listof varref-set?) varref-set?)])
+  
   (provide
    step-result?
    exp-without-holes?
@@ -51,11 +68,6 @@
    ; expr-read
    ; set-expr-read!
    )
-  
-  ; contracts:
-  
-  (define varref-set? (listof identifier?))
-  (define binding-set? (or/f varref-set? (symbols 'all)))
   
   ; an exp-with-holes is either:
   ; - a pair,
@@ -354,15 +366,15 @@
   
   ; functional update package
   
-  (define second (lambda (x y) y))
+  (define second-arg (lambda (x y) y))
   
   (define up-mappings
     `((rebuild ((,car ,(lambda (stx new) (cons new (cdr stx))))
                 (,cdr ,(lambda (stx new) (cons (car stx) new)))
                 (,syntax-e ,(lambda (stx new) (datum->syntax-object stx new stx stx)))))
-      (discard ((,car ,second)
-                (,cdr ,second)
-                (,syntax-e ,second)))))
+      (discard ((,car ,second-arg)
+                (,cdr ,second-arg)
+                (,syntax-e ,second-arg)))))
   
   (define (update fn-list val fn traversal)
     (if (null? fn-list)
@@ -418,7 +430,62 @@
     (symbols 'normal-break 'result-exp-break 'result-value-break 'double-break 'late-let-break))
     
   (define break-contract
-    (-> continuation-mark-set? break-kind? list? any?)))
+    (-> continuation-mark-set? break-kind? list? any?))
+  
+  ; BINDING-/VARREF-SET FUNCTIONS
+  
+  ; note: a BINDING-SET which is not 'all may be used as a VARREF-SET.
+  ; this is because they both consist of syntax objects, and a binding
+  ; answers true to bound-identifier=? with itself, just like a varref
+  ; in the scope of that binding would.
+  
+  ; binding-set-union: (listof BINDING-SET) -> BINDING-SET
+  ; varref-set-union: (listof VARREF-SET) -> VARREF-SET
+  
+  (define-values (binding-set-union
+                  varref-set-union)
+    (local ((define (set-pair-union a-set b-set comparator)
+              (append (remove* a-set b-set comparator) a-set))
+            
+            (define (varref-set-pair-union a-set b-set)
+              (set-pair-union a-set b-set free-identifier=?))
+            
+            (define (binding-set-pair-union a-set b-set)
+              (cond [(eq? a-set 'all) 'all]
+                    [(eq? b-set 'all) 'all]
+                    [else (set-pair-union a-set b-set eq?)]))
+            
+            (define (pair-union->many-union fn)
+              (lambda (args)
+                (foldl fn null args)))
+            
+            (define binding-set-union
+              (pair-union->many-union binding-set-pair-union))
+            
+            (define varref-set-union
+              (pair-union->many-union varref-set-pair-union)))
+      (values binding-set-union
+              varref-set-union)))
+
+  ; binding-set-varref-set-intersect : BINDING-SET VARREF-SET -> BINDING-SET
+  ; return the subset of varrefs that appear in the bindings
+  
+  (define (binding-set-varref-set-intersect bindings varrefs)
+    (cond [(eq? bindings 'all) varrefs]
+          [else (filter (lambda (varref)
+                          (ormap (lambda (binding)
+                                   (bound-identifier=? binding varref))
+                                 bindings))
+                        varrefs)]))
+  
+  ; varref-set-remove-bindings : VARREF-SET (BINDING-SET - 'all) -> VARREF-SET
+  ; remove bindings from varrefs
+  
+  (define (varref-set-remove-bindings varrefs bindings)
+    (cond [(eq? bindings 'all)
+           (error 'varref-set-remove-bindings "binding-set 'all passed as second argument, first argument was: ~s" varrefs)]
+          [else (remove* bindings varrefs bound-identifier=?)]))
+  )
   
 ; test cases
 ;(require shared)
