@@ -48,7 +48,7 @@
 
   (define program-expander-contract
     ((-> void?) ; init
-     ((union eof-object? syntax? (cons/p string? any?)) (-> void?) . -> . void?) ; iter
+     ((union eof-object? syntax? (cons/c string? any?)) (-> void?) . -> . void?) ; iter
      . -> .
      void?))
     
@@ -76,7 +76,7 @@
          ; redivide takes a list of sexps and divides them into the 'before', 'during', and 'after' lists,
          ; where the before and after sets are maximal-length lists where none of the s-expressions contain
          ; a highlight-placeholder
-         ; (->* ((listof syntax)) (list/p syntax syntax syntax))
+         ; (->* ((listof syntax)) (list/c syntax syntax syntax))
          (define (redivide exprs)
            (letrec ([contains-highlight
                      (lambda (expr)

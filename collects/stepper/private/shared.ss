@@ -13,9 +13,9 @@
     (or (null? v)
         (identifier? v)
         (and (pair? v)
-             ((flat-contract-predicate (cons/p identifier? arglist?)) v))        
+             ((flat-contract-predicate (cons/c identifier? arglist?)) v))        
         (and (syntax? v) 
-             ((flat-contract-predicate (cons/p identifier? arglist?)) (syntax-e v)))))
+             ((flat-contract-predicate (cons/c identifier? arglist?)) (syntax-e v)))))
   
   (provide/contract
    ;[varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
@@ -582,8 +582,8 @@
   ;; An xml-spec is (listof xml-spec-elt)
   ;; An xml-spec-elt is either
   ;;  - a string,
-  ;;  - (cons/p 'scheme-box scheme-spec), or
-  ;;  - (cons/p 'splice-box scheme-spec)
+  ;;  - (cons/c 'scheme-box scheme-spec), or
+  ;;  - (cons/c 'splice-box scheme-spec)
   ;;
   ;; A scheme-spec is (listof scheme-spec-elt)
   ;; A scheme-spec-elt is either
