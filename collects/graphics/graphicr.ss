@@ -913,6 +913,13 @@
 		1
 		0))))))
   
+  (define (test-pixel viewport)
+    (let ([try-color (ivar (viewport-buffer-dc viewport) try-color)])
+      (lambda (color)
+        (let ([c (make-object mred:color%)])
+          (try-color color c)
+          c))))
+
   (define draw-pixmap-posn
     (opt-lambda (filename [type 'unknown])
       (let* ([type
