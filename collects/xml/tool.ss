@@ -45,142 +45,8 @@
           (send sn insert str (string-length str) 0)
           sn))
       
-      (define renderable-editor-snip%
-        (class editor-snip% 
-          (inherit get-editor get-style)
-          
-          (define/public (get-color)
-            (error 'get-color "abstract method"))
-          
-          [define (get-pen) (send the-pen-list find-or-create-pen (get-color) 1 'solid)]
-          [define (get-brush) (send the-brush-list find-or-create-brush "BLACK" 'transparent)]
-          
-          (define/public (get-corner-bitmap)
-            (error 'get-corner-bitmap "abstract method"))
-          
-          (inherit get-admin)
-          (rename [super-on-event on-event])
-          (define/override (on-event dc x y editorx editory evt)
-            (let ([sx (- (send evt get-x) x)]
-                  [sy (- (send evt get-y) y)]
-                  [bil (box 0)]
-                  [bit (box 0)]
-                  [bir (box 0)]
-                  [bib (box 0)]
-                  [bw (box 0)]
-                  [bh (box 0)]
-                  [bml (box 0)]
-                  [bmt (box 0)]
-                  [bmr (box 0)]
-                  [bmb (box 0)])
-              (get-extent dc x y bw bh #f #f #f #f)
-              (get-inset bil bit bir bib)
-              (get-margin bml bmt bmr bmb)
-              (cond
-                [(and (send evt get-right-down)
-                      (<= 0 sx (unbox bw))
-                      (<= 0 sy (unbox bmt)))
-                 (let ([admin (get-admin)]
-                       [menu (get-menu)])
-                   (send admin popup-menu menu this (+ sx 1) (+ sy 1)))]
-                [else
-                 (super-on-event dc x y editorx editory evt)])))
-          
-          ;; get-menu : -> (is-a?/c popup-menu%)
-          ;; returns the popup menu that should appear
-          ;; when clicking in the top part of the snip.
-          (define/public (get-menu)
-            (error 'get-menu "absract method"))
-          
-          (inherit get-extent get-inset)
-          (rename [super-draw draw])
-          (define/override draw
-            (lambda (dc x y left top right bottom dx dy draw-caret)
-              (let ([bil (box 0)]
-                    [bit (box 0)]
-                    [bir (box 0)]
-                    [bib (box 0)]
-                    [bw (box 0)]
-                    [bh (box 0)]
-                    [bml (box 0)]
-                    [bmt (box 0)]
-                    [bmr (box 0)]
-                    [bmb (box 0)])
-                (get-extent dc x y bw bh #f #f #f #f)
-                (get-inset bil bit bir bib)
-                (get-margin bml bmt bmr bmb)
-                (super-draw dc x y left top right bottom dx dy draw-caret)
-                (let* ([old-pen (send dc get-pen)]
-                       [old-brush (send dc get-brush)]
-                       [bm (get-corner-bitmap)]
-                       [bm-w (send bm get-width)]
-                       [bm-h (send bm get-height)])
-                  
-                  (send dc set-pen (send the-pen-list find-or-create-pen "white" 1 'transparent))
-                  (send dc set-brush (send the-brush-list find-or-create-brush "white" 'solid))
-                  (send dc draw-rectangle 
-                        (+ x (unbox bml))
-                        (+ y (unbox bit))
-                        (max 0 (- (unbox bw) (unbox bml) (unbox bmr)))
-                        (- (unbox bmt) (unbox bit)))
-                  
-                  (send dc set-pen (send the-pen-list find-or-create-pen "black" 1 'solid))
-                  (send dc set-brush (send the-brush-list find-or-create-brush "black" 'solid))
-                  (send dc draw-bitmap
-                        bm
-                        (+ x (max 0
-                                  (- (unbox bw)
-                                     (unbox bmr)
-                                     bm-w)))
-                        ;; leave two pixels above and two below (see super-instantiate below)
-                        (+ y (unbox bit) 2))
-                  
-                  (send dc set-pen (get-pen))
-                  (send dc set-brush (get-brush))
-                  (send dc draw-rectangle
-                        (+ x (unbox bil))
-                        (+ y (unbox bit))
-                        (max 0 (- (unbox bw) (unbox bil) (unbox bir)))
-                        (max 0 (- (unbox bh) (unbox bit) (unbox bib))))
-                  
-                  
-                  (send dc set-pen old-pen)
-                  (send dc set-brush old-brush)))))
-          
-          (define/override write
-            (lambda (stream-out)
-              (send (get-editor) write-to-file stream-out 0 'eof)))
-          (define/override (copy)
-            (let ([snip (make-snip)])
-              (send snip set-editor (send (get-editor) copy-self))
-              (send snip set-style (get-style))
-              snip))
-          (define/public (make-snip)
-            (error 'make-snip "abstract method"))
-          
-          (define/public (make-editor) 
-            (error 'make-editor "abstract method in XML/Scheme box superclass"))
-          
-          (inherit set-min-width get-margin)
-          (define/public (reset-min-width)
-            (let ([lib (box 0)]
-                  [rib (box 0)]
-                  [lmb (box 0)]
-                  [rmb (box 0)])
-              (get-inset lib (box 0) rib (box 0))
-              (get-margin lmb (box 0) rmb (box 0))
-              (set-min-width 
-               (max 0 (send (get-corner-bitmap) get-width)))))
-          
-          (super-instantiate ()
-            (editor (make-editor))
-            (with-border? #f)
-            (top-margin (+ 4 (send (get-corner-bitmap) get-height))))
-          
-          (reset-min-width)))
-      
       (define xml-snip%
-        (class* renderable-editor-snip% (readable-snip<%> xml-snip<%>)
+        (class* decorated-editor-snip% (readable-snip<%> xml-snip<%>)
           (inherit get-editor)
           
           (init-field eliminate-whitespace-in-empty-tags?)
@@ -261,13 +127,11 @@
                  (exn:xml-locs exn))))))
       
       (define xml-snipclass%
-        (class snip-class%
-          (define/override (read stream-in)
-            (let* ([snip (instantiate xml-snip% ()
-                           [eliminate-whitespace-in-empty-tags?
-                            (preferences:get 'drscheme:xml-eliminate-whitespace)])])
-              (send (send snip get-editor) read-from-file stream-in)
-              snip))
+        (class decorated-editor-snipclass%
+          (define/override (make-snip stream-in)
+            (instantiate xml-snip% ()
+              [eliminate-whitespace-in-empty-tags?
+               (preferences:get 'drscheme:xml-eliminate-whitespace)]))
           (super-instantiate ())))
       
       ;; this snipclass is for old, saved files (no snip has it set)
@@ -295,7 +159,7 @@
       (send (get-the-snip-class-list) add lib-xml-snipclass)
       
       (define scheme-snip%
-        (class* renderable-editor-snip% (scheme-snip<%> readable-snip<%>)
+        (class* decorated-editor-snip% (scheme-snip<%> readable-snip<%>)
           (init-field splice?)
           (define/public (get-splice?) splice?)
           
@@ -340,9 +204,10 @@
           (define/override (make-snip) 
             (instantiate scheme-snip% () (splice? splice?)))
           
+          (rename [super-write write])
           (define/override (write stream-out)
             (send stream-out put (if splice? 0 1))
-            (send (get-editor) write-to-file stream-out 0 'eof))
+            (super-write stream-out))
           
           (inherit show-border set-snipclass)
           (define/override (get-color)
@@ -362,13 +227,10 @@
           (super-instantiate ())))
       
       (define scheme-snipclass%
-        (class snip-class%
-          (define/override (read stream-in)
-            (let* ([splice? (zero? (send stream-in get-exact))]
-                   [snip (instantiate scheme-snip% () (splice? splice?))]
-                   [editor (send snip get-editor)])
-              (send editor read-from-file stream-in)
-              snip))
+        (class decorated-editor-snipclass%
+          (define/override (make-snip stream-in)
+            (let* ([splice? (zero? (send stream-in get-exact))])
+              (instantiate scheme-snip% () (splice? splice?))))
           (super-instantiate ())))
       
       ;; this snipclass is for old, saved files (no snip has it set)
