@@ -103,24 +103,24 @@
     (match expected
       [`(before-after ,before ,after)
        (and (before-after-result? actual)
-            (andmap (lambda (fn expected) (noisy-equal? (syntax-object->hilite-datum (fn actual)) expected))
+            (andmap (lambda (fn expected) (noisy-equal? (map syntax-object->hilite-datum (fn actual)) expected))
                     (list before-after-result-exp before-after-result-post-exp)
                     (list before after)))]
       [`(before-after-waiting ,before ,after ,waiting)
        (and (before-after-result? actual)
-            (and (noisy-equal? (syntax-object->hilite-datum (before-after-result-after-exprs actual)) waiting)
+            (and (noisy-equal? (map syntax-object->hilite-datum (before-after-result-after-exprs actual)) waiting)
                  (compare-steps actual `(before-after ,before ,after))))]
       [`(before-after-finished ,finished-exprs . ,rest)
        (and (before-after-result? actual)
-            (compare-finished (syntax-object->hilite-datum (before-after-result-finished-exprs actual)) finished-exprs)
+            (compare-finished (map syntax-object->hilite-datum (before-after-result-finished-exprs actual)) finished-exprs)
             (compare-steps actual `(before-after ,@rest)))]
       [`(before-after-finished-waiting ,finished-exprs . ,rest)
        (and (before-after-result? actual)
-            (compare-finished (syntax-object->hilite-datum (before-after-result-finished-exprs actual)) finished-exprs)
+            (compare-finished (map syntax-object->hilite-datum (before-after-result-finished-exprs actual)) finished-exprs)
             (compare-steps actual `(before-after-waiting ,@rest)))]
       [`(finished ,finished-exprs)
        (and (finished-result? actual)
-            (compare-finished (syntax-object->hilite-datum (finished-result-finished-exprs actual)) finished-exprs))]
+            (compare-finished (map syntax-object->hilite-datum (finished-result-finished-exprs actual)) finished-exprs))]
       [`(error ,err-msg)
        (and (error-result? actual)
             (equal? err-msg (error-result-err-msg actual)))]
@@ -263,7 +263,7 @@
      (test-upto-int/lam "(+ 4 129)" 
                      `((before-after ((hilite (+ 4 129))) ((hilite 133)))
                        (finished (133)))))
-  
+
   (t if
   (test-upto-int/lam "(if true 3 4)"
                      `((before-after ((hilite (if true 3 4))) ((hilite 3)))
