@@ -39,7 +39,7 @@
    queue-push ; queue val -> 
    queue-pop ; queue -> val
    queue-length ; queue -> num
-   
+   rebuild-stx ; datum syntax-object -> syntax-object
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -394,6 +394,9 @@
   
   (define (queue-length queue)
     (length (unbox queue)))
+  
+  (define (rebuild-stx new old)
+    (datum->syntax-object old new old old))
   )
 
 ; test cases

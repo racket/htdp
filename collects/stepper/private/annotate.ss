@@ -235,19 +235,27 @@
   ;                (list #'(let ([a 3] [b 9]) (let ([b 14]) b)) '(let*-values ([(a) (#%datum . 3)] [(b) (#%datum . 9)] [(b) (#%datum . 14)]) b) 14)))
 
 
-  ; label-var-types : (SYNTAX-OBJECT -> SYNTAX-OBJECT)
+  
+  ; top-level-rewrite : (SYNTAX-OBJECT -> SYNTAX-OBJECT)
+  
+  ; top-level-rewrite performs two tasks; it labels variables with their types (let-bound, lambda-bound, or non-lexical)
+  ; and it flags if's which could come from cond's
+  
   ; label-var-types returns a syntax object which is identical to the original except that the variable references are labeled
   ; with the syntax-property 'stepper-binding-type, which is set to either let-bound, lambda-bound, or non-lexical.
   
-  (define (label-var-types stx)
-  (let loop ([stx stx] [let-bound-bindings null])
+  (define (top-level-rewrite stx)
+  (let loop ([stx stx] [let-bound-bindings null] [could-be-cond #f] [cond-test #f])
     (let* ([recur-regular 
             (lambda (stx)
-              (loop stx let-bound-bindings))]
+              (loop stx let-bound-bindings #f #f))]
            [recur-with-bindings
             (lambda (vars exps)
-              (map (lambda (stx) (loop stx (append vars let-bound-bindings))) 
+              (map (lambda (stx) (loop stx (append vars let-bound-bindings) #f #f)) 
                    exps))]
+           [recur-in-cond
+            (lambda (stx new-cond-test)
+              (loop stx let-bound-bindings #t new-cond-test))]
            [do-let/rec
             (lambda (stx rec?)
               (with-syntax ([(label ((vars rhs) ...) . bodies) stx])
@@ -261,25 +269,48 @@
                        [new-bindings (map list labelled-vars-list rhs-list)])
                   (datum->syntax-object stx `(,(syntax label) ,new-bindings ,@new-bodies)))))])
       (kernel:kernel-syntax-case stx #f
-                                     [(let-values x ...) (do-let/rec stx #f)]
-                                     [(letrec-values x ...) (do-let/rec stx #t)]
-                                     [var
-                                      (identifier? (syntax var))
-                                      (if (eq? (identifier-binding (syntax var)) 'lexical)
-                                          (if (ormap (lambda (binding)
-                                                       (bound-identifier=? binding (syntax var)))
-                                                     let-bound-bindings)
-                                              (syntax-property (syntax var) 'stepper-binding-type 'let-bound)
-                                              (syntax-property (syntax var) 'stepper-binding-type 'lambda-bound))
-                                          (syntax-property (syntax var) 'stepper-binding-type 'non-lexical))]
-                                     [stx
-                                      (let ([content (syntax-e (syntax stx))])
-                                        (if (pair? content)
-                                            (datum->syntax-object (syntax stx)
-                                                                  (syntax-pair-map content recur-regular)
-                                                                  (syntax stx)
-                                                                  (syntax stx))
-                                            content))]))))
+        [(let-values x ...) (do-let/rec stx #f)]
+        [(letrec-values x ...) (do-let/rec stx #t)]
+        [(if test then else-stx)
+         (let ([origin (syntax-property stx 'origin)])
+           (cond [(and could-be-cond (cond-test stx))
+                  (syntax-property 
+                   (rebuild-stx `(if ,(recur-regular (syntax test))
+                                     ,(recur-regular (syntax then))
+                                     ,(recur-in-cond (syntax else-stx) cond-test))
+                                stx)
+                   'stepper-hint 
+                   'comes-from-cond)]
+                 [(and origin (pair? origin) (eq? (syntax-e (car origin)) 'cond))
+                  (syntax-property
+                   (rebuild-stx `(if ,(recur-regular (syntax test))
+                                     ,(recur-regular (syntax then))
+                                     ,(recur-in-cond (syntax else-stx)
+                                                     (lambda (test-stx) 
+                                                       (and (eq? (syntax-source stx) (syntax-source test-stx))
+                                                            (eq? (syntax-position stx) (syntax-source test-stx))))))
+                                stx)
+                   'stepper-hint
+                   'comes-from-cond)]
+                 [else
+                  (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax then) (syntax else-stx)))) stx)]))]
+        [var
+         (identifier? (syntax var))
+         (if (eq? (identifier-binding (syntax var)) 'lexical)
+             (if (ormap (lambda (binding)
+                          (bound-identifier=? binding (syntax var)))
+                        let-bound-bindings)
+                 (syntax-property (syntax var) 'stepper-binding-type 'let-bound)
+                 (syntax-property (syntax var) 'stepper-binding-type 'lambda-bound))
+             (syntax-property (syntax var) 'stepper-binding-type 'non-lexical))]
+        [stx
+         (let ([content (syntax-e (syntax stx))])
+           (if (pair? content)
+               (datum->syntax-object (syntax stx)
+                                     (syntax-pair-map content recur-regular)
+                                     (syntax stx)
+                                     (syntax stx))
+               content))]))))
   
 ;  (syntax-case (label-var-types (expand #'(+ a 3))) (#%app #%top + #%datum) 
 ;    [(#%app (#%top . +) (#%top . a-var) (#%datum . 3))
@@ -1087,7 +1118,7 @@
          
          (define (annotate/top-level expr)
            (let*-2vals ([(annotated dont-care)
-                         (top-level-annotate/inner (label-var-types expr))])
+                         (top-level-annotate/inner (top-level-rewrite expr))])
              annotated)))
          
          ; body of local

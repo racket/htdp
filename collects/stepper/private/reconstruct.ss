@@ -20,7 +20,7 @@
    skip-result-step?
    skip-redex-step?)
   
-  
+  (make-contract-checker STRING string?)
 
   (make-contract-checker MARK-LIST 
                          (lambda (arg) 
@@ -249,16 +249,6 @@
   (define (binding-lifted-name mark-list binding)
       (construct-lifted-name binding (mark-binding-value (lookup-binding mark-list (get-lifted-var binding)))))
 
-  ; attach-info : SYNTAX-OBJECT SYNTAX-OBJECT -> SYNTAX-OBJECT
-  ; attach-info attaches to a generated piece of syntax the origin & source information of another.
-  ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
-  (define (attach-info stx expr)
-    (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
-           [it (syntax-property it 'user-source (syntax-source expr))]
-           [it (syntax-property it 'user-position (syntax-position expr))])
-      it))                                                                                                  
-                                                                                                  
-                                                                                                  
                                                                 ;              ;  ;               
                                                                                ;                  
  ; ;;; ;;    ;;;    ;;;  ; ;;  ;;;       ;   ;  ; ;;  ;   ;   ; ;  ; ;;    ;;; ;  ;  ; ;;    ;; ; 
@@ -297,7 +287,7 @@
                       [origins (syntax-property stx 'user-origin)])
                  (if (or (not origins) (null? origins))
                      (recur-on-pieces)
-                     (case (car origins)
+                     (case (syntax-e (car origins))
                        ((cond) (unwind-cond stx 
                                             (syntax-property stx 'user-source)
                                             (syntax-property stx 'user-position)))
@@ -317,7 +307,7 @@
                                              (loop (syntax else)))]
                                       [(begin else-stx)
                                        ; source or synthesized else?
-                                       (if (teach-source? (syntax-property (syntax else-stx) 'user-source))
+                                       (if (eq? 'inserted-else (syntax-property (syntax else-stx) 'user-stepper-hint))
                                            null
                                            (cons (inner (syntax (else else-stx)))
                                                  null))]
@@ -331,21 +321,17 @@
       (let* ([main (map inner stx-list)]
              [new-highlights (build-list (queue-length highlight-queue-dest) (lambda (x) (queue-pop highlight-queue-dest)))])
         (list main new-highlights))))
-  ; something in here returns void!
   
-  
-  ; teach-name-substring: the name of the file containing the teaching macros. Yuck!
-  (define teach-name-substring "lang/private/teach.ss")
-  
-  
-  (define (teach-source? source)
-    (and (string? source)
-         (let* ([origin-len (string-length source)]
-                [test-len (string-length teach-name-substring)])
-           (and (>= origin-len test-len)
-                (string=? teach-name-substring (substring source (- origin-len test-len) origin-len))))))
-          
-          
+  ; attach-info : SYNTAX-OBJECT SYNTAX-OBJECT -> SYNTAX-OBJECT
+  ; attach-info attaches to a generated piece of syntax the origin & source information of another.
+  ; we do this so that macro unwinding can tell what reconstructed syntax came from what original syntax
+  (define (attach-info stx expr)
+    (let* ([it (syntax-property stx 'user-origin (syntax-property expr 'origin))]
+           [it (syntax-property it 'user-stepper-hint (syntax-property expr 'stepper-hint))]
+           [it (syntax-property it 'user-source (syntax-source expr))]
+           [it (syntax-property it 'user-position (syntax-position expr))])
+      it))                                                                                                  
+                                                                                                  
 ;;;  
 ; (define comes-from-define?
 ;    (make-check-raw-first-symbol 'define))
@@ -549,7 +535,8 @@
                                [(with-continuation-mark . rest) (recon-basic)]
                                
                                ; application
-                               [(#%app . terms) (d->so (map recur (syntax->list (syntax terms))))]
+                               [(#%app . terms) 
+                                (d->so (map recur (syntax->list (syntax terms))))]
                                
                                ; #%datum
                                [(#%datum . datum) (recon-value (syntax-e (syntax datum)))]
