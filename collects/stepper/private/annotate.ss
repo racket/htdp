@@ -192,19 +192,6 @@
            (error 'varref-set-remove-bindings "binding-set 'all passed as second argument, first argument was: ~s" varrefs)]
           [else (remove* bindings varrefs bound-identifier=?)]))
       
-  ; WARNING: because of how syntax-property works, these properties will have a default value of #f.
-  ; that's what we want, in this case.
-  
-  (define (never-undefined? stx)
-    (syntax-property stx 'never-undefined))
-  (define (mark-never-undefined stx) 
-    (syntax-property stx 'never-undefined #t))
- 
-  (define (lambda-bound-var? stx)
-    (syntax-property stx 'lambda-bound-var))
-  (define (mark-lambda-bound-var stx)
-    (syntax-property stx 'lambda-bound-var #t))
-  
   (define (interlace a b)
     (foldr (lambda (a b built)
              (cons a (cons b built)))
@@ -561,7 +548,7 @@
                                               (make-debug-info expr 
                                                                (binding-set-union (list tail-bound binding-list))
                                                                (varref-set-union (list free-bindings binding-list)) ; NB using bindings as varrefs
-                                                               let-bound-vars
+                                                               (varref-set-union (list let-bound-vars binding-list))
                                                                'let-body
                                                                foot-wrap?))]
                   [wcm-wrap (if pre-break?
@@ -589,16 +576,14 @@
                    (lambda (clause)
                      (with-syntax ([(args-stx . bodies) clause])
                        (let*-2vals ([args (syntax->ilist (syntax args-stx))]
-                                    [marked-args (ilist-map mark-lambda-bound-var args)]
-                                    [tagged-args (ilist-map mark-never-undefined marked-args)]
                                     [(annotated-body free-varrefs)
                                      (if (= (length (syntax->list (syntax bodies))) 1)
                                          (lambda-body-recur (car (syntax->list (syntax bodies))))
                                          (lambda-body-recur (syntax (begin . bodies))))]
                                     [tagged-body (syntax-property annotated-body 'stepper-info 'lambda-body-begin)]
                                     [new-free-varrefs (varref-set-remove-bindings free-varrefs
-                                                                                  (ilist-flatten tagged-args))])
-                         (2vals (datum->syntax-object clause (list tagged-args tagged-body)) new-free-varrefs))))]
+                                                                                  (ilist-flatten args))])
+                         (2vals (datum->syntax-object clause (list args tagged-body)) new-free-varrefs))))]
                   
                   [outer-lambda-abstraction
                    (lambda (annotated-lambda free-varrefs)
