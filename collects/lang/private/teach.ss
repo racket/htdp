@@ -70,6 +70,11 @@
   (require (rename "teachprims.ss" the-cons advanced-cons))
   (require (rename "teachprims.ss" cyclic-list? cyclic-list?))
 
+  ;; Referenced to ensure that evaluating `lambda' always
+  ;; produces a new closure (instead of using a closure
+  ;; that's allocated once)
+  (define make-lambda-generative 5)
+
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; syntax implementations
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -268,7 +273,7 @@
 	       'define
 	       stx
 	       (syntax name)
-	       (syntax/loc stx (define (name . arg-seq) lexpr ...)))]
+	       (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...)))]
 	     ;; Constant def
 	     [_else
 	      (check-definition-new
@@ -896,7 +901,10 @@
 		       [(rhs-expr ...) (map allow-local-lambda 
 					    (syntax->list (syntax (rhs-expr ...))))])
 	   (syntax/loc stx
-	     (let ([tmp rhs-expr]
+	     (let ([tmp 
+		    ;; Use `name' to preserve inferred names:
+		    (let ([name rhs-expr])
+		      name)]
 		   ...)
 	       ;; Use `local' to tell `#%app' about the bindings:
 	       (intermediate-local [(define-values (name ...) (values tmp ...))]
@@ -925,7 +933,10 @@
 	[(beginner-lambda . rest)
 	 (begin
 	   (check-defined-lambda stx)
-	   (syntax/loc stx (lambda . rest)))]
+	   ;; pattern-match again to pull out the formals:
+	   (syntax-case stx ()
+	     [(_ formals . rest)
+	      (syntax/loc stx (lambda formals make-lambda-generative . rest))]))]
 	[_else stx]))
 
     ;; Helper function:
