@@ -5,7 +5,11 @@
            (lib "match.ss")
            (lib "sexp-diff.ss" "tests" "utils")
            "module-elaborator.ss"
-           (lib "xml-snip"))
+           ; for xml testing:
+           (lib "class.ss")
+           (all-except (lib "xml-snipclass.ss" "xml") snip-class)
+           (all-except (lib "scheme-snipclass.ss" "xml") snip-class)
+           (lib "mred.ss" "mred"))
   
   (call-with-output-file "/Users/clements/test1.txt"
     (lambda (port)
@@ -20,7 +24,7 @@
           (iter eof void)
           (iter (expand (car expr-list)) (stream-ify (cdr expr-list) iter)))))
   
-  (define (test-sequence-core namespace-spec render-settings track-inferred-names? make-reader expected-steps)
+  (define (test-sequence-core namespace-spec render-settings track-inferred-names? in-port expected-steps)
     (let* ([current-error-display-handler (error-display-handler)]) 
         (let* ([all-steps
                 (append expected-steps 
@@ -41,7 +45,15 @@
                [program-expander
                 (lambda (init iter)
                   (init)
-                  ((make-reader iter)))])
+                  (letrec ([read-loop (lambda ()
+                                        (let ([r (read-syntax in-port)])
+                                          (if (eof-object? r)
+                                              (begin
+                                                (close-input-port in-port)
+                                                (iter eof void))
+                                              (begin (printf "expanded: ~v\n" (expand r))
+                                              (iter (expand r) read-loop)))))])
+                    (read-loop)))])
           (let/ec escape
             (parameterize ([error-escape-handler (lambda () (escape (void)))])
               (go program-expander receive-result render-settings track-inferred-names?)))
@@ -54,24 +66,9 @@
           (fprintf port "~a" exp-str))
         'truncate)
       (printf "testing string: ~v\n" exp-str)
-      (letrec ([port (open-input-file filename)]
-               [make-reader (lambda (iter)
-                              (lambda ()
-                                (let ([r (read-syntax filename port)])
-                                  (if (eof-object? r)
-                                      (begin
-                                        (close-input-port port)
-                                        (iter eof void))
-                                      (iter (expand r) (make-reader iter))))))])
-        (test-sequence-core namespace-spec render-settings track-inferred-names? make-reader expected-steps))))
-  
-  (define (test-xml-sequence namespace-spec render-settings track-inferred-names? xml-sexps expected-steps)
-    (letrec ([make-make-reader (lambda (xml-sexps)
-                                 (lambda (iter)
-                                   (if (null? xml-sexps)
-                                       (iter eof void)
-                                       (iter (expand (car xml-sexps)) ((make-make-reader (cdr xml-sexps)) iter)))))])
-      (test-sequence-core namespace-spec render-settings track-inferred-names? (make-make-reader xml-sexps) expected-steps)))
+      (letrec ([port (open-input-file filename)])
+        (test-sequence-core namespace-spec render-settings track-inferred-names? port expected-steps))))
+
   
   (define (lang-level-test-sequence namespace-spec rs track-inferred-names?)
     (lambda args
@@ -934,10 +931,53 @@
                                           (finished ((define f (lambda (x) x)) (lambda (x) x))))))
   
   
+  ;;;;;;;;;;;;;;;;
+  ;;
+  ;;  XML (uses MrEd)
+  ;;
+  ;;;;;;;;;;;;;;;;
+    
+  (define (test-xml-sequence namespace-spec render-settings track-inferred-names? spec expected-steps)
+    (letrec ([port (open-input-text-editor (construct-text spec))])
+      (test-sequence-core namespace-spec render-settings track-inferred-names? port expected-steps)))
+  
+  (define (construct-text spec)
+    (let ([new-text (instantiate text% ())])
+      (for-each
+       (match-lambda 
+         [`(xml-box ,@(xmlspec ...)) (send new-text insert (construct-xml-box xmlspec))]
+         [(? string? text) (send new-text insert text)])
+       spec)
+      new-text))
+  
+  (define (construct-xml-box spec)
+    (let* ([new-xml-box (instantiate xml-snip% () 
+                          [eliminate-whitespace-in-empty-tags? #t])] ;  need to check what the languages themselves do here
+           [xml-editor (send new-xml-box get-editor)])
+      (for-each
+       (match-lambda
+         [`(scheme-box ,@(schemeboxspec ...)) (send new-xml-box insert (construct-scheme-box #f schemeboxspec))]
+         [`(splice-box ,@(spliceboxspec ...)) (send new-xml-box insert (construct-scheme-box #f spliceboxspec))]
+         [(? string? text) (send xml-editor insert text)])
+       spec)
+      new-xml-box))
+  
+  (define (construct-scheme-box splice? spec)
+    (let* ([new-scheme-box (instantiate scheme-snip% () [splice? splice?])]
+           [scheme-editor (send new-scheme-box get-editor)])
+      (for-each 
+       (match-lambda
+         [`(xml-box ,@(xmlspec ...)) (send scheme-editor insert (construct-xml-box xmlspec))]
+         [(? string? text) (send scheme-editor insert text)])
+       spec)))
+  
+  
   (t xml-box1
-     (let ([xml-box (make-xml-box "<abba>3<abba>")])
-       (test-xml-sequence (list xml-box)
-                          `((finished ((xml-box (cons abba (cons empty (cons 3 empty))))))))))
+     (test-xml-sequence `(lib "htdp-beginner.ss" "lang")
+                        fake-beginner-render-settings
+                        #t
+                        `((xml-box "<abba>3</abba>"))
+                        `((finished ((xml-box (cons abba (cons empty (cons 3 empty)))))))))
   
   ;  
   ;  ;;;;;;;;;;;;;
@@ -1034,6 +1074,6 @@
 ;  (finished (true))))
   
   
-  (run-tests '(int/lam2))
+  (run-tests '(xml-box1))
   ;(run-all-tests)
   )
