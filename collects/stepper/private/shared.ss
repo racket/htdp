@@ -197,11 +197,13 @@
    (let ([assoc-table (box null)])
       (lambda (stx)
         (let ([maybe-fetch (weak-assoc-search assoc-table stx module-identifier=?)])
+          (when maybe-fetch (fprintf (current-error-port) "found an id: ~a\n" (syntax-e maybe-fetch)))
           (or maybe-fetch
               (begin
                 (let* ([new-binding (next-lifted-symbol
                                      (string-append "lifter-" (format "~a" (syntax-object->datum stx)) "-"))])
                   (weak-assoc-add assoc-table stx new-binding)
+                  (fprintf (current-error-port) "generated a new id: ~a\n" (syntax-e new-binding))
                   new-binding)))))))
 
   ; gensyms needed by many modules:
