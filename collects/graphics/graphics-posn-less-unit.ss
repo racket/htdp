@@ -1107,7 +1107,7 @@
   (define draw-pixmap-posn
     (opt-lambda (filename [type 'unknown/mask])
       (check 'draw-pixmap-posn
-	     (andp string? file-exists?) filename "filename"
+	     (andp path-string? file-exists?) filename "filename"
 	     (lambda (x) (memq x '(gif xbm xpm bmp pict unknown unknown/mask gif/mask))) type "file type symbol")
       (let* ([bitmap (make-object mred:bitmap% filename type)])
 	(lambda (viewport)
@@ -1130,7 +1130,7 @@
 	     viewport? viewport "viewport")
       (opt-lambda (filename p [color #f])
 	(check 'draw-pixmap
-	       (andp string? file-exists?) filename "filename"
+	       (andp path-string? file-exists?) filename "filename"
 	       posn? p "posn"
 	       (orp not color?) color (format "color or ~e" #f))
 	(((draw-pixmap-posn filename 'unknown) viewport) p color))))
@@ -1152,7 +1152,7 @@
 	     viewport? viewport "viewport")
       (opt-lambda (filename [kind 'xpm])
 	(check 'save-pixmap
-	       (andp string? (orp relative-path? absolute-path?)) filename "filename"
+	       (andp path-string? (orp relative-path? absolute-path?)) filename "filename"
 	       (lambda (x) (memq x '(xpm xbm bmp pict))) kind "file type symbol")
 	(let ([bm (viewport-bitmap viewport)])
 	  (send bm save-file filename kind)))))
