@@ -49,17 +49,17 @@
        (syntax (vector-ref a 1))])))
 
 ; test cases
-(require my-macros)
-
-(= (2vals-first (2vals 3 4)) 3)
-(= (2vals-second (2vals 3 4)) 4)
-
-(= 
- (let*-2vals
-     ([a (2vals 3 4)]
-      [(b c) a])
-   a
-   c)
- 4)
+;(require my-macros)
+;
+;(= (2vals-first (2vals 3 4)) 3)
+;(= (2vals-second (2vals 3 4)) 4)
+;
+;(= 
+; (let*-2vals
+;     ([a (2vals 3 4)]
+;      [(b c) a])
+;   a
+;   c)
+; 4)
 
 
