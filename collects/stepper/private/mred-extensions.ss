@@ -276,10 +276,10 @@
                        [pretty-print-print-hook
                         ; this print-hook is called for confusable highlights and for images.
                         (lambda (value display? port)
-                          (let ([looked-up (hash-table-get highlight-table value (lambda () #f))])
-                            (cond [(is-a? value snip%) (insert (send value copy)) (set-last-style)]
-                                  [looked-up (insert (format "~s" (car looked-up)))]
-                                  [else (error 'stepper-GUI "pretty-print-print-hook: expected an image or a highlight-placeholder, got: ~e" value)])))]
+                          (let ([to-display (cond [(hash-table-get highlight-table value (lambda () #f)) => car]
+                                                  [else value])])
+                            (cond [(is-a? to-display snip%) (insert (send to-display copy)) (set-last-style)]
+                                  [else (insert (format "~s" to-display))])))]
                        [pretty-print-display-string-handler
                         (lambda (string port)
                           (insert string))]
