@@ -170,6 +170,7 @@
                                             (z:scheme-expand new-expr 'previous user-vocabulary))))])
                    (let*-values ([(annotated-list envs) (a:annotate (list new-expr) (list new-parsed) packaged-envs break #f)]
                                  [(annotated) (car annotated-list)])
+                     (printf "annotated:~n~a~n" annotated)
                      (set! packaged-envs envs)
                      (set! current-expr new-parsed)
                      (check-for-repeated-names new-parsed exception-handler)
@@ -210,14 +211,17 @@
                        [redex (cadr reconstruct-pair)])
                   (finish-thunk reconstructed redex)))))])
       (case break-kind
-        [(normal)
+        [(normal-break)
+         (printf "entering normal-break~n")
          (when (not (r:skip-redex-step? mark-list))
+           (printf "not skipping step~n")
            (reconstruct-helper 
             (lambda (reconstructed redex)
               (set! held-expr reconstructed)
               (set! held-redex redex)
               (continue-user-computation)))
-           (suspend-user-computation))]
+           (suspend-user-computation))
+         (printf "finished normal-break~n")]
         [(result-break)
          (when (not (or (r:skip-redex-step? mark-list)
                         (and (null? returned-value-list)
@@ -243,25 +247,30 @@
                 (set! held-redex no-sexp)
                 (i:receive-result result))))
            (suspend-user-computation))]
-        [(double)
+        [(double-break)
          ; a double-break occurs at the beginning of a let's body.
          (send-to-drscheme-eventspace
           (lambda ()
-            (let* ([reconstruct-quadruple
-                    (r:reconstruct-current current-expr mark-list)])
-              (set! finished-exprs (append finished-exprs (caddr reconstruct-quadruple)))
-              (when (not (eq? held-expr no-expr))
+            (let* ([reconstruct-quintuple
+                    (r:reconstruct-current current-expr mark-list break-kind returned-value-list)])
+              (set! finished-exprs (append finished-exprs (car reconstruct-quintuple)))
+              (when (not (eq? held-expr no-sexp))
                 (e:internal-error 'break-reconstruction
                                   "held-expr not empty when a double-break occurred"))
               (i:receive-result (apply make-before-after-result 
                                        finished-exprs
-                                       reconstruct-quadruple)))))
-         (suspend-user-computation)])))
+                                       (cdr reconstruct-quintuple))))))
+         (suspend-user-computation)]
+        [else (e:internal-error 'break "unknown label on break")])))
   
   (define (handle-exception exn)
-    (if held-expr
-        (i:receive-result (make-before-error-result finished-exprs held-expr held-redex (exn-message exn)))
-        (i:receive-result (make-error-result finished-exprs (exn-message exn)))))
+    (if (not (eq? held-expr no-sexp))
+        (begin
+          (printf "held-expr: ~a~n" held-expr)
+          (i:receive-result (make-before-error-result finished-exprs held-expr held-redex (exn-message exn))))
+        (begin
+          (printf "no held sexp~n")
+          (i:receive-result (make-error-result finished-exprs (exn-message exn))))))
            
   (define (make-exception-handler k)
     (lambda (exn)

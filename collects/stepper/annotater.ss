@@ -188,12 +188,12 @@
          
          (define (break-wrap expr)
            (if break
-               `(#%begin (,(make-break 'normal)) ,expr)
+               `(#%begin (,(make-break 'normal-break)) ,expr)
                expr))
          
          (define (double-break-wrap expr)
            (if break
-               `(#%begin (,(make-break 'double)) ,expr)))
+               `(#%begin (,(make-break 'double-break)) ,expr)))
          
          (define (simple-wcm-break-wrap debug-info expr)
            (simple-wcm-wrap debug-info (break-wrap expr)))
@@ -483,7 +483,7 @@
                ;turns into
                ;
                ;(let-values ([(dummy1 dummy2 dummy3 dummy4 dummy5)
-               ;              (values *undefined* *undefined* *undefined* *undefined* *undefined*)])
+               ;              (values *unevaluated* *unevaluated* *unevaluated* *unevaluated* *unevaluated*)])
                ;  (with-continuation-mark 
                ;   key huge-value
                ;   (begin
@@ -536,7 +536,7 @@
                              [val outer-dummy-initialization
                                   `([,(map z:varref-var dummy-var-list)
                                      (#%values ,@(build-list (length dummy-var-list) 
-                                                             (lambda (_) '(#%quote *undefined*))))])]
+                                                             (lambda (_) `(#%quote ,*unevaluated*))))])]
                              [val set!-clauses
                                   (map (lambda (dummy-var-set val)
                                          `(#%set!-values ,(map z:varref-var dummy-var-set) ,val))
