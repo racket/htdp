@@ -6,5 +6,3 @@
 
 (syntax-test #'(define (x) 10))
 (syntax-test #'(define x (lambda () 10)))
-
-(syntax-test #'(define-struct a ())) ; zero fields...

@@ -30,16 +30,13 @@
 (err/rt-test (1 2 3))
 (err/rt-test (+) exn:application:arity?)
 
-(define (f a) (a))
-(test (void) f void)
+(define (f6 a) (a))
+(test (void) f6 void)
 
-(define (x) 10)
-(test 10 x)
-(define x (lambda () 11))
-(test 11 x)
-
-(define-struct a0 ())
-(test #t a0? (make-a0))
+(define (x7) 10)
+(test 10 x7)
+(define x8 (lambda () 11))
+(test 11 x8)
 
 (syntax-test #'begin)
 (syntax-test #'(begin))

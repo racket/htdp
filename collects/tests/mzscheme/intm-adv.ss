@@ -1,8 +1,8 @@
 
 (syntax-test #'(lambda (z z) 10))
 
-(define f (lambda (y) (lambda (z) z)))
-(test #t procedure? f)
+(define f7 (lambda (y) (lambda (z) z)))
+(test #t procedure? f7)
 (test 778 (lambda (x) 778) 'ignored)
 
 (test values (lambda (f) (f f)) values)

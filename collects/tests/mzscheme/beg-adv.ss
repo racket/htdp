@@ -44,9 +44,13 @@
 (define (f y) (+ x y))
 (test 5 'lookup x)
 (test 9 f 4)
+(define f2 (lambda (y) (+ x y)))
+(test 15 f 10)
 
+(define-struct a0 ())
 (define-struct a1 (b))
 (define-struct a3 (b c d))
+(test #t a0? (make-a0))
 (test #t a1? (make-a1 1))
 (test #t a3? (make-a3 1 2 3))
 (test #f a1? (make-a3 1 2 3))
