@@ -147,9 +147,9 @@
   ;; start up a canvas of size width x height  and draw a centered cartesian coordinate
   (define (start/cartesian-plane width height)
     (check-arg 'start/cartesian-plane
-      (and (integer? WIDTH) (> WIDTH 0)) "positive integer" "first" WIDTH)
+      (and (integer? width) (> width 0)) "positive integer" "first" width)
     (check-arg 'start/cartesian-plane
-      (and (integer? HEIGHT) (> HEIGHT 0)) "positive integer" "second" HEIGHT)    
+      (and (integer? height) (> height 0)) "positive integer" "second" height)    
     (local ((define trash  (start width height))
 	    (define mid-x  (quotient width 2))
 	    (define mid-y  (quotient height 2)))
