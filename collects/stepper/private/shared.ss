@@ -27,7 +27,13 @@
    ilist-flatten
    zip
    let-counter
-   skipto
+   skipto-annotate
+   skipto-reconstruct
+   contract-check-syntax-object?
+   contract-check-binding-set?
+   contract-check-varref-set?
+   contract-check-boolean?
+   contract-check-procedure-list?
    ; get-binding-name
    ; bogus-binding?
    ; if-temp
@@ -35,6 +41,33 @@
    ; expr-read
    ; set-expr-read!
    )
+  
+  ; contracts:
+  
+  ; a BINDING is a syntax-object
+  ; a VARREF is a syntax-object
+  
+  ; a BINDING-SET is (union 'all (listof BINDING))
+  ; a VARREF-SET is (listof VARREF)
+  
+  (make-contract-checker BINDING-SET
+                         (lambda (arg)
+                           (or (eq? arg 'all)
+                               (andmap identifier? arg))))
+  (make-contract-checker VARREF-SET
+                         (lambda (arg)
+                           (and (list? arg)
+                                (andmap identifier? arg))))
+  
+  (make-contract-checker BOOLEAN boolean?)
+  (make-contract-checker SYNTAX-OBJECT syntax?)
+  
+  (make-contract-checker PROCEDURE-LIST 
+                         (lambda (arg) 
+                           (and (list? arg)
+                                (andmap procedure? arg))))
+  
+
   
   ; A step-result is either:
   ; (make-before-after-result finished-exprs exp redex reduct)
@@ -293,46 +326,41 @@
   
   (define let-counter (syntax-property (d->so 'let-counter) 'stepper-binding-type 'stepper-temp))
   
-  ;;   ;      ;                  ;               
- ;  ;  ;                                         
- ;     ;   ;  ;  ; ;;;   ; ;;;   ;  ; ;;    ;; ; 
- ;     ;  ;   ;  ;;   ;  ;;   ;  ;  ;;  ;  ;  ;; 
-  ;;   ; ;    ;  ;    ;  ;    ;  ;  ;   ;  ;   ; 
-    ;  ;;     ;  ;    ;  ;    ;  ;  ;   ;  ;   ; 
-    ;  ; ;    ;  ;    ;  ;    ;  ;  ;   ;  ;   ; 
- ;  ;  ;  ;   ;  ;;   ;  ;;   ;  ;  ;   ;  ;  ;; 
-  ;;   ;   ;  ;  ; ;;;   ; ;;;   ;  ;   ;   ;; ; 
-                 ;       ;                     ; 
-                 ;       ;                 ;;;;  
-                                                 
  
-  ; skipto : (listof number) SYNTAX-OBJECT (SYNTAX-OBJECT -> SYNTAX-OBJECT) -> SYNTAX-OBJECT
-  ; skipto : opens up an existing syntax-object to a position indicated by the posn-list,
-  ; then rebuilds the expression using the result of applying the annotater to the sub-term.
-  ; the posn-list is used by converting the stx to a list, then recurring on the nth element,
-  ; where n is indicated by the first number in the list.
+  ; functional update package
   
-(define skipto
-  (checked-lambda (posn-list (stx SYNTAX-OBJECT) annotater)
-    (if (null? posn-list)
-        (annotater stx)
-        (let ([opened (syntax->list stx)])
-          (unless opened (error 'skipto "unable to apply syntax->list to ~a" (syntax-object->datum stx)))
-          (datum->syntax-object 
-           #'here
-           (let loop ([iter (car posn-list)] [stx-list opened])
-             (if (= iter 0)
-                 (cons (skipto (cdr posn-list) (car stx-list) annotater)
-                       (cdr stx-list))
-                 (cons (car stx-list) 
-                       (loop (- iter 1) (cdr stx-list)))))
-           stx)))))
+  (define second (lambda (x y) y))
   
-  ;test case
-;  (and (equal? (syntax-object->datum (skipto '(0 2) #'((a b c) (d e f) (g h i)) (lambda (dc) #'foo)))
-;               '((a b foo) (d e f) (g h i))))
-                    
+  (define up-mappings
+    `((rebuild ((,car ,(lambda (stx new) (cons new (cdr stx))))
+                (,cdr ,(lambda (stx new) (cons (car stx) new)))
+                (,syntax-e ,(lambda (stx new) (datum->syntax-object stx new stx stx)))))
+      (discard ((,car ,second)
+                (,cdr ,second)
+                (,syntax-e ,second)))))
+  
+  (define (update fn-list val fn traversal)
+    (if (null? fn-list)
+        (fn val)
+        (let* ([down (car fn-list)]
+               [up (cadr (assq down (cadr (assq traversal up-mappings))))])
+          (up val (update (cdr fn-list) (down val) fn traversal)))))
  
+  
+  
+  (define skipto-annotate 
+    (checked-lambda ((fn-list PROCEDURE-LIST) (stx SYNTAX-OBJECT) annotater)
+                    (update fn-list stx annotater 'rebuild)))
+
+    ; test cases
+;  (equal? (syntax-object->datum (skipto-annotate (list syntax-e car syntax-e cdr cdr car) #'((a b c) (d e f) (g h i)) (lambda (dc) #'foo)))
+;          '((a b foo) (d e f) (g h i)))
+
+  
+  (define skipto-reconstruct
+    (checked-lambda ((fn-list PROCEDURE-LIST) (stx SYNTAX-OBJECT) reconstructer)
+                    (update fn-list stx reconstructer 'discard)))
+  
   )
 
 ; test cases

@@ -67,24 +67,6 @@
                           (values (cons a a-rest) (cons b b-rest) (cons c c-rest)))))])
       (apply inr lsts)))
 
-  ; a BINDING is a syntax-object
-  ; a VARREF is a syntax-object
-  
-  ; a BINDING-SET is (union 'all (listof BINDING))
-  ; a VARREF-SET is (listof VARREF)
-  
-  (make-contract-checker BINDING-SET
-                         (lambda (arg)
-                           (or (eq? arg 'all)
-                               (andmap identifier? arg))))
-  (make-contract-checker VARREF-SET
-                         (lambda (arg)
-                           (and (list? arg)
-                                (andmap identifier? arg))))
-  
-  (make-contract-checker BOOLEAN boolean?)
-  (make-contract-checker SYNTAX-OBJECT syntax?)
-  
   ; note: a BINDING-SET which is not 'all may be used as a VARREF-SET.
   ; this is because they both consist of syntax objects, and a binding
   ; answers true to bound-identifier=? with itself, just like a varref
@@ -332,45 +314,6 @@
                                                  
                                                  
                                                  
-  ;;   ;      ;                  ;               
- ;  ;  ;                                         
- ;     ;   ;  ;  ; ;;;   ; ;;;   ;  ; ;;    ;; ; 
- ;     ;  ;   ;  ;;   ;  ;;   ;  ;  ;;  ;  ;  ;; 
-  ;;   ; ;    ;  ;    ;  ;    ;  ;  ;   ;  ;   ; 
-    ;  ;;     ;  ;    ;  ;    ;  ;  ;   ;  ;   ; 
-    ;  ; ;    ;  ;    ;  ;    ;  ;  ;   ;  ;   ; 
- ;  ;  ;  ;   ;  ;;   ;  ;;   ;  ;  ;   ;  ;  ;; 
-  ;;   ;   ;  ;  ; ;;;   ; ;;;   ;  ;   ;   ;; ; 
-                 ;       ;                     ; 
-                 ;       ;                 ;;;;  
-                                                 
- 
-  ; skipto : (listof number) SYNTAX-OBJECT (SYNTAX-OBJECT -> SYNTAX-OBJECT) -> SYNTAX-OBJECT
-  ; skipto : opens up an existing syntax-object to a position indicated by the posn-list,
-  ; then rebuilds the expression using the result of applying the annotater to the sub-term.
-  ; the posn-list is used by converting the stx to a list, then recurring on the nth element,
-  ; where n is indicated by the first number in the list.
-  
-(define skipto
-  (checked-lambda (posn-list (stx SYNTAX-OBJECT) annotater)
-    (if (null? posn-list)
-        (annotater stx)
-        (let ([opened (syntax->list stx)])
-          (unless opened (error 'skipto "unable to apply syntax->list to ~a" (syntax-object->datum stx)))
-          (datum->syntax-object 
-           #'here
-           (let loop ([iter (car posn-list)] [stx-list opened])
-             (if (= iter 0)
-                 (cons (skipto (cdr posn-list) (car stx-list) annotater)
-                       (cdr stx-list))
-                 (cons (car stx-list) 
-                       (loop (- iter 1) (cdr stx-list)))))
-           stx)))))
-  
-  ;test case
-;  (and (equal? (syntax-object->datum (skipto '(0 2) #'((a b c) (d e f) (g h i)) (lambda (dc) #'foo)))
-;               '((a b foo) (d e f) (g h i))))
-                    
    ;                                               
   ; ;                         ;          ;         
   ; ;    ; ;;   ; ;;    ;;;  ;;;;  ;;;  ;;;;  ;;;  
@@ -461,8 +404,11 @@
              index))
          
          ; wrap creates the w-c-m expression.
+
+         
          
          ; here are the possible configurations of wcm's, pre-breaks, and breaks (not including late-let & double-breaks):
+  
          ; (for full-on stepper)
          ; wcm, result-break, normal-break
          ; wcm, normal-break
@@ -602,12 +548,13 @@
            (if (syntax-property expr 'stepper-skipto)
                (let ([free-vars-captured #f]) ; this will be set!'ed
                  ; WARNING! I depend on the order of evaluation in application arguments here:
-                 (2vals (skipto (syntax-property expr 'stepper-skipto) 
-                                expr 
-                                (lambda (subterm)
-                                  (let*-2vals ([(stx free-vars) (annotate/inner subterm tail-bound pre-break? top-level? procedure-name-info)])
-                                              (set! free-vars-captured free-vars)
-                                              stx)))
+                 (2vals (skipto-annotate
+                         (syntax-property expr 'stepper-skipto) 
+                         expr 
+                         (lambda (subterm)
+                           (let*-2vals ([(stx free-vars) (annotate/inner subterm tail-bound pre-break? top-level? procedure-name-info)])
+                                       (set! free-vars-captured free-vars)
+                                       stx)))
                         free-vars-captured))
                  
                
