@@ -1,7 +1,12 @@
+(module reconstructor mzscheme
+  (require (lib "unitsig.ss")
+	   "sig.ss"
+	   (lib "zodiac-sig.ss" "syntax"))
+
+  (provide reconstructor@)
+
 (unit/sig stepper:reconstruct^
-  (import [z : zodiac:system^]
-          mzlib:function^
-          [e : zodiac:interface^]
+  (import [z : zodiac^]
           [utils : stepper:cogen-utils^]
           stepper:marks^
           [s : stepper:model^]
@@ -227,7 +232,7 @@
             
             [(z:struct-form? expr)
              (if (comes-from-define-struct? expr)
-                 (e:internal-error expr "this expression should have been skipped during reconstruction")
+                 (internal-error expr "this expression should have been skipped during reconstruction")
                  (let ([super-expr (z:struct-form-super expr)]
                        [raw-type (utils:read->raw (z:struct-form-type expr))]
                        [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
@@ -306,13 +311,13 @@
                      [(comes-from-case-lambda? expr)
                       `(case-lambda ,@(map list o-form-arglists o-form-bodies))]
                      [else
-                      (e:internal-error expr "unknown source for case-lambda")]))]
+                      (internal-error expr "unknown source for case-lambda")]))]
             
             ; we won't call rectify-source-expr on define-values expressions
             
             [else
              (print-struct #t)
-             (e:internal-error
+             (internal-error
               expr
               (format "stepper:rectify-source: unknown object to rectify, ~a~n" expr))])))
  
@@ -566,7 +571,7 @@
                (so-far-only
                 (if (eq? so-far nothing-so-far)
                     (rectify-source-current-marks expr)
-                    (e:internal-error expr 
+                    (internal-error expr 
                                       "variable reference given as context")))]
                
                ; applications
@@ -601,7 +606,7 @@
                           `(...) ; in unannotated code
                           `(... ,so-far ...)))
                      (else
-                      (e:internal-error expr "bad label in application mark")))))]
+                      (internal-error expr "bad label in application mark")))))]
                
                ; define-struct 
                
@@ -668,8 +673,7 @@
                ; lambda : there is no mark or break on a quote
                
                [else
-                (print-struct #t)
-                (e:internal-error
+                (internal-error
                  expr
                  (format "stepper:reconstruct: unknown object to reconstruct, ~a~n" expr))])))
          

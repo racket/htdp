@@ -1,6 +1,13 @@
+(module sharedr mzscheme
+  (require (lib "unitsig.ss")
+	   "sig.ss"
+	   (lib "zodiac-sig.ss" "syntax"))
+
+  (provide sharedr@)
+
+  (define sharedr@
 (unit/sig stepper:shared^
-  (import [z : zodiac:system^]
-	  [e : zodiac:interface^]
+  (import [z : zodiac^]
           stepper:client-procs^)
   
   ; A step-result is either:
@@ -188,4 +195,4 @@
   
   
 
-  ) 
+  )))
