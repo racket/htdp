@@ -99,6 +99,7 @@
                (case break-kind
                  [(normal-break)
                   (when (not (r:skip-redex-step? mark-list))
+                    (error 'yikes "not really an error.")
                     (let*-2vals ([(reconstructed redex-list) (reconstruct-helper)])
                       (set! held-expr-list reconstructed)
                       (set! held-redex-list redex-list)))
@@ -177,11 +178,12 @@
              (set! packaged-envs envs)
              (set! current-expr expanded)
              (fprintf (current-error-port) "about to perform eval~n")
-             (let ([expression-result
-                    (with-handlers ([(lambda (x) #t) handle-exception])
-                      (eval annotated))])
-               (add-finished-expr expression-result)
-               (send-to-drscheme-eventspace expand-next-expression))))
+             (let/ec k
+               (let ([expression-result
+                      (parameterize ([current-exception-handler (make-exception-handler k)])
+                        (eval annotated))])
+                 (add-finished-expr expression-result)
+                 (send-to-drscheme-eventspace expand-next-expression)))))
          
          (define (add-finished-expr expression-result)
            (let ([reconstructed (r:reconstruct-completed current-expr expression-result)])
@@ -192,10 +194,17 @@
                (let*-values
                    ([(before current after) (redivide held-expr-list)])
                  (receive-result (make-before-error-result (append finished-exprs before) 
-                                                             current held-redex-list (exn-message exn) after)))
-               (begin
-                 (receive-result (make-error-result finished-exprs (exn-message exn)))))))
+                                                           current held-redex-list (exn-message exn) after)
+                                 user-computation-semaphore))
+               (receive-result (make-error-result finished-exprs (exn-message exn)) user-computation-semaphore)))
   
+         (define (make-exception-handler k)
+           (lambda (exn)
+             (send-to-drscheme-eventspace
+              (lambda ()
+                (handle-exception exn)))
+             (k))))
+      
       (program-expander
         (lambda (error? expanded send-to-user-eventspace continue-thunk)
           (if error?
