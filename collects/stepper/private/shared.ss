@@ -1,6 +1,7 @@
 (module shared mzscheme
   
   (require "my-macros.ss")
+  (require "highlight-placeholder.ss")
   
   (provide
    (struct before-after-result (finished-exprs exp redex post-exp reduct after-exprs))
@@ -13,7 +14,6 @@
    *unevaluated* 
    no-sexp
    struct-flag
-   highlight-placeholder
    multiple-highlight
    flatten-take
    closure-table-put!
@@ -49,18 +49,13 @@
 
   (define-struct closure-record (name mark constructor? lifted-name))
 
-;  ; bogus-binding is used so that we can create legal zodiac bindings for temporary variables
-;  
-;  (define (create-bogus-binding name)
-;    (let* ([gensymed-name (gensym name)]
-;           [binding (z:make-lexical-binding 'bogus #f #f (z:make-empty-back-box) 
-;                                            gensymed-name name)])
-;      (set-new-binding-name! binding gensymed-name)
-;      binding))
-;  
-;  (define (bogus-binding? binding)
-;    (eq? (z:zodiac-origin binding) 'bogus))
-
+  ; bogus-binding is used so that we can create legal bindings for temporary variables
+  
+  (define (create-bogus-binding name)
+    (let* ([gensymed-name (gensym name)]
+           [binding (datum->syntax-object #'here gensymed-name)])
+      binding))
+  
   ; make-binding-source creates a pool of bindings, indexed by arbitrary keys. These bindings
   ; not eq? to any other bindings[*], but a client can always get the same binding by
   ; invoking the resulting procedure with the same key (numbers work well). make-binding-source
@@ -81,50 +76,32 @@
                   new-binding)))))))
   
   
-  ; get-binding-name extracts the S-expression name for a binding. Zodiac
-  ; creates a unique, gensym'd symbol for each binding, but the name is
-  ; unreadable. Here, we create a new gensym, but the name of the generated
-  ; symbol prints in the same way as the original symbol.
-  
-;  (define (get-binding-name binding)
-;    (let ([name (lookup-new-binding-name binding)])
-;      (or name
-;	  (let* ([orig-name (z:binding-orig-name binding)]
-;		 [name (string->uninterned-symbol (symbol->string orig-name))])
-;	    (set-new-binding-name! binding name)
-;	    name))))
-;
-;  (define-values (lookup-new-binding-name set-new-binding-name!)
-;    (let-values ([(getter setter) (z:register-client 'new-name (lambda () #f))])
-;      (values
-;       (lambda (parsed) (getter (z:parsed-back parsed)))
-;       (lambda (parsed n) (setter (z:parsed-back parsed) n)))))
-
-  ; get-arg-binding maintains a list of bindings associated with the non-negative
+  ; get-arg-var maintains a list of bindings associated with the non-negative
   ; integers.  These symbols are used in the elaboration of applications; the nth
   ; in the application is evaluated and stored in a variable whose name is the nth
-  ; gensym supplied by get-arg-symbol.
+  ; gensym supplied by get-arg-var.
   
-;  (define get-arg-binding
-;    (make-binding-source "arg" create-bogus-binding number->string))
-;  
+  (define get-arg-var
+    (make-binding-source "arg" create-bogus-binding number->string))
+  
   ; test cases: (returns #t on success)
-;  (let ([arg3 (get-arg-symbol 3)]
-;        [arg2 (get-arg-symbol 2)]
-;        [arg1 (get-arg-symbol 1)]
-;        [arg2p (get-arg-symbol 2)])
-;    (and (not (eq? arg3 arg2))
-;	 (not (eq? arg3 arg1))
-;	 (not (eq? arg3 arg2p))
-;         (not (eq? arg2 arg1))
-;         (eq? arg2 arg2p)
-;         (not (eq? arg1 arg2p)))
+;  (printf "test of get-arg-binding: ~a\n"
+;          (let* ([arg3 (get-arg-var 3)]
+;                 [arg2 (get-arg-var 2)]
+;                 [arg1 (get-arg-var 1)]
+;                 [arg2p (get-arg-var 2)])
+;            (and (not (eq? arg3 arg2))
+;                 (not (eq? arg3 arg1))
+;                 (not (eq? arg3 arg2p))
+;                 (not (eq? arg2 arg1))
+;                 (eq? arg2 arg2p)
+;                 (not (eq? arg1 arg2p)))))
 
   
   ; get-lifted-var maintains the mapping between let-bindings and the syntax object
   ; which is used to capture its index at runtime.
   ; unfortunately, it can't use "make-binding-source" because you need to compare the items 
-  ; with free-variable=?, which means that hash tables won't work.
+  ; with module-variable=?, which means that hash tables won't work.
   
   ; my weak-assoc lists are lists of two-element lists, where the first one is in a weak box.
   ; furthermore, the whole thing is in a box, to allow it to be banged when needed.
@@ -179,7 +156,7 @@
   (define get-lifted-var
    (let ([assoc-table (box null)])
       (lambda (stx)
-        (let ([maybe-fetch (weak-assoc-search assoc-table stx free-identifier=?)])
+        (let ([maybe-fetch (weak-assoc-search assoc-table stx module-identifier=?)])
           (or maybe-fetch
               (begin
                 (let* ([new-binding (next-lifted-symbol
@@ -187,9 +164,6 @@
                   (weak-assoc-add assoc-table stx new-binding)
                   new-binding)))))))
 
-  (define (get-arg-var n)
-    (datum->syntax-object #f (string->symbol (format "arg-temp-~a" n))))
-  
   ; gensyms needed by many modules:
 
   ; no-sexp is used to indicate no sexpression for display.
@@ -204,15 +178,9 @@
   (define-struct *unevaluated-struct* ())
   (define *unevaluated* (make-*unevaluated-struct*))
  
-  ; if-temp : uninterned-symbol
-;  (define if-temp (create-bogus-binding "if-temp-"))
-
   ; struct-flag : uninterned symbol
   (define struct-flag (gensym "struct-flag-"))
   
-  ; highlight-placeholder : uninterned symbol
-  (define highlight-placeholder (gensym "highlight-placeholder"))
-
   ; unit-result-values-list
   (define unit-result-values-list (gensym "unit-result-vaues-list"))
   

@@ -1048,7 +1048,7 @@
                 (2vals
                  (if (or cheap-wrap? ankle-wrap?)
                      expr
-                     (wcm-wrap bogus-mark expr))
+                     (wcm-wrap (make-debug-info-normal null) expr))
                  null)]
 
                [(define-values vars-stx body)
@@ -1086,10 +1086,7 @@
                              ((lambda-bound) (wcm-wrap (make-debug-info-normal free-varrefs) var))
                              ((let-bound) (wcm-break-wrap (make-debug-info-normal free-varrefs) var))
                              ((non-lexical) (wcm-break-wrap (make-debug-info-normal free-varrefs)
-                                                            (return-value-wrap var))
-                           (case (identifier-binding var)
-                             ((lexical) )
-                             (else ))])
+                                                            (return-value-wrap var))))])
                    free-varrefs))]
                
                [else ; require, require-for-syntax, define-syntaxes, module, provide

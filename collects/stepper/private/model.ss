@@ -5,7 +5,8 @@
            "my-macros.ss"
            (prefix a: "annotate.ss")
            (prefix r: "reconstruct.ss")
-           "shared.ss")
+           "shared.ss"
+           "highlight-placeholder.ss")
  
   
   (provide go)

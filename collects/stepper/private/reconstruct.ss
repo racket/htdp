@@ -5,6 +5,7 @@
            "marks.ss"
            (prefix model-settings: "model-settings.ss")
            "shared.ss"
+           "highlight-placeholder.ss"
            "my-macros.ss")
 
   (provide
