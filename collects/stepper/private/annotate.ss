@@ -23,13 +23,23 @@
 ;	  stepper:shared^
 ;          stepper:client-procs^)
 
-  
-      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-      ;;;                                            ;;;
-      ;;;           Support Functions                ;;;
-      ;;;                                            ;;;
-      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-            
+
+                                                                                                      
+                                                                                                      
+                                                                                                      
+  ;;                                              ;;;;                          ;                     
+ ;  ;                                     ;       ;                         ;                         
+ ;     ;   ;  ; ;;;   ; ;;;    ;;;   ; ;;;;;;     ;     ;   ;  ; ;;    ;;; ;;;; ;   ;;;   ; ;;    ;;; 
+ ;     ;   ;  ;;   ;  ;;   ;  ;   ;  ;;   ;       ;     ;   ;  ;;  ;  ;     ;   ;  ;   ;  ;;  ;  ;    
+  ;;   ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;;;;  ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;  ;    
+    ;  ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;     ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;   ;;  
+    ;  ;   ;  ;    ;  ;    ;  ;   ;  ;    ;       ;     ;   ;  ;   ;  ;     ;   ;  ;   ;  ;   ;     ; 
+ ;  ;  ;  ;;  ;;   ;  ;;   ;  ;   ;  ;    ;       ;     ;  ;;  ;   ;  ;     ;   ;  ;   ;  ;   ;     ; 
+  ;;    ;; ;  ; ;;;   ; ;;;    ;;;   ;     ;;     ;      ;; ;  ;   ;   ;;;   ;; ;   ;;;   ;   ;  ;;;  
+              ;       ;                                                                               
+              ;       ;                                                                               
+                                                                                                      
+              
  
   ;; this looks wrong...
   (define (internal-error . x)
@@ -257,13 +267,24 @@
   ;          (list (list #'(let ([a 3] [b 9]) (+ a b)) '(let-values ([(a) (#%datum . 3)] [(b) (#%datum . 9)]) (#%app (#%top . +) a b)) 12)
   ;                (list #'(let* ([a 9] [b a] [c b]) c) '(let*-values ([(a) (#%datum . 9)] [(b) a] [(c) b]) c) 9)
   ;                (list #'(let ([a 3] [b 9]) (let ([b 14]) b)) '(let*-values ([(a) (#%datum . 3)] [(b) (#%datum . 9)] [(b) (#%datum . 14)]) b) 14)))
-;  
-;        * * * * * *      AAAA  N    N N    N  OOOO  TTTTT  AAAA  TTTTT EEEEEE     * * * * * * 
-;         ***   ***      A    A NN   N NN   N O    O   T   A    A   T   E           ***   ***  
-;        ***** *****     AAAAAA N N  N N N  N O    O   T   AAAAAA   T   EEEE       ***** ***** 
-;         ***   ***      A    A N  N N N  N N O    O   T   A    A   T   E           ***   ***  
-;        * * * * * *     A    A N   NN N   NN  OOOO    T   A    A   T   EEEEEE     * * * * * * 
-;  
+
+
+                                                   
+                                                   
+                                                   
+   ;                                               
+  ; ;                         ;          ;         
+  ; ;    ; ;;   ; ;;    ;;;  ;;;;  ;;;  ;;;;  ;;;  
+  ; ;    ;;  ;  ;;  ;  ;   ;  ;   ;   ;  ;   ;   ; 
+ ;   ;   ;   ;  ;   ;  ;   ;  ;       ;  ;   ;   ; 
+ ;;;;;   ;   ;  ;   ;  ;   ;  ;    ;;;;  ;   ;;;;; 
+ ;   ;   ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;     
+;     ;  ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;     
+;     ;  ;   ;  ;   ;   ;;;    ;;  ;;;;;  ;;  ;;;; 
+                                                   
+                                                   
+                                                   
+  
 ;  oh-say-can-you-see,by-the-dawn's-early-light,what-so-proudly-we-hailed,at-the-twilight's-last-gle
 ;  a m i n g . W h o s e b r o a d s t r i                                                         p
 ;  pe s a n d b r i g h t s t a r s , t hrough-the-perilous-night,o'er-the-ramparts-we-watched,were-
@@ -442,6 +463,22 @@
 	 ;(syntax-object BINDING-SET bool bool (union #f symbol (list binding symbol)) -> 
          ;          sexp (list-of z:varref))
          
+
+                                                                                     
+                                                                                     
+                                                                                     
+                                                      ;  ;                           
+                             ;          ;             ;                              
+  ;;;   ; ;;   ; ;;    ;;;  ;;;;  ;;;  ;;;;  ;;;     ;   ;  ; ;;   ; ;;    ;;;   ; ;;
+ ;   ;  ;;  ;  ;;  ;  ;   ;  ;   ;   ;  ;   ;   ;    ;   ;  ;;  ;  ;;  ;  ;   ;  ;;  
+     ;  ;   ;  ;   ;  ;   ;  ;       ;  ;   ;   ;    ;   ;  ;   ;  ;   ;  ;   ;  ;   
+  ;;;;  ;   ;  ;   ;  ;   ;  ;    ;;;;  ;   ;;;;;   ;    ;  ;   ;  ;   ;  ;;;;;  ;   
+ ;   ;  ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;       ;    ;  ;   ;  ;   ;  ;      ;   
+ ;   ;  ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;       ;    ;  ;   ;  ;   ;  ;      ;   
+  ;;;;; ;   ;  ;   ;   ;;;    ;;  ;;;;;  ;;  ;;;;   ;    ;  ;   ;  ;   ;   ;;;;  ;   
+                                                   ;                                 
+                                                   ;                                 
+                                                                                     
 	 (define (annotate/inner expr tail-bound pre-break? top-level? procedure-name-info)
 	   
 	   (let* ([tail-recur (lambda (expr) (annotate/inner expr tail-bound #t #f procedure-name-info))]
@@ -489,20 +526,12 @@
                                                (d->so #f `(let* ([,name ,annotated]) ,name)))
                                              annotated))]
                   
-                  
-;                  
-;                  l        AAAA  M    M BBBBB  DDDDD   AAAA
-;                  l       A    A MM  MM B    B D    D A    A
-;                  l       AAAAAA M MM M BBBBB  D    D AAAAAA
-;                  l       A    A M    M B    B D    D A    A
-;                  llllll  A    A M    M BBBBB  DDDDD  A    A
-                  
                   [lambda-clause-abstraction 
                    (lambda (clause)
                      (with-syntax ([(args body ...) clause])
                        (utils:improper-foreach mark-never-undefined (syntax args))
                        (let*-2vals ([(annotated-bodies free-varref-sets)
-                                     (2vals-map lambda-body-recur (syntax (body ...)))]
+                                     (2vals-map lambda-body-recur (syntax->list (syntax (body ...))))]
                                     [new-free-varrefs (varref-set-remove-bindings (varref-set-union free-varref-sets)
                                                                                   (syntax args))])
                          (with-syntax ([annotated-bodies annotated-bodies])
@@ -548,13 +577,7 @@
                                   [ankle-wrap? 
                                    captured]) ; no wcm is needed because evaluation of closures cannot cause exceptions.
                            free-varrefs))))]
-;                  
-;                  L      EEEEEE TTTTTTT
-;                  L      E         T
-;                  L      EEEEEE    T
-;                  L      E         T
-;                  LLLLLL EEEEEE    T
-                    
+
                   ; The let transformation is complicated.
                   ; here's a sample transformation (not including 'break's):
                   ;(let-values ([(a b c) e1] [(d e) e2]) e3)
