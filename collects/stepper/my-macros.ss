@@ -29,14 +29,14 @@
   
   (define-syntax (let*-2vals stx)
     (syntax-case stx (let*-2vals)
-      [(let*-2vals () body)
-       (syntax body)]
-      [(let*-2vals ([(id-a id-b) rhs] binding ...) body)  ; 2 values in a vector
+      [(let*-2vals () . bodies)
+       (syntax (begin . bodies))]
+      [(let*-2vals ([(id-a id-b) rhs] binding ...) . bodies)  ; 2 values in a vector
        (syntax (let* ([_a rhs] [id-a (vector-ref _a 0)] [id-b (vector-ref _a 1)])
-                 (let*-2vals (binding ...) body)))]
-      [(let*-2vals ([id-a rhs] binding ...) body)         ; just 1 value
+                 (let*-2vals (binding ...) . bodies)))]
+      [(let*-2vals ([id-a rhs] binding ...) . bodies)         ; just 1 value
        (syntax (let* ([id-a rhs]) 
-                 (let*-2vals (binding ...) body)))]))
+                 (let*-2vals (binding ...) . bodies)))]))
   
   (define-syntax (2vals-first stx)
     (syntax-case stx (2vals-first)
@@ -49,16 +49,17 @@
        (syntax (vector-ref a 1))])))
 
 ; test cases
-;(require my-macros)
-;
-;(= (2vals-first (2vals 3 4)) 3)
-;(= (2vals-second (2vals 3 4)) 4)
-;
-;(= 
-; (let*-2vals
-;  ([a (2vals 3 4)]
-;   [(b c) a])
-;  c)
-; 4)
-  
+(require my-macros)
+
+(= (2vals-first (2vals 3 4)) 3)
+(= (2vals-second (2vals 3 4)) 4)
+
+(= 
+ (let*-2vals
+     ([a (2vals 3 4)]
+      [(b c) a])
+   a
+   c)
+ 4)
+
 
