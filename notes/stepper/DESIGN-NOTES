@@ -614,3 +614,11 @@ in this scheme. Yep.
 
 2000-06-06
 
+***********
+
+Oh.. Well, Matthias prefers a naming scheme whereby all bindings are assigned
+sequential numbers, regardless of the binding name. So this name clash isn't
+really an issue anymore.
+
+2000-09-09
+
