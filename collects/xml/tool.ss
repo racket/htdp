@@ -76,12 +76,12 @@
               (send eliminate-item check eliminate-whitespace-in-empty-tags?)
               menu))
           
-          (inherit get-admin reset-min-width)
+          (inherit get-admin reset-min-sizes)
           (define/private (set-eliminate-whitespace-in-empty-tags? new)
             (unless (eq? eliminate-whitespace-in-empty-tags? new)
               (set! eliminate-whitespace-in-empty-tags? new)
               (preferences:set 'drscheme:xml-eliminate-whitespace new)
-              (reset-min-width)
+              (reset-min-sizes)
               (let ([admin (get-admin)])
                 (when admin
                   (send admin resized this #t)))))
@@ -182,11 +182,11 @@
                 (callback (lambda (x y) (toggle-splice))))
               menu))
           
-          (inherit get-admin reset-min-width)
+          (inherit get-admin reset-min-sizes)
           (define/private (toggle-splice)
             (let ([admin (get-admin)])
               (set! splice? (not splice?))
-              (reset-min-width)
+              (reset-min-sizes)
               (when admin
                 (send admin resized this #t))))
           
