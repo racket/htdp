@@ -38,6 +38,8 @@
     
     (values image-snip1 image-snip2)))
 
+(define image-snip3 (make-object image-snip%))
+
 ;; check-on-bitmap : symbol snip -> void
 ;; checks on various aspects of the bitmap snips to make
 ;; sure that they draw properly
@@ -816,6 +818,20 @@ snips as arguments
 (test 1
       'bs-pinhole-y
       (pinhole-y image-snip2))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; test image-snip that doesnt' have a bitmap
+;;
+
+(test 20
+      'image-snip-no-bitmap1
+      (image-width image-snip3))
+
+(test 'passed
+      'image-snip-no-bitmap2
+      (begin (overlay/xy image-snip3 10 10 image-snip3) 'passed))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
