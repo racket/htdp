@@ -57,12 +57,12 @@
 (htdp-test #t 'image? (image? (filled-rect 10 10 'blue)))
 (htdp-test #f 'image? (image? 5))
 
-(define red (make-color 248 20 64))
-(define blue (make-color 80 80 248))
+(define red (make-color 248 0 0)) ; (define red (make-color 248 20 64))
+(define blue (make-color 0 0 248)) ; (define blue (make-color 80 80 248))
 (define black (make-color 0 0 0))
 (define white (make-color 255 255 255))
-(htdp-top (define red (make-color 248 20 64)))
-(htdp-top (define blue (make-color 80 80 248)))
+(htdp-top (define red (make-color 248 0 0))) ; (htdp-top (define red (make-color 248 20 64)))
+(htdp-top (define blue (make-color 0 0 248))) ; (htdp-top (define blue (make-color 80 80 248)))
 (htdp-top (define black (make-color 0 0 0)))
 (htdp-top (define white (make-color 255 255 255)))
 
