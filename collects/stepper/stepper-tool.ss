@@ -316,8 +316,20 @@
                 ; receive-result takes a result from the model and renders it on-screen
                 ; : (step-result -> void)
                 (define (receive-result result)
+                  (fprintf (current-error-port) "received result: ~a\n" result)
                   (let ([step-text
                          (cond [(before-after-result? result) 
+                                (fprintf "result-contents: ~a\n"
+                                         (map (lambda (x) (with-handlers ([not-break-exn? #f])
+                                                            (map syntax-object->datum x)))
+                                              (list
+                                               (before-after-result-finished-exprs result)
+                                               (before-after-result-exp result)
+                                               (before-after-result-redex result)
+                                               (before-after-result-post-exp result)
+                                               (before-after-result-reduct result)
+                                               #f
+                                               (before-after-result-after-exprs result))))
                                 (make-object x:stepper-text% 
                                   (before-after-result-finished-exprs result)
                                   (before-after-result-exp result)
