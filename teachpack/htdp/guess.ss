@@ -1,6 +1,6 @@
 (require-library "error.ss" "htdp")
 
-(define-signature masterS (repl repl3 repl-for-list))
+(define-signature masterS (guess-with-gui guess-with-gui-3 guess-with-gui-list))
 
 (define (masterU N)
   (unit/sig masterS (import errorS plt:userspace^)
@@ -130,31 +130,31 @@
                   (else (+ (first digits) (* (convert (rest digits)) 10))))))
         (convert (vector->list guesses:vec))))
     
-    ;; repl : (num num -> num) -> void
+    ;; guess-with-gui : (num num -> num) -> void
     ;; effect: init target, init frame, set the check-guess function and show the frame
-    (define (repl cg)
-      (check-proc 'repl cg 2 'first "two arguments")
+    (define (guess-with-gui cg)
+      (check-proc 'guess-with-gui cg 2 'first "two arguments")
       (init-game 5)
       (set! check-guess cg)
       (send frame show #t)
       #t)
 
-    ;; repl3 : (digit digit digit num -> num) -> void
+    ;; guess-with-gui-3 : (digit digit digit num -> num) -> void
     ;; effect: init target, init frame, set the check-guess function and show the frame
-    (define (repl3 cg)
-      (check-proc 'repl3 cg (+ 3 1) 'first "four arguments")
+    (define (guess-with-gui-3 cg)
+      (check-proc 'guess-with-gui-3 cg (+ 3 1) 'first "four arguments")
       (init-game 3)
       (set! convert vector->list)
       (set! check-guess (lambda (lod target) (apply cg (append lod (list target)))))
       (send frame show #t)
       #t)
 
-    ;; repl-for-list : num ((listof digit) num -> num) -> void
+    ;; guess-with-gui-list : num ((listof digit) num -> num) -> void
     ;; effect: init target, init frame, set the check-guess function and show the frame
-    (define (repl-for-list n cg)
-      (check-arg  'repl-for-list
+    (define (guess-with-gui-list n cg)
+      (check-arg  'guess-with-gui-list
 	(and (number? n) (integer? n) (>= n 1)) "positive integer" '1st n)
-      (check-proc 'repl-for-list cg 2 'first "two arguments")
+      (check-proc 'guess-with-gui-list cg 2 'first "two arguments")
       (init-game n)
       (set! check-guess cg)
       (set! convert vector->list)
