@@ -1179,22 +1179,29 @@
 	 (let ([names (syntax->list (syntax (name ...)))])
 	   (and (andmap identifier/non-kw? names)
 		(not (check-duplicate-identifier names))))
-	 (with-syntax ([(rhs-expr ...) (map allow-local-lambda 
+	 (with-syntax ([(tmp-id ...)
+                          ;; Generate tmp-ids that at least look like the defined
+                          ;;  ids, for the purposes of error reporting, etc.:
+                          (map (lambda (name)
+                                 (syntax-property
+                                  (datum->syntax-object
+                                   #f
+                                   (string->uninterned-symbol
+                                    (symbol->string (syntax-e name))))
+                                  'stepper-orig-name
+                                  name))
+                               (syntax->list #`(name ...)))]
+                       [(rhs-expr ...) (map allow-local-lambda 
 					    (syntax->list (syntax (rhs-expr ...))))])
-	   (syntax/loc stx
-	     (intermediate-local [(define-values (name) rhs-expr) ...] expr)))]
+           (quasisyntax/loc stx
+             (letrec-syntaxes+values ([(name) (make-undefined-check
+                                               (quote-syntax check-not-undefined)
+                                               (quote-syntax tmp-id))]
+                                      ...)
+                                     ([(tmp-id) rhs-expr] 
+                                      ...)
+                                     expr)))]
 	[_else (bad-let-form 'letrec stx stx)]))
-
-    
-    
-;    (letrec-syntaxes+values ([(name) (make-undefined-check
-;                                                                  (quote-syntax name)
-;                                                                  (quote-syntax check-not-undefined)
-;                                                                  (quote-syntax tmp-id))]
-;                                                         ...)
-;                                                        ([(tmp-id) rhs-expr] 
-;                                                         ...)
-;                                                        expr)
     
     (define (intermediate-let/proc stx)
       (syntax-case stx ()
@@ -1203,32 +1210,29 @@
 	   (and (andmap identifier/non-kw? names)
 		(not (check-duplicate-identifier names))))
          (with-syntax ([(tmp-id ...)
-                        ;; Generate tmp-ids that at least look like the defined
-                        ;;  ids, for the purposes of error reporting, etc.:
-                        (map (lambda (name)
-                               (syntax-property
-                                (datum->syntax-object
-                                 #f
-                                 (string->uninterned-symbol
-                                  (symbol->string (syntax-e name))))
-                                'stepper-orig-name
-                                name))
-                             (syntax->list #`(name ...)))])
-           (with-syntax ([(rhs-expr ...) (map allow-local-lambda 
+                          ;; Generate tmp-ids that at least look like the defined
+                          ;;  ids, for the purposes of error reporting, etc.:
+                          (map (lambda (name)
+                                 (syntax-property
+                                  (datum->syntax-object
+                                   #f
+                                   (string->uninterned-symbol
+                                    (symbol->string (syntax-e name))))
+                                  'stepper-orig-name
+                                  name))
+                               (syntax->list #`(name ...)))]
+                         [(rhs-expr ...) (map allow-local-lambda 
                                               (syntax->list (syntax (rhs-expr ...))))])
-             (syntax-property
-              (quasisyntax/loc stx
-                (let-values ([(tmp-id) rhs-expr] ...)
-                  #,(syntax-property
-                     #`(let-syntaxes ([(name) (make-undefined-check
-                                               (quote-syntax check-not-undefined)
-                                               (quote-syntax tmp-id))]
-                                      ...)
-                         expr)
-                     'stepper-skipto
-                     (list syntax-e cdr cdr car))))
-              'stepper-hint
-              'comes-from-let)))]
+           (quasisyntax/loc stx
+             (let-values ([(tmp-id) rhs-expr] ...)
+               #,(syntax-property
+                  #`(let-syntaxes ([(name) (make-undefined-check
+                                            (quote-syntax check-not-undefined)
+                                            (quote-syntax tmp-id))]
+                                   ...)
+                      expr)
+                  'stepper-skipto
+                  (list syntax-e cdr cdr car)))))]
 	[_else (bad-let-form 'let stx stx)]))
 
     (define (intermediate-let*/proc stx)
@@ -1365,12 +1369,21 @@
 			   (and (andmap identifier/non-kw? names)
 				(or empty-ok? (pair? names))
 				(not (check-duplicate-identifier names)))))
-		    (syntax/loc stx
+		    (syntax-property
+                     (quasisyntax/loc stx
 		      ((intermediate-letrec ([fname
-					      (lambda (name ...)
-						expr)])
+					      #,(syntax-property
+                                                 (syntax-property 
+                                                  #`(lambda (name ...)
+                                                      expr)
+                                                  'stepper-define-type
+                                                  'shortened-proc-define)
+                                                 'stepper-proc-define-name
+                                                 #`fname)])
 					    fname)
-		       rhs-expr ...))]
+		       rhs-expr ...))
+                     'stepper-hint
+                     'comes-from-recur)]
 		   [(_form fname empty-seq . rest)
 		    (and (not empty-ok?)
 			 (identifier/non-kw? (syntax fname))
@@ -1560,7 +1573,10 @@
 				  stx
 				  (syntax->list (syntax exprs))
 				  null)
-	 (syntax/loc stx (time . exprs))]
+	 (syntax-property 
+          (syntax/loc stx (time . exprs))
+          'stepper-skipto
+          (list syntax-e cdr car syntax-e car syntax-e cdr car syntax-e cdr syntax-e cdr car syntax-e cdr cdr car))]
 	[_else
 	 (bad-use-error 'time stx)]))
 
