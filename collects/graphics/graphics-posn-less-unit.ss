@@ -178,28 +178,50 @@
         [on-char-proc #f]
         [the-time (new timer%
                        [notify-callback 
-                        (lambda () (set! the-world (on-tick-proc the-world)))])]
+                        (lambda ()
+                          (set! the-world 
+                                (with-handlers ([exn:break? break-handler]
+                                                [exn? exn-handler])
+                                  (on-tick-proc the-world))))])]
         ;; World -> World 
-        [on-tick-proc void])
-      
+        [on-tick-proc void]
+        [exn-handler 
+         (lambda (e)
+           (send the-time stop)
+           (set! on-char-proc #f)
+           (raise e))]
+        [break-handler
+         (lambda _ 
+           (printf "animation stopped")
+           (send the-time stop)
+           (set! on-char-proc #f)
+           the-world)])
       (public
         [set-on-char-proc 
          (lambda (f)
            (let ([esp (current-eventspace)])
              (if (procedure? on-char-proc)
+                 (error 'on-event "the event action has been set already")
                  (set! on-char-proc 
                        (lambda (e)
                          (parameterize ([current-eventspace esp])
                            (queue-callback 
-                            (lambda () (set! the-world (f e the-world)))
-                            #t))))
-                 (error 'on-event "the event action has been set already"))))]
+                            (lambda ()
+                              (set! the-world 
+                                    (with-handlers ([exn:break? break-handler]
+                                                    [exn? exn-handler])
+                                      (f e the-world))))
+                            #t)))))))]
         [set-on-tick-proc ;; Number [seconds] (World -> World) -> Void
          (lambda (delta f)
            (if (eq? on-tick-proc void)
                (set! on-tick-proc f)
                (error 'on-tick "the timing action has been set already"))
            (send the-time start delta))]
+        [stop-tick 
+         (lambda ()
+           (set! on-char-proc #f)
+           (set! on-tick-proc void))]
         [init-world (lambda (w) (set! the-world w))])
       ;; --- end timing stuff
       
@@ -303,6 +325,10 @@
   (define (set-on-tick-event viewport)
     (lambda (delta f)
       (send (viewport-canvas viewport) set-on-tick-proc delta f)))
+  
+  (define (stop-tick viewport)
+    (lambda ()
+      (send (viewport-canvas viewport) stop-tick)))
 
   (define (get-key-press viewport) 
     (send (viewport-canvas viewport) get-press-now))

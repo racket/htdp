@@ -25,6 +25,7 @@
      
      set-on-key-event
      set-on-tick-event
+     stop-tick
      init-world
      get-key-press
      ready-key-press

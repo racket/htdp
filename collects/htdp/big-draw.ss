@@ -41,114 +41,96 @@
      (define-higher-order-primitive on-key-event on-key-event/proc (handle-event))
      (define-higher-order-primitive on-tick-event on-tick-event/proc (_ handle-tick))
      (define-primitive big-bang big-bang/proc)
+     (define-primitive stop-time stop-time/proc)
+          
+     (define the-error (lambda x (error "evaluate (start <num> <num>) first")))
+     (define-syntax (define-hook stx)
+       (syntax-case stx ()
+         [(_ name)
+          (let* ([stuff (symbol->string (syntax-e (syntax name)))]
+                 [fools (lambda (x) (datum->syntax-object #'name (string->symbol x)))]
+                 [%name (fools (format "%~a" stuff))]
+                 [proc  (fools (format "~a/proc" stuff))])
+            #`(define-values (#,%name #,proc)
+                (values the-error
+                        (lambda a (apply #,%name a)))))]))
      
-     (define the-error
-       (lambda x
-         (error "evaluate (start <num> <num>) first")))  
-     
-     (define %draw-solid-disk the-error)
-     (define draw-solid-disk/proc (lambda a (apply %draw-solid-disk a)))
-     
-     (define %clear-solid-disk the-error)
-     (define clear-solid-disk/proc (lambda a (apply %clear-solid-disk a)))
-     
-     (define %draw-circle the-error)
-     (define draw-circle/proc (lambda a (apply %draw-circle a)))
-     
-     (define %clear-circle the-error)
-     (define clear-circle/proc (lambda a (apply %clear-circle a)))
-     
-     (define %draw-string the-error)
-     (define draw-string/proc (lambda a (apply %draw-string a)))
-     
-     (define %clear-string the-error)
-     (define clear-string/proc (lambda a (apply %clear-string a)))
-     
-     (define %draw-solid-rect the-error)
-     (define draw-solid-rect/proc (lambda a (apply %draw-solid-rect a)))
-     
-     (define %clear-solid-rect the-error)
-     (define clear-solid-rect/proc (lambda a (apply %clear-solid-rect a)))
-     
-     (define %draw-solid-line the-error) 
-     (define draw-solid-line/proc (lambda a (apply %draw-solid-line a)))
-     
-     (define %clear-solid-line the-error)
-     (define clear-solid-line/proc (lambda a (apply %clear-solid-line a)))
-     
-     (define %clear-all the-error)
-     (define clear-all/proc (lambda a (apply %clear-all a)))
-     
-     (define %wait-for-mouse-click the-error)
-     (define (wait-for-mouse-click/proc) (%wait-for-mouse-click))
-     
-     (define %get-key-event the-error)
-     (define (get-key-event/proc) (%get-key-event)) 
-     
-     (define %on-key-event the-error)
-     (define (on-key-event/proc f) (%on-key-event f))
-     
-     (define %on-tick-event the-error)
-     (define (on-tick-event/proc w f) (%on-tick-event w f))
-     
-     (define %big-bang the-error)
-     (define (big-bang/proc w) (%big-bang w))     
+     (define-syntax (define-hook-draw/clear stx)
+       (syntax-case stx () 
+         [(_ name)
+          (let* ([stuff (symbol->string (syntax-e (syntax name)))]
+                 [fools (lambda (x) (datum->syntax-object #'name (string->symbol x)))]
+                 [clear (fools (format "clear-~a" stuff))]
+                 [draw  (fools (format "draw-~a" stuff))])
+            #`(begin
+                (define-hook #,clear)
+                (define-hook #,draw)))]))
+               
+     (define-hook-draw/clear solid-disk) 
+     (define-hook-draw/clear circle)
+     (define-hook-draw/clear string)
+     (define-hook-draw/clear solid-rect)
+     (define-hook-draw/clear solid-line)  
 
-     (define %get-mouse-event the-error)
-     (define (get-mouse-event/proc) (%get-mouse-event))
+     (define-hook clear-all)
+
+     (define-hook get-key-event)
+     (define-hook get-mouse-event)
+     (define-hook wait-for-mouse-click)
+
+     (define-hook big-bang)     
+     (define-hook on-key-event)
+     (define-hook on-tick-event)
+     (define-hook stop-time)
      
      (define (make-true f) (lambda x (apply f x) #t))
-     
      (define sleep-for-a-while/proc (make-true mred:sleep/yield))
      
-     ;; i wish i could abstract these functions ...
-     (define (make-line name f)
-       (make-true
-        (lambda x
-          (apply (lambda (p1 p2 . c)
-                   (check-arg name (posn? p1) "posn" "first" p1)
-                   (check-arg name (posn? p2) "posn" "second" p2)
-                   (f p1 p2 (check-optional name 3 c "third" x)))
-                 x))))
+     (define-syntax (define-make stx)
+       (syntax-case stx ()
+         [(_ tag procedure)
+          (identifier? (syntax tag))
+          (let* ([stuff (symbol->string (syntax-e (syntax tag)))]
+                 [fools (lambda (x) (datum->syntax-object stx (string->symbol x)))]
+                 [make- (fools (format "make-~a" stuff))]
+                 [name  (fools "name")]
+                 [ffff  (fools "f")]
+                 [x     (fools "x")])
+            #`(define (#,make- #,name #,ffff)
+                (make-true (lambda #,x (apply procedure #,x)))))]))
+
+     (define-make line 
+       (lambda (p1 p2 . c)
+         (check-arg name (posn? p1) "posn" "first" p1)
+         (check-arg name (posn? p2) "posn" "second" p2)
+         (f p1 p2 (check-optional name 3 c "third" x))))
      
-     (define (make-rect name f)
-       (make-true
-        (lambda x
-          (apply (lambda (p w h . c)
-                   (check-arg name (posn? p) "posn" "first" p)
-                   (check-arg
-                    name (and (integer? w) (> w 0)) "positive integer" "second" w)
-                   (check-arg
-                    name (and (integer? h) (> h 0)) "positive integer" "third" h)
-                   (f p w h (check-optional name 4 c "fourth" x)))
-                 x))))
+     (define-make rect
+       (lambda (p w h . c)
+         (check-arg name (posn? p) "posn" "first" p)
+         (check-arg name (and (integer? w) (> w 0)) "positive integer" "second" w)
+         (check-arg name (and (integer? h) (> h 0)) "positive integer" "third" h)
+         (f p w h (check-optional name 4 c "fourth" x))))
      
+     (define-make %string 
+       (lambda (p s)
+         (check-arg name (posn? p) "posn" "first" p)
+         (check-arg name (string? s) "string" "second" s)
+         (f p s)))
+     
+     (define-make circle
+       (lambda (p r . c)
+         (check-arg name (posn? p) "posn" "first" p)
+         (check-arg name (and (integer? r) (> r 0)) "positive integer" "second" r)
+         ((ellipsis-2-circle f) p r (check-optional name 3 c "third" x))))
+
      ;; Local function for make-circle 
      ;; (Posn Number Symbol[color] -> void) -> (Posn Number Symbol[color] -> void)
      (define (ellipsis-2-circle f)
        (lambda (p r c)
          (let ((d (* r 2)))
            (f (make-posn (- (posn-x p) r) (- (posn-y p) r)) d d c))))
-     
-     (define (make-circle name f)
-       (make-true
-        (lambda x
-          (apply (lambda (p r . c)
-                   (check-arg name (posn? p) "posn" "first" p)
-                   (check-arg 
-                    name (and (integer? r) (> r 0)) "positive integer" "second" r)
-                   ((ellipsis-2-circle f) p r (check-optional name 3 c "third" x)))
-                 x))))
 
-     (define (make-%string name f)
-       (make-true
-        (lambda x
-          (apply (lambda (p s)
-                   (check-arg name (posn? p) "posn" "first" p)
-                   (check-arg name (string? s) "string" "second" s)
-                   (f p s))
-                 x))))
-     
      ;; (Listof _) String (Listof _) -> Symbol[color]
      ;; contract: c is shared suffix of all
      ;; check whether c contains a single color symbol and all has proper length
@@ -237,6 +219,11 @@
          (set! %big-bang
                (lambda (w) 
                  ((init-world @vp) w)
+                 #t))
+         
+         (set! %stop-time
+               (lambda () 
+                 ((stop-tick @vp))
                  #t))
 
 	 (set! %get-mouse-event

@@ -24,6 +24,7 @@
         big-bang        ; World -> true
         on-key-event    ; (union char symbol) World -> World 
         on-tick-event   ; World -> World 
+        stop-time       ; -> true
         ))
   
   (define-signature draw^ core-draw^))
