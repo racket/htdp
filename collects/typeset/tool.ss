@@ -8,8 +8,11 @@
   (provide tool@)
   
   (define tool@
-    (unit/sig ()
+    (unit/sig drscheme:tool-exports^
       (import drscheme:tool^)
+      
+      (define (phase1) (void))
+      (define (phase2) (void))
       
       (define read/snips (lambda x (error x)))
       
@@ -23,15 +26,6 @@
                [sn (make-object string-snip% (string-length str))])
           (send sn insert str (string-length str) 0)
           sn))
-      
-      (define void-snip%
-        (class snip% 
-          (inherit get-style)
-          (define/override (copy)
-            (let ([ans (make-object void-snip%)])
-              (send ans set-style (get-style))
-              ans))
-          (super-instantiate ())))
       
       (define (make-delta family)
         (let ([d (make-object style-delta% 'change-family family)])
@@ -47,51 +41,51 @@
           
           [define pen (send the-pen-list find-or-create-pen color 1 'solid)]
           [define brush (send the-brush-list find-or-create-brush "BLACK" 'transparent)]
-        
-        (inherit get-extent get-inset)
-        (rename [super-draw draw])
-        (define/override draw
-          (lambda (dc x y left top right bottom dx dy draw-caret)
-            (let ([bl (box 0)]
-                  [br (box 0)]
-                  [bt (box 0)]
-                  [bb (box 0)]
-                  [bw (box 0)]
-                  [bh (box 0)])
-              (get-extent dc x y bw bh #f #f #f #f)
-              (get-inset bl br bt bb)
-              (super-draw dc x y left top right bottom dx dy draw-caret)
-              (let ([old-pen (send dc get-pen)]
-                    [old-brush (send dc get-brush)])
-                (send dc set-pen pen)
-                (send dc set-brush brush)
-                (send dc draw-rectangle
-                      (+ x (unbox bl))
-                      (+ y (unbox bt))
-                      (- (unbox bw) (unbox bl) (unbox br))
-                      (- (unbox bh) (unbox bt) (unbox bb)))
-                (send dc set-pen old-pen)
-                (send dc set-brush old-brush)))))
-        
-        (define/override write
-          (lambda (stream-out)
-            (send (get-editor) write-to-file stream-out 0 'eof)))
-        (define/override (copy)
-          (let ([snip (make-snip)])
-            (send snip set-editor (send (get-editor) copy-self))
-            (send snip set-style (get-style))
-            snip))
-        (define/public (make-snip)
-          (error 'make-snip "abstract method"))
-        
-        (define/public
-          (make-editor)
-          (make-object (drscheme:unit:program-editor-mixin plain-text%) (make-delta family)))
-        
-        (super-instantiate 
-         ()
-         (editor (make-editor))
-         (with-border? #f))))
+          
+          (inherit get-extent get-inset)
+          (rename [super-draw draw])
+          (define/override draw
+            (lambda (dc x y left top right bottom dx dy draw-caret)
+              (let ([bl (box 0)]
+                    [br (box 0)]
+                    [bt (box 0)]
+                    [bb (box 0)]
+                    [bw (box 0)]
+                    [bh (box 0)])
+                (get-extent dc x y bw bh #f #f #f #f)
+                (get-inset bl br bt bb)
+                (super-draw dc x y left top right bottom dx dy draw-caret)
+                (let ([old-pen (send dc get-pen)]
+                      [old-brush (send dc get-brush)])
+                  (send dc set-pen pen)
+                  (send dc set-brush brush)
+                  (send dc draw-rectangle
+                        (+ x (unbox bl))
+                        (+ y (unbox bt))
+                        (- (unbox bw) (unbox bl) (unbox br))
+                        (- (unbox bh) (unbox bt) (unbox bb)))
+                  (send dc set-pen old-pen)
+                  (send dc set-brush old-brush)))))
+          
+          (define/override write
+            (lambda (stream-out)
+              (send (get-editor) write-to-file stream-out 0 'eof)))
+          (define/override (copy)
+            (let ([snip (make-snip)])
+              (send snip set-editor (send (get-editor) copy-self))
+              (send snip set-style (get-style))
+              snip))
+          (define/public (make-snip)
+            (error 'make-snip "abstract method"))
+          
+          (define/public (make-editor)
+            (make-object (drscheme:unit:program-editor-mixin plain-text%)
+              (make-delta family)))
+          
+          (super-instantiate 
+              ()
+            (editor (make-editor))
+            (with-border? #f))))
       
       (define constant-snip%
         (class* renderable-editor-snip% (drscheme:snip:special<%>) 
@@ -106,9 +100,12 @@
                              (cond
                                [(not snip) null]
                                [(transformable? snip)
-                                (cons snip (loop (send snip next)))]
+                                (let-values ([(syntax width)
+                                              (send snip read-special file line col pos)])
+                                  (cons syntax (loop (send snip next))))]
                                [else (loop (send snip next))]))])
-              (values (syntax (replace-in-template 'family snip snips ...)) 1)))
+              (values (syntax (replace-in-template 'family snip snips ...))
+                      1)))
           
           (define/public (get-family) family)
           
@@ -148,14 +145,15 @@
               (values
                (read-syntax
                 text
-                (gui-utils:read-snips/chars-from-text text 0 (send text last-position)))
+                (drscheme:language:open-input-text text 0 (send text last-position)))
                1)))
           
           
           ;; MATTHEW
           ;; cannot do this because the styles information in the saved texts screws up.
           (define/override (make-editor)
-            (make-object (drscheme:unit:program-editor-mixin (scheme:text-mixin (editor:keymap-mixin text:basic%)))))
+            (make-object (drscheme:unit:program-editor-mixin 
+                          (scheme:text-mixin (editor:keymap-mixin text:basic%)))))
           
           (define/override (make-snip) (make-object evaluated-snip%))
           
@@ -202,11 +200,20 @@
           (super-instantiate ())
           (set-styles-sticky #f)))
       
-      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-      ;;;                                                     ;;;
-      ;;;                      EVALUATION                     ;;;
-      ;;;                                                     ;;;
-      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+                                                                      
+                      ;;;                           ;                 
+                        ;                   ;                         
+                        ;                   ;                         
+  ;;;  ;;; ;;; ;;;;     ;   ;;  ;;  ;;;;   ;;;;;  ;;;     ;;;  ; ;;;  
+ ;   ;  ;   ;      ;    ;    ;   ;      ;   ;       ;    ;   ;  ;;  ; 
+ ;;;;;  ;   ;   ;;;;    ;    ;   ;   ;;;;   ;       ;    ;   ;  ;   ; 
+ ;       ; ;   ;   ;    ;    ;   ;  ;   ;   ;       ;    ;   ;  ;   ; 
+ ;   ;   ;;;   ;   ;    ;    ;   ;  ;   ;   ;   ;   ;    ;   ;  ;   ; 
+  ;;;     ;     ;;; ; ;;;;;;  ;;; ;  ;;; ;   ;;;  ;;;;;   ;;;  ;;;  ;;
+                                                                      
+                                                                      
+                                                                      
       
       (define (transformable? snip)
         (or (is-a? snip constant-snip%)
@@ -309,7 +316,7 @@
           (rename [super-reset-console reset-console])
           (inherit get-user-namespace)
           
-          (define/override (reset-console)
+          '(define/override (reset-console)
             (super-reset-console)
             (parameterize ([current-namespace (get-user-namespace)])
               (namespace-set-variable-value! 'single-bracket 'single-bracket)
