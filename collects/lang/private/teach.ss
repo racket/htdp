@@ -294,10 +294,15 @@
                 'define
                 stx
                 (syntax name)
-                (syntax-property
-                 (syntax/loc stx (define (name . arg-seq) make-lambda-generative lexpr ...))
-                 'stepper-define-hint
-                 'lambda-define))
+                (with-syntax ([a (syntax-property (syntax make-lambda-generative) 'foo 'bar)])
+                  (with-syntax ([procedure-body 
+                                 (syntax-property (syntax (begin a lexpr ...))
+                                                  'stepper-skipto
+                                                  (list syntax-e cdr syntax-e cdr car))])
+                    (syntax-property
+                     (syntax/loc stx (define (name . arg-seq) procedure-body))
+                     'stepper-define-hint
+                     'lambda-define))))
                'stepper-skipto
                (list syntax-e cdr syntax-e cdr car))]
 	     ;; Constant def
@@ -541,12 +546,17 @@
 			       (define-struct name_ (field_ ...) (make-inspector))
 			       (values to-define-name ...)))))])
                  (syntax-property
-                  (check-definitions-new 'define-struct
-                                         stx 
-                                         (syntax (name_ to-define-name ...)) 
-                                         defn)
-                  'stepper-skip-completely
-                  (syntax->list (syntax (to-define-name ...))))))))]
+                  (syntax-property
+                   (check-definitions-new 'define-struct
+                                          stx 
+                                          (syntax (name_ to-define-name ...)) 
+                                          defn)
+                   'stepper-skip-completely 
+                   #t)
+                  'stepper-define-struct-hint
+                  (list
+                   (syntax->list (syntax (to-define-name ...)))
+                   stx))))))]
 	[(_ name_ something . rest)
 	 (teach-syntax-error
 	  'define-struct

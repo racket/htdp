@@ -657,6 +657,11 @@
                (-> syntax? binding-set? boolean? boolean? any? (vectorof/n syntax? binding-set?))
                (lambda (expr tail-bound pre-break? top-level? procedure-name-info)
                  
+                 (when (syntax-property expr 'stepper-define-struct-hint)
+                   (let ([struct-names (car (syntax-property expr 'stepper-define-struct-hint))])
+                     (set! struct-proc-names
+                           (append struct-proc-names struct-names))))
+                 
                  (cond [(syntax-property expr 'stepper-skipto)
                         (let* ([free-vars-captured #f] ; this will be set!'ed
                                ; WARNING! I depend on the order of evaluation in application arguments here:
@@ -675,13 +680,9 @@
                                  free-vars-captured))]
                        
                        [(syntax-property expr 'stepper-skip-completely)
-                        (let ([maybe-struct-names (syntax-property expr 'stepper-skip-completely)])
-                          (when (pair? maybe-struct-names)
-                            (set! struct-proc-names
-                                  (append struct-proc-names maybe-struct-names)))
-                          (if top-level?
+                        (if top-level?
                               (2vals expr null)
-                              (2vals (simple-wcm-wrap 13 expr) null)))]
+                              (2vals (simple-wcm-wrap 13 expr) null))]
                      
                        [else
                         (let* ([d->so/user (lambda (stx) (datum->syntax-object #'here stx expr))]

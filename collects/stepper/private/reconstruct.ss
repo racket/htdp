@@ -539,6 +539,9 @@
             (skipto-reconstruct skipto expr
                                 (lambda (expr)
                                   (reconstruct-completed expr value))))]
+         [(syntax-property expr 'stepper-define-struct-hint) =>
+          (lambda (define-struct-info)
+            (syntax-object->datum (cadr define-struct-info)))]
          [else
           (syntax-object->datum
            (kernel:kernel-syntax-case expr #f
