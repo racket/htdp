@@ -518,7 +518,7 @@
         (let ([dc (get-dc)])
           (send dc set-font warning-font) 
           (let-values ([(cw ch) (get-client-size)]
-                       [(tw th dc dc2) (send dc get-text-extent warning-str)])
+                       [(tw th dont-care dont-care2) (send dc get-text-extent warning-str)])
             (send dc set-pen (send the-pen-list find-or-create-pen warning-color 1 'solid))
             (send dc set-brush (send the-brush-list find-or-create-brush warning-color 'solid))
             (send dc draw-rectangle 0 0 cw ch)
