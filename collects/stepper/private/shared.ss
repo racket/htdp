@@ -44,7 +44,7 @@
    vectorof/n ; (predicate ... -> predicate)
    ; get-binding-name
    ; bogus-binding?
-   ; if-temp
+   if-temp
    ; get-lifted-gensym
    ; expr-read
    ; set-expr-read!
@@ -186,6 +186,8 @@
                                      (string-append "lifter-" (format "~a" (syntax-object->datum stx)) "-"))])
                   (weak-assoc-add assoc-table stx new-binding)
                   new-binding)))))))
+  
+  (define if-temp (syntax-property (datum->syntax-object #'here 'if-temp) 'stepper-binding-type 'stepper-temp))
 
   ; gensyms needed by many modules:
 

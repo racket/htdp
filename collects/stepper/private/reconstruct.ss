@@ -710,7 +710,7 @@
                   [(if test then else)
                    (attach-info
                     (let ([test-exp (if (eq? so-far nothing-so-far)
-                                        (recon-source-current-marks (syntax test))
+                                        (recon-value (mark-binding-value (lookup-binding mark-list if-temp)))
                                         so-far)])
                       (d->so `(if ,test-exp 
                                   ,(recon-source-current-marks (syntax then))

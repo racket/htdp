@@ -932,16 +932,20 @@
                                                                      free-varrefs-then 
                                                                      free-varrefs-else))]
                                [annotated-if
-                                (with-syntax ([test-stx annotated-test]
-                                              [then-stx annotated-then]
+                                (with-syntax ([then-stx annotated-then]
                                               [else-stx annotated-else]
-                                              [break-stx normal-break])
-                                  (syntax/loc expr (let ([test-var test-stx])
-                                                     (begin (break-stx) (if test-var then-stx else-stx)))))])
+                                              [break-stx normal-break]
+                                              [test-var if-temp])
+                                  (syntax/loc expr (begin (break-stx) (if test-var then-stx else-stx))))]
+                               [wrapped (wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
+                                                                       (varref-set-union (list free-varrefs (list if-temp)))
+                                                                       'none)
+                                                  annotated-if)])
                               (2vals
-                               (if foot-wrap?
-                                   (wcm-wrap (make-debug-info-normal free-varrefs) annotated-if)
-                                   (appropriate-wrap annotated-if free-varrefs))
+                               (with-syntax ([test-stx annotated-test]
+                                             [test-var if-temp]
+                                             [wrapped-stx wrapped])
+                                 (syntax/loc expr (let ([test-var test-stx]) wrapped-stx)))
                                free-varrefs))]
                             
                             ; yecch: should abstract over if with & without else clauses
@@ -955,13 +959,19 @@
                                [free-varrefs (varref-set-union (list free-varrefs-test 
                                                                      free-varrefs-then))]
                                [annotated-if
-                                (with-syntax ([test annotated-test]
-                                              [then annotated-then])
-                                  (syntax/loc expr (if test then)))])
+                                (with-syntax ([test-var if-temp]
+                                              [then annotated-then]
+                                              [break-stx normal-break])
+                                  (syntax/loc expr (begin (break-stx) (if test-var then))))]
+                               [wrapped (wcm-wrap (make-debug-info-app (binding-set-union (list tail-bound (list if-temp)))
+                                                                       (varref-set-union (list free-varrefs (list if-temp)))
+                                                                       'none)
+                                                  annotated-if)])
                               (2vals
-                               (if foot-wrap?
-                                   (wcm-break-wrap (make-debug-info-normal free-varrefs) annotated-if)
-                                   (appropriate-wrap annotated-if free-varrefs))
+                               (with-syntax ([test-stx annotated-test]
+                                             [test-var if-temp]
+                                             [wrapped-stx wrapped])
+                                 (syntax/loc expr (let ([test-var test-stx]) wrapped-stx)))
                                free-varrefs))]
                             
                             [(begin . bodies-stx)
