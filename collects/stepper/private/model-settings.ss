@@ -7,21 +7,26 @@
   (provide
 
    ; namespace queries
-   check-global-defined
+   check-global-defined ; : (symbol -> boolean)
    global-lookup
    
    ; settings queries
-   true-false-printed?
-   constructor-style-printing?
-   abbreviate-cons-as-list?
+   set-fake-beginner-mode ; : (boolean -> (void))
+   
+   true-false-printed? ; : ( -> boolean)
+   constructor-style-printing? ; : ( -> boolean)
+   abbreviate-cons-as-list? ; : ( -> boolean)
    ;special-function?
    
-   ;print-convert
    print-convert)
   
-  (define (true-false-printed?) (p:booleans-as-true/false))
-  (define (constructor-style-printing?) (p:constructor-style-printing))
-  (define (abbreviate-cons-as-list?) (p:abbreviate-cons-as-list))
+  (define (set-fake-beginner-mode x) 
+    (set! fake-beginner-mode x))
+  (define fake-beginner-mode #f)
+  
+  (define (true-false-printed?) (or fake-beginner-mode (p:booleans-as-true/false)))
+  (define (constructor-style-printing?) (or fake-beginner-mode (p:constructor-style-printing)))
+  (define (abbreviate-cons-as-list?) (not (or fake-beginner-mode (not (p:abbreviate-cons-as-list)))))
   
   (define check-global-defined
     (contract

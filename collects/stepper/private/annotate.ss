@@ -142,8 +142,6 @@
   (define make-debug-info
     (checked-lambda (source (tail-bound BINDING-SET) (free-vars VARREF-SET) label lifting?)
                     (let*-2vals ([kept-vars (binding-set-varref-set-intersect tail-bound free-vars)]
-                                 [var-clauses (map (lx (list _ (d->so `(quote-syntax ,_))))
-                                                   kept-vars)]
                                  [let-bindings (filter (lambda (var) 
                                                          (case (syntax-property var 'stepper-binding-type)
                                                            ((let-bound) #t)
@@ -153,12 +151,8 @@
                                                                         (syntax-e var)
                                                                         (syntax-property var 'stepper-binding-type)))))
                                                        kept-vars)]
-                                 [lifter-syms (map get-lifted-var let-bindings)]
-                                 [quoted-lifter-syms (map (lambda (b) 
-                                                            (d->so `(quote-syntax ,b))) 
-                                                          lifter-syms)]
-                                 [let-clauses (map list lifter-syms quoted-lifter-syms)])
-                      (make-full-mark source label (append var-clauses (if lifting? let-clauses null))))))
+                                 [lifter-syms (map get-lifted-var let-bindings)])
+                      (make-full-mark source label (append kept-vars (if lifting? lifter-syms null))))))
   
   ; cheap-wrap for non-debugging annotation
   

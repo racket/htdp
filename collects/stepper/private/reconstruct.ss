@@ -16,7 +16,7 @@
 
   (provide
    reconstruct-completed
-   reconstruct-current
+   reconstruct-current ; : syntax (list-of mark) symbol (list-of value) -> (list (listof sexp) (listof sexp))
    final-mark-list?
    skip-step?)
   
@@ -180,13 +180,18 @@
      'reconstruct-module
      'caller))
   
+  ; OUCH! primitives are not necessarily top-level vars
+  
   (define (skip-redex-step? mark-list)
     (and (pair? mark-list)
          (let ([expr (mark-source (car mark-list))])
            (or (kernel:kernel-syntax-case expr #f
                   [id
                    (identifier? expr)
-                   (or (eq? (syntax-property expr 'stepper-binding-type) 'lambda-bound) ; don't halt for lambda-bound vars
+                   (or (and (model-settings:true-false-printed?) ; if our language prints #t as true, then ...
+                            (or (eq? (syntax-e (syntax id)) 'true)        ; don't halt for true or false
+                                (eq? (syntax-e (syntax id)) 'false)))
+                       (eq? (syntax-property expr 'stepper-binding-type) 'lambda-bound) ; don't halt for lambda-bound vars
                        (let ([val (mark-binding-value (lookup-binding mark-list expr))]) 
                          (and (procedure? val)
                               (not (continuation? val)))))] ; don't halt for varrefs bound to non-continuation procedures
@@ -195,10 +200,7 @@
                      (with-handlers
                          ([exn:variable? (lambda args #f)]) ; DO halt for unbound top-level varrefs
                        (let ([val (model-settings:global-lookup (syntax-e id))])
-                         (or (and (model-settings:true-false-printed?) ; if our language prints #t as true, then ...
-                                  (or (eq? (syntax-e id) 'true)        ; don't halt for true or false
-                                      (eq? (syntax-e id) 'false)))
-                             (and (procedure? val)                     ; don't halt for top-level procedure refs ...
+                         (or (and (procedure? val)                     ; don't halt for top-level procedure refs ...
                                   (or (not (closure-table-lookup val (lambda () #f))) ; that are primitives, or ...
                                       (and (not (continuation? val))
                                            (cond [(closure-table-lookup val (lambda () #f)) => ; are user fns with the right (original) name
@@ -548,14 +550,11 @@
                                                                                                                 
   
   ; reconstruct-current : takes a parsed expression, a list of marks, the kind of break, and
-  ; any values that may have been returned at the break point. It produces a list containing the
-  ; reconstructed sexp, and the (contained) sexp which is the redex.  If the redex is a heap value
-  ; (and can thus be distinguished from syntactically identical occurrences of that value using
-  ; eq?), it is embedded directly in the sexp. Otherwise, its place in the sexp is taken by the 
-  ; highlight-placeholder, which is replaced by the highlighted redex in the construction of the 
-  ; text%
+  ; any values that may have been returned at the break point. It produces a list of sexps
+  ; (the result of reconstruction) --- which may contain holes, indicated by the 
+  ; highlight-placeholder --- and a list of sexps which go in the holes
   
-  ; reconstruct-current : SYNTAX-OBJECT (list-of mark) symbol (list-of value) -> (list SYNTAX-OBJECT SYNTAX-OBJECT)
+  ; reconstruct-current : syntax (list-of mark) symbol (list-of value) -> (list (listof sexp) (listof sexp))
 
   (define reconstruct-current
     (contract
