@@ -450,7 +450,19 @@
 ;                         [val var-set-list (apply append var-sets)]
 ;                         [val vals (z:let-values-form-vals expr)]
 ;                         [val dummy-var-list (build-list (length var-set-list) (lambda (x) (get-arg-varref x)))]
-;                         
+;                         [val rhs-vals (map (lambda (arg-sym) 
+;                                              (mark-binding-value (find-var-binding mark-list arg-sym)))
+;                                            arg-temp-syms)]
+;                         [val rhs-list
+;                              (let loop ([var-sets var-sets] [rhs-vals rhs-vals])
+;                                (if (null? var-sets)
+;                                    null
+;                                    (let*-values ([first-set (car var-sets)]
+;                                                  [(set-vals remaining) (list-partition rhs-vals (length first-set))])
+;                                      (if (null? first-set)
+;                                          (cons `(values) (loop (cdr var-sets) remaining))
+;                                          (cons 
+;
 ;                         [val (values annotated-vals free-vars-vals)
 ;                              (dual-map non-tail-recur vals)]
 ;                         [val (values annotated-body free-vars-body)

@@ -445,3 +445,42 @@ Okay, well that doesn't work at all; dynamic scope blows it away completely.  Fo
   
 Now, during the execution of c, there's no mark on the stack which holds the bindings of a. DUH! I can't believe I didn't think of this before.  Okay, one possible solution for this would be to use _different keys_ for the marks, so that a mark on the unit-evaluation-continuaiton could be retained.
   
+  
+*********
+
+
+Okay, time to do units.  Compound units are dead easy.  Just wrap them in a wcm that captures all free vars.  No problemo.  Normal units are more tricky, because of their scoping rules.  Here's my canonical translation:
+
+(unit 
+  (import vars)
+  (export vars)
+  
+  (define a a-exp)
+  
+  b
+  
+  (define c c-exp)
+  
+  d
+  
+  etc.)
+  
+... goes to ...
+
+(unit
+  (import vars)
+  (export vars)
+  
+  (wcm blah ; including imported vars
+    (begin
+      (set! a a-exp)
+      b
+      (set! c c-exp)
+      d))
+      
+   (define a a)
+   (define c c)
+   ...)
+   
+
+      
