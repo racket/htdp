@@ -386,8 +386,7 @@
                                                  (split-lists (cdr exprs) (cdr vals))])
                                      (values (cons (car vals) small-vals) small-exprs))))])
                          (let-values ([(evaluated unevaluated) (split-lists sub-exprs arg-vals)])
-                           (let* ([eval-exprs (list-take (length evaluated) sub-exprs)]
-                                  [rectified-evaluated (map rectify-value evaluated)])
+                           (let* ([rectified-evaluated (map rectify-value evaluated)])
                              (if (null? unevaluated)
                                  rectified-evaluated
                                  (append rectified-evaluated
@@ -441,6 +440,58 @@
                                 ,(rectify-source-current-marks (z:if-form-else expr)))]))]
                  
                  ; quote : there is no mark or break on a quote.
+                 
+                 ; begin, begin0 : may not occur directly (or indirectly?) except in advanced
+                 
+                 ; letrec-values
+                 
+;                 [(z:let-values-form? expr)
+;                  (let+ ([val var-sets (z:let-values-form-vars expr)]
+;                         [val var-set-list (apply append var-sets)]
+;                         [val vals (z:let-values-form-vals expr)]
+;                         [val dummy-var-list (build-list (length var-set-list) (lambda (x) (get-arg-varref x)))]
+;                         
+;                         [val (values annotated-vals free-vars-vals)
+;                              (dual-map non-tail-recur vals)]
+;                         [val (values annotated-body free-vars-body)
+;                              (let-body-recur (z:let-values-form-body expr) 
+;                                              (bindings->varrefs var-set-list))]
+;                         [val free-vars (apply var-set-union (varref-remove* (bindings->varrefs var-set-list) free-vars-body)
+;                                               free-vars-vals)])
+;                    (if cheap-wrap?
+;                        (let ([bindings
+;                               (map (lambda (vars val)
+;                                      `(,(map utils:get-binding-name vars) ,val))
+;                                    var-sets
+;                                    annotated-vals)])
+;                          (values (expr-cheap-wrap `(#%let-values ,bindings ,annotated-body)) free-vars))
+;                        (let+ (
+;                               [val dummy-var-list (apply append dummy-var-sets)]
+;                               [val outer-dummy-initialization
+;                                    `([,(map z:varref-var dummy-var-list)
+;                                       (#%values ,@(build-list (length dummy-var-list) 
+;                                                               (lambda (_) '(#%quote *undefined*))))])]
+;                               [val set!-clauses
+;                                    (map (lambda (dummy-var-set val)
+;                                           `(#%set!-values ,(map z:varref-var dummy-var-set) ,val))
+;                                         dummy-var-sets
+;                                         annotated-vals)]
+;                               [val inner-transference
+;                                    `([,(map utils:get-binding-name var-set-list) 
+;                                       (values ,@(map z:varref-var dummy-var-list))])]
+;                               ; time to work from the inside out again
+;                               [val inner-let-values
+;                                    `(#%let-values ,inner-transference ,annotated-body)]
+;                               [val middle-begin
+;                                    `(#%begin ,@set!-clauses ,inner-let-values)]
+;                               [val wrapped-begin
+;                                    (wcm-wrap (make-debug-info-app (var-set-union tail-bound dummy-var-list)
+;                                                                   (var-set-union free-vars dummy-var-list)
+;                                                                   'none)
+;                                              middle-begin)]
+;                               [val whole-thing
+;                                    `(#%let-values ,outer-dummy-initialization ,wrapped-begin)])
+;                          (values whole-thing free-vars))))]
                  
                  ; define-values : define's don't get marks, so they can't occur here
                  
