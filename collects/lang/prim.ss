@@ -5,7 +5,8 @@
 ;; See doc.txt for more information.
 
 (module prim mzscheme
-  (require (lib "error.ss" "lang"))
+  (require (lib "error.ss" "lang")
+	   (rename (lib "htdp-advanced.ss" "lang") advanced-app #%app))
   
   (provide define-primitive
 	   define-higher-order-primitive)
@@ -19,14 +20,12 @@
 	 #'(define-syntax (name stx)
 	     (syntax-case stx ()
 	       [(__ . ___)
-		;; HACK: we disable all checks if #%top is 
-		;; the usual one, which indicates that we're
-		;; not in beginner
-		(module-identifier=? #'#%top (datum->syntax-object stx '#%top))
+		;; HACK: we disable all checks if #%app is advanced-app
+		(module-identifier=? #'advanced-app (datum->syntax-object stx '#%app))
 		(syntax/loc stx (impl . ___))]
 	       [__
 		;; HACK: see above
-		(module-identifier=? #'#%top (datum->syntax-object stx '#%top))
+		(module-identifier=? #'advanced-app (datum->syntax-object stx '#%app))
 		(syntax/loc stx impl)]
 	       [(id . args)
                 (with-syntax ([tagged-impl (syntax-property
@@ -85,11 +84,11 @@
 		     (syntax-case s ()
 		       [(__ . ___)
 			;; HACK: see above
-			(module-identifier=? #'#%top (datum->syntax-object s '#%top))
+			(module-identifier=? #'advanced-app (datum->syntax-object s '#%app))
                         (syntax/loc s (impl . ___))]
 		       [__
 			;; HACK: see above
-			(module-identifier=? #'#%top (datum->syntax-object s '#%top))
+			(module-identifier=? #'advanced-app (datum->syntax-object s '#%app))
                         (syntax/loc s impl)]
 		       [(__ new-arg ...)
 			(begin

@@ -13,6 +13,7 @@
 	   (rename advanced-define-struct define-struct)
 	   (rename advanced-lambda lambda)
 	   (rename advanced-app #%app)
+	   (rename beginner-top #%top)
 	   (rename intermediate-local local)
 	   (rename advanced-let let)
 	   (rename intermediate-let* let*)
@@ -37,7 +38,6 @@
 	   (rename advanced-delay delay)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum
-	   #%top
 	   empty true false)
 
   ;; procedures:

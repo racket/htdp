@@ -10,6 +10,7 @@
 	   (rename intermediate-define-struct define-struct)
 	   (rename intermediate-lambda lambda)
 	   (rename advanced-app #%app)
+	   (rename beginner-top #%top)
 	   (rename intermediate-local local)
 	   (rename intermediate-let let)
 	   (rename intermediate-let* let*)
@@ -26,7 +27,6 @@
 	   (rename intermediate-time time)
 	   (rename #%plain-module-begin #%module-begin)
 	   #%datum
-	   #%top
 	   empty true false)
 
   ;; procedures:
