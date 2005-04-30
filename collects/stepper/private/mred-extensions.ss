@@ -255,7 +255,8 @@
       (inherit get-dc)
       
       (define/private (format-sexp sexp)
-        
+        (define text-port (open-output-text-editor this))
+
         (parameterize ([pretty-print-columns pretty-printed-width]
                        
                        ; the pretty-print-size-hook decides whether this object should be printed by the new pretty-print-hook
@@ -264,7 +265,12 @@
                           (let ([looked-up (hash-table-get highlight-table value (lambda () #f))])
                             (cond
                               [(is-a? value snip%) 
-                               (let ([dc (get-dc)]
+			       ;; Calculate the effective width of the snip, so that
+			       ;;  too-long lines (as a result of large snips) are broken
+			       ;;  correctly. When the snip is actusally inserted, its width
+			       ;;  will be determined by `(send snip get-count)', but the number
+			       ;;  returned here triggers line breaking in the pretty printer.
+			       (let ([dc (get-dc)]
                                      [wbox (box 0)])
                                  (send value get-extent dc 0 0 wbox #f #f #f #f #f)
                                  (let-values ([(xw dc dc2 dc3) (send dc get-text-extent "x")])
@@ -276,17 +282,18 @@
                        [pretty-print-print-hook
                         ; this print-hook is called for confusable highlights and for images.
                         (lambda (value display? port)
-                          (let ([to-display (cond [(hash-table-get highlight-table value (lambda () #f)) => car]
-                                                  [else value])])
-                            (cond [(is-a? to-display snip%) (insert (send to-display copy)) (set-last-style)]
-                                  [else (insert (format "~s" to-display))])))]
-                       [pretty-print-display-string-handler
-                        (lambda (string port)
-                          (insert string))]
+                          (let ([to-display (cond 
+					     [(hash-table-get highlight-table value (lambda () #f)) => car]
+					     [else value])])
+                            (cond 
+			     [(is-a? to-display snip%) 
+			      (write-special (send to-display copy) port) (set-last-style)]
+			     [else 
+			      (write-string (format "~s" to-display) port)])))]
                        [pretty-print-print-line
                         (lambda (number port old-length dest-columns)
                           (when (and number (not (eq? number 0)))
-                            (insert #\newline))
+                            (newline port))
                           0)]
                        [pretty-print-pre-print-hook
                         (lambda (value p)
@@ -305,7 +312,7 @@
                        ;; mflatt: MAJOR HACK - this setting needs to come from the language
                        ;;  somehow
                        [read-case-sensitive #t])
-          (pretty-print sexp)))
+          (pretty-print sexp text-port)))
              
       (define/public (format-whole-step)
         (lock #f)
