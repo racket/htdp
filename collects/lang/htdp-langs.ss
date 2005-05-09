@@ -712,8 +712,8 @@ tracing todo:
           (inherit get-frame)
           
           (define tracing-visible? #f)
-          (define (set-tracing-visible? v?) (set! tracing-visible? v?))
-          (define (get-tracing-visible?) tracing-visible?)
+          (define/public (set-tracing-visible? v?) (set! tracing-visible? v?))
+          (define/public (get-tracing-visible?) tracing-visible?)
           
           (define/augment (clear-annotations)
             (tracing:reset)
@@ -778,9 +778,9 @@ tracing todo:
           
           (define/augment (on-tab-change old new)
             (inner (void) on-tab-change old new)
-            (send show-tracing-canvas set-editor (send new get-tracing-editor))
+            (send show-tracing-canvas set-editor (send new get-tracing-text))
             (cond
-              [(eq? tracing-visible? (send new tracing-visible?))
+              [(eq? tracing-visible? (send new get-tracing-visible?))
                (void)]
               [(send new tracing-visible?)
                (show-tracing)]
