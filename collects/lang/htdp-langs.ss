@@ -44,8 +44,19 @@ tracing todo:
     (unit/sig drscheme:tool-exports^
       (import drscheme:tool^)
 
-      (define (phase1) (void))
-
+      (define-local-member-name
+        get-tracing-text
+        show-tracing
+        tracing:add-line
+        tracing:rest)
+      (define tab-tracing<%>
+        (interface ()
+          get-tracing-text
+          get-any-results?
+          tracing:add-line
+          tracing:reset))
+      
+      
       (define drs-eventspace (current-eventspace))
       
       (define-struct (htdp-lang-settings drscheme:language:simple-settings) (tracing?))
@@ -649,8 +660,9 @@ tracing todo:
             (when (and name rep)
               (let ([canvas (send rep get-canvas)])
                 (when canvas
-                  (let ([frame (send canvas get-top-level-window)])
-                    (when (is-a? frame frame-tracing<%>)
+                  (let* ([frame (send canvas get-top-level-window)]
+                         [tab (send frame get-current-tab)])
+                    (when (is-a? tab tab-tracing<%>)
                       (let ([sp (open-output-string)])
                         (let loop ([i depth])
                           (unless (zero? i)
@@ -673,7 +685,7 @@ tracing todo:
                         (parameterize ([current-eventspace drs-eventspace])
                           (queue-callback
                            (lambda ()
-                             (send frame tracing:add-line (get-output-string sp))))))))))))))
+                             (send tab tracing:add-line (get-output-string sp))))))))))))))
 
       (define-values/invoke-unit/sig tr:stacktrace^ tr:stacktrace@ tr tr:stacktrace-imports^)
       
@@ -695,66 +707,35 @@ tracing todo:
                    (oe annotated)))])
           teaching-language-eval-handler))
       
-      (define frame-tracing<%>
-        (interface ()
-          tracing:add-line
-          tracing:reset))
+      (define tab-tracing-mixin
+        (mixin (drscheme:unit:tab<%> drscheme:rep:context<%>) (tab-tracing<%>)
+          (inherit get-frame)
           
-      (define frame-tracing-mixin 
-        (mixin (drscheme:frame:<%> drscheme:unit:frame<%>) (frame-tracing<%>)
-          (define show-tracing-menu-item #f)
           (define tracing-visible? #f)
+          (define (set-tracing-visible? v?) (set! tracing-visible? v?))
+          (define (get-tracing-visible?) tracing-visible?)
           
-          (define/override (add-show-menu-items show-menu)
-            (super add-show-menu-items show-menu)
-            (set! show-tracing-menu-item
-                  (new menu-item%
-                       (parent show-menu)
-                       (label sc-show-tracing-window)
-                       (callback (lambda (x y) (toggle-tracing))))))
-          
-          (define/private (toggle-tracing)
-            (cond
-              [(and (not tracing-visible?)
-                    (not any-results?))
-               (message-box (string-constant drscheme)
-                            sc-tracing-nothing-to-show
-                            this
-                            '(ok stop))]
-              [else
-               (set! tracing-visible? (not tracing-visible?))
-               (send show-tracing-menu-item set-label
-                     (if tracing-visible?
-                         sc-hide-tracing-window
-                         sc-show-tracing-window))
-               (send dragable-parent change-children
-                     (lambda (l)
-                       (let ([without (remq show-tracing-canvas l)])
-                         (if tracing-visible?
-                             (append without (list show-tracing-canvas))
-                             without))))
-               (when tracing-visible?
-                 (send dragable-parent set-percentages '(3/4 1/4)))])
-            (void))
-          
-          (define/override (clear-annotations)
+          (define/augment (clear-annotations)
             (tracing:reset)
-            (super clear-annotations))
+            (inner (void) clear-annotations))
           
           (define any-results? #f)
+          (define/public (get-any-results?) any-results?)
           (define/public (tracing:reset)
             (set! any-results? #f)
             (send show-tracing-text lock #f)
             (send show-tracing-text erase)
             (send show-tracing-text lock #t))
           
+          (define show-tracing-text (new text:hide-caret/selection%))
+          (define/public (get-tracing-text) show-tracing-text)
+          (send show-tracing-text lock #t)
           
           (define/public (tracing:add-line s)
             (let ([old-any? any-results?])
               (set! any-results? #t)
               (unless old-any?
-                (unless tracing-visible?
-                  (toggle-tracing)))
+                (send (get-frame) show-tracing))
               (send show-tracing-text begin-edit-sequence)
               (send show-tracing-text lock #f)
               (let ([insert
@@ -774,29 +755,84 @@ tracing todo:
                          (insert "\n")
                          (send show-tracing-text change-style clickback-delta ell-start ell-end)
                          (send show-tracing-text set-clickback ell-start ell-end 
-                                (lambda (t x y)
-                                  (send show-tracing-text begin-edit-sequence)
-                                  (send show-tracing-text lock #f)
-                                  (let ([line-start (send show-tracing-text paragraph-start-position para)]
-                                        [line-end (send show-tracing-text paragraph-end-position para)])
-                                    (send show-tracing-text delete line-start line-end #f)
-                                    (send show-tracing-text insert s line-start 'same #f))
-                                  (send show-tracing-text lock #t)
-                                  (send show-tracing-text end-edit-sequence))))))]))
+                               (lambda (t x y)
+                                 (send show-tracing-text begin-edit-sequence)
+                                 (send show-tracing-text lock #f)
+                                 (let ([line-start (send show-tracing-text paragraph-start-position para)]
+                                       [line-end (send show-tracing-text paragraph-end-position para)])
+                                   (send show-tracing-text delete line-start line-end #f)
+                                   (send show-tracing-text insert s line-start 'same #f))
+                                 (send show-tracing-text lock #t)
+                                 (send show-tracing-text end-edit-sequence))))))]))
               (send show-tracing-text lock #t)
               (send show-tracing-text end-edit-sequence)))
           
-          (field [dragable-parent #f]
-                 [show-tracing-parent-panel #f]
-                 [show-tracing-canvas #f]
-                 [show-tracing-text (new text:hide-caret/selection%)])
-          (send show-tracing-text lock #t)
+          (super-new)))
+          
+      
+      (define frame-tracing-mixin 
+        (mixin (drscheme:frame:<%> drscheme:unit:frame<%>) ()
+          (inherit get-current-tab)
+          (define show-tracing-menu-item #f)
+          (define tracing-visible? #f)
+          
+          (define/augment (on-tab-change old new)
+            (inner (void) on-tab-change old new)
+            (send show-tracing-canvas set-editor (send new get-tracing-editor))
+            (cond
+              [(eq? tracing-visible? (send new tracing-visible?))
+               (void)]
+              [(send new tracing-visible?)
+               (show-tracing)]
+              [else
+               (hide-tracing)]))
+          
+          (define/override (add-show-menu-items show-menu)
+            (super add-show-menu-items show-menu)
+            (set! show-tracing-menu-item
+                  (new menu-item%
+                       (parent show-menu)
+                       (label sc-show-tracing-window)
+                       (callback (lambda (x y) (toggle-tracing))))))
+          
+          (define/public (show-tracing)
+            (set! tracing-visible? #t)
+            (send show-tracing-menu-item set-label sc-hide-tracing-window)
+            (send dragable-parent change-children
+                  (lambda (l)
+                    (let ([without (remq show-tracing-canvas l)])
+                      (append without (list show-tracing-canvas)))))
+            (send dragable-parent set-percentages '(3/4 1/4)))
+          
+          (define/private (hide-tracing)
+            (cond
+              [(not (send (get-current-tab) get-any-results?))
+               (message-box (string-constant drscheme)
+                            sc-tracing-nothing-to-show
+                            this
+                            '(ok stop))]
+              [else
+               (set! tracing-visible? #f)
+               (send show-tracing-menu-item set-label sc-show-tracing-window)
+               (send dragable-parent change-children
+                     (lambda (l)
+                       (remq show-tracing-canvas l)))]))
+          
+          (define/private (toggle-tracing)
+            (if tracing-visible?
+                (hide-tracing)
+                (show-tracing)))
+          
+          (define dragable-parent #f)
+          (define show-tracing-parent-panel #f)
+          (define show-tracing-canvas #f)
+          
           (define/override (make-root-area-container cls parent)
             (set! dragable-parent (super make-root-area-container panel:horizontal-dragable% parent))
             (let ([root (make-object cls dragable-parent)])
               (set! show-tracing-canvas (new editor-canvas% 
                                              (parent dragable-parent)
-                                             (editor show-tracing-text)))
+                                             (editor (send (get-current-tab) get-tracing-text))))
               (send dragable-parent change-children (lambda (l) (remq show-tracing-canvas l)))
               root))
           
@@ -829,6 +865,8 @@ tracing todo:
       (define (add-htdp-language o)
         (drscheme:language-configuration:add-language o))
       
+      (define (phase1) (void))
+
       ;; phase2 : -> void
       (define (phase2)
         (define htdp-language%
@@ -920,4 +958,5 @@ tracing todo:
            (allow-sharing? #f)
            (accept-quasiquote? #f)))
         
-        (drscheme:get/extend:extend-unit-frame frame-tracing-mixin)))))
+        (drscheme:get/extend:extend-unit-frame frame-tracing-mixin)
+        (drscheme:get/extend:extend-tab tab-tracing-mixin)))))
