@@ -230,7 +230,7 @@
 ;     ;  ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;     
 ;     ;  ;   ;  ;   ;   ;;;    ;;  ;;;;;  ;;  ;;;; 
                                                    
-                                                   
+
                                                    
   
 ;  oh-say-can-you-see,by-the-dawn's-early-light,what-so-proudly-we-hailed,at-the-twilight's-last-gle
@@ -835,9 +835,9 @@
       (syntax? . -> . syntax?)
       (lambda (expr)
         (syntax-case expr (module #%plain-module-begin let-values dynamic-wind lambda)
-          [(m1 n1 l1
-             (pm1 . bodies))
-           #`(m1 n1 l1 (pm1 #,@(map annotate/module-top-level (syntax->list #`bodies))))]
+          [(module name lang
+             (#%plain-module-begin . bodies))
+           #`(module name lang (#%plain-module-begin #,@(map annotate/module-top-level (syntax->list #`bodies))))]
           ; the 'require' form is used for the test harness
           [(require module-name)
            expr]

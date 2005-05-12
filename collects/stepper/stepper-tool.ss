@@ -495,7 +495,8 @@
                     (let* ([settings (send (get-definitions-text) get-next-settings)]
                            [language (drscheme:language-configuration:language-settings-language settings)]
                            [language-level (car (last-pair (send language get-language-position)))])
-                      (if (member language-level stepper-works-for)
+                      (if (or (member language-level stepper-works-for)
+                              (getenv "PLTSTEPPERUNSAFE"))
                           (set! stepper-frame (view-controller-go this program-expander))
                           (message-box (string-constant stepper-name)
 				       (format (string-constant stepper-language-level-message)
