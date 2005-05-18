@@ -1,5 +1,5 @@
 (module contracts-module-begin mzscheme
-
+  
   (require "contracts.ss")
   
   (require-for-syntax (lib "list.ss"))
@@ -51,7 +51,8 @@
 	  (lambda (stx) 
 	    (if (contract-stx? stx)
 		(syntax-case stx () 
-		  [(contract function cnt ...) (syntax function)])
+		  [(contract function cnt ...) (syntax function)]
+                  [_ (raise-syntax-error 'contract "internal error.1")])
 		(raise-syntax-error 'contract "this is not a valid contract" stx))))  
 	
 	;; used to match up contract definitions with function definitions
@@ -74,7 +75,8 @@
 	  (lambda (stx) 
 	    (if (definition-stx? stx)
 		(syntax-case stx (begin define-values define-syntaxes) 
-		  [(define-values (f) e1 ...) (syntax f)])
+		  [(define-values (f) e1 ...) (syntax f)]
+                  [_ (raise-syntax-error 'contract "internal error.2")])
 		(raise-syntax-error 'defs "this is not a valid definition" stx))))
 	
 	;; given a syntax object, tells you whether or not this is a definition.
@@ -91,14 +93,16 @@
 	     (with-syntax ([new-name (rename-func def)]
 			   [expr-infname (syntax-property (syntax exp) 'inferred-name 
 							  (syntax-object->datum (syntax func)))])
-	       (syntax/loc def (define-values (new-name) expr-infname)))]))
+	       (syntax/loc def (define-values (new-name) expr-infname)))]
+            [_ (raise-syntax-error 'contract "internal error.3")]))
 	
 	(define (rename-func def)
 	  (let ([name (get-function-from-def def)])
 	    (syntax-case def (define-values)
 	      [(define-values (f) e1)
 	       (datum->syntax-object (syntax f) 
-				     (string->symbol (string-append (symbol->string (syntax-object->datum name)) "-con")))])))
+				     (string->symbol (string-append (symbol->string (syntax-object->datum name)) "-con")))]
+              [_ (raise-syntax-error 'contract "internal error.4")])))
 	
 
 	;; transform-contract : syntax syntax -> syntax
@@ -106,13 +110,13 @@
 	;; returns a syntax object that returns the correct language level contract wrapping
 	(define transform-contract
 	  (lambda (language-level-contract cnt-stx def-stx)
-	    
 	    (syntax-case cnt-stx ()
 	      [(contract function cnt) 
 	       (with-syntax ([ll-contract language-level-contract]
 			     [name-to-bind (get-function-from-def def-stx)]
 			     [func-to-wrap (rename-func def-stx)])
-		 (syntax/loc cnt-stx (ll-contract 'name-to-bind 'func-to-wrap cnt)))])))
+		 (syntax/loc cnt-stx (ll-contract 'name-to-bind 'func-to-wrap cnt)))]
+              [_ (raise-syntax-error 'contract "internal error.5")])))
 	
 	(define local-expand-stop-list (list 'contract 'define-values 'define-syntaxes 'require 'require-for-syntax 
 					     'provide 'define-data '#%app '#%datum 'define-struct 'begin))
@@ -127,35 +131,36 @@
 	  (let loop ([cnt-list contract-list]
 		     [exprs expressions])
 
-	    (if (null? exprs)
-		(if (null? cnt-list)
-		    (syntax (begin ))
-		    (raise-syntax-error 'contracts "this contract has no corresponding def" (car cnt-list)))
-
-					;      (let ([expanded (local-expand (car exprs) (syntax-local-context) local-expand-stop-list)])
-		(let ([expanded (local-expand (car exprs) 'module local-expand-stop-list)])
-		  (syntax-case expanded (begin define-values define-data)
-		    [(define-values (func) e1 ...)
-		     (contract-defined? cnt-list expanded)
-		     (let ([cnt (get-contract cnt-list expanded)])
-		       (quasisyntax/loc (car exprs)
-			 (begin
-			   #,(transform-definition expanded)
-			   #,(transform-contract ll-contract cnt expanded)
-			   #,(loop (remove cnt cnt-list) (cdr exprs)))))]
-		    [(define-data name c1 c2 ...)
-		     (identifier? #'name)
-		     (quasisyntax/loc (car exprs)
-		       (begin
-			 (#,ll-define-data name c1 c2 ...)
-			 #,(loop cnt-list (cdr exprs))))]
-		    [(begin e1 ...)
-		     (loop cnt-list (append (syntax-e (syntax (e1 ...)))(cdr exprs)))]
-		    [_else 
-		     (quasisyntax/loc (car exprs)
-		       (begin
-			 #,(car exprs)
-			 #,(loop cnt-list (cdr exprs))))])))))
+	    (cond
+              [(null? exprs)
+               (if (null? cnt-list)
+                   (syntax (begin ))
+                   (raise-syntax-error 'contracts "this contract has no corresponding def" (car cnt-list)))]
+              [else
+               ;      (let ([expanded (local-expand (car exprs) (syntax-local-context) local-expand-stop-list)])
+               (let ([expanded (local-expand (car exprs) 'module local-expand-stop-list)])
+                 (syntax-case expanded (begin define-values define-data)
+                   [(define-values (func) e1 ...)
+                    (contract-defined? cnt-list expanded)
+                    (let ([cnt (get-contract cnt-list expanded)])
+                      (quasisyntax/loc (car exprs)
+                        (begin
+                          #,(transform-definition expanded)
+                          #,(transform-contract ll-contract cnt expanded)
+                          #,(loop (remove cnt cnt-list) (cdr exprs)))))]
+                   [(define-data name c1 c2 ...)
+                    (identifier? #'name)
+                    (quasisyntax/loc (car exprs)
+                      (begin
+                        (#,ll-define-data name c1 c2 ...)
+                        #,(loop cnt-list (cdr exprs))))]
+                   [(begin e1 ...)
+                    (loop cnt-list (append (syntax-e (syntax (e1 ...)))(cdr exprs)))]
+                   [_else 
+                    (quasisyntax/loc (car exprs)
+                      (begin
+                        #,(car exprs)
+                        #,(loop cnt-list (cdr exprs))))]))])))
 	
 
 
@@ -169,7 +174,7 @@
 	;; where ll-contract is either beginner-contract, intermediate-contract, or advanced-contract
 	;; and (define-data name ....) to (lang-lvl-define-data name ...)
 	
-	(lambda (stx)   
+	(lambda (stx)
 	  (syntax-case stx ()
 	    [(_ e1 ...)
 	     (let* ([top-level (syntax-e (syntax (e1 ...)))]

@@ -406,7 +406,9 @@ tracing todo:
                      (let ([done-already? #f])
                        (dynamic-wind
                         void
-                        (lambda () (dynamic-require '#%htdp #f))
+                        (lambda () 
+                          ;(dynamic-require '#%htdp #f)
+                          (eval '(require #%htdp)))  ;; work around a bug in dynamic-require
                         (lambda () 
                           (unless done-already?
                             (set! done-already? #t)
