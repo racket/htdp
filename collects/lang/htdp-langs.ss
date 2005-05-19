@@ -386,20 +386,23 @@ tracing todo:
                (lambda ()
                  (case state
                    [(init)
-                    (with-syntax ([(body-exp ...) 
-                                   (let loop ()
-                                     (let ([result (reader (object-name port) port)])
-                                       (if (eof-object? result)
-                                           null
-                                           (cons result (loop)))))]
-                                  [language-module (get-module)]
-                                  [(require-specs ...) 
-                                   (drscheme:teachpack:teachpack-cache-require-specs teachpacks)])
-                      (set! state 'require)
-                      (let ([mod (expand (syntax (module #%htdp language-module 
-                                                   (require require-specs ...)
-                                                   body-exp ...)))])
-                        (rewrite-module mod)))]
+                    (set! state 'require)
+                    (let ([body-exps 
+                           (let loop ()
+                             (let ([result (reader (object-name port) port)])
+                               (if (eof-object? result)
+                                   null
+                                   (cons result (loop)))))]
+                          [language-module (get-module)]
+                          [require-specs 
+                           (drscheme:teachpack:teachpack-cache-require-specs teachpacks)])
+                      (rewrite-module 
+                       (expand
+                        (datum->syntax-object
+                         #f
+                         `(,#'module #%htdp ,language-module 
+                            (,#'require ,@require-specs)
+                            ,@body-exps)))))]
                    [(require) 
                     (set! state 'done)
                     (syntax

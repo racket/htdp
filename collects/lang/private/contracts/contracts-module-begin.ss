@@ -118,8 +118,9 @@
 		 (syntax/loc cnt-stx (ll-contract 'name-to-bind 'func-to-wrap cnt)))]
               [_ (raise-syntax-error 'contract "internal error.5")])))
 	
-	(define local-expand-stop-list (list 'contract 'define-values 'define-syntaxes 'require 'require-for-syntax 
-					     'provide 'define-data '#%app '#%datum 'define-struct 'begin))
+	(define local-expand-stop-list 
+          (list 'contract 'define-values 'define-syntaxes 'require 'require-for-syntax 
+                'provide 'define-data '#%app '#%datum 'define-struct 'begin))
 	
 	;; parse-contract-expressions 
 	;; takes in a list of top level expressions and a list of contracts, and outputs the correct transformation. 
@@ -174,18 +175,24 @@
 	;; where ll-contract is either beginner-contract, intermediate-contract, or advanced-contract
 	;; and (define-data name ....) to (lang-lvl-define-data name ...)
 	
-	(lambda (stx)
+        (lambda (stx)
 	  (syntax-case stx ()
 	    [(_ e1 ...)
 	     (let* ([top-level (syntax-e (syntax (e1 ...)))]
 		    [cnt-list (extract-contracts top-level)]
 		    [expr-list (extract-not-contracts top-level)])
-	       (with-syntax ([rest (parse-contract-expressions language-level-contract language-level-define-data cnt-list expr-list)])
+	       (with-syntax ([rest (parse-contract-expressions language-level-contract
+                                                               language-level-define-data
+                                                               cnt-list
+                                                               expr-list)])
 		 (syntax/loc stx (#%plain-module-begin rest))))])))
       
-      (define parse-beginner-contract/func (parse-contracts #'beginner-contract #'beginner-define-data))
-      (define parse-intermediate-contract/func (parse-contracts #'intermediate-contract  #'intermediate-define-data))
-      (define parse-advanced-contract/func (parse-contracts #'advanced-contract #'advanced-define-data))
+      (define parse-beginner-contract/func 
+        (parse-contracts #'beginner-contract #'beginner-define-data))
+      (define parse-intermediate-contract/func 
+        (parse-contracts #'intermediate-contract  #'intermediate-define-data))
+      (define parse-advanced-contract/func
+        (parse-contracts #'advanced-contract #'advanced-define-data))
     
       (values parse-beginner-contract/func
               parse-intermediate-contract/func
