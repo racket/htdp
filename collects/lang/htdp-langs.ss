@@ -411,7 +411,7 @@ tracing todo:
                         void
                         (lambda () 
                           ;(dynamic-require '#%htdp #f)
-                          (eval '(require #%htdp)))  ;; work around a bug in dynamic-require
+                          (eval #'(require #%htdp)))  ;; work around a bug in dynamic-require
                         (lambda () 
                           (unless done-already?
                             (set! done-already? #t)
