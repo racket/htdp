@@ -570,8 +570,7 @@
                               [(let-values . rest) (recon-let/rec #f)]
                               [(letrec-values . rest) (recon-let/rec #t)]
                               
-                              ; set! ;; XX need to handle lifted names here? Probably so.
-                              [(set! var rhs) #`(set! var #,(recur #'rhs))]
+                              ; set! : set! doesn't fit into this scheme. It would be a mistake to allow it to proceed.
                               
                               ; quote 
                               [(quote body) (recon-value (syntax-e (syntax body)) render-settings)]
@@ -902,8 +901,7 @@
                
                [(letrec-values . rest) (recon-let)]
                
-               ;; renaming required here? XX
-               [(set! var rhs) #`(set! var #,so-far)]
+               ; define-values : define's don't get marks, so they can't occur here
                
                ; lambda : there is no break on a lambda
                
