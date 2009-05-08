@@ -146,7 +146,6 @@
         (close-output-port (iworld-out p))
         (close-input-port (iworld-in p))
         (send gui add (format "~a !! closed port" (iworld-name p)))
-        (set! iworlds (remq p iworlds))
         (pdisconnect p)
         (cont))
       
@@ -228,9 +227,9 @@
 (define-struct iworld (in out name info) #:transparent)
 ;; World = (make-iworld IPort OPort Symbol [Listof Sexp])
 
-(define iworld1 (make-iworld (current-input-port) (current-output-port) 'sk '()))
-(define iworld2 (make-iworld (current-input-port) (current-output-port) 'mf '()))
-(define iworld3 (make-iworld (current-input-port) (current-output-port) 'rf '()))
+(define iworld1 (make-iworld (current-input-port) (current-output-port) 'iworld1 '()))
+(define iworld2 (make-iworld (current-input-port) (current-output-port) 'iworld2 '()))
+(define iworld3 (make-iworld (current-input-port) (current-output-port) 'iworld3 '()))
 
 (define (iworld=? u v)
   (check-arg 'iworld=? (iworld? u) 'iworld "first" u)
@@ -279,7 +278,7 @@
                  [callback (lambda (but evt) (stop-and-restart))])]
      [text  (new text%)]
      [edit  (new editor-canvas% [parent this] [editor text]
-                 [style '(no-border combo no-hscroll auto-vscroll)])])
+                 [style '(no-border no-hscroll auto-vscroll)])])
     
     ;; add lines to the end of the text 
     (define/public (add str)

@@ -1,7 +1,7 @@
 #lang scheme/gui
 
 #| TODO: 
-   -- make window resizable :: why? 
+   -- make window resizable :: why
 |#
 
 (require (for-syntax "private/syn-aux.ss")
@@ -117,13 +117,17 @@
               (lambda (p)
                 (syntax-case p ()
                   [(host) #`(ip> #,tag host)]
-                  [(ip name) #`(list (ip> #,tag ip) (symbol> #,tag name))]
-                  [_ (err tag p)])))]
+                  [_ (err tag p "expected a host (ip address)")])))]
+  [name (lambda (tag)
+          (lambda (p)
+            (syntax-case p ()
+              [(n) #`(symbol> #,tag n)]
+              [_ (err tag p "expected a string for the current world")])))]
   [record? (lambda (tag)
              (lambda (p)
                (syntax-case p ()
                  [(b) #`(bool> #,tag b)]
-                 [_ (err tag p)])))])
+                 [_ (err tag p "expected a boolean (to record or not to record?")])))])
 
 (define-syntax (big-bang stx)
   (syntax-case stx ()
@@ -142,15 +146,18 @@
                                 (syntax-case #'E ()
                                   [(V) (set! rec? #'V)]
                                   [_ (err 'record? stx)]))
-                              (cons (syntax-e #'kw) (syntax E)))]
+                              (cons #'kw #;(syntax-e #'kw) (syntax E)))]
                            [_ (raise-syntax-error
                                'big-bang "not a legal big-bang clause" stx)]))
                        (syntax->list (syntax (s ...))))]
             ;; assert: all bind = (kw . E) and kw is constrained via Bind 
             [args (map (lambda (x) 
                          (define kw (car x))
-                         (define co (assq kw Spec))
-                         (list kw ((cadr co) (cdr x))))
+                         (define co ;; patch from Jay to allow rename on import
+                           (findf (lambda (n) (free-identifier=? kw (car n)))
+                                  (map (lambda (k s) (cons k (cdr s))) 
+                                       kwds Spec)))
+                         (list (syntax-e (car co)) ((cadr co) (cdr x))))
                        spec)])
        #`(send (new (if #,rec? aworld% world%) [world0 w]  #,@args) last))]))
 
@@ -188,21 +195,21 @@
      (on-draw (lambda (m) (if (empty? m) (text "The End" 22 'red) (first m))))
      (stop-when empty?))))
 
-(define (mouse-event? a)
-  (pair? (member a '(button-down button-up drag move enter leave))))
+(define ME (map symbol->string '(button-down button-up drag move enter leave)))
+
+(define (mouse-event? a) (and (string? a) (pair? (member a ME))))
 
 (define (mouse=? k m)
   (check-arg 'mouse=? (mouse-event? k) 'MouseEvent "first" k)
   (check-arg 'mouse=? (mouse-event? m) 'MouseEvent "second" m)
-  (eq? k m))
+  (string=? k m))
 
-(define (key-event? k)
-  (or (char? k) (symbol? k)))
+(define (key-event? k) (string? k))
 
 (define (key=? k m)
   (check-arg 'key=? (key-event? k) 'KeyEvent "first" k)
   (check-arg 'key=? (key-event? m) 'KeyEvent "second" m)
-  (eqv? k m))
+  (string=? k m))
 
 (define LOCALHOST "127.0.0.1")
 
@@ -272,7 +279,7 @@
                            [(kw . E)
                             (and (identifier? #'kw) 
                                  (for/or ([n kwds]) (free-identifier=? #'kw n)))
-                            (cons (syntax-e #'kw) (syntax E))]
+                            (cons #'kw (syntax E))]
                            [(kw E)
                             (and (identifier? #'kw) 
                                  (for/or ([n kwds]) (free-identifier=? #'kw n)))
@@ -281,6 +288,15 @@
                                'universe "not a legal universe clause" stx)]))
                        (syntax->list (syntax (bind ...))))]
             ;; assert: all bind = (kw . E) and kw is constrained via Bind 
+            [args (map (lambda (x) 
+                         (define kw (car x))
+                         (define co ;; patch from Jay to allow rename on import
+                           (findf (lambda (n) (free-identifier=? kw (car n)))
+                                  (map (lambda (k s) (cons k (cdr s))) 
+                                       kwds Spec)))
+                         (list (syntax-e (car co)) ((cadr co) (cdr x))))
+                       spec)]
+            #;
             [args (map (lambda (x) 
                          (define kw (car x))
                          (define co (assq kw Spec))

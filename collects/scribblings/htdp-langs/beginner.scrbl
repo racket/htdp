@@ -90,7 +90,7 @@ the @scheme[fieldid]s in parentheses. After evaluation of a
 define-struct form, a set of new primitives is available for creation,
 extraction, and type-like queries:
 
-@itemize{
+@itemize[
 
  @item{@schemeidfont{make-}@scheme[structid] : takes a number of
        arguments equal to the number of fields in the structure type,
@@ -106,7 +106,7 @@ extraction, and type-like queries:
  @item{@scheme[structid] : an identifier representing the structure
        type, but never used directly.}
 
-}
+]
 
 The created names must not be the same as a primitive or another defined name.}
 
@@ -318,6 +318,13 @@ lowercase), @litchar{0} through @litchar{9}, @litchar{-}, @litchar{_},
 and @litchar{.}, and the string cannot be empty or contain a leading
 or trailing @litchar{/}.}
 
+@defform/none[#:literals (require)
+              (require module-id)]{
+
+Accesses a file in an installed library. The library name is an
+identifier with the same constraints as for a relative-path string,
+with the additional constraint that it must not contain a
+@litchar{.}.}
 
 @defform/none[#:literals (require lib)
               (require (lib string string ...))]{

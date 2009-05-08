@@ -21,9 +21,11 @@
 
 @; -----------------------------------------------------------------------------
 
-@title{Worlds and the Universe}
+@teachpack["universe"]{Worlds and the Universe}
 
 @author{Matthias Felleisen}
+
+@defmodule[#:require-form beginner-require 2htdp/universe #:use-sources (teachpack/htdp/image)]
 
 @;{FIXME: the following paragraph uses `defterm' instead of `deftech',
    because the words "world" and "universe" are used as datatypes, and
@@ -38,21 +40,20 @@ This @tt{universe.ss} teachpack implements and provides the functionality
 
 The purpose of this documentation is to give experienced Schemers and HtDP
  teachers a concise overview for using the library. The first part of the
- documentation focuses on @tech{world} programs. Section @secref["world-example"]
- presents an illustration of how to design such programs for a simple
- domain; it is suited for a novice who knows how to design conditional
- functions for symbols. The second half of the documentation focuses on
- "universe" programs: how it is managed via a server, how @tech{world}
- programs register with the server, etc. The last two sections show how to
- design a simple universe of two communicating worlds. 
+ documentation focuses on @tech{world} programs. Section
+ @secref["world-example"] presents an illustration of how to design such
+ programs for a simple domain; it is suited for a novice who knows how to
+ design conditional functions for enumerations, intervals, and unions. The
+ second half of the documentation focuses on "universe" programs: how it is
+ managed via a server, how @tech{world} programs register with the server,
+ etc. The last two sections show how to design a simple universe of two
+ communicating worlds.
 
 @emph{Note}: For a quick and educational introduction to just worlds, see
  @link["http://www.ccs.neu.edu/home/matthias/HtDP/Prologue/book.html"]{How
  to Design Programs, Second Edition: Prologue}. As of August 2008, we also
  have a series of projects available as a small booklet on
  @link["http://world.cs.brown.edu/"]{How to Design Worlds}.
-
-@declare-exporting[teachpack/2htdp/universe #:use-sources (teachpack/htdp/image)]
 
 @; -----------------------------------------------------------------------------
 
@@ -91,10 +92,13 @@ The simplest kind of animated @tech{world} program is a time-based
 @defproc[(run-simulation [create-image (-> natural-number/c scene)])
          true]{
 
- opens a canvas and starts a clock that tick 28 times per second.
- Every time the clock ticks, DrScheme applies
- @scheme[create-image] to the number of ticks passed since this function
- call. The results of these applications are displayed in the canvas.
+ opens a canvas and starts a clock that tick 28 times per second.  Every
+ time the clock ticks, DrScheme applies @scheme[create-image] to the
+ number of ticks passed since this function call. The results of these
+ function calls are displayed in the canvas. The simulation runs until you
+ click the @tt{Stop} button in DrScheme or close the window. At that
+ point, @scheme[run-simulation] returns the number of ticks that have
+ passed. 
 }
 
 Example:
@@ -158,7 +162,7 @@ The design of a world program demands that you come up with a data
 @defform/subs[#:id big-bang
               #:literals 
 	      (on-tick on-draw on-key on-mouse on-receive 
-	        stop-when register record?)
+	        stop-when register record? name)
               (big-bang state-expr clause ...)
               ([clause
 		 (on-tick tick-expr)
@@ -171,7 +175,7 @@ The design of a world program demands that you come up with a data
 		 (record? boolean-expr)
 		 (on-receive rec-expr)
 		 (register IP-expr)
-		 (register IP-expr name-expr)
+		 (name name-expr)
 		 ])]{
 
  starts a @tech{world} program in the initial state specified with
@@ -183,7 +187,11 @@ The design of a world program demands that you come up with a data
  itself as a scene; when the program must shut down; where to register the
  world with a universe; and whether to record the stream of events. A world
  specification may not contain more than one @scheme[on-tick],
- @scheme[on-draw], or @scheme[register] clause.}
+ @scheme[on-draw], or @scheme[register] clause. A @scheme[big-bang]
+ expression returns the last world when the stop condition is satisfied
+ (see below) or when the programmer clicks on the @tt{Stop} button or
+ closes the canvas.
+}
 
 @itemize[
 
@@ -208,22 +216,97 @@ current world. The clock ticks at the rate of @scheme[rate-expr].}}
 @item{A @tech{KeyEvent} represents key board events, e.g., keys pressed or
  released. 
 
-@deftech{KeyEvent} : @scheme[(or/c char? symbol?)]
+@deftech{KeyEvent} : @scheme[string?]
 
-A character is used to signal that the user has hit an alphanumeric
- key. A symbol denotes arrow keys or special events:
-
+For simplicity, we represent key events with strings, but not all strings
+ are key events. The representation of key events comes in distinct
+ classes. First, a single-character string is used to signal that the user
+ has hit a "regular" key. Some of these one-character strings may look
+ unusual:
 @itemize[
 
-@item{@scheme['left] is the left arrow,}
+@item{@scheme[" "] stands for the space bar (@scheme[#\space]);}
+@item{@scheme["\r"] stands for the return key (@scheme[#\return]);}
+@item{@scheme["\t"] stands for the tab key (@scheme[#\tab]); and}
+@item{@scheme["\b"] stands for the backspace key (@scheme[#\backspace]).}
 
-@item{@scheme['right] is the right arrow,}
+]
+ On rare occasions you may also encounter @scheme["\u007F"], which is the
+ string representing the delete key (aka rubout). 
 
-@item{@scheme['up] is the up arrow,}
-
-@item{@scheme['down] is the down arrow, and}
-
-@item{@scheme['release] is the event of releasing a key.}
+Second, some keys have multiple-character string representations. Strings
+ with more than one character denotes arrow keys or other special events, 
+ starting with the most important: 
+@itemize[
+@item{@scheme["left"] is the left arrow;}
+@item{@scheme["right"] is the right arrow;}
+@item{@scheme["up"] is the up arrow;}
+@item{@scheme["down"] is the down arrow;}
+@item{@scheme["release"] is the event of releasing a key;}
+@item{@scheme["start"]}
+@item{@scheme["cancel"]}
+@item{@scheme["clear"]}
+@item{@scheme["shift"]}
+@item{@scheme["control"]}
+@item{@scheme["menu"]}
+@item{@scheme["pause"]}
+@item{@scheme["capital"]}
+@item{@scheme["prior"]}
+@item{@scheme["next"]}
+@item{@scheme["end"]}
+@item{@scheme["home"]}
+@item{@scheme["escape"]}
+@item{@scheme["select"]}
+@item{@scheme["print"]}
+@item{@scheme["execute"]}
+@item{@scheme["snapshot"]}
+@item{@scheme["insert"]}
+@item{@scheme["help"]}
+@item{@scheme["numpad0"], 
+ @scheme["numpad1"], 
+ @scheme["numpad2"], 
+ @scheme["numpad3"],
+ @scheme["numpad4"],
+ @scheme["numpad5"],
+ @scheme["numpad6"],
+ @scheme["numpad7"],
+ @scheme["numpad8"],
+ @scheme["numpad9"],
+ @scheme["numpad-enter"],
+ @scheme["multiply"],
+ @scheme["add"],
+ @scheme["separator"],
+ @scheme["subtract"],
+ @scheme["decimal"],
+ @scheme["divide"]}
+@item{@scheme["f1"],
+ @scheme["f2"],
+ @scheme["f3"],
+ @scheme["f4"],
+ @scheme["f5"],
+ @scheme["f6"],
+ @scheme["f7"],
+ @scheme["f8"],
+ @scheme["f9"],
+ @scheme["f10"],
+ @scheme["f11"],
+ @scheme["f12"],
+ @scheme["f13"],
+ @scheme["f14"],
+ @scheme["f15"],
+ @scheme["f16"],
+ @scheme["f17"],
+ @scheme["f18"],
+ @scheme["f19"],
+ @scheme["f20"],
+ @scheme["f21"],
+ @scheme["f22"],
+ @scheme["f23"],
+ @scheme["f24"]}
+@item{@scheme["numlock"]}
+@item{@scheme["scroll"]}
+@item{@scheme["wheel-up"]}
+@item{@scheme["wheel-down"]}
 ]
 
 @defproc[(key-event? [x any]) boolean?]{
@@ -240,18 +323,16 @@ A character is used to signal that the user has hit an alphanumeric
  of the call becomes the current world.
 
  Here is a typical key-event handler: 
-@(begin
-#reader scribble/comment-reader
-(schemeblock
+@schemeblock[
 (define (change w a-key)
   (cond
-    [(key=? a-key 'left)  (world-go w -DELTA)]
-    [(key=? a-key 'right) (world-go w +DELTA)]
-    [(char? a-key) w] ;; to demonstrate order-free checking 
-    [(key=? a-key 'up)    (world-go w -DELTA)]
-    [(key=? a-key 'down)  (world-go w +DELTA)]
+    [(key=? a-key "left")  (world-go w -DELTA)]
+    [(key=? a-key "right") (world-go w +DELTA)]
+    [(= (string-length a-key) 1) w] (code:comment "to demonstrate order-free checking")
+    [(key=? a-key "up")    (world-go w -DELTA)]
+    [(key=? a-key "down")  (world-go w +DELTA)]
     [else w]))
-))
+]
  }
  The omitted, auxiliary function @emph{world-go} is supposed to consume a
  world and a number and produces a world.
@@ -262,20 +343,20 @@ A character is used to signal that the user has hit an alphanumeric
  
 @deftech{MouseEvent} : @scheme[(one-of/c 'button-down 'button-up 'drag 'move 'enter 'leave)]
 
-All @tech{MouseEvent}s are represented via symbols: 
+All @tech{MouseEvent}s are represented via strings:
 @itemize[
 
-@item{@scheme['button-down] 
+@item{@scheme["button-down"] 
  signals that the computer user has pushed a mouse button down;}
-@item{@scheme['button-up]
+@item{@scheme["button-up"]
  signals that the computer user has let go of a mouse button;}
-@item{@scheme['drag]
+@item{@scheme["drag"]
  signals that the computer user is dragging the mouse;}
-@item{@scheme['move]
+@item{@scheme["move"]
  signals that the computer user has moved the mouse;}
-@item{@scheme['enter]
+@item{@scheme["enter"]
  signals that the computer user has moved the mouse into the canvas area; and}
-@item{@scheme['leave]
+@item{@scheme["leave"]
  signals that the computer user has moved the mouse out of the canvas area.}
 ]
 
@@ -328,9 +409,10 @@ All @tech{MouseEvent}s are represented via symbols:
          ([last-world? (-> (unsyntax @tech{WorldState}) boolean?)])]{
  tell DrScheme to call the @scheme[last-world?] function whenever the canvas is
  drawn. If this call produces @scheme[true], the world program is shut
-          down. Specifically, the  clock is stopped; no more
+ down. Specifically, the  clock is stopped; no more
  tick events, @tech{KeyEvent}s, or @tech{MouseEvent}s are forwarded to
- the respective handlers. 
+ the respective handlers. The @scheme[big-bang] expression returns this
+ last world. 
 }}
 
 @item{
@@ -466,7 +548,7 @@ Second, we must translate the actions in our domain---the arrows in the
 (define (click w x y me) ...)
 
 ;; control : WorldState @tech{KeyEvent} -> WorldState
-;; deal with a key event (symbol, char) @emph{ke}
+;; deal with a key event @emph{ke}
 ;; in the current world @emph{w}
 (define (control w ke) ...)
 ))
@@ -798,11 +880,11 @@ following shapes:
 }
 
 @item{
-@defform/none[(register ip-expr name-expr)
-              #:contracts
-              ([ip-expr string?]
-               [name-expr (or/c symbol? string?)])]{
- connect this world to a universe server @emph{under a specific} @scheme[name-expr].}
+@defform[(name name-expr)
+         #:contracts
+         ([name-expr (or/c symbol? string?)])]{
+ provide a name (@scheme[namer-expr]) to this world, which is used as the
+ title of the canvas and the name sent to the server.}
 }
 
 ]
@@ -932,7 +1014,7 @@ for universe programs. For example:
 }
 
 @item{Each event handler produces a @emph{bundle}, which is a structure
- that contains the list of @emph{iworld}s to keep track of; the
+ that contains the list of @emph{iworld}s that the universe must track; the
  @tech{server}'s remaining state; and a list of mails to other
  worlds: 
 
@@ -940,8 +1022,11 @@ for universe programs. For example:
  determines whether @scheme[x] is a @emph{bundle}.}
 
 @defproc[(make-bundle [low (listof iworld?)] [state any/c] [mails (listof mail?)]) bundle?]{
- creates a @emph{bundle} from a list of iworlds, a piece of data that represents a server
- state, and a list of mails.}
+ creates a @emph{bundle} from a list of iworlds, a piece of data that
+ represents a server state, and a list of mails.}
+
+If an event handler returns a bundle with an empty list of worlds, the
+universe server is restarted in the initial state. 
 
 A @emph{mail} represents a message from an event handler to a world. The
 teachpack provides only a predicate and a constructor for these structures:
@@ -952,7 +1037,6 @@ teachpack provides only a predicate and a constructor for these structures:
 @defproc[(make-mail [to iworld?] [content sexp?]) mail?]{
  creates a @emph{mail} from a @emph{iworld} and an @tech{S-expression}.}
 }
-
 ]
 
 @; -----------------------------------------------------------------------------
@@ -1031,7 +1115,6 @@ The mandatory clauses of a @scheme[universe] server description are
  @scheme[w] is guaranteed to be on the list @scheme[low]. 
  }
 }]
-
  All proper event handlers produce a @emph{bundle}. The list of worlds in
  this @emph{bundle} becomes the server's list of worlds, meaning that only
  the server listens only to messages from "approved" worlds.  The state in
@@ -1453,7 +1536,7 @@ The final step is to design the ball @tech{world}. Recall that each world
  enumeration of two cases: 
 
 @(begin #reader scribble/comment-reader
-(schemeblock 
+(schemeblock
 ;; teachpack: universe.ss
 
 ;; WorldState is one of:
@@ -1636,12 +1719,13 @@ Finally, here is the third function, which renders the state as a scene:
 
 ; String -> WorldState 
 ; create and hook up a world with the @scheme[LOCALHOST] server
-(define (create-world name)
+(define (create-world n)
   (big-bang WORLD0
            (on-receive receive)
-	   (on-draw (draw name))
+	   (on-draw (draw n))
 	   (on-tick move)
-	   (register LOCALHOST name)))
+           (name n)
+	   (register LOCALHOST)))
 ))
 
  Now you can use @scheme[(create-world 'carl)] and @scheme[(create-world 'same)],
