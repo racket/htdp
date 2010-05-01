@@ -49,7 +49,7 @@
 ;;     removes the last <n> added expressions
 ;;
 
-(load-relative "loadtest.rkt")
+(load-relative "loadtest.rktl")
 
 ;; Check that expansion doesn't introduce non-equal ids that
 ;;  claim to be "original" at the same place
@@ -82,14 +82,14 @@
 (require (only-in mzscheme exn:fail? exn:fail:contract?))
 
 (define current-htdp-lang 'lang/htdp-beginner)
-(load-relative "htdp-test.rkt")
+(load-relative "htdp-test.rktl")
 
 (require (lib "htdp-beginner.rkt" "lang"))
 
-(load-relative "beg-adv.rkt")
-(load-relative "beg-intml.rkt")
-(load-relative "beg-intm.rkt")
-(load-relative "beg-bega.rkt")
+(load-relative "beg-adv.rktl")
+(load-relative "beg-intml.rktl")
+(load-relative "beg-intm.rktl")
+(load-relative "beg-bega.rktl")
 
 (htdp-syntax-test #'quote)
 (htdp-syntax-test #''1)

@@ -2,7 +2,7 @@
 ;; Basic checks for the advanced language. See also
 ;;  beginner.ss
 
-(load-relative "loadtest.rkt")
+(load-relative "loadtest.rktl")
 
 ;; Don't need these:
 (define no-extra-if-tests? #t)
@@ -22,13 +22,13 @@
    docs))
 
 (define current-htdp-lang 'lang/htdp-advanced)
-(load-relative "htdp-test.rkt")
+(load-relative "htdp-test.rktl")
 
 (require (lib "htdp-advanced.rkt" "lang"))
 
-(load-relative "beg-adv.rkt")
-(load-relative "bega-adv.rkt")
-(load-relative "intm-adv.rkt")
+(load-relative "beg-adv.rktl")
+(load-relative "bega-adv.rktl")
+(load-relative "intm-adv.rktl")
 
 (define (f6 a) (a))
 (test (void) f6 void)
@@ -190,7 +190,7 @@
 (htdp-test 13 'loop (recur f ([f 13]) f))
 (htdp-test 14 'loop (let ([f 14]) (recur f ([f f]) f)))
 
-(load (build-path (collection-path "tests" "racket") "shared-tests.rkt"))
+(load (build-path (collection-path "tests" "racket") "shared-tests.rktl"))
 
 (htdp-test #t 'equal? (equal? (vector (list 10) 'apple) (vector (list 10) 'apple)))
 (htdp-test #t 'equal? (equal?  (shared ([x (cons 10 x)]) x) (shared ([x (cons 10 x)]) x)))

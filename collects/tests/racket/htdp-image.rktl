@@ -1,6 +1,6 @@
 ;; Load this one with MrEd
 
-(load-relative "loadtest.rkt")
+(load-relative "loadtest.rktl")
 (require teachpack/htdp/image
          htdp/error
          lang/posn

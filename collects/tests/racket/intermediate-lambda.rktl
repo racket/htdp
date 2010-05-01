@@ -1,8 +1,8 @@
 
 ;; Basic checks for the intermediate language. See also
-;;  beginner.rkt
+;;  beginner.rktl
 
-(load-relative "loadtest.rkt")
+(load-relative "loadtest.rktl")
 
 ;; Don't need these:
 (define no-extra-if-tests? #t)
@@ -21,14 +21,14 @@
    docs))
 
 (define current-htdp-lang 'lang/htdp-intermediate-lambda)
-(load-relative "htdp-test.rkt")
+(load-relative "htdp-test.rktl")
 
 (require (lib "htdp-intermediate-lambda.rkt" "lang"))
 
-(load-relative "beg-adv.rkt")
-(load-relative "beg-intml.rkt")
-(load-relative "bega-adv.rkt")
-(load-relative "intm-intml.rkt")
-(load-relative "intm-adv.rkt")
+(load-relative "beg-adv.rktl")
+(load-relative "beg-intml.rktl")
+(load-relative "bega-adv.rktl")
+(load-relative "intm-intml.rktl")
+(load-relative "intm-adv.rktl")
 
 (report-errs)
