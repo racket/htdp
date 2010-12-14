@@ -23,7 +23,10 @@
     [(list name models string expected-steps)
      (when (assq name list-of-tests)
        (error 'add-test "name ~v is already in the list of tests" name))
-     (set! list-of-tests (append list-of-tests (list (list name (list models string expected-steps)))))]))
+     (set! list-of-tests 
+           (append list-of-tests 
+                   (list (list name
+                               (list models string expected-steps)))))]))
 
 (define (t1 name models string expected-steps)
   (add-test (list name models string expected-steps)))
@@ -55,7 +58,7 @@
   (let ([maybe-test (assq name list-of-tests)])
     (if maybe-test
         (run-one-test/helper maybe-test)
-        (error 'run-test "test not found: ~e" name))))
+        (error 'run-test "test not found: ~.s" name))))
 
 (define (run-tests names)
   (ormap/no-shortcut run-test names))
@@ -68,12 +71,7 @@
 (define (andmap/no-shortcut f args)
   (foldl (lambda (a b) (and a b)) #t (map f args)))
 
-(t 'mz1 m:mz
-   (for-each (lambda (x) x) '(1 2 3))
-   :: {(for-each (lambda (x) x) `(1 2 3))} -> (... {1} ...)
-   :: ... -> (... {2} ...)
-   :: ... -> (... {3} ...)
-   :: ... -> {(void)})
+
 
 ;; new test case language:
 ;; an expected is (listof step)
@@ -105,6 +103,13 @@
 ;; * a `finished-stepping' is added if no error was specified
 ;; * a `{...}' is replaced with `(hilite ...)'
 
+ (t 'mz1 m:mz
+   (for-each (lambda (x) x) '(1 2 3))
+   :: {(for-each (lambda (x) x) `(1 2 3))} -> (... {1} ...)
+   :: ... -> (... {2} ...)
+   :: ... -> (... {3} ...)
+   :: ... -> {(void)})
+
 (t 'mz-app m:mz
    (+ 3 4)
    :: {(+ 3 4)} -> {7})
@@ -116,15 +121,6 @@
 (t 'mz-if m:mz
    (if 3 4 5)
    :: {(if 3 4 5)} -> {4})
-
-(t 'simple-if m:upto-int/lam
-   (if true false true)
-   :: {(if true false true)} -> {false})
-
-(t 'if-bool m:upto-int/lam
-   (if (if true false true) false true)
-   :: (if {(if true false true)} false true) -> (if {false} false true)
-   :: {(if false false true)} -> {true})
 
 (t 'direct-app m:mz
    ((lambda (x) x) 3)
@@ -165,6 +161,18 @@
 
 ;(syntax-object->datum (cadr (annotate-expr test2 'mzscheme 0 (lambda (x) x))))
 
+   
+
+(t 'simple-if m:upto-int/lam
+   (if true false true)
+   :: {(if true false true)} -> {false})
+
+(t 'if-bool m:upto-int/lam
+   (if (if true false true) false true)
+   :: (if {(if true false true)} false true) -> (if {false} false true)
+   :: {(if false false true)} -> {true})
+
+
 (t 'top-def m:upto-int/lam
    (define a (+ 3 4))
    :: (define a {(+ 3 4)})
@@ -204,6 +212,23 @@
      :: ,@defs {(a12 12)}
      -> ,@defs {(+ 12 9)}
      -> ,@defs {21}))
+
+;;intermediate/lambda hof
+(let ([a-def `(define (a x)
+                (lambda (y) (+ x y)))])
+  (t 'intermediate-lambda-hof m:intermediate-lambda
+     ,a-def (define b (a 9)) (b 5)
+     :: ,a-def (define b ({a} 9))
+     -> ,a-def (define b ({(lambda (x) (lambda (y) (+ x y)))} 9))
+     :: ,a-def (define b {((lambda (x) (lambda (y) (+ x y))) 9)})
+     -> ,a-def (define b {(lambda (y) (+ 9 y))})
+     :: ,a-def (define b (lambda (y) (+ 9 y))) ({b} 5)
+     -> ,a-def (define b (lambda (y) (+ 9 y))) 
+     ({(lambda (y) (+ 9 y))} 5)
+     :: ,a-def (define b (lambda (y) (+ 9 y)))
+     {((lambda (y) (+ 9 y)) 5)}
+     -> ,a-def (define b (lambda (y) (+ 9 y))) {(+ 9 5)}
+     -> ,a-def (define b (lambda (y) (+ 9 y))) {14}))
 
 ;;;;;;;;;;;;
 ;;
@@ -596,9 +621,16 @@
 
 (t1 'let-deriv
     m:intermediate "(define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
-    (let ([defs `((define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))])
-      `((before-after (,@defs (define gprime (hilite (f cos))))
-                      (,@defs (define gprime (hilite (let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))))
+    (let ([defs `((define (f g) 
+                    (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))])
+                      gp)))])
+      `((before-after (,@defs (define gprime
+                                (hilite (f cos))))
+                      (,@defs (define gprime 
+                                (hilite (let ([gp (lambda (x) 
+                                                    (/ (- (cos (+ x 0.1)) (cos x))
+                                                       0.001))]) 
+                                          gp)))))
         (before-after (,@defs (define gprime (hilite (let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))))
                       (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001)))) (define gprime (hilite gp_0))))
         (finished-stepping))))
@@ -616,6 +648,8 @@
       (before-after ((define f_0 (lambda (x) (+ x 13))) (define a (hilite f_0)))
                     ((define f_0 (lambda (x) (+ x 13))) (define a (hilite (lambda (x) (+ x 13))))))
       (finished-stepping)))
+
+
 
 ;;;;;;;;;;;;;
 ;;
@@ -1451,21 +1485,32 @@
   #;(t1 'bad-stx-and m:upto-int/lam
       "(and)"
       `((error "foo")))
-
   
+  (t 'local-struct/i m:intermediate
+     (define (f x) (local ((define-struct a (b c))) x))  (f 1)
+     :: (define (f x) (local ((define-struct a (b c))) x)) {(f 1)}
+     -> (define (f x) (local ((define-struct a (b c))) x)) 
+     {(define-struct a_1 (b c))} {1})
+  
+  (t 'local-struct/ilam m:intermediate-lambda
+     (define (f x) (local ((define-struct a (b c))) x))  (f 1)
+     :: (define (f x) (local ((define-struct a (b c))) x)) {(f 1)}
+     -> (define (f x) (local ((define-struct a (b c))) x)) 
+     {((lambda (x) (local ((define-struct a (b c))) x)) 1)}
+     -> (define (f x) (local ((define-struct a (b c))) x)) 
+     {(define-struct a_1 (b c))} {1})
+  
+  
+  (provide ggg)
   ;; run whatever tests are enabled (intended for interactive use):
   (define (ggg)
-    (parameterize (#;[disable-stepper-error-handling #t]
+    (parameterize ([disable-stepper-error-handling #t]
                    #;[display-only-errors #t]
                    #;[store-steps #f]
                    #;[show-all-steps #t])
-      #;(run-tests '(check-expect forward-ref check-within check-within-bad check-error check-error-bad))
+      #;(run-tests '(check-expect forward-ref check-within check-within-bad
+                                  check-error check-error-bad))
       #;(run-tests '(teachpack-universe))
-      #;(run-tests '(simple-if))
-      (run-all-tests)))
-  
-  
-
-
-  
-  
+      #;(run-all-tests)
+      (run-tests '(simple-if))
+      ))

@@ -15,6 +15,7 @@
   (provide (rename-out
             [advanced-define define]
             [advanced-define-struct define-struct]
+            [advanced-define-datatype define-datatype]
             [advanced-lambda lambda]
             [advanced-lambda λ]
             [advanced-app #%app]
@@ -47,6 +48,7 @@
             [advanced-when when]
             [advanced-unless unless]
             [advanced-case case]
+            [advanced-match match]
             [advanced-delay delay]
             [advanced-module-begin #%module-begin]
             )
@@ -60,7 +62,8 @@
 	   empty true false
 
 	   signature : -> mixed one-of predicate combined
-	   Number Real Rational Integer Natural Boolean True False String Symbol Char Empty-list 
+	   Number Real Rational Integer Natural Boolean True False String Symbol Char Empty-list Any
+	   cons-of
 	   Property
 	   check-property for-all ==> expect expect-within expect-member-of expect-range)
 

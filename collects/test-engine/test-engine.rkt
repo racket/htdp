@@ -1,6 +1,6 @@
-#lang scheme/base
+#lang racket/base
 
-(require scheme/class
+(require racket/class
          "test-info.scm")
 
 (define test-display-textual%
@@ -89,7 +89,7 @@
     
     (define/public (display-untested-summary port)
       (unless (test-silence)
-        (fprintf port "This program should be tested.~n")))
+        (fprintf port "This program should be tested.\n")))
 
     (define/public (display-disabled-summary port)
       (fprintf port "Tests disabled.\n"))
@@ -99,7 +99,7 @@
     ;; make-link: (listof (U check-fail (U string snip%))) src -> void
     (define (make-link reason dest)
       (print-reason display display reason)
-      (printf (format-src dest)))
+      (printf "~a" (format-src dest)))
 
     (define (format-src src)
       (let ([src-file car]
@@ -126,6 +126,7 @@
     (define display-rep #f)
     (define display-event-space #f)
     (define silent-mode #t)
+    (define test-run-since-last-display? #f)
 
     (super-instantiate ())
 
@@ -150,8 +151,8 @@
 
     (define/private (clear-results event-space)
       (when event-space
-	(parameterize ([(dynamic-require 'scheme/gui 'current-eventspace) event-space])
-	  ((dynamic-require 'scheme/gui 'queue-callback)
+	(parameterize ([(dynamic-require 'mred/mred 'current-eventspace) event-space])
+	  ((dynamic-require 'mred/mred 'queue-callback)
 	   (lambda () (send test-display report-success))))))
 
     (define/public (summarize-results port)
@@ -172,34 +173,39 @@
 		[(mixed-results)
 		 (display-results display-rep display-event-space)]))))
        (else
-	(display-disabled port))))
+	(display-disabled port)))
+      (set! test-run-since-last-display? #f))
 
     (define/private (display-success port event-space count)
-      (clear-results event-space)
-      (send test-display display-success-summary port count))
+      (when test-run-since-last-display?
+	(clear-results event-space)
+	(send test-display display-success-summary port count)))
 
     (define/public (display-results rep event-space)
       (cond
        [(and rep event-space)
-	(parameterize ([(dynamic-require 'scheme/gui 'current-eventspace) event-space])
-	  ((dynamic-require 'scheme/gui 'queue-callback)
+	(parameterize ([(dynamic-require 'mred/mred 'current-eventspace) event-space])
+	  ((dynamic-require 'mred/mred 'queue-callback)
 	   (lambda () (send rep display-test-results test-display))))]
        [event-space 
-	(parameterize ([(dynamic-require 'scheme/gui 'current-eventspace) event-space])
-	  ((dynamic-require 'scheme/gui 'queue-callback) (lambda () (send test-display display-results))))]
+	(parameterize ([(dynamic-require 'mred/mred 'current-eventspace) event-space])
+	  ((dynamic-require 'mred/mred 'queue-callback) (lambda () (send test-display display-results))))]
        [else (send test-display display-results)]))
 
     (define/public (display-untested port)
-      (unless silent-mode
-        (send test-display display-untested-summary port)))
+      (when (and test-run-since-last-display?
+		 (not silent-mode))
+	(send test-display display-untested-summary port)))
 
     (define/public (display-disabled port)
-      (send test-display display-disabled-summary port))
+      (when test-run-since-last-display?
+	(send test-display display-disabled-summary port)))
 
     (define/pubment (initialize-test test)
       (inner (void) initialize-test test))
 
     (define/pubment (run-test test)
+      (set! test-run-since-last-display? #t)
       (inner (void) run-test test))
 
     (define/pubment (run-testcase testcase)

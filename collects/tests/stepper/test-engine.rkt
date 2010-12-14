@@ -6,7 +6,6 @@
          lang/run-teaching-program
          (only-in srfi/13 string-contains)
          scheme/contract
-         #;(file "/Users/clements/clements/scheme-scraps/eli-debug.ss")
          "language-level-model.ss")
 
 
@@ -93,11 +92,6 @@
 
 ;; run the named test, return #t if a failure occurred during the test.
 
-;; WARNING: evaluating code expanded using run-teaching-program causes mutation of the
-;; current namespace.  Unfortunately, wrapping a parameterize around each test (i.e., in this
-;; file) causes unacceptable slowdown and severe weirdness.  I tried saving and restoring 
-;; the namespace through mutation, and got severe weirdness again.
-
 (define (run-one-test name models exp-str expected-steps)
   (unless (display-only-errors)
     (printf "running test: ~v\n" name))
@@ -125,7 +119,7 @@
 ;; check to see whether the stepper produces the desired steps
 (define (test-sequence the-ll-model exp-str expected-steps error-box)
   (match the-ll-model
-    [(struct ll-model (namespace-spec teachpack-specs render-settings show-lambdas-as-lambdas? enable-testing?))
+    [(struct ll-model (namespace-spec render-settings enable-testing?))
      (let ([filename (build-path test-directory "stepper-test")])
        (call-with-output-file filename
          (lambda (port) (fprintf port "~a" exp-str))
@@ -137,14 +131,14 @@
               [module-id (gensym "stepper-module-name-")]
               ;; thunk this so that syntax errors happen within the error handlers:
               [expanded-thunk 
-               (lambda () (expand-teaching-program port read-syntax namespace-spec teachpack-specs #f module-id enable-testing?))])
-         (test-sequence/core render-settings show-lambdas-as-lambdas? expanded-thunk expected-steps error-box)))]))
+               (lambda () (expand-teaching-program port read-syntax namespace-spec '() #f module-id enable-testing?))])
+         (test-sequence/core render-settings expanded-thunk expected-steps error-box)))]))
 
 ;; test-sequence/core : render-settings? boolean? syntax? steps?
 ;; this is a front end for calling the stepper's "go"; the main 
 ;; responsibility here is to fake the behavior of DrRacket and collect the
 ;; resulting steps.
-(define (test-sequence/core render-settings show-lambdas-as-lambdas? expanded-thunk expected-steps error-box)
+(define (test-sequence/core render-settings expanded-thunk expected-steps error-box)
   (let* ([current-error-display-handler (error-display-handler)]
          [all-steps
           (append expected-steps '((finished-stepping)))]
@@ -176,21 +170,34 @@
     (let/ec escape
       (parameterize ([error-escape-handler (lambda () (escape (void)))])
         (go iter-caller receive-result render-settings
-            show-lambdas-as-lambdas?
-            ;; language level:
-            'testing
-            (disable-stepper-error-handling))))
+            #:disable-error-handling? (disable-stepper-error-handling))))
     (error-display-handler current-error-display-handler)))
 
+(define-namespace-anchor n-anchor)
+
+;; it seems to be okay to use the same namespace for all of the tests... 
+(define test-namespace (make-base-namespace))
+(namespace-attach-module (namespace-anchor->empty-namespace n-anchor)
+                         'mzlib/pconvert-prop
+                         test-namespace)
+(parameterize ([current-namespace test-namespace])
+    (namespace-require 'test-engine/racket-tests)
+    ;; make the test engine happy by adding a binding for test~object:
+    (namespace-set-variable-value! 'test~object #f))
+
 ;; call-iter-on-each : (-> syntax?) (syntax? (-> 'a) -> 'a) -> void/c
-;; call the given iter on each syntax in turn (iter bounces control)
-;; back to us by calling the followup-thunk.
+;; call the given iter on each syntax in turn (iter bounces control
+;; back to us by calling the followup-thunk).
 (define (call-iter-on-each stx-thunk iter)
-  (let* ([next (stx-thunk)]
-         [followup-thunk (if (eof-object? next) void (lambda () (call-iter-on-each stx-thunk iter)))]
-         [expanded (expand next)])
-    ;;(printf "~v\n" expanded)
-    (iter expanded followup-thunk)))
+  (parameterize ([current-namespace test-namespace])
+    (let iter-loop ()
+      (let* ([next (stx-thunk)]
+             [followup-thunk (if (eof-object? next) 
+                                 void
+                                 iter-loop)]
+             [expanded (expand next)])
+        ;;(printf "~v\n" expanded)
+        (iter expanded followup-thunk)))))
 
 
 (define (warn error-box who fmt . args)
@@ -259,25 +266,10 @@
   (if (equal? actual expected)
       #t
       (begin (warn error-box 'not-equal?
-                   "~e:\nactual:   ~e =/= \nexpected: ~e\n  here's the diff: ~e" name actual expected (sexp-diff actual expected))
+                   "~.s:\nactual:   ~e =/= \nexpected: ~e\n  here's the diff: ~e" name actual expected (sexp-diff actual expected))
              #f)))
 
 
-
-;; DEBUGGING TO TRY TO FIND OUT WHY THIS DOESN'T WORK IN AN AUTOMATED TESTER:
-;; test-sequence : ll-model? string? steps? -> (void)
-;; given a language model and an expression and a sequence of steps,
-;; check to see whether the stepper produces the desired steps
-;;define (test-sequence the-ll-model exp-str expected-steps error-box)
-#;(match mz
-  [(struct ll-model (namespace-spec teachpack-specs render-settings show-lambdas-as-lambdas? enable-testing?))
-   (let* ([p2 (open-input-string "134")]
-          [module-id (gensym "stepper-module-name-")]
-          ;; thunk this so that syntax errors happen within the error handlers:
-          [expanded-thunk 
-           (lambda () (expand-teaching-program p2 read-syntax namespace-spec teachpack-specs #f module-id enable-testing?))])
-     (display (expanded-thunk))
-     (test-sequence/core render-settings show-lambdas-as-lambdas? expanded-thunk '() (box #f)))])
 
 
 

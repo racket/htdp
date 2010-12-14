@@ -16,19 +16,6 @@ improvments/changes wrt to htdp/image:
   - got rid of pinholes (see the new overlay, beside, and above functions)
   - a bunch of new polygon functions
 
-Equality change: equality is now based on the structure of the construction of the picture. 
-This means that some equalities that were there before are no longer true. For example,
-in the old library, these two images are the same:
-
-  (overlay/xy (rectangle 100 10 'solid 'red)
-               0
-               10
-               (rectangle 100 10 'solid 'red))
-
-  (rectangle 100 20 'solid 'red)
-
-... and why aren't they the same again....?!
-
 todo: sort out wxme library support (loading in text mode).
 
 ------------
@@ -46,7 +33,7 @@ and they all have good sample contracts. (It is amazing what we can do with kids
 |#
 
 
-(require (except-in "../mrlib/image-core.ss" make-color make-pen)
+(require (except-in "../mrlib/image-core.ss" make-color color make-pen pen)
          "private/image-more.ss"
          "private/img-err.ss"
          (only-in lang/prim provide-primitive provide-primitives define-primitive)
@@ -89,6 +76,13 @@ and they all have good sample contracts. (It is amazing what we can do with kids
          star-polygon
          radial-star
          triangle
+         triangle/sss
+         triangle/ssa
+         triangle/sas
+         triangle/ass
+         triangle/aas
+         triangle/asa
+         triangle/saa
          isosceles-triangle
          right-triangle
          line
@@ -98,6 +92,9 @@ and they all have good sample contracts. (It is amazing what we can do with kids
          scene+curve
          text
          text/font
+         
+         image->color-list
+         color-list->bitmap
          
          x-place?
          y-place?
@@ -110,23 +107,33 @@ and they all have good sample contracts. (It is amazing what we can do with kids
          pen-cap?
          pen-join?
          color-red color-blue color-green color? color
-         pen-color pen-width pen-style pen-cap pen-join pen
+         pen-color pen-width pen-style pen-cap pen-join 
 
          image-width
          image-height
          image-baseline
+
+         put-pinhole
+         clear-pinhole
+         center-pinhole
+         pinhole-x
+         pinhole-y
+         overlay/pinhole
+         underlay/pinhole
          
          make-color
-         make-pen
+         make-pen pen
          pen?
          step-count?
          save-image)
 
-(provide bitmap)
+(provide bitmap
+         empty-image)
 
-
-(define-primitive make-color build-color)
-(define-primitive make-pen build-pen)
+(define-primitive make-color build-color/make-color)
+(define-primitive color build-color/color)
+(define-primitive make-pen build-pen/make-pen)
+(define-primitive pen build-pen/pen)
 
 #;
 (provide (rename-out [build-color make-color])

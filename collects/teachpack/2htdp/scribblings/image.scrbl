@@ -27,7 +27,7 @@ The image teachpack provides a number of basic image construction functions, alo
 combinators for building more complex images out of existing images. Basic images include
 various polygons, ellipses and circles, and text, as well as bitmaps (typically bitmaps 
 come about via the @onscreen{Insert Image...} menu item in DrRacket).
-Existing images can be rotated, scaled, and overlaid on top of each other.
+Existing images can be rotated, scaled, flipped, and overlaid on top of each other.
 
 @section{Basic Images}
 
@@ -64,262 +64,6 @@ Existing images can be rotated, scaled, and overlaid on top of each other.
   
   @image-examples[(ellipse 40 20 "outline" "black")
                   (ellipse 20 40 "solid" "blue")] 
-}
-
-@defproc*[([(triangle [side-length (and/c real? (not/c negative?))] 
-                      [mode mode?]
-                      [color image-color?])
-            image?]
-           [(triangle [side-length (and/c real? (not/c negative?))] 
-                      [outline-mode (or/c 'outline "outline")]
-                      [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-
-   Constructs a upward-pointing equilateral triangle. 
-  The @racket[side-length] argument 
-  determines the 
-  length of the side of the triangle.
-
-    @mode/color-text
-  
-    @image-examples[(triangle 40 "solid" "tan")]
-
-}
-
-@defproc*[([(right-triangle [side-length1 (and/c real? (not/c negative?))]
-                            [side-length2 (and/c real? (not/c negative?))]
-                            [mode mode?]
-                            [color image-color?])
-            image?]
-           [(right-triangle [side-length1 (and/c real? (not/c negative?))]
-                            [side-length2 (and/c real? (not/c negative?))]
-                            [outline-mode (or/c 'outline "outline")]
-                            [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-                 
-  Constructs a triangle with a right angle where the two sides adjacent
-  to the right angle have lengths @racket[side-length1] and @racket[side-length2].
-
-  @mode/color-text
-  
-  @image-examples[(right-triangle 36 48 "solid" "black")]
-}
-
-@defproc*[([(isosceles-triangle [side-length (and/c real? (not/c negative?))] 
-                                [angle angle?]
-                                [mode mode?]
-                                [color image-color?])
-            image?]
-           [(isosceles-triangle [side-length (and/c real? (not/c negative?))] 
-                                [angle angle?]
-                                [outline-mode (or/c 'outline "outline")]
-                                [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-
- Creates a triangle with two equal-length sides, of length @racket[side-length]
- where the angle between those sides is @racket[angle]. The third
- leg is straight, horizontally. If the angle is less than 
- @racket[180], then the triangle will point up and if the @racket[angle]
- is more, then the triangle will point down. 
- 
- @mode/color-text
- 
- @image-examples[(isosceles-triangle 200 170 "solid" "seagreen")
-                 (isosceles-triangle 60 30 "solid" "aquamarine")
-                 (isosceles-triangle 60 330 "solid" "lightseagreen")]
-}
-
-
-@defproc*[([(square [side-len (and/c real? (not/c negative?))]
-                    [mode mode?]
-                    [color image-color?])
-            image?]
-           [(square [side-len (and/c real? (not/c negative?))]
-                    [outline-mode (or/c 'outline "outline")]
-                    [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-
- Constructs a square.
- 
- @mode/color-text
- 
- @image-examples[(square 40 "solid" "slateblue")
-                 (square 50 "outline" "darkmagenta")]
-
-}
-
-@defproc*[([(rectangle [width real?]
-                       [height real?]
-                       [mode mode?]
-                       [color image-color?])
-            image?]
-           [(rectangle [width real?] 
-                       [height real?] 
-                       [outline-mode (or/c 'outline "outline")] 
-                       [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-  Constructs a rectangle with the given width, height, mode, and color.
-  
-  @mode/color-text
-  
-  @image-examples[(rectangle 40 20 "outline" "black")
-                  (rectangle 20 40 "solid" "blue")]
-}
-
-@defproc*[([(rhombus [side-length (and/c real? (not/c negative?))]
-                     [angle angle?]
-                     [mode mode?]
-                     [color image-color?])
-            image?]
-           [(rhombus [side-length (and/c real? (not/c negative?))]
-                     [angle angle?]
-                     [outline-mode (or/c 'outline "outline")]
-                     [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-                 
-Constructs a four sided polygon with all equal sides and thus where opposite angles are equal to each
-other. The top and bottom pair of angles is @racket[angle] and the left and right are @racket[(- 180 angle)].
-
-@mode/color-text
-
-@image-examples[(rhombus 40 45 "solid" "magenta")
-                (rhombus 80 150 "solid" "mediumpurple")]
-}
-
-@defproc*[([(regular-polygon [side-length (and/c real? (not/c negative?))] 
-                             [side-count side-count?]
-                             [mode mode?]
-                             [color image-color?])
-            image?]
-           [(regular-polygon [side-length (and/c real? (not/c negative?))] 
-                             [side-count side-count?]
-                             [outline-mode (or/c 'outline "outline")]
-                             [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-  Constructs a regular polygon with @racket[side-count] sides.
-
-  @mode/color-text
-
-  @image-examples[(regular-polygon 50 3 "outline" "red")
-                  (regular-polygon 40 4 "outline" "blue")
-                  (regular-polygon 20 8 "solid" "red")]
-}
-
-@defproc*[([(star [side-length (and/c real? (not/c negative?))] 
-                  [mode mode?]
-                  [color image-color?])
-            image?]
-           [(star [side-length (and/c real? (not/c negative?))] 
-                  [outline-mode (or/c 'outline "outline")]
-                  [color (or/c pen? image-color?)])
-            image?])]{
-  Constructs a star with five points. The @racket[side-length] argument 
-  determines the side length of the enclosing pentagon.
-
-  @mode/color-text
-
-  @image-examples[(star 40 "solid" "gray")]
-  
-}
-
-@defproc*[([(star-polygon [side-length (and/c real? (not/c negative?))]
-                          [side-count side-count?]
-                          [step-count step-count?]
-                          [mode mode?]
-                          [color image-color?])
-            image?]
-           [(star-polygon [side-length (and/c real? (not/c negative?))]
-                          [side-count side-count?]
-                          [step-count step-count?]
-                          [outline-mode (or/c 'outline "outline")]
-                          [pen-or-color (or/c pen? image-color?)])
-            image?])]{
- 
-  Constructs an arbitrary regular star polygon (a generalization of the regular polygons). 
-  The polygon is enclosed by a regular polygon with @racket[side-count] sides each
-  @racket[side-length] long. The polygon is actually constructed by going from vertex to
-  vertex around the regular polgon, but skipping over every @racket[step-count] vertices.
-  
-  For examples, if @racket[side-count] is @racket[5] and @racket[step-count] is @racket[2],
-  then this function produces a shape just like @racket[star].
-  
-  @mode/color-text
-
-  @image-examples[(star-polygon 40 5 2 "solid" "seagreen")
-                  (star-polygon 40 7 3 "outline" "darkred")
-                  (star-polygon 20 10 3 "solid" "cornflowerblue")]
- 
-}
-                
-@defproc*[([(radial-star [point-count (and/c integer? (>=/c 2))]
-                         [inner-radius (and/c real? (not/c negative?))]
-                         [outer-radius (and/c real? (not/c negative?))]
-                         [mode mode?]
-                         [color image-color?])
-            image?]
-           [(radial-star [point-count (and/c integer? (>=/c 2))]
-                         [inner-radius (and/c real? (not/c negative?))]
-                         [outer-radius (and/c real? (not/c negative?))]
-                         [outline-mode (or/c 'outline "outline")]
-                         [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-                                   
-Constructs a star-like polygon where the star is specified by two radii and a number of points. 
-The first radius determines where the points begin, the second determines where they end, and
-the @scheme[point-count] argument determines how many points the star has.
-
-@image-examples[(radial-star 8 8 64 "solid" "darkslategray")
-                (radial-star 32 30 40 "outline" "black")]
-
-}
-
-@defproc*[([(polygon [vertices (listof posn?)] 
-                     [mode mode?]
-                     [color image-color?])
-            image?]
-           [(polygon [vertices (listof posn?)] 
-                     [outline-mode (or/c 'outline "outline")]
-                     [pen-or-color (or/c pen? image-color?)])
-            image?])]{
-  Constructs a polygon connecting the given vertices.
-  
-  @mode/color-text
-  
-  @image-examples[(polygon (list (make-posn 0 0)
-                                 (make-posn -10 20)
-                                 (make-posn 60 0)
-                                 (make-posn -10 -20))
-                           "solid" 
-                           "burlywood")
-                  (polygon (list (make-posn 0 0)
-                                 (make-posn 0 40)
-                                 (make-posn 20 40)
-                                 (make-posn 20 60)
-                                 (make-posn 40 60)
-                                 (make-posn 40 20)
-                                 (make-posn 20 20)
-                                 (make-posn 20 0))
-                           "solid" 
-                           "plum")
-                  (underlay
-                   (rectangle 80 80 "solid" "mediumseagreen")
-                   (polygon
-                    (list (make-posn 0 0)
-                          (make-posn 50 0)
-                          (make-posn 0 50)
-                          (make-posn 50 50))
-                    "outline"
-                    (make-pen "darkslategray" 10 "solid" "round" "round")))
-                  
-                  (underlay
-                   (rectangle 90 80 "solid" "mediumseagreen")
-                   (polygon 
-                    (list (make-posn 0 0)
-                          (make-posn 50 0)
-                          (make-posn 0 50)
-                          (make-posn 50 50))
-                    "outline"
-                    (make-pen "darkslategray" 10 "solid" "projecting" "miter")))]
 }
 
 @defproc[(line [x1 real?] [y1 real?] [pen-or-color (or/c pen? image-color?)]) image?]{
@@ -433,16 +177,435 @@ Unlike @racket[scene+curve], if the line passes outside of @racket[image], the i
                              #f 'roman 'normal 'normal #t)]
 }
 
-@defform/subs[(bitmap bitmap-spec)
-              ([bitmap-spec rel-string
-                            id])]{
-                                  
-  Loads the bitmap specified by @racket[bitmap-spec]. If @racket[bitmap-spec] is a string, it is treated as a 
-  relative path. If it is an identifier, it is treated like a require spec and used to refer to a file
-  in a collection.
+@defthing[empty-image image?]{
+  The empty image. Its width and height are both zero and it does not draw at all.
   
-  @image-examples[(bitmap icons/stop-16x16.png)
-                  (bitmap icons/b-run.png)]
+  @image-examples[(image-width empty-image)
+                  (equal? (above empty-image
+                                 (rectangle 10 10 "solid" "red"))
+                          (beside empty-image
+                                  (rectangle 10 10 "solid" "red")))]
+}
+                
+@section{Polygons}
+                     
+@defproc*[([(triangle [side-length (and/c real? (not/c negative?))] 
+                      [mode mode?]
+                      [color image-color?])
+            image?]
+           [(triangle [side-length (and/c real? (not/c negative?))] 
+                      [outline-mode (or/c 'outline "outline")]
+                      [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+
+   Constructs a upward-pointing equilateral triangle. 
+  The @racket[side-length] argument 
+  determines the 
+  length of the side of the triangle.
+
+    @mode/color-text
+  
+    @image-examples[(triangle 40 "solid" "tan")]
+
+}
+
+@defproc*[([(right-triangle [side-length1 (and/c real? (not/c negative?))]
+                            [side-length2 (and/c real? (not/c negative?))]
+                            [mode mode?]
+                            [color image-color?])
+            image?]
+           [(right-triangle [side-length1 (and/c real? (not/c negative?))]
+                            [side-length2 (and/c real? (not/c negative?))]
+                            [outline-mode (or/c 'outline "outline")]
+                            [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+                 
+  Constructs a triangle with a right angle where the two sides adjacent
+  to the right angle have lengths @racket[side-length1] and @racket[side-length2].
+
+  @mode/color-text
+  
+  @image-examples[(right-triangle 36 48 "solid" "black")]
+}
+
+@defproc*[([(isosceles-triangle [side-length (and/c real? (not/c negative?))] 
+                                [angle angle?]
+                                [mode mode?]
+                                [color image-color?])
+            image?]
+           [(isosceles-triangle [side-length (and/c real? (not/c negative?))] 
+                                [angle angle?]
+                                [outline-mode (or/c 'outline "outline")]
+                                [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+
+ Creates a triangle with two equal-length sides, of length @racket[side-length]
+ where the angle between those sides is @racket[angle]. The third
+ leg is straight, horizontally. If the angle is less than 
+ @racket[180], then the triangle will point up and if the @racket[angle]
+ is more, then the triangle will point down. 
+ 
+ @mode/color-text
+ 
+ @image-examples[(isosceles-triangle 200 170 "solid" "seagreen")
+                 (isosceles-triangle 60 30 "solid" "aquamarine")
+                 (isosceles-triangle 60 330 "solid" "lightseagreen")]
+}
+
+To create a general triangle given known sides and angles the following
+family of functions are useful: @scheme[triangle/sss], 
+@scheme[triangle/ass], @scheme[triangle/sas], @scheme[triangle/ssa], 
+@scheme[triangle/sss], @scheme[triangle/sss], and, @scheme[triangle/sss].
+They all construct a triangle oriented as follows:
+
+@image["triangle-xxx.png"]
+
+@defproc*[([(triangle/sss [side-length-a (and/c real? (not/c negative?))] 
+                          [side-length-b (and/c real? (not/c negative?))] 
+                          [side-length-c (and/c real? (not/c negative?))] 
+                          [mode mode?]
+                          [color image-color?])
+            image?]
+           [(triangle/sss [side-length-a (and/c real? (not/c negative?))]
+                          [side-length-b (and/c real? (not/c negative?))]
+                          [side-length-c (and/c real? (not/c negative?))]
+                          [outline-mode (or/c 'outline "outline")]
+                          [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+ Creates a triangle where the side lengths a, b, and, c are given by @scheme[side-length-a],
+ @scheme[side-length-b], and, @scheme[side-length-c] respectively.
+ 
+ @mode/color-text
+ 
+ @image-examples[(triangle/sss 40 60 80 "solid" "seagreen")
+                 (triangle/sss 80 40 60 "solid" "aquamarine")
+                 (triangle/sss 80 80 40 "solid" "lightseagreen")]
+}
+
+@defproc*[([(triangle/ass [angle-a angle?] 
+                          [side-length-b (and/c real? (not/c negative?))] 
+                          [side-length-c (and/c real? (not/c negative?))] 
+                          [mode mode?]
+                          [color image-color?])
+            image?]
+           [(triangle/ass [angle-a angle?]
+                          [side-length-b (and/c real? (not/c negative?))]
+                          [side-length-c (and/c real? (not/c negative?))]
+                          [outline-mode (or/c 'outline "outline")]
+                          [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+ Creates a triangle where the angle A and side length a and b, are given by @scheme[angle-a],
+ @scheme[side-length-b], and, @scheme[side-length-c] respectively.
+ 
+ @mode/color-text
+ 
+ @image-examples[(triangle/ass 10  60 100 "solid" "seagreen")
+                 (triangle/ass 90  60 100 "solid" "aquamarine")
+                 (triangle/ass 130 60 100 "solid" "lightseagreen")]
+}
+
+@defproc*[([(triangle/sas [side-length-a (and/c real? (not/c negative?))] 
+                          [angle-b angle?] 
+                          [side-length-c (and/c real? (not/c negative?))] 
+                          [mode mode?]
+                          [color image-color?])
+            image?]
+           [(triangle/sas [side-length-a (and/c real? (not/c negative?))]
+                          [angle-b angle?]
+                          [side-length-c (and/c real? (not/c negative?))]
+                          [outline-mode (or/c 'outline "outline")]
+                          [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+ Creates a triangle where the side length a, angle B, and, side length c given by @scheme[side-length-a],
+ @scheme[angle-b], and, @scheme[side-length-c] respectively.
+ 
+ @mode/color-text
+ 
+ @image-examples[(triangle/sas 60  10 100 "solid" "seagreen")
+                 (triangle/sas 60  90 100 "solid" "aquamarine")
+                 (triangle/sas 60 130 100 "solid" "lightseagreen")]
+}
+
+@defproc*[([(triangle/ssa [side-length-a (and/c real? (not/c negative?))] 
+                          [side-length-b (and/c real? (not/c negative?))] 
+                          [angle-c angle?] 
+                          [mode mode?]
+                          [color image-color?])
+            image?]
+           [(triangle/ssa [side-length-a (and/c real? (not/c negative?))]
+                          [side-length-b (and/c real? (not/c negative?))]
+                          [angle-c angle?]
+                          [outline-mode (or/c 'outline "outline")]
+                          [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+ Creates a triangle where the side length a, side length b, and, angle c given by @scheme[side-length-a],
+ @scheme[side-length-b], and, @scheme[angle-c] respectively.
+ 
+ @mode/color-text
+ 
+ @image-examples[(triangle/ssa 60 100  10 "solid" "seagreen")
+                 (triangle/ssa 60 100  90 "solid" "aquamarine")
+                 (triangle/ssa 60 100 130 "solid" "lightseagreen")]
+}
+@defproc*[([(triangle/aas [angle-a angle?] 
+                          [angle-b angle?] 
+                          [side-length-c (and/c real? (not/c negative?))] 
+                          [mode mode?]
+                          [color image-color?])
+            image?]
+           [(triangle/aas [angle-a angle?]
+                          [angle-b angle?]
+                          [side-length-c (and/c real? (not/c negative?))]
+                          [outline-mode (or/c 'outline "outline")]
+                          [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+ Creates a triangle where the angle A, angle B, and, side length c given by @scheme[angle-a],
+ @scheme[angle-b], and, @scheme[side-length-c] respectively.
+ 
+ @mode/color-text
+ 
+ @image-examples[(triangle/aas  10 40 200 "solid" "seagreen")
+                 (triangle/aas  90 40 200 "solid" "aquamarine")
+                 (triangle/aas 130 40 40  "solid" "lightseagreen")]
+}
+
+@defproc*[([(triangle/asa [angle-a angle?] 
+                          [side-length-b (and/c real? (not/c negative?))] 
+                          [angle-c angle?] 
+                          [mode mode?]
+                          [color image-color?])
+            image?]
+           [(triangle/asa [angle-a angle?]
+                          [side-length-b (and/c real? (not/c negative?))]
+                          [angle-c angle?]
+                          [outline-mode (or/c 'outline "outline")]
+                          [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+ Creates a triangle where the angle A, side length b, and, angle C given by @scheme[angle-a],
+ @scheme[side-length-b], and, @scheme[angle-c] respectively.
+ 
+ @mode/color-text
+ 
+ @image-examples[(triangle/asa  10 200 40 "solid" "seagreen")
+                 (triangle/asa  90 200 40 "solid" "aquamarine")
+                 (triangle/asa 130 40  40 "solid" "lightseagreen")]
+}
+
+@defproc*[([(triangle/saa [side-length-a (and/c real? (not/c negative?))] 
+                          [angle-b angle?] 
+                          [angle-c angle?] 
+                          [mode mode?]
+                          [color image-color?])
+            image?]
+           [(triangle/saa [side-length-a (and/c real? (not/c negative?))]
+                          [angle-b angle?]
+                          [angle-c angle?]
+                          [outline-mode (or/c 'outline "outline")]
+                          [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+ Creates a triangle where the side length a, angle B, and, angle C given by @scheme[side-length-a],
+ @scheme[angle-b], and, @scheme[angle-c] respectively.
+ 
+ @mode/color-text
+ 
+ @image-examples[(triangle/saa 200  10 40 "solid" "seagreen")
+                 (triangle/saa 200  90 40 "solid" "aquamarine")
+                 (triangle/saa 40  130 40 "solid" "lightseagreen")]
+}
+                     
+                     
+
+@defproc*[([(square [side-len (and/c real? (not/c negative?))]
+                    [mode mode?]
+                    [color image-color?])
+            image?]
+           [(square [side-len (and/c real? (not/c negative?))]
+                    [outline-mode (or/c 'outline "outline")]
+                    [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+
+ Constructs a square.
+ 
+ @mode/color-text
+ 
+ @image-examples[(square 40 "solid" "slateblue")
+                 (square 50 "outline" "darkmagenta")]
+
+}
+
+@defproc*[([(rectangle [width real?]
+                       [height real?]
+                       [mode mode?]
+                       [color image-color?])
+            image?]
+           [(rectangle [width real?] 
+                       [height real?] 
+                       [outline-mode (or/c 'outline "outline")] 
+                       [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+  Constructs a rectangle with the given width, height, mode, and color.
+  
+  @mode/color-text
+  
+  @image-examples[(rectangle 40 20 "outline" "black")
+                  (rectangle 20 40 "solid" "blue")]
+}
+
+@defproc*[([(rhombus [side-length (and/c real? (not/c negative?))]
+                     [angle angle?]
+                     [mode mode?]
+                     [color image-color?])
+            image?]
+           [(rhombus [side-length (and/c real? (not/c negative?))]
+                     [angle angle?]
+                     [outline-mode (or/c 'outline "outline")]
+                     [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+                 
+Constructs a four sided polygon with all equal sides and thus where opposite angles are equal to each
+other. The top and bottom pair of angles is @racket[angle] and the left and right are @racket[(- 180 angle)].
+
+@mode/color-text
+
+@image-examples[(rhombus 40 45 "solid" "magenta")
+                (rhombus 80 150 "solid" "mediumpurple")]
+}
+
+@defproc*[([(star [side-length (and/c real? (not/c negative?))] 
+                  [mode mode?]
+                  [color image-color?])
+            image?]
+           [(star [side-length (and/c real? (not/c negative?))] 
+                  [outline-mode (or/c 'outline "outline")]
+                  [color (or/c pen? image-color?)])
+            image?])]{
+  Constructs a star with five points. The @racket[side-length] argument 
+  determines the side length of the enclosing pentagon.
+
+  @mode/color-text
+
+  @image-examples[(star 40 "solid" "gray")]
+  
+}
+
+@defproc*[([(star-polygon [side-length (and/c real? (not/c negative?))]
+                          [side-count side-count?]
+                          [step-count step-count?]
+                          [mode mode?]
+                          [color image-color?])
+            image?]
+           [(star-polygon [side-length (and/c real? (not/c negative?))]
+                          [side-count side-count?]
+                          [step-count step-count?]
+                          [outline-mode (or/c 'outline "outline")]
+                          [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+ 
+  Constructs an arbitrary regular star polygon (a generalization of the regular polygons). 
+  The polygon is enclosed by a regular polygon with @racket[side-count] sides each
+  @racket[side-length] long. The polygon is actually constructed by going from vertex to
+  vertex around the regular polgon, but skipping over every @racket[step-count] vertices.
+  
+  For examples, if @racket[side-count] is @racket[5] and @racket[step-count] is @racket[2],
+  then this function produces a shape just like @racket[star].
+  
+  @mode/color-text
+
+  @image-examples[(star-polygon 40 5 2 "solid" "seagreen")
+                  (star-polygon 40 7 3 "outline" "darkred")
+                  (star-polygon 20 10 3 "solid" "cornflowerblue")]
+ 
+}
+                
+@defproc*[([(radial-star [point-count (and/c integer? (>=/c 2))]
+                         [inner-radius (and/c real? (not/c negative?))]
+                         [outer-radius (and/c real? (not/c negative?))]
+                         [mode mode?]
+                         [color image-color?])
+            image?]
+           [(radial-star [point-count (and/c integer? (>=/c 2))]
+                         [inner-radius (and/c real? (not/c negative?))]
+                         [outer-radius (and/c real? (not/c negative?))]
+                         [outline-mode (or/c 'outline "outline")]
+                         [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+                                   
+Constructs a star-like polygon where the star is specified by two radii and a number of points. 
+The first radius determines where the points begin, the second determines where they end, and
+the @scheme[point-count] argument determines how many points the star has.
+
+@image-examples[(radial-star 8 8 64 "solid" "darkslategray")
+                (radial-star 32 30 40 "outline" "black")]
+
+}
+
+@defproc*[([(regular-polygon [side-length (and/c real? (not/c negative?))] 
+                             [side-count side-count?]
+                             [mode mode?]
+                             [color image-color?])
+            image?]
+           [(regular-polygon [side-length (and/c real? (not/c negative?))] 
+                             [side-count side-count?]
+                             [outline-mode (or/c 'outline "outline")]
+                             [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+  Constructs a regular polygon with @racket[side-count] sides.
+
+  @mode/color-text
+
+  @image-examples[(regular-polygon 50 3 "outline" "red")
+                  (regular-polygon 40 4 "outline" "blue")
+                  (regular-polygon 20 8 "solid" "red")]
+}
+
+                     
+@defproc*[([(polygon [vertices (listof posn?)] 
+                     [mode mode?]
+                     [color image-color?])
+            image?]
+           [(polygon [vertices (listof posn?)] 
+                     [outline-mode (or/c 'outline "outline")]
+                     [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+  Constructs a polygon connecting the given vertices.
+  
+  @mode/color-text
+  
+  @image-examples[(polygon (list (make-posn 0 0)
+                                 (make-posn -10 20)
+                                 (make-posn 60 0)
+                                 (make-posn -10 -20))
+                           "solid" 
+                           "burlywood")
+                  (polygon (list (make-posn 0 0)
+                                 (make-posn 0 40)
+                                 (make-posn 20 40)
+                                 (make-posn 20 60)
+                                 (make-posn 40 60)
+                                 (make-posn 40 20)
+                                 (make-posn 20 20)
+                                 (make-posn 20 0))
+                           "solid" 
+                           "plum")
+                  (underlay
+                   (rectangle 80 80 "solid" "mediumseagreen")
+                   (polygon
+                    (list (make-posn 0 0)
+                          (make-posn 50 0)
+                          (make-posn 0 50)
+                          (make-posn 50 50))
+                    "outline"
+                    (make-pen "darkslategray" 10 "solid" "round" "round")))
+                  
+                  (underlay
+                   (rectangle 90 80 "solid" "mediumseagreen")
+                   (polygon 
+                    (list (make-posn 0 0)
+                          (make-posn 50 0)
+                          (make-posn 0 50)
+                          (make-posn 50 50))
+                    "outline"
+                    (make-pen "darkslategray" 10 "solid" "projecting" "miter")))]
 }
 
 @section{Overlaying Images}
@@ -854,7 +1017,8 @@ the parts that fit onto @racket[scene].
                           (scale/xy 1 1/2 (flip-vertical (star 40 "solid" "gray"))))]
 }
 
-@defproc[(crop [x real?] [y real?] 
+@defproc[(crop [x (and/c real? (between/c 0 (image-width image)))]
+               [y (and/c real? (between/c 0 (image-height image)))] 
                [width (and/c real? (not/c negative?))]
                [height (and/c real? (not/c negative?))]
                [image image?])
@@ -862,6 +1026,9 @@ the parts that fit onto @racket[scene].
 
  Crops @racket[image] to the rectangle with the upper left at the point (@racket[x],@racket[y])
  and with @racket[width] and @racket[height]. 
+ 
+ The @racket[x] and @racket[y] arguments must be between 0 and
+ the @racket[width] or @racket[height], respectively.
  
  @image-examples[(crop 0 0 40 40 (circle 40 "solid" "chocolate"))
                  (crop 40 60 40 60 (ellipse 80 120 "solid" "dodgerblue"))
@@ -878,7 +1045,7 @@ the parts that fit onto @racket[scene].
   with a black, single pixel frame drawn around the 
   bounding box of the image.
   
-  @image-examples[(frame (ellipse 20 20 "outline" "black"))]
+  @image-examples[(frame (ellipse 40 40 "solid" "gray"))]
   
   Generally speaking, this function is useful to 
   debug image constructions, i.e., to see where
@@ -890,6 +1057,58 @@ the parts that fit onto @racket[scene].
                    (ellipse 20 30 "solid" "slateblue")
                    (ellipse 20 10 "solid" "navy"))]
 }
+
+@section{Bitmaps}
+
+DrRacket's @seclink["images" #:doc '(lib "scribblings/drracket/drracket.scrbl")]{Insert Image ...} 
+menu item allows you to insert images into your program text, and those images are treated 
+as images for this library. 
+
+Unlike all of the other images in this library, those images (and the other images created
+by functions in this section of the documentation)
+are represented as bitmaps, i.e., an array of colors (that can be quite large in some cases).
+This means that scaling and rotating them loses fidelity in the image and is significantly
+more expensive than with the other shapes.
+
+@defform/subs[(bitmap bitmap-spec)
+              ([bitmap-spec rel-string
+                            id])]{
+                                  
+  Loads the bitmap specified by @racket[bitmap-spec]. If @racket[bitmap-spec] is a string, it is treated as a 
+  relative path. If it is an identifier, it is treated like a require spec and used to refer to a file
+  in a collection.
+  
+  @image-examples[(bitmap icons/stop-16x16.png)
+                  (bitmap icons/b-run.png)]
+}
+
+@defproc[(image->color-list [image image?]) (listof color?)]{
+  Returns a list of colors that correspond to the colors in the
+  image, reading from left to right, top to bottom.
+  
+  @image-examples[(image->color-list (rectangle 2 2 "solid" "black"))
+                  (image->color-list
+                   (above (beside (rectangle 1 1 "solid" (make-color 1 1 1))
+                                  (rectangle 1 1 "solid" (make-color 2 2 2)))
+                          (beside (rectangle 1 1 "solid" (make-color 3 3 3))
+                                  (rectangle 1 1 "solid" (make-color 4 4 4)))))]
+  
+}
+
+@defproc[(color-list->bitmap [colors (listof image-color?)] 
+                             [width (and/c real? (not/c negative?))]
+                             [height (and/c real? (not/c negative?))])
+         image?]{
+  Constructs a bitmap from the given @racket[colors], with the given @racket[width] and @racket[height].
+
+  @image-examples[(scale
+                   40
+                   (color-list->bitmap
+                    (list "red" "green" "blue")
+                    3 1))]
+  
+  }
+                             
 
 @section{Image Properties}
 
@@ -981,11 +1200,14 @@ This section lists predicates for the basic structures provided by the image lib
 @racket['middle],
 @racket["center"],
 @racket['center],
-@racket["baseline"], or
-@racket['baseline].
+@racket["baseline"],
+@racket['baseline],
+@racket["pinhole"], or
+@racket['pinhole].
 
 The baseline of an image is the place where the bottoms any letters line up, not counting descenders, e.g. the tail on ``y'' or ``g'' or ``j''.
 
+Using @racket["pinhole"] or @racket['pinhole] is only allowed when all of the image arguments have @seclink["pinholes"]{pinholes}.
 
 }
 
@@ -998,8 +1220,13 @@ The baseline of an image is the place where the bottoms any letters line up, not
   @racket['right],
   @racket["middle"],
   @racket['middle],
-  @racket["center"], or
-  @racket['center].
+  @racket["center"],
+  @racket['center],
+  @racket["pinhole"], or
+  @racket['pinhole].
+
+  Using @racket["pinhole"] or @racket['pinhole] is only allowed when all of the image arguments have @seclink["pinholes"]{pinholes}.
+
 }
 
 @defproc[(angle? [x any/c]) boolean?]{
@@ -1062,13 +1289,97 @@ The baseline of an image is the place where the bottoms any letters line up, not
 
 @section{Equality Testing of Images}
 
-Two images are equal if they draw exactly the same way, at their current size
-(not neccessarily at all sizes).
+Two images are @racket[equal?] if they draw exactly the same way at their current size
+(not neccessarily at all sizes) and, if there are pinholes, the pinholes are
+in the same place.
+
+@section[#:tag "pinholes"]{Pinholes}
+
+A pinhole is an optional property of an image that identifies a point somewhere
+in the image. The pinhole can then be used to facilitate overlaying images by
+lining them up on the their pinholes. 
+
+When an image has a pinhole, the pinhole
+is drawn with crosshairs on the image.
+The crosshairs are drawn with a two one pixel wide black lines (one horizontal and one vertical)
+and two one pixel wide white lines,
+where the black lines is drawn .5 pixels to the left and above the pinhole, and the
+white lines are drawn .5 pixels to the right and below the pinhole. 
+Accordingly, when the pixel is on an integral coordinate, then black and white lines all 
+take up a single pixel and in the center of their intersections is the actual pinholes.
+See @secref["nitty-gritty"] for more details about pixels.
+
+When images are @racket[overlay]'d, @racket[underlay]'d (or the variants of those functions),
+placed @racket[beside], or @racket[above] each other, 
+the pinhole of the resulting image is the pinhole of the first image argument passed to the combining
+operation. When images are combined with @racket[place-image] (or the variants of @racket[place-image]), 
+then the scene argument's pinhole is preserved.
+
+@defproc[(center-pinhole [image image?]) image?]{
+  Creates a pinhole in @racket[image] at its center.
+  @image-examples[(center-pinhole (rectangle 40 20 "solid" "red"))
+                  (rotate 30 (center-pinhole (rectangle 40 20 "solid" "orange")))]
+}
+@defproc[(put-pinhole [x integer?] [y integer?] [image image?]) image?]{
+  Creates a pinhole in @racket[image] at the point (@racket[x],@racket[y]).
+  @image-examples[(put-pinhole 2 18 (rectangle 40 20 "solid" "forestgreen"))]
+}
+@defproc[(pinhole-x [image image?]) (or/c integer? #f)]{
+  Returns the x coordinate of @racket[image]'s pinhole.
+  @image-examples[(pinhole-x (center-pinhole (rectangle 10 10 "solid" "red")))]
+}
+@defproc[(pinhole-y [image image?]) (or/c integer? #f)]{
+  Returns the y coordinate of @racket[image]'s pinhole.
+  @image-examples[(pinhole-y (center-pinhole (rectangle 10 10 "solid" "red")))]
+}
+@defproc[(clear-pinhole [image image?]) image?]{
+  Removes a pinhole from @racket[image] (if the image has a pinhole).                                                  
+}
+
+@defproc[(overlay/pinhole [i1 image?] [i2 image?] [is image?] ...) image?]{
+  
+  Overlays all of the image arguments on their pinholes. If any of the
+  arguments do not have pinholes, then the center of the image is used instead.
+  
+  @image-examples[(overlay/pinhole
+                   (put-pinhole 25 10 (ellipse 100 50 "solid" "red"))
+                   (put-pinhole 75 40 (ellipse 100 50 "solid" "blue")))
+                  (let ([petal (put-pinhole 
+                                20 20
+                                (ellipse 100 40 "solid" "purple"))])
+                    (clear-pinhole
+                     (overlay/pinhole
+                      (circle 30 "solid" "yellow")
+                      (rotate (* 60 0) petal)
+                      (rotate (* 60 1) petal)
+                      (rotate (* 60 2) petal)
+                      (rotate (* 60 3) petal)
+                      (rotate (* 60 4) petal)
+                      (rotate (* 60 5) petal))))]
+}
+
+@defproc[(underlay/pinhole [i1 image?] [i2 image?] [is image?] ...) image?]{
+  
+  Underlays all of the image arguments on their pinholes. If any of the
+  arguments do not have pinholes, then the center of the image is used instead.
+  
+  @image-examples[(underlay/pinhole
+                   (put-pinhole 25 10 (ellipse 100 50 "solid" "red"))
+                   (put-pinhole 75 40 (ellipse 100 50 "solid" "blue")))
+                  (let* ([t (triangle 40 "solid" "orange")]
+                         [w (image-width t)]
+                         [h (image-height t)])
+                    (clear-pinhole
+                     (overlay/pinhole
+                      (put-pinhole (/ w 2) 0 t)
+                      (put-pinhole w h t)
+                      (put-pinhole 0 h t))))]
+}
 
 @section[#:tag "nitty-gritty"]{The nitty gritty of pixels, pens, and lines}
 
 The image library treats coordinates as if they are in the upper-left corner 
-of each pixel, and infinitesimally small.
+of each pixel, and infinitesimally small (unlike pixels which have some area).
 
 Thus, when drawing a solid @racket[square] of whose side-length is 10, the image library
 colors in all of the pixels enclosed by the @racket[square] starting at the upper
@@ -1088,20 +1399,61 @@ This means that the outline slightly exceeds the bounding box of the shape.
 Specifically, the upper and left-hand lines around the square are within
 the bounding box, but the lower and right-hand lines are just outside.
 
-The special case of adding 0.5 to each coordinate when drawing the square
-applies to all polygon-based shapes, but does not apply when a @racket[pen]
-is passed as the last argument to create the shape.
-In that case, not adjustment of the pixels is performed and using a one
-pixel wide pen draws the pixels above and below the line, but each with
-a color that is half of the intensity of the given color. Using a
-@racket[pen] with with two, colors the pixels above and below the line
-with the full intensity. 
+This kind of rectangle is useful when putting rectangles next to each other
+and avoiding extra thick lines on the interior. For example, imagine
+building a grid like this:
 
+@image-examples[(let* ([s (rectangle 20 20 "outline" "black")]
+                       [r (beside s s s s s s)])
+                  (above r r r r r r))]
+
+The reason interior lines in this grid are the same thickness as the lines around the edge
+is because the rectangles overlap with each other. 
+That is, the upper-left rectangle's right edge is right on top of the
+next rectangle's left edge.
+
+The special case of adding 0.5 to each coordinate when drawing the square
+applies to all outline polygon-based shapes that just pass color, 
+but does not apply when a @racket[pen]
+is passed as the last argument to create the shape.
+For example, if using a pen of thickness 2 to draw a rectangle, we get a
+shape that has a border drawing the row of pixels just inside and just outside
+the shape. One might imagine that a pen of thickness 1 would draw an outline around the shape with
+a 1 pixel thick line, but this would require 1/2 of each pixel to be illuminated, something
+that is not possible. Instead, the same pixels are lit up as with the 2 pixel wide pen, but
+with only 1/2 of the intensity of the color. So a 1 pixel wide black @racket[pen] object draws
+a 2 pixel wide outline, but in gray.
+
+When combining pens and cropping, we can make a rectangle that has a line that is one pixel
+wide, but where the line is drawn entirely within the rectangle
+
+@image-examples[(crop
+                 0 0 20 20
+                 (rectangle
+                  20 20 "outline" 
+                  (make-pen "black" 2 "solid" "round" "round")))]
+
+and we can use that to build a grid now too, but this grid has doubled lines on the
+interior.
+
+@image-examples[(let* ([s (crop
+                           0 0 20 20
+                           (rectangle
+                            20 20 "outline" 
+                            (make-pen "black" 2 "solid" "round" "round")))]
+                       [r (beside s s s s s s)])
+                  (above r r r r r r))]
+
+While this kind of rectangle is not useful for building grids, it 
+is important to be able to build rectangles whose drawing does not
+exceed its bounding box. Specifically, this kind of drawing is used
+by @racket[frame] and @racket[empty-scene] so that the extra drawn pixels
+are not lost if the image is later clipped to its bounding box.
 
 @;-----------------------------------------------------------------------------
 @section{Exporting Images to Disk}
 
-In order to use an image as an input to another program (Photoshop, e.g., or 
+In order to use an image as an input to another program (e.g., Photoshop or 
 a web browser), it is necessary to represent it in a format that these programs
 can understand. The @racket[save-image] function provides this functionality, 
 writing an image to disk using the @tt{PNG} format. Since this
@@ -1109,8 +1461,21 @@ format represents an image using a set of pixel values, an image written to disk
 generally contains less information than the image that was written, and cannot be scaled
 or manipulated as cleanly (by any image program).
 
-@defproc[(save-image [image image?] [filename path-string?]) boolean?]{
- writes an image to the path specified by @racket[filename], using the
- @tt{PNG} format.}
+@defproc[(save-image [image image?]
+                     [filename path-string?]
+                     [width 
+                      (and/c real? (not/c negative?))
+                      (image-width image)]
+                     [height 
+                      (and/c real? (not/c negative?))
+                      (image-height image)])
+         boolean?]{
+ Writes an image to the path specified by @racket[filename], using the
+ @tt{PNG} format.
+ 
+ The last two arguments are optional. If present, they determine the width
+ and height of the save image file. If absent, the width and height of the image is used.
+ 
+ }
 
 
