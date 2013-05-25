@@ -29,7 +29,7 @@
          "private/create-htdp-executable.rkt"
          
          "stepper-language-interface.rkt"
-         "debugger-language-interface.rkt"
+         lang/debugger-language-interface
          "run-teaching-program.rkt"
          "htdp-langs-save-file-prefix.rkt"
 

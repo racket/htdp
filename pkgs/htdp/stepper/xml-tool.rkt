@@ -29,7 +29,7 @@
       
       ;; get-bm : string -> (union (is-a?/c bitmap%) false?)
       (define (get-bm name)
-        (let ([bm (make-object bitmap% (build-path (collection-path "icons") name))])
+        (let ([bm (make-object bitmap% (collection-file-path name "icons"))])
           (unless (send bm ok?)
             (error 'xml-box "bitmap ~a failed to load" name))
           bm))

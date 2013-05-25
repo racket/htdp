@@ -5,5 +5,3 @@
 ;; bit) more information
 (define tools '(("text-box-tool.rkt")))
 (define tool-names '("Text Box"))
-
-(define scribblings '(("xml.scrbl" () (parsing-library))))

@@ -33,7 +33,7 @@
 ;;;; VERTICAL-SEPARATOR : the red arrow that separates the left half of the display from the right half.
 
 (define red-arrow-bitmap
-  (make-object bitmap% (build-path (collection-path "icons") "red-arrow.bmp") 'bmp))
+  (make-object bitmap% (collection-file-path "red-arrow.bmp" "icons") 'bmp))
 
 (unless (send red-arrow-bitmap ok?)
   (error 'red-arrow-bitmap "unable to load red-arrow bitmap"))
