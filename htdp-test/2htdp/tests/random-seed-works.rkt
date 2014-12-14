@@ -32,3 +32,6 @@
 
 (testing
   (check-equal? (main) (begin (set! *color 'red) (main))))
+
+;; disable in drdr
+(module test racket/base)
