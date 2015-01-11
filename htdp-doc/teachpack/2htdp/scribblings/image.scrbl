@@ -184,6 +184,48 @@ Unlike @racket[scene+curve], if the line passes outside of @racket[image], the i
                              "red")]
 }
 
+@defproc[(add-solid-curve [image image?] 
+                          [x1 real?] [y1 real?] [angle1 angle?] [pull1 real?]
+                          [x2 real?] [y2 real?] [angle2 angle?] [pull2 real?]
+                          [color image-color?])
+         image?]{
+
+Adds a curve to @racket[image] like
+@racket[add-curve], except it fills in the region
+inside the curve.
+
+@image-examples[(add-solid-curve (rectangle 100 100 "solid" "black")
+                                 20 20 0 1 
+                                 80 80 0 1
+                                 "white")
+                
+                (add-solid-curve
+                 (add-solid-curve
+                  (rectangle 100 100 "solid" "black")
+                  50 20 180 1/10
+                  50 80 0 1
+                  "white")
+                 50 20 0 1/10
+                 50 80 180 1
+                 "white")
+                
+                (add-solid-curve
+                 (add-solid-curve
+                  (rectangle 100 100 "solid" "black")
+                  51 20 180 1/10
+                  50 80 0 1
+                  "white")
+                 49 20 0 1/10
+                 50 80 180 1
+                 "white")
+                
+                (add-solid-curve (rectangle 100 100 "solid" "black")
+                                 -20 -20 0 1 
+                                 120 120 0 1
+                                 "red")]
+@history[#:added "1.2"]
+}
+
 @defproc[(text [string string?] [font-size (and/c integer? (<=/c 1 255))] [color image-color?])
          image?]{
                 

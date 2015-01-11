@@ -193,6 +193,11 @@
                 'angle\ in\ degrees
                 i arg)
      (angle->proper-range arg)]
+    [(color-only)
+     (check-arg fn-name (image-color? arg) 'image-color i arg)
+     (cond
+       [(color? arg) arg]
+       [else (convert-symbol-or-string-to-color-string arg)])]
     [(color)
      (check-arg fn-name (or (image-color? arg) (pen? arg)) 'image-color-or-pen i arg)
      ;; return either a string, color, or a pen,
@@ -205,15 +210,7 @@
      (cond
        [(color? arg) arg]
        [(pen? arg) arg]
-       [else
-        (define color-str
-          (if (symbol? arg)
-              (symbol->string arg)
-              arg))
-        (cond
-          [(equal? color-str "transparent") "transparent"]
-          [(send the-color-database find-color color-str) color-str]
-          [else "black"])])]
+       [else (convert-symbol-or-string-to-color-string arg)])]
     [(color-list)
      (check-arg fn-name (and (list? arg) (andmap image-color? arg)) 'color-list i arg)
      arg]
@@ -298,6 +295,16 @@
      (error 'check "the function ~a has an argument with an unknown name: ~s"
             fn-name
             argname)]))
+
+(define (convert-symbol-or-string-to-color-string arg)
+  (define color-str
+    (if (symbol? arg)
+        (symbol->string arg)
+        arg))
+  (cond
+    [(equal? color-str "transparent") "transparent"]
+    [(send the-color-database find-color color-str) color-str]
+    [else "black"]))
 
 (define (y-place? arg)
   (and (member arg '("top" top "bottom" bottom "middle" middle "center" center 

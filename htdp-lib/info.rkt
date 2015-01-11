@@ -9,7 +9,7 @@
     "compatibility-lib"
     "draw-lib"
     "errortrace-lib"
-    "gui-lib"
+    ("gui-lib" #:version "1.6")
     "htdp-doc"
     "html-lib"
     "images-lib"
@@ -35,4 +35,4 @@
 
 (define pkg-authors '(matthias mflatt robby))
 
-(define version "1.1")
+(define version "1.2")

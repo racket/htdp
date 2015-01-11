@@ -522,7 +522,7 @@
                  (make-crop (rectangle-points (get-right image) (get-bottom image))
                             (make-curve-segment (make-point x1 y1) angle1 pull1
                                                 (make-point x2 y2) angle2 pull2
-                                                color))
+                                                'outline color))
                  (image-shape image))
                 (image-bb image)
                 #f
@@ -610,6 +610,7 @@
                                        θ)
                          (bring-between (+ (curve-segment-e-angle simple-shape) θ) 360)
                          (curve-segment-e-pull simple-shape)
+                         (curve-segment-mode simple-shape)
                          (curve-segment-color simple-shape))]
     [(polygon? simple-shape)
      (make-polygon (rotate-points (polygon-points simple-shape) θ)
@@ -907,6 +908,7 @@
                          (flip-point (curve-segment-end simple-shape))
                          (bring-between (- (curve-segment-e-angle simple-shape)) 360)
                          (curve-segment-e-pull simple-shape)
+                         (curve-segment-mode simple-shape)
                          (curve-segment-color simple-shape))]
     [(polygon? simple-shape)
      (make-polygon (flip-points (polygon-points simple-shape))
@@ -1054,10 +1056,16 @@
         (overlay/xy poly (- left) (- top) image)
         )))
 
+(define/chk (add-solid-curve image x1 y1 angle1 pull1 x2 y2 angle2 pull2 color-only)
+  (add-a-curve image x1 y1 angle1 pull1 x2 y2 angle2 pull2 'solid color-only))
+
 (define/chk (add-curve image x1 y1 angle1 pull1 x2 y2 angle2 pull2 color)
+  (add-a-curve image x1 y1 angle1 pull1 x2 y2 angle2 pull2 'outline color))
+ 
+(define (add-a-curve image x1 y1 angle1 pull1 x2 y2 angle2 pull2 mode color)
   (define cs (make-curve-segment (make-point x1 y1) angle1 pull1
                                  (make-point x2 y2) angle2 pull2
-                                 color))
+                                 mode color))
   (define path (curve-segment->path cs))
   (define rdc (new record-dc%))
   (send rdc set-pen (mode-color->pen 'outline color))
@@ -1603,6 +1611,7 @@
          add-line
          add-polygon
          add-curve
+         add-solid-curve
          scene+line
          scene+polygon
          scene+curve

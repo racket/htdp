@@ -101,6 +101,7 @@ and they all have good sample contracts. (It is amazing what we can do with kids
          add-line
          add-polygon
          add-curve
+         add-solid-curve
          scene+line
          scene+polygon
          scene+curve
