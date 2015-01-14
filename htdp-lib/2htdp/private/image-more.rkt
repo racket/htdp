@@ -1411,7 +1411,7 @@
   (rotate
    0
    (call/input-url (string->url string)
-                   get-pure-port
+                   (lambda (u [h '()]) (get-pure-port u h #:redirections 5))          
                    (λ (port)
                      (make-object bitmap% port 'unknown/alpha #f #t)))))
                       
