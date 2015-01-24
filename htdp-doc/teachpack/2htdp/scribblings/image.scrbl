@@ -69,6 +69,11 @@ does not refer to the @racket[bitmap%] class. Typically such image-bitmaps
 come about via the @onscreen{Insert Image...} menu item in DrRacket}
 Existing images can be rotated, scaled, flipped, and overlaid on top of each other.
 
+In some situations images are rendered into bitmaps (e.g. when being shown in
+the DrRacket Interactions window) In order to avoid bad performance
+penalties, the rendering process limits the area of the images to
+about 25,000,000 pixels (which requires about 100 MB of storage).
+
 @section{Basic Images}
 
 @defproc*[([(circle [radius (and/c real? (not/c negative?))]
