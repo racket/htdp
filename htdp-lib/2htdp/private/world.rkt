@@ -11,6 +11,7 @@
          htdp/error
          mzlib/runtime-path
          mrlib/bitmap-label
+         (only-in mrlib/image-core definitely-same-image?)
          string-constants
          mrlib/gif)
 
@@ -76,7 +77,7 @@
       
       (define/private (register-with-host)
         (define FMT "\nworking off-line\n")
-        (define FMTtry (string-append "unable to register with ~a after ~s tries" FMT))                         
+        (define FMTtry (string-append "unable to register with ~a after ~s tries" FMT))
         (define FMTcom (string-append "unable to register with ~a due to protocol problems" FMT))
         ;; Input-Port -> [-> Void]
         ;; create closure (for thread) to receive messages and signal events
@@ -139,6 +140,7 @@
       (define/private (show-canvas)
         (send visible set-cursor (make-object cursor% 'arrow))
         (let ([fst-scene (ppdraw)])
+          (set! *last-pict-shown fst-scene)
           (if (2:image? fst-scene)
               (let ([first-width  (+ (image-width fst-scene) 1)]
                     [first-height (+ (image-height fst-scene) 1)])
@@ -229,27 +231,33 @@
       
       ;; Image -> Void
       ;; show the image in the visible world
+      (define *last-pict-shown #f)
       (define/public (show pict0)
         (define pict*
           (if (is-a? pict0 bitmap%)
+              ;; MF: I forgot why we did this
               (rotate 0 pict0)
               pict0))
-        (define pict (add-game-pad pict*))
-        (send visible begin-edit-sequence)
-        (send visible lock #f)
-        (let ([s (send visible find-first-snip)]
-              [c (send visible get-canvas)])
-          (when s (send visible delete s))
-          (send visible insert (disable-cache (send pict copy)) 0 0)
-          (send visible lock #t)
-          (send visible end-edit-sequence)
-          ;; The following flush trades streaming performance (where updates
-          ;; could be skipped if they're replaced fast enough) for 
-          ;; responsiveness (where too many updates might not get 
-          ;; through if the canvas is mostly in suspended-refresh 
-          ;; mode for scene changes):
-          #;
-          (send c flush)))
+        ;; last-pict-shown is set to a pict in show-canvas during startup
+        ;; no need to double-check here 
+        (unless (definitely-same-image? *last-pict-shown pict*)
+          (set! *last-pict-shown pict*)
+          (define pict (add-game-pad pict*))
+          (send visible begin-edit-sequence)
+          (send visible lock #f)
+          (let ([s (send visible find-first-snip)]
+                [c (send visible get-canvas)])
+            (when s (send visible delete s))
+            (send visible insert (disable-cache (send pict copy)) 0 0)
+            (send visible lock #t)
+            (send visible end-edit-sequence)
+            ;; The following flush trades streaming performance (where updates
+            ;; could be skipped if they're replaced fast enough) for 
+            ;; responsiveness (where too many updates might not get 
+            ;; through if the canvas is mostly in suspended-refresh 
+            ;; mode for scene changes):
+            #;
+            (send c flush))))
       
       ;; ----------------------------------------------------------------------
       ;; callbacks 
