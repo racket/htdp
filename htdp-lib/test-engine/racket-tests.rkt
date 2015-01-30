@@ -193,7 +193,7 @@
        (check-expect-maker stx 
                            #'check-values-property 
                            #'actual:exp
-                           (list #'(lambda (x) (expected-property:exp x))
+                           (list #'expected-property:exp
                                  (symbol->string (syntax-e #'expected-property:exp)))
                            'comes-from-check-satisfied))]
     [(_ actual:exp expected-property:exp) 
@@ -206,7 +206,11 @@
   (send (send test-engine get-info) add-check)
   (run-and-check
    ;; check
-   (lambda (p? v _what-is-this?) (p? v))
+   (lambda (p? v _what-is-this?)
+     (unless (and (procedure? p?)
+                  (procedure-arity-includes? p? 1))
+       (error-check (lambda (v) #f) property? SATISFIED-FMT #t))
+     (p? v))
    ;; maker
    (lambda (src format v1 _v2 _) (make-satisfied-failed src format v1 property?))
    ;; test 
@@ -373,12 +377,6 @@
                                   (define name (exn:fail:wish-name e))
                                   (define args (exn:fail:wish-args e))
                                   (list (unimplemented-wish src (test-format) name args) 'error #f))]
-                               [(lambda (x)
-                                  (and (exn:fail:contract:arity? x)
-                                       (pair? kind)
-                                       (eq? 'check-satisfied (car kind))))
-                                (lambda (_)
-                                  (error-check (lambda (v) #f) (cadr kind) SATISFIED-FMT #t))]
                                [exn:fail?
                                 (lambda (e)
                                   (define display (error-display-handler))
