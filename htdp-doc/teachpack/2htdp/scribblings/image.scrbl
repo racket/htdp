@@ -677,12 +677,43 @@ the @racket[point-count] argument determines how many points the star has.
                   (regular-polygon 20 8 "solid" "red")]
 }
 
+@defproc*[([(pulled-regular-polygon [side-length (and/c real? (not/c negative?))]
+                                    [side-count side-count?]
+                                    [pull (and/c real? (not/c negative?))]
+                                    [angle angle?]
+                                    [mode mode?]
+                                    [color image-color?])
+            image?]
+           [(pulled-regular-polygon [side-length (and/c real? (not/c negative?))]
+                                    [side-count side-count?]
+                                    [pull (and/c real? (not/c negative?))]
+                                    [angle angle?]
+                                    [outline-mode (or/c 'outline "outline")]
+                                    [pen-or-color (or/c pen? image-color?)])
+            image?])]{
+  Constructs a regular polygon with @racket[side-count] sides where each side
+  is curved according to the @racket[pull] and @racket[angle] arguments. The
+  @racket[angle] argument controls the angle at which the curved version of
+  polygon edge makes with the original edge of the polygon. Larger the @racket[pull]
+  arguments mean that the angle is preserved more at each vertex.
+  
+  @mode/color-and-nitty-text
 
-@defproc*[([(polygon [vertices (listof real-valued-posn?)] 
+  @image-examples[(pulled-regular-polygon 60 4 1/3 30 "solid" "blue")
+                  (pulled-regular-polygon 50 5 1/2 -10 "solid" "red")
+                  (pulled-regular-polygon 50 5 1 140 "solid" "purple")
+                  (pulled-regular-polygon 50 5 1.1 140 "solid" "purple")
+                  (pulled-regular-polygon 100 3 1.8 30 "solid" "blue")]
+
+  @history[#:added "1.3"]
+}
+
+
+@defproc*[([(polygon [vertices (listof (or/c real-valued-posn? pulled-point?))]
                      [mode mode?]
                      [color image-color?])
             image?]
-           [(polygon [vertices (listof real-valued-posn?)] 
+           [(polygon [vertices (listof (or/c real-valued-posn? pulled-point?))]
                      [outline-mode (or/c 'outline "outline")]
                      [pen-or-color (or/c pen? image-color?)])
             image?])]{
@@ -693,6 +724,12 @@ the @racket[point-count] argument determines how many points the star has.
   @image-examples[(polygon (list (make-posn 0 0)
                                  (make-posn -10 20)
                                  (make-posn 60 0)
+                                 (make-posn -10 -20))
+                           "solid" 
+                           "burlywood")
+                  (polygon (list (make-pulled-point 1/2 20 0 0 1/2 -20)
+                                 (make-posn -10 20)
+                                 (make-pulled-point 1/2 -20 60 0 1/2 20)
                                  (make-posn -10 -20))
                            "solid" 
                            "burlywood")
@@ -725,6 +762,8 @@ the @racket[point-count] argument determines how many points the star has.
                           (make-posn 50 50))
                     "outline"
                     (make-pen "darkslategray" 10 "solid" "projecting" "miter")))]
+  
+  @history[#:changed "1.3" @list{Accepts @racket[pulled-point]s.}]
 }
 
 @defproc[(add-polygon [image image?]
@@ -1691,6 +1730,31 @@ This section lists predicates for the basic structures provided by the image lib
   The constructor, @racket[make-color], also accepts only three arguments, in which case
   the three arguments are used for the @racket[red], @racket[green], and @racket[blue] fields, and the
   @racket[alpha] field defaults to @racket[255].
+}
+
+@defstruct[pulled-point ([lpull real?]
+                         [langle angle?]
+                         [x real?]
+                         [y real?]
+                         [rpull real?]
+                         [rangle angle?])]{
+  The @racket[pulled-point] struct defines a point with
+      @racket[x] and @racket[y] coordinates, but also with
+      two angles (@racket[langle] and @racket[rangle]) and
+      two pulls (@racket[lpull] and @racket[rpull]).
+
+      These points are used with the @racket[polygon] function
+      and control how the edges can be curved.
+      
+      The first two pull and angle arguments indicate
+      how an edge coming into this point should be curved.
+      The angle argument indicates the angle as the edge
+      reaches (@racket[x],@racket[y]) and a larger pull argument
+      means that the edge should hold the angle longer.
+      The last two are the same, except they apply to
+      the edge leaving the point.
+      
+  @history[#:added "1.3"]
 }
 
 @defproc[(y-place? [x any/c]) boolean?]{

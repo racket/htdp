@@ -35,7 +35,10 @@ and they all have good sample contracts. (It is amazing what we can do with kids
 |#
 
 
-(require (except-in mrlib/image-core make-color color make-pen pen)
+(require (except-in mrlib/image-core
+                    make-color color
+                    make-pen pen
+                    make-pulled-point pulled-point)
          "private/image-more.rkt"
          "private/img-err.rkt"
          (only-in lang/prim provide-primitive provide-primitives define-primitive)
@@ -83,6 +86,7 @@ and they all have good sample contracts. (It is amazing what we can do with kids
          square
          rhombus
          regular-polygon
+         pulled-regular-polygon
          polygon
          star
          star-polygon
@@ -137,6 +141,7 @@ and they all have good sample contracts. (It is amazing what we can do with kids
          
          make-color
          make-pen
+         make-pulled-point
          step-count?
          save-image
          save-svg-image
@@ -162,7 +167,14 @@ and they all have good sample contracts. (It is amazing what we can do with kids
         (list #':pen-join #':pen-cap #':pen-style #':pen-width #':pen-color)
         (list #f #f #f #f #f)
         #f))
-(provide color pen)
+(define-primitive make-pulled-point build-pulled-point/make-pulled-point)
+(define-primitive pulled-point build-pulled-point/pulled-point
+  (list #f
+        #'pulled-point #':pulled-point?
+        (list #':lpull #':langle #':x #':y #':rpull #':rangle)
+        (list #f #f #f #f #f #f)
+        #f))
+(provide color pen pulled-point)
 
 (define-primitive :color-red color-red)
 (define-primitive :color-blue color-blue)
@@ -176,6 +188,14 @@ and they all have good sample contracts. (It is amazing what we can do with kids
 (define-primitive :pen-join pen-join)
 (define-primitive :pen? pen?)
 
+(define-primitive :pulled-point-lpull pulled-point-lpull)
+(define-primitive :pulled-point-langle pulled-point-langle)
+(define-primitive :pulled-point-x pulled-point-x)
+(define-primitive :pulled-point-y pulled-point-y)
+(define-primitive :pulled-point-rpull pulled-point-rpull)
+(define-primitive :pulled-point-rangle pulled-point-rangle)
+(define-primitive :pulled-point? pulled-point?)
+
 (provide (rename-out [:color-red color-red]
                      [:color-blue color-blue]
                      [:color-green color-green]
@@ -186,4 +206,12 @@ and they all have good sample contracts. (It is amazing what we can do with kids
                      [:pen-style pen-style]
                      [:pen-cap pen-cap]
                      [:pen-join pen-join]
-                     [:pen? pen?]))
+                     [:pen? pen?]
+                     
+                     [:pulled-point-lpull pulled-point-lpull]
+                     [:pulled-point-langle pulled-point-langle]
+                     [:pulled-point-x pulled-point-x]
+                     [:pulled-point-y pulled-point-y]
+                     [:pulled-point-rpull pulled-point-rpull]
+                     [:pulled-point-rangle pulled-point-rangle]
+                     [:pulled-point? pulled-point?]))

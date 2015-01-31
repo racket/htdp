@@ -162,7 +162,7 @@
                 'integer\ greater\ than\ 2
                 i arg)
      arg]
-    [(dx dy x y x1 y1 x2 y2 pull1 pull2)
+    [(dx dy x y x1 y1 x2 y2 pull pull1 pull2)
      (check-arg fn-name
                 (real? arg)
                 'real\ number
@@ -251,6 +251,21 @@
      (check-arg fn-name
                 (>= (length arg) 3)
                 'list-of-at-least-three-posns
+                i arg)
+     arg]
+    [(posns-or-pulled-points)
+     (check-arg fn-name
+                (and (list? arg)
+                     (andmap (or/c posn? pulled-point?) arg))
+                'list-of-posns-or-pulled-points
+                i arg)
+     (check-arg fn-name
+                (andmap (or/c pulled-point? real-valued-posn?) arg)
+                'list-of-posns-with-real-valued-x-and-y-coordinates
+                i arg)
+     (check-arg fn-name
+                (>= (length arg) 3)
+                'list-of-at-least-three-posns-or-pulled-points
                 i arg)
      arg]
     [(zero-or-more-posns)

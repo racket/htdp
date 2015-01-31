@@ -739,11 +739,21 @@
             (max ay by cy dy))))
 
 (define (rotate-points in-points θ)
-  (let* ([cs (map point->c in-points)]
-         [vectors (points->vectors cs)]
-         [rotated-vectors (map (λ (c) (rotate-c c θ)) vectors)]
-         [points (vectors->points rotated-vectors)])
-    points))
+  (define cs (map pp->c in-points))
+  (define vectors (points->vectors cs))
+  (define rotated-vectors (map (λ (c) (rotate-c c θ)) vectors))
+  (define rotated-points (vectors->points rotated-vectors))
+  (for/list ([orig-point (in-list in-points)]
+             [rotated-point (in-list rotated-points)])
+    (cond
+      [(pulled-point? orig-point)
+       (make-pulled-point (pulled-point-lpull orig-point)
+                          (pulled-point-langle orig-point)
+                          (point-x rotated-point)
+                          (point-y rotated-point)
+                          (pulled-point-rpull orig-point)
+                          (pulled-point-rangle orig-point))]
+      [else rotated-point])))
 
 (define (points->vectors orig-points)
   (let loop ([points (cons 0 orig-points)])
@@ -843,7 +853,10 @@
 (define (c->xy c) 
   (values (real-part c)
           (- (imag-part c))))
-(define (point->c p) (xy->c (point-x p) (point-y p)))
+(define (pp->c p)
+  (cond
+    [(pulled-point? p) (xy->c (pulled-point-x p) (pulled-point-y p))]
+    [else (xy->c (point-x p) (point-y p))]))
 (define (c->point c) 
   (let-values ([(x y) (c->xy c)])
     (make-point x y)))
@@ -953,7 +966,18 @@
                               (ibitmap-y-scale bitmap)
                               (make-hash)))]))
 
-(define (flip-point point) (make-point (point-x point) (- (point-y point))))
+(define (flip-point point)
+  (cond
+    [(pulled-point? point)
+     (make-pulled-point
+      (pulled-point-lpull point)
+      (bring-between (- (pulled-point-langle point)) 360)
+      (pulled-point-x point)
+      (- (pulled-point-y point))
+      (pulled-point-rpull point)
+      (bring-between (- (pulled-point-rangle point)) 360))]
+    [else
+     (make-point (point-x point) (- (point-y point)))]))
 (define (flip-points points) (map flip-point points))
 ;                                                                                                 
 ;                                                                                                 
@@ -972,9 +996,12 @@
 ;                                                                                                 
 
 
-(define/chk (polygon posns mode color)
+(define/chk (polygon posns-or-pulled-points mode color)
   (check-mode/color-combination 'polygon 3 mode color)
-  (make-a-polygon (map (λ (p) (make-point (posn-x p) (posn-y p))) posns)
+  (make-a-polygon (for/list ([p (in-list posns-or-pulled-points)])
+                    (if (posn? p)
+                        (make-point (posn-x p) (posn-y p))
+                        p))
                   mode
                   color))
 
@@ -1241,6 +1268,11 @@
   (check-mode/color-combination 'regular-polygon 4 mode color)
   (make-polygon/star side-length side-count mode color values))
 
+(define/chk (pulled-regular-polygon side-length side-count pull angle mode color)
+  (check-mode/color-combination 'regular-polygon 4 mode color)
+  (make-a-polygon (regular-polygon-points side-length side-count pull angle)
+                  mode color))
+
 (define/chk (star-polygon side-length side-count step-count mode color)
   (check-mode/color-combination 'star-polygon 5 mode color)
   (check-arg 'star-polygon
@@ -1260,7 +1292,7 @@
   (make-polygon/star side-length 5 mode color (λ (l) (swizzle l 2))))
 
 (define (make-polygon/star side-length side-count mode color adjust)
-  (make-a-polygon (adjust (regular-polygon-points side-length side-count)) 
+  (make-a-polygon (adjust (regular-polygon-points side-length side-count 0 0))
                   mode color))
 
 (define/chk (radial-star point-count radius1 radius2 mode color)
@@ -1320,12 +1352,12 @@
                (loop (+ i 1)))]))))
 
 ;; regular-polygon-points : number number -> (listof point)
-(define (regular-polygon-points side-length side-count)
+(define (regular-polygon-points side-length side-count pull angle)
   (let loop ([p (make-rectangular 0 0)]
              [i 0])
     (cond
       [(= i side-count) '()]
-      [else (cons (make-point (real-part p) (imag-part p)) 
+      [else (cons (build-pulled-point pull angle (real-part p) (imag-part p) pull (- angle))
                   (loop (+ p (make-polar side-length
                                          (* -1 (* 2 pi) (/ i side-count))))
                         (+ i 1)))])))
@@ -1512,6 +1544,18 @@
          (orig-make-color int0-255-1 int0-255-2 int0-255-3 int0-255-4)]))
     color))
 
+(define build-pulled-point/pulled-point
+  (let ()
+    (define/chk (pulled-point pull1 angle1 x y pull2 angle2)
+      (build-pulled-point pull1 angle1 x y pull2 angle2))
+    pulled-point))
+
+(define build-pulled-point/make-pulled-point
+  (let ()
+    (define/chk (make-pulled-point pull1 angle1 x y pull2 angle2)
+      (build-pulled-point pull1 angle1 x y pull2 angle2))
+    make-pulled-point))
+
 (define build-pen/make-pen
   (let ([orig-make-pen make-pen])
     (define/chk (make-pen color int-0-255 pen-style pen-cap pen-join)
@@ -1592,6 +1636,7 @@
          
          polygon
          regular-polygon
+         pulled-regular-polygon
          triangle 
          triangle/sss
          triangle/ssa
@@ -1640,6 +1685,8 @@
          build-color/color
          build-pen/make-pen
          build-pen/pen
+         build-pulled-point/make-pulled-point
+         build-pulled-point/pulled-point
          
          freeze
          

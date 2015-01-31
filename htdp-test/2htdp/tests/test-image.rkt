@@ -929,6 +929,16 @@
       =>
       #t)
 
+(let ([a (polygon (list (make-pulled-point 1/2 20 0 0 1/2 -20)
+                        (make-posn -10 20)
+                        (make-pulled-point 1/2 -20 60 0 1/2 20)
+                        (make-posn -10 -20))
+                  "solid" 
+                  "burlywood")])
+  (test (rotate -90 (rotate 90 a))
+        =>
+        a))
+
 ;; make sure rotate can get non-integral arguments
 (test (rotate -90.5 (rotate 90.5 (rectangle 20 100 'solid 'orange)))
       =>
@@ -1940,6 +1950,22 @@
                  20 80 0 1
                  180 20 90 1/3
                  "white"))
+
+(let ([a (polygon (list (make-pulled-point 1/2 20 0 0 1/2 -20)
+                        (make-posn -10 20)
+                        (make-pulled-point 1/2 -20 60 0 1/2 20)
+                        (make-posn -10 -20))
+                  "solid" 
+                  "burlywood")])
+  (test (flip-horizontal (flip-horizontal a)) => a))
+
+(let ([a (polygon (list (make-pulled-point 1/2 20 0 0 1/2 -20)
+                        (make-posn -10 20)
+                        (make-pulled-point 1/2 -20 60 0 1/2 20)
+                        (make-posn -10 -20))
+                  "solid" 
+                  "burlywood")])
+  (test (flip-vertical a) => a))
 
 (let* ([bdc (make-object bitmap-dc%)]
        [bm-ul (make-bitmap 10 10)]
