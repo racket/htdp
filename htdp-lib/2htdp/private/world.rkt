@@ -7,7 +7,7 @@
          "stop.rkt"
          "universe-image.rkt"
          "pad.rkt"
-         (only-in 2htdp/image scale overlay/align rotate)
+         (only-in 2htdp/image scale overlay/align rotate empty-image)
          htdp/error
          mzlib/runtime-path
          mrlib/bitmap-label
@@ -140,7 +140,6 @@
       (define/private (show-canvas)
         (send visible set-cursor (make-object cursor% 'arrow))
         (let ([fst-scene (ppdraw)])
-          (set! *last-pict-shown fst-scene)
           (if (2:image? fst-scene)
               (let ([first-width  (+ (image-width fst-scene) 1)]
                     [first-height (+ (image-height fst-scene) 1)])
@@ -231,7 +230,7 @@
       
       ;; Image -> Void
       ;; show the image in the visible world
-      (define *last-pict-shown #f)
+      (define *last-pict-shown empty-image)
       (define/public (show pict0)
         (define pict*
           (if (is-a? pict0 bitmap%)
@@ -239,8 +238,10 @@
               (rotate 0 pict0)
               pict0))
         ;; last-pict-shown is set to a pict in show-canvas during startup
-        ;; no need to double-check here 
-        (unless (definitely-same-image? *last-pict-shown pict*)
+        ;; no need to double-check here; it will fail in the unlikely case 
+        ;; that someone uses 1/image to create the first image and then 2/image
+        (define same? (definitely-same-image? *last-pict-shown pict*))
+        (unless same?
           (set! *last-pict-shown pict*)
           (define pict (add-game-pad pict*))
           (send visible begin-edit-sequence)
