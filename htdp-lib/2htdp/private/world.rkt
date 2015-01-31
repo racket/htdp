@@ -237,9 +237,6 @@
               ;; MF: I forgot why we did this
               (rotate 0 pict0)
               pict0))
-        ;; last-pict-shown is set to a pict in show-canvas during startup
-        ;; no need to double-check here; it will fail in the unlikely case 
-        ;; that someone uses 1/image to create the first image and then 2/image
         (define same? (definitely-same-image? *last-pict-shown pict*))
         (unless same?
           (set! *last-pict-shown pict*)
