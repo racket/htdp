@@ -9,7 +9,7 @@
     "compatibility-lib"
     "draw-lib"
     "errortrace-lib"
-    ("gui-lib" #:version "1.6")
+    ("gui-lib" #:version "1.7")
     "htdp-doc"
     "html-lib"
     "images-lib"
