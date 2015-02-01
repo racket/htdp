@@ -778,39 +778,38 @@ the @racket[point-count] argument determines how many points the star has.
 
 @mode/color-and-nitty-text
 
-@image-examples[(add-polygon (rectangle 55 34 "solid" "light blue")
-                          (list (make-posn 50 10)
-                                (make-posn 20 15)
-                                (make-posn 50 20)
-                                (make-posn 10 25)
-                                (make-posn 35 30))
-                          "outline" "red")
+@image-examples[(add-polygon (square 65 "solid" "light blue")
+                             (list (make-posn 30 -20)
+                                   (make-posn 50 50)
+                                   (make-posn -20 30))
+                             "solid" "forest green")
                 (add-polygon (square 65 "solid" "light blue")
-                          (list (make-posn 30 -20)
-                                (make-posn 50 50)
-                                (make-posn -20 30))
-                          "solid" "forest green")
+                             (list (make-posn 30 -20)
+                                   (make-pulled-point 1/2 30 50 50 1/2 -30)
+                                   (make-posn -20 30))
+                             "solid" "forest green")
                 (add-polygon (square 180 "solid" "yellow")
-                          (list
-                           (make-posn 109 160)
-                           (make-posn 26 148)
-                           (make-posn 46 36)
-                           (make-posn 93 44)
-                           (make-posn 89 68)
-                           (make-posn 122 72))
-                          "outline" "dark blue")
+                             (list (make-posn 109 160)
+                                   (make-posn 26 148)
+                                   (make-posn 46 36)
+                                   (make-posn 93 44)
+                                   (make-posn 89 68)
+                                   (make-posn 122 72))
+                             "outline" "dark blue")
                 (add-polygon (square 50 "solid" "light blue")
-                          (list (make-posn 25 -10)
-                                (make-posn 60 25)
-                                (make-posn 25 60)
-                                (make-posn -10 25))
-                          "solid" "pink")]
-                                     }
+                             (list (make-posn 25 -10)
+                                   (make-posn 60 25)
+                                   (make-posn 25 60)
+                                   (make-posn -10 25))
+                             "solid" "pink")]
+  @history[#:changed "1.3" @list{Accepts @racket[pulled-point]s.}]
+
+}
 
 @defproc[(scene+polygon [image image?]
-                     [posns (listof posn?)]
-                     [mode mode?]
-                     [color image-color?])
+                        [posns (listof posn?)]
+                        [mode mode?]
+                        [color image-color?])
          image?]{
   Adds a closed polygon to the image @racket[image], with vertices as specified in @racket[posns]
  (relative to the top-left corner of @racket[image]).  Unlike @racket[add-polygon], if the
@@ -818,34 +817,33 @@ the @racket[point-count] argument determines how many points the star has.
                                      
 @crop-warning
 
-@image-examples[(scene+polygon (rectangle 55 34 "solid" "light blue")
-                          (list (make-posn 50 10)
-                                (make-posn 20 15)
-                                (make-posn 50 20)
-                                (make-posn 10 25)
-                                (make-posn 35 30))
-                          "outline" "red")
+@image-examples[(scene+polygon (square 65 "solid" "light blue")
+                               (list (make-posn 30 -20)
+                                     (make-posn 50 50)
+                                     (make-posn -20 30))
+                               "solid" "forest green")
                 (scene+polygon (square 65 "solid" "light blue")
-                          (list (make-posn 30 -20)
-                                (make-posn 50 50)
-                                (make-posn -20 30))
-                          "solid" "forest green")
+                               (list (make-posn 30 -20)
+                                     (make-pulled-point 1/2 -30 50 50 1/2 30)
+                                     (make-posn -20 30))
+                               "solid" "forest green")
                 (scene+polygon (square 180 "solid" "yellow")
-                          (list
-                           (make-posn 109 160)
-                           (make-posn 26 148)
-                           (make-posn 46 36)
-                           (make-posn 93 44)
-                           (make-posn 89 68)
-                           (make-posn 122 72))
-                          "outline" "dark blue")
+                               (list (make-posn 109 160)
+                                     (make-posn 26 148)
+                                     (make-posn 46 36)
+                                     (make-posn 93 44)
+                                     (make-posn 89 68)
+                                     (make-posn 122 72))
+                               "outline" "dark blue")
                 (scene+polygon (square 50 "solid" "light blue")
-                          (list (make-posn 25 -10)
-                                (make-posn 60 25)
-                                (make-posn 25 60)
-                                (make-posn -10 25))
-                          "solid" "pink")]
-                                     }
+                               (list (make-posn 25 -10)
+                                     (make-posn 60 25)
+                                     (make-posn 25 60)
+                                     (make-posn -10 25))
+                               "solid" "pink")]
+
+@history[#:changed "1.3" @list{Accepts @racket[pulled-point]s.}]
+}
 
 
 @section{Overlaying Images}
