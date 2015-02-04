@@ -369,8 +369,12 @@
                                     @interaction[#:eval (bsl) (angle (make-polar 3 4))]
                                     }
   @defproc[(conjugate [x number]) number]{
-                                          Extracts the conjugate of a complex number. 
-                                          @interaction[#:eval (bsl) (conjugate (make-polar 3 4))]
+                                          Flips the sign of the imaginary part of a complex number. 
+                                          @interaction[#:eval (bsl)
+(conjugate 3+4i)
+(conjugate -2-5i)
+(conjugate (make-polar 3 4))
+]
                                           }
   @defproc[(exact->inexact [x number]) number]{
                                                Converts an exact number to an inexact one. 
