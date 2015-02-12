@@ -12,7 +12,7 @@
          racket/function
          lang/private/continuation-mark-key
          lang/private/rewrite-error-message
-         ; (for-template lang/private/firstorder)
+         (for-syntax #;"requiring from" lang/private/firstorder #;"avoids load cycle")
          "test-engine.rkt"
          "test-info.scm")
 
@@ -187,14 +187,14 @@
 
 (define-syntax (check-satisfied stx)
   (syntax-case stx ()
-    [(_ actual:exp expected-property:exp)
-     (identifier? #'expected-property:exp)
-     (begin 
+    [(_ actual:exp expected-property:id)
+     (identifier? #'expected-property:id)
+     (let* ([name (symbol->string (syntax-e #'expected-property:id))]
+            [prop (first-order->higher-order #'expected-property:id)])
        (check-expect-maker stx 
                            #'check-values-property 
                            #'actual:exp
-                           (list #'expected-property:exp
-                                 (symbol->string (syntax-e #'expected-property:exp)))
+                           (list prop name)
                            'comes-from-check-satisfied))]
     [(_ actual:exp expected-property:exp) 
      (raise-syntax-error 'check-satisfied "expects named function in second position." stx)]
@@ -383,7 +383,7 @@
                                   (define msg (get-rewriten-error-message e))
                                   (if (and (pair? kind) (eq? 'check-satisfied (car kind)))
                                       (list (unsatisfied-error src (test-format) (cadr kind) msg e) 
-                                             'error e)
+                                            'error e)
                                       (list (unexpected-error src (test-format) expect msg e) 
                                             'error e)))])
                  (define test-val (test))

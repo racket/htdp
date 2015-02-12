@@ -83,7 +83,13 @@ argument).
 (check-satisfied 1 even?)
 
 (test)
-]} 
+]
+
+@history[
+ #:changed 
+ "1.1" 
+ "allow the above examples to run in BSL and BSL+"]
+} 
 
 @defform[(check-within expr expected-expr delta-expr)
           #:contracts ([delta-expr number?])]{
