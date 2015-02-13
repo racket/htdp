@@ -318,7 +318,7 @@
       [(number? x) #t]
       [(and (cons? x) (symbol? (first x)))
        (define body (rest x))
-       (or (and (list-of-attributes? (first body)) (list-of-xexpr? (rest body))) 
+       (or (and (cons? body) (list-of-attributes? (first body)) (list-of-xexpr? (rest body)))
            (list-of-xexpr? body))]
       [else (raise (cons tag x))]))
   

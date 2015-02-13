@@ -2,6 +2,8 @@
 
 (require 2htdp/batch-io rackunit)
 
+(check-true (xexpr? (cons 'html empty)))
+
 (define url "http://www.ccs.neu.edu/home/matthias/HtDP2e/Files/")
 
 (define local-machine-configuration "batch-io-xexpr-machine.xml")
