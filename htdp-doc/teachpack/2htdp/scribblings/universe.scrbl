@@ -55,7 +55,7 @@ The purpose of this documentation is to give experienced Racketeers and HtDP
  communicating worlds.
 
 @emph{Note}: For a quick and educational introduction to just worlds, see
- @link["http://www.ccs.neu.edu/home/matthias/HtDP2e/prologue.html"]{How
+ @link["http://www.ccs.neu.edu/home/matthias/HtDP2e/part_prologue.html"]{How
  to Design Programs, Second Edition: Prologue}. As of August 2008, we also
  have a series of projects available as a small booklet on
  @link["http://world.cs.brown.edu/"]{How to Design Worlds}.
@@ -119,16 +119,18 @@ Example:
 ]
 
 @defproc[(run-simulation [create-image (-> natural-number/c scene?)])
-         true]{
+         natural-number/c]{
 @note-scene
  @racket[animate] was originally called @racket[run-simulation], and this
  binding is retained for backwards compatibility}
 
 @defproc[(run-movie [r (and/c real? positive?)] [m [Listof image?]])
-         true]{
+         [Listof image?]]{
 
  @racket[run-movie] displays the list of images @racket[m], spending 
- @racket[r] seconds per image.}
+ @racket[r] seconds per image.
+ When the animation is stopped, a list of the remaining, undisplayed images
+ are returned.}
 
 
 @;-----------------------------------------------------------------------------
@@ -148,7 +150,7 @@ Your program may deal with such events via the @emph{designation} of
  installation of four event handlers: @racket[on-tick], @racket[on-key],
  @racket[on-mouse], and @racket[on-pad]. In addition, a @tech{world}
  program must specify a
- @racket[draw] function, which is called every time your program should
+ @racket[render] function, which is called every time your program should
  visualize the current world, and a @racket[done] predicate, which is used
  to determine when the @tech{world} program should shut down.
 
@@ -165,7 +167,7 @@ The following picture provides an intuitive overview of the workings of a
  The handlers @racket[tock], @racket[react], and @racket[click] transform
  one world into another one; each time an event is handled, @racket[done] is
  used to check whether the world is final, in which case the program is
- shut down; and finally, @racket[draw] renders each world as an image, which
+ shut down; and finally, @racket[render] renders each world as an image, which
  is then displayed on an external canvas.
 
 @deftech{WorldState} : @racket[any/c]
@@ -206,7 +208,7 @@ The design of a world program demands that you come up with a data
  starts a @tech{world} program in the initial state specified with
  @racket[state-expr], which must of course evaluate to an element of
  @tech{WorldState}.  Its behavior is specified via the handler functions
- designated in the optional @racket[spec] clauses, especially how the
+ designated in the optional clauses, especially how the
  @tech{world} program deals with clock ticks, with key events, with mouse
  events, and eventually with messages from the universe; how it renders
  itself as an image; when the program must shut down; where to register the
@@ -739,7 +741,7 @@ and @racket[big-bang] will close down all event handling.}
  if not @racket[#f], DrRacket opens a separate window in which the current
  state is rendered each time it is updated. This is useful for beginners
  who wish to see how their world evolves---without having to design a
- rendering function---plus for the debugging of world programs.
+ rendering function---or for general debugging of world programs.
 }}
 
 @item{
@@ -847,7 +849,7 @@ Second, we must translate the actions in our domain---the arrows in the
 @(begin
 #reader scribble/comment-reader
 (racketblock
-;; tick : WorldState -> HandlerResult
+;; tick : WorldState -> @tech[#:tag-prefixes '("world")]{HandlerResult}
 ;; deal with the passing of time
 (define (tick w) ...)
 
@@ -930,7 +932,7 @@ Each world-producing callback in a world program---those for handling clock
 ]
  where @deftech{Package} represents a pair consisting of a @|WorldState|
  and a message from a @tech{world} program to the @tech{server}.  Because
- programs send messages via @tech{Package}, the teachpack does not
+ programs only send messages via @tech{Package}, the teachpack does not
  provide the selectors for the structure, only the constructor and a
  predicate.
 
@@ -1123,7 +1125,10 @@ for universe programs. For example:
 
 @defproc[(make-bundle [state any/c] [mails (listof mail?)] [low (listof iworld?)]) bundle?]{
  creates a @emph{bundle} from a piece of data that
- represents a server state, a list of mails, and a list of iworlds.}
+ represents a server state, a list of mails, and a list of iworlds.
+ 
+  The list of iworlds in the third field of the bundle are removed from the
+  list of participants from which to expect messages.}
 
 If disconnecting from these worlds results in an empty list of
 participants, the universe server is restarted in the initial state.
@@ -1235,7 +1240,7 @@ The mandatory clauses of a @racket[universe] server description are
  All proper event handlers produce a state of the universe or a
  @emph{bundle}.  The state of the universe is safe-guarded by the server until the next event, and the mails
  are broadcast as specified.  The list of iworlds in the third field of the
- bundle is removed from the list of participants from which to expect
+ bundle are removed from the list of participants from which to expect
  messages.
 
 The following picture provides a graphical overview of the server's workings.
@@ -1345,8 +1350,8 @@ optional handlers:
 
 @item{
 @defform/none[#:literals (state) (state expr)]{
- tells DrRacket to display a separate window in which the current
- state is rendered each time it is updated. This is mostly useful for
+ if not #f, DrRacket opens a separate window in which the current state is 
+ rendered each time it is updated. This is mostly useful for
  debugging server programs.
 }}
 
@@ -1762,7 +1767,7 @@ Start the server now.
  @racketblock[(universe '() (on-new add-world) (on-msg switch))]
 
 Exercise: The function definition simply assumes that @emph{wrld} is
- @racket[world=?] to @racket[(first univ)] and that the received message
+ @racket[iworld=?] to @racket[(first univ)] and that the received message
  @emph{m} is @racket['done]. Modify the function definition so that it
  checks these assumptions and raises an error signal if either of them is
  wrong. Start with functional examples. If stuck, re-read the section on
