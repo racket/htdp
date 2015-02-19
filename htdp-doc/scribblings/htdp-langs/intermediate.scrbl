@@ -40,6 +40,7 @@
       character]
 [expr-for-let (lambda (variable variable ...) expr)
               expr]
+[test-case @#,racket[(check-satisifed expr expr)]]
 ]
 
 @prim-nonterms[("intermediate") define define-struct]

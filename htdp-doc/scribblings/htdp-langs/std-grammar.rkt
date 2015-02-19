@@ -18,7 +18,7 @@
    form ...
    [test-case @#,racket[(check-expect expr expr)]
               @#,racket[(check-random expr expr)]
-              @#,racket[(check-satisifed expr name)]
+              @#,racket[(check-satisfied expr name)]
               @#,racket[(check-within expr expr expr)]
               @#,racket[(check-member-of expr expr (... ...))]
               @#,racket[(check-range expr expr expr)]
