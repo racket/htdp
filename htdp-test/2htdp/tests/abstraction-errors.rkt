@@ -11,7 +11,7 @@
    (lambda ()
      (eval `(module a racket/base (require ,ABSTRACTION) e)))))
 
-(define ABSTRACTION "abstraction.rkt")
+(define ABSTRACTION '2htdp/abstraction)
 
 (exn/msg "bad syntax" (for/list 10))
 (exn/msg "expected at least one comprehension clause" (for/list () 10))
