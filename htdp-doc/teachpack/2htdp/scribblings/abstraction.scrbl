@@ -3,14 +3,14 @@
 @(require "shared.rkt" scribble/manual scribble/eval
           (for-label
 	    teachpack/2htdp/abstraction
-	    (only-in lang/htdp-beginner check-expect)
+	    (only-in lang/htdp-beginner require check-expect)
 	    #;
 	    (except-in racket for/list for/or for/and for/sum for/product for*/list for*/or for*/and for*/sum for*/product)
 	    ))	
 
 @; ---------------------------------------------------------------------------------------------------
 
-@teachpack["universe"]{Worlds and the Universe}
+@teachpack["abstraction"]{Abstraction}
 
 @author{Matthias Felleisen}
 
@@ -20,7 +20,7 @@
 @section[#:tag "abstraction" #:tag-prefix "x"]{Abstraction}
 
 @defform/subs[#:id for/list
-              (for/list (comprehension-clause comprehension-clause ...) body-expression)
+              (for/list (comprehension-clause comprehension-clause ...) body-expr)
               ([comprehension-clause (identifier expression)])]{
   loops ...
 
