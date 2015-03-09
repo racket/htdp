@@ -285,7 +285,7 @@ applicable ideas of program design.
                  (cons pattern pattern)
                  (name pattern ...)
                  (? name)])]{
- a conditional form that matches the result of @racket[case-expr] sequentially
+ dispatches like a @racket[cond], matching the result of @racket[case-expr] sequentially
  against all @racket[pattern]s. The first successful match triggers the
  evaluation of the matching @racket[body-expr], whose value is the result of
  the entire @racket[match] expression. 
@@ -354,3 +354,92 @@ structure type, not @racket[make-doll], the constructor name.
 
 @;-----------------------------------------------------------------------------
 @section[#:tag "adt" #:tag-prefix "x"]{Algebraic Data Types}
+
+@defform/subs[#:id define-type
+              (define-type type (variant (field predicate) ...) ...)
+              ([type name]
+	       [variant name]
+	       [field name]
+	       [predicate name])]{
+ defines structure types @racket[variant] ... with fields
+ @racket[field] ..., respectively. In addition, it defines constructors
+ that enforce that the field values satisfy the specified predicate. Finally,
+ it introduce the name @racket[type] as the name for the union of all
+ @racket[variant] structure types and @racket[type?] as a predicate
+ that determines whether a value belongs to this class of values. 
+
+Consider the following type definition: 
+@;%
+@(begin
+#reader scribble/comment-reader
+(racketblock
+(define-type BTree
+  (leaf (info number?))
+  (node (left BTree?) (right BTree?)))
+))
+@;%
+ It defines two structure types: 
+@;%
+@(begin
+#reader scribble/comment-reader
+(racketblock
+(define-struct leaf (info))
+(define-struct node (left right))
+))
+@;%
+ The @racket[make-leaf] constructor signals an error when applied to any other
+ values but numbers, while @racket[make-node] accepts only instances of
+ @racket[BTree]. Finally, @racket[BTree?] is a predicate that recognizes such
+ instances: 
+@interaction[#:eval (make-base-eval '(require 2htdp/abstraction) '(define-type BTree (leaf (info number?)) (node (left BTree?) (right BTree?))))
+(make-leaf 42)
+(make-node (make-leaf 42) (make-leaf 21))
+(BTree? (make-node (make-leaf 42) (make-leaf 21)))
+]
+And here is how a constructor fails when applied to the wrong kind of values: 
+@interaction[#:eval (make-base-eval '(require 2htdp/abstraction) '(define-type BTree (leaf (info number?)) (node (left BTree?) (right BTree?))))
+(make-leaf 'four)
+]
+}
+
+@defform[#:id type-case
+         (type-case type case-expr (variant (field ...) body-expr) ...)]{
+ dispatches like a @racket[cond], matching the result of @racket[case-expr] sequentially
+ against all @racket[variant]s. The first successful match triggers the
+ evaluation of the matching @racket[body-expr], whose value is the result of
+ the entire @racket[type-case] expression. 
+
+ A @racket[type-case] expression also ensures that (1) the collection
+ @racket[variant] cases covers all variant structure type definitions in
+ @racket[type] and (2) that each @racket[variant] clauses specifies as many fields as
+ the definition of @racket[type] specifies. 
+
+Assume that the following definition is placed in the scope of the above type
+definition for @racket[BTree]:
+@;%
+@(begin
+#reader scribble/comment-reader
+(racketblock
+(define (depth t)
+  (type-case BTree t
+    [leaf (info) 0]
+    [node (left right) (+ (max (depth left) (depth right)) 1)]))
+))
+@;%
+ This function definition uses a @racket[type-case] for @racket[BTree] and the
+ latter consists of two clauses: one for @racket[leaf]s and one for
+ @racket[node]s. The function computes the depth of the given tree. 
+
+@interaction[#:eval 
+(make-base-eval 
+ '(require 2htdp/abstraction) 
+ '(define-type BTree (leaf (info number?)) (node (left BTree?) (right BTree?)))
+ '(define (depth t)
+    (type-case BTree t
+      [leaf (info) 0]
+      [node (left right) (+ (max (depth left) (depth right)) 1)])))
+
+(depth (make-leaf 42))
+(depth (make-node (make-leaf 42) (make-leaf 21)))
+]
+}
