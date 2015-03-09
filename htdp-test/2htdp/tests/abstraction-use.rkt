@@ -52,8 +52,22 @@
   (map list (build-list (length l) add1) l))
 
 (define (enumerate l)
-  (for/list ((x l) (i (in-naturals)))
+  (for/list ((x l) (i (in-naturals 0)))
     (list (add1 i) x)))
+
+;; -----------------------------------------------------------------------------
+
+;; String -> String 
+
+(check-expect (capitalize-every-other-letter "abcd") "AbCd")
+
+(define (capitalize-every-other-letter s)
+  (for/string ([c s][i (in-naturals 0)])
+    (if (even? i) (string-upcase c) c)))
+
+(define (string-upcase s)
+  (string (char-upcase (first (string->list s)))))
+
 
 ;; -----------------------------------------------------------------------------
 ;; data abstraction 
