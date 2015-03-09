@@ -94,3 +94,26 @@
     [leaf (info) 0]
     [node (left right) (+ (max (depth left) (depth right)) 1)]))
 
+
+;; -----------------------------------------------------------------------------
+;; [NEList-of X] -> X
+
+(check-expect (last '(a b c)) 'c)
+(check-expect (last '(1 2 3)) 3)
+
+(define (last l)
+  (match l
+    [(cons x '()) x]
+    [(cons fst rst) (last rst)]))
+
+;; -----------------------------------------------------------------------------
+;; Doll -> Symbol 
+
+(define-struct doll (inside))
+
+(check-expect (undress (make-doll 'wood)) 'wood)
+
+(define (undress a-doll)
+  (match a-doll
+    [(struct doll (inside)) (undress inside)]
+    [(? symbol?) a-doll]))

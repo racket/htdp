@@ -25,7 +25,11 @@
  
  ;; SYNTAX: expression 
  ;; (type-case case:expr (name (name ...) body:expr) ...)
- (rename-out (type-case0 type-case)))
+ (rename-out (type-case0 type-case))
+ 
+ ;; SYTAX: expression 
+ ;; (match case:expr (pattern body:expr) ...)
+ (rename-out (match0 match)))
 
 ;; ---------------------------------------------------------------------------------------------------
 (require (for-syntax syntax/parse)
@@ -109,3 +113,8 @@
   (syntax-parse stx 
     [(_ type:id case:expr [variant:id (field:id ...) body:expr] ...)
      #'(type-case type case [variant (field ...) body] ...)]))
+
+(define-syntax (match0 stx)
+  (syntax-parse stx
+    [(_ case:expr (pattern body:expr) ...)
+     #'(match case (pattern body) ...)]))
