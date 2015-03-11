@@ -285,10 +285,10 @@ applicable ideas of program design.
                  (cons pattern pattern)
                  (name pattern ...)
                  (? name)])]{
- dispatches like a @racket[cond], matching the result of @racket[case-expr] sequentially
- against all @racket[pattern]s. The first successful match triggers the
- evaluation of the matching @racket[body-expr], whose value is the result of
- the entire @racket[match] expression. 
+ dispatches like a @racket[cond], matching the result of @racket[case-expr]
+ sequentially against all @racket[pattern]s. The first successful match
+ triggers the evaluation of the matching @racket[body-expr], whose value is the
+ result of the entire @racket[match] expression.
 
  The literal constants commonly used are numbers, strings, symbols, and
  @racket['()]. 

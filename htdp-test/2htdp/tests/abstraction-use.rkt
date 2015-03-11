@@ -100,6 +100,7 @@
 
 (check-expect (last '(a b c)) 'c)
 (check-expect (last '(1 2 3)) 3)
+(check-error (last '()))
 
 (define (last l)
   (match l
@@ -110,7 +111,6 @@
 ;; Doll -> Symbol 
 
 (define-struct doll (inside))
-
 (check-expect (undress (make-doll 'wood)) 'wood)
 
 (define (undress a-doll)
