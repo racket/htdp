@@ -9,6 +9,7 @@
     "draw-lib"
     "gui-lib"
     "htdp-lib"
+    "plai"
     "sandbox-lib"
     "pict-lib"))
 (define build-deps '("mzscheme-doc"

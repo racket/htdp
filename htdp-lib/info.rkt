@@ -15,6 +15,7 @@
     "images-lib"
     "images-gui-lib"
     "net-lib"
+    "plai"
     "pconvert-lib"
     "r5rs-lib"
     "sandbox-lib"
