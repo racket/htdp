@@ -64,18 +64,10 @@
             #f
             `(,#'module ,module-name ,language-module 
                         ,@teachpack-requires
-                        ,@(if enable-testing?
-                              (if (null? body-exps)
-                                  '() 
-                                  ;; this definition pulls the test~object binding from the user's namespace
-                                  ;; over to the one that is used in the REPL when module->namepsace
-                                  ;; grabs a hold of this module to make a namespace for the REPL
-                                  `(,(syntax-property
-                                      #`(define #,(datum->syntax #f 'test~object) (namespace-variable-value 'test~object))
-                                      'test-call #t)))
-                              '())
                         ,@body-exps)
-             (vector (object-name port) #f #f #f #f)))))]
+             (vector (object-name port) #f #f #f #f)))
+          enable-testing?
+          body-exps))]
       [(require)
        (set! state 'done-or-exn)
        (make-dynamic-requirer module-name enable-testing?)]
@@ -138,17 +130,28 @@
   (format "the teachpack '~s' was not found" x))
 
 
-;; rewrite-module : syntax -> syntax
-;; rewrites the module to remove provide's (for now...)
-(define (rewrite-module stx)
+;; rewrite-module : syntax boolean -> syntax
+;; rewrites the module to inject `test~object`
+;; and to remove provide's (for now...)
+(define (rewrite-module stx enable-testing? body-exps)
   (syntax-case stx (module #%plain-module-begin)
     [(module name lang (#%plain-module-begin bodies ...))
      (with-syntax ([(rewritten-bodies ...) 
                     (filter not-provide?
                             (syntax->list (syntax (bodies ...))))])
-       (syntax/loc stx
+       (quasisyntax/loc stx
          (module name lang
            (#%plain-module-begin 
+            #,@(if enable-testing?
+                   (if (null? body-exps)
+                       '()
+                       ;; this definition pulls the test~object binding from the user's namespace
+                       ;; over to the one that is used in the REPL when module->namepsace
+                       ;; grabs a hold of this module to make a namespace for the REPL
+                       `(,(syntax-property
+                           #`(define #,(datum->syntax stx 'test~object) (namespace-variable-value 'test~object))
+                           'test-call #t)))
+                  '())
             rewritten-bodies ...))))]
     [else
      (raise-syntax-error 'htdp-languages "internal error .1")]))
