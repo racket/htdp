@@ -150,7 +150,7 @@
                        ;; over to the one that is used in the REPL when module->namepsace
                        ;; grabs a hold of this module to make a namespace for the REPL
                        `(,(syntax-property
-                           #`(define #,(datum->syntax stx 'test~object) (namespace-variable-value 'test~object))
+                           #`(define #,(datum->syntax #'lang 'test~object) (namespace-variable-value 'test~object))
                            'test-call #t)))
                   '())
             rewritten-bodies ...))))]
