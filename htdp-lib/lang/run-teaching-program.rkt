@@ -63,8 +63,9 @@
            (datum->syntax
             #f
             `(,#'module ,module-name ,language-module 
-                        ,@teachpack-requires
-                        ,@body-exps)
+              (#%module-begin ; avoid problems with macros in a 'module-begin context
+               ,@teachpack-requires
+               ,@body-exps))
              (vector (object-name port) #f #f #f #f)))
           enable-testing?
           body-exps))]
