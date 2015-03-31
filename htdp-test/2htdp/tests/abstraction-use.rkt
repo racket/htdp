@@ -94,6 +94,13 @@
     [leaf (info) 0]
     [node (left right) (+ (max (depth left) (depth right)) 1)]))
 
+;; -----------------------------------------------------------------------------
+
+(check-expect (move (make-posn 1 2)) (make-posn 2 2))
+
+(define (move x)
+  (match x
+    [(posn x y) (make-posn (+ x 1) y)]))
 
 ;; -----------------------------------------------------------------------------
 ;; [NEList-of X] -> X

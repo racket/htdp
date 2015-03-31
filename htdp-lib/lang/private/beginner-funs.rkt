@@ -77,7 +77,6 @@
                      stx)]))
                #'orig-name))]))]))
 
-
 ;; procedures with documentation:
 (provide-and-wrap
  in-rator-position-only
@@ -629,7 +628,7 @@
                                                           })
  
  ("Posns"
-  @defproc[(posn) signature]{Signature for posns.}
+  ; @defproc[(posn) signature]{Signature for posns.}
   @defproc[(make-posn [x any/c][y any/c]) posn]{
                                                 Constructs a posn from two arbitrary values.
                                                 @interaction[#:eval (bsl) (make-posn 3 3) (make-posn "hello" true)]

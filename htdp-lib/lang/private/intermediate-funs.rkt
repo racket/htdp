@@ -1,6 +1,7 @@
 #lang at-exp scheme/base
 
 (require "teachprims.rkt" "and-or-map.rkt"
+         lang/posn
          mzlib/etc
          (only-in racket/list argmin argmax)
          syntax/docprovide
@@ -43,8 +44,9 @@
     @interaction[#:eval (isl) (/ 12 2) (/ 12 2 3) (/ 3)]
     }
     )
- 
-  ; ("Posn" )
+  
+  ("Posn"
+    @defproc[(posn) signature]{Signature for posns.})
 
   ("Lists"
     @defproc[((intermediate-append append) [l (listof any)] ...) (listof any)]{
