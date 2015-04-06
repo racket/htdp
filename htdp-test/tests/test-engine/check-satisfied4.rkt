@@ -4,5 +4,4 @@
 ;; ASSUME: THIS FILE is IN BSL 
 
 (check-satisfied 3 equal?)
-;; just error, w/o showing the report window but show string below 
 "check-satisfied: expects function of one argument in second position. Given equal?"

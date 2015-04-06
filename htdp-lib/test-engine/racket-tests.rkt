@@ -219,9 +219,10 @@
      (raise-syntax-error 'check-satisfied "expects named function in second position." stx)]
     [_ (raise-syntax-error 'check-satisfied (argcount-error-message/stx 2 stx) stx)]))
 
-(define (check-values-property test actual name src test-engine)
+(define (check-values-property produce-v actual name src test-engine)
   ;; it is okay if actual is a procedure because property testing may use
   ;; it, but it is possibly weird for students
+  (send (send test-engine get-info) add-check)
   (run-and-check
    ;; check
    (lambda (p? v _what-is-this?)
@@ -233,12 +234,12 @@
         (send (send test-engine get-info) add-check)
         r]
        [else 
-        (error-check (lambda (v) #f) name "ouch ouch" #t)
+        (error-check (lambda (v) #f) name "expected a boolean" #t)
         (check-result (format "~a [as predicate in check-satisfied]" name) boolean? "boolean" r)]))
    ;; maker
    (lambda (src format v1 _v2 _) (make-satisfied-failed src format v1 name))
    ;; test 
-   test
+   produce-v
    ;; expect 
    actual
    #f
@@ -420,10 +421,6 @@
            (send c check-failed result (check-fail-src result) exn)
            (if exn (raise exn) #f)]
           [else #t])))
-
-(define (tee x)
-  (displayln `(tee ,x))
-  x)
 
 ;;Wishes
 (struct exn:fail:wish exn:fail (name args))

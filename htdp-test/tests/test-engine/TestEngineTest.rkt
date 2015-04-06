@@ -2,7 +2,7 @@
 ;; about the language level of this file in a form that our tools can easily process.
 #reader(lib "htdp-advanced-reader.ss" "lang")((modname TestEngineTest) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #t #t none #f ())))
 ;; *****************************************************************************
-;; Expect 44 checks, 20 failures, the last one is finel
+;; Expect 42 checks, 19 failures, the last one is finel
 ;; *****************************************************************************
 ;; 3 additonals must be uncommented to check error message for check-satisfied
 
