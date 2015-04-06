@@ -33,6 +33,8 @@ Algebraic data types are provided for those who think teaching the features
 of functional programming is more important than teaching universally
 applicable ideas of program design.
 
+@history[#:added "version 1.1"]
+
 @;-----------------------------------------------------------------------------
 @section[#:tag "abstraction" #:tag-prefix "x"]{Loops and Comprehensions}
 

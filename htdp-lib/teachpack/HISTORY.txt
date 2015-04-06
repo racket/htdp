@@ -1,6 +1,8 @@
 ------------------------------------------------------------------------
-Version NEXT 
+Version 6.2
 
+* new teachpack: 2htdp/abstraction -- 
+  some for/* loops, match, define-type and type-cases for ISL and ISL+ 
 * added check-satisfied to test engine 
 * fixed 2htdp/universe so that an executable created from drracket 
   behaves properly when run independently of drracket 
