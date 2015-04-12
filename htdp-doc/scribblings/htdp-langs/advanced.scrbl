@@ -315,6 +315,10 @@ level as they did in the @secref["intermediate-lam"] level.
 
 @section[#:tag "advanced-pre-defined"]{Pre-Defined Functions}
 
+The remaining subsections list those functions that are built into the
+programming language. All other functions are imported from a teachpack or
+must be defined in the program. 
+
 @(require (submod lang/htdp-advanced procedures))
 @(render-sections (docs) #'here "htdp-advanced")
 

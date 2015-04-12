@@ -79,6 +79,10 @@ A quoted @racket[name] is a symbol. A symbol is a value, just like
              
 @section[#:tag "beginner-pre-defined"]{Pre-defined Functions}
 
+The remaining subsections list those functions that are built into the
+programming language. All other functions are imported from a teachpack or
+must be defined in the program. 
+
 @(require (submod lang/htdp-beginner procedures))
 @(render-sections (docs) #'here "htdp-beginner")
 

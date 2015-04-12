@@ -95,16 +95,16 @@
   ;; ===> 
   (make-splice
    (list
-    @section[#:tag (string-append section-prefix " Pre-Defined Variables")]{Pre-Defined Variables}
+    @section[#:tag (string-append section-prefix " Pre-Defined Variables")]{Pre-defined Variables}
 
     @defthing[empty empty?]{
       The empty list.}
 
-    @defthing[true boolean?]{
-      The true value.}
+   @defthing[true boolean?]{
+      The @code{#true} value.}
 
-    @defthing[false boolean?]{
-      The false value.}
+   @defthing[false boolean?]{
+      The @code{#false} value.}
 
     @section[#:tag (string-append section-prefix " Template Variables")]{Template Variables}
     @; MF: I tried abstracting but I failed

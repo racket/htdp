@@ -121,6 +121,10 @@ level as they did in the @secref["intermediate"] level.
 
 @section[#:tag "intm-w-lambda-pre-defined"]{Pre-defined Functions}
 
+The remaining subsections list those functions that are built into the
+programming language. All other functions are imported from a teachpack or
+must be defined in the program. 
+
 @(require (submod lang/htdp-intermediate-lambda procedures))
 @(render-sections (docs) #'here "htdp-intermediate-lambda")
 
