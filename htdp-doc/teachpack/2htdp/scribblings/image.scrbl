@@ -9,7 +9,7 @@
                      (only-in racket/base path-string?))
           lang/posn
           "shared.rkt"
-          "img-eval.rkt"
+          teachpack/2htdp/scribblings/img-eval
           scribble/decode
           scribble/manual)
 

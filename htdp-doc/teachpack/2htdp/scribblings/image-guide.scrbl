@@ -9,7 +9,7 @@
                      pict/convert
                      (only-in mrlib/image-core render-image))
           "shared.rkt"
-          "img-eval.rkt"
+          teachpack/2htdp/scribblings/img-eval
           scribble/decode
           scribble/manual
           scribble/eval
