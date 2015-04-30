@@ -3,31 +3,30 @@
 (define collection 'multi)
 
 (define deps
-  '("scheme-lib"
-    "srfi-lite-lib"
-    "base"
+  '("base"
     "compatibility-lib"
     "draw-lib"
+    ("drracket-plugin-lib" #:version "1.1")
     "errortrace-lib"
-    ("gui-lib" #:version "1.7")
     "html-lib"
-    "images-lib"
     "images-gui-lib"
+    "images-lib"
     "net-lib"
-    "plai"
     "pconvert-lib"
+    "plai-lib"
     "r5rs-lib"
     "sandbox-lib"
+    "scheme-lib"
     "scribble-lib"
     "slideshow-lib"
-    "snip-lib"    
+    "snip-lib"
+    "srfi-lite-lib"
     "string-constants-lib"
     "typed-racket-lib"
     "web-server-lib"
     "wxme-lib"
-    "drracket"
-    "deinprogramm-signature"
-    "deinprogramm"))
+    ("gui-lib" #:version "1.7")
+    "deinprogramm-signature"))
 (define build-deps '("racket-index"
                      "at-exp-lib"
                      "rackunit-lib"))
