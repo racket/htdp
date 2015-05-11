@@ -11,7 +11,8 @@
 
 (define (image? a)
   (or (is-a? a image-snip%)
-      (is-a? a cache-image-snip%)))
+      (is-a? a cache-image-snip%)
+      (is-a? a 2htdp/image:image%)))
 
 (define (image=? a-raw b-raw)
   (unless (or (2htdp/image:image? a-raw) (image? a-raw)) (raise-type-error 'image=? "image" 0 a-raw b-raw))
@@ -21,6 +22,7 @@
 
 (define (scene? i)
   (and (image? i)
+       (not (is-a? i 2htdp/image:image%))
        (let-values ([(x y) (send (coerce-to-cache-image-snip i) get-pinhole)])
          (and (= 0 x)
               (= 0 y)))))
