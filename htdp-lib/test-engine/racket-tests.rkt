@@ -230,9 +230,7 @@
        (error-check (lambda (v) #f) name SATISFIED-FMT #t))
      (define r (p? v))
      (cond
-       [(boolean? r) 
-        (send (send test-engine get-info) add-check)
-        r]
+       [(boolean? r) r]
        [else 
         (error-check (lambda (v) #f) name "expected a boolean" #t)
         (check-result (format "~a [as predicate in check-satisfied]" name) boolean? "boolean" r)]))
