@@ -144,12 +144,15 @@
                    (send pr set-x (+ dx x (* short-size (cos r-theta))))
                    (send pr set-y (+ dy y (* short-size (sin r-theta))))
                    (send dc draw-polygon points)))))
+         (define old-smoothing (send dc get-smoothing))
+         (send dc set-smoothing 'aligned)
          (if (eq? turtle-style 'line)
              (send dc set-pen icon-pen)
              (begin
                (send dc set-pen blank-pen)
                (send dc set-brush icon-brush)))
          (for-each proc turtles)
+         (send dc set-smoothing old-smoothing)
          (send dc set-pen b-pen)]
         [else
          (void)]))
@@ -157,8 +160,9 @@
     (define (construct-bitmap)
       (unless bitmap
         (flatten)
-        (set! bitmap (make-object bitmap% width height))
+        (set! bitmap (make-bitmap width height))
         (let* ([bitmap-dc (make-object bitmap-dc% bitmap)])
+          (send bitmap-dc set-smoothing 'aligned)
           (send bitmap-dc clear)
           (for ([line (in-list lines)])
             (send bitmap-dc set-pen (if (line-black? line) b-pen w-pen))
