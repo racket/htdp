@@ -66,11 +66,11 @@
       (define/override (read in-stream)
         (unless saved-turtles
           (error 'turtles "click execute before running the turtles"))
-        (let ([str (send in-stream get-string #f)])
+        (let ([str (send in-stream get-unterminated-bytes #f)])
           (if (or (not str)
                   (string=? "" str))
               (saved-turtles 150 150)
-              (let ([sexp (vec->struc (prim-read (open-input-string str)))])
+              (let ([sexp (vec->struc (prim-read (open-input-bytes str)))])
                 (make-object saved-turtle-snip%
                   (first sexp)
                   (second sexp)
@@ -193,9 +193,10 @@
       (define/override (copy)
         (make-object turtle-snip% width height turtles cache lines))
       (define/override (write stream-out)
-        (let ([p (open-output-string)])
+        (let ([p (open-output-bytes)])
           (prim-write (struc->vec (list width height turtles cache lines)) p)
-          (send stream-out put (get-output-string p))))
+          (define btes (get-output-bytes p))
+          (send stream-out put (bytes-length btes) btes)))
       
       (define/public (flatten)
         (letrec ([walk-turtles
