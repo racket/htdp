@@ -77,7 +77,7 @@
     [define pr (make-object point% 0 0)]
     [define ph (make-object point% 0 0)]
     [define points (list pl pr ph)]
-    (define (flip-icons dc dx dy)
+    (define/private (flip-icons dc dx dy)
       (case turtle-style
         [(triangle line)
          (define proc
@@ -120,7 +120,7 @@
         [else
          (void)]))
     
-    (define (construct-bitmap)
+    (define/private (construct-bitmap)
       (unless bitmap
         (flatten)
         (set! bitmap (make-bitmap width height))
@@ -189,7 +189,7 @@
       (set! turtles (walk-turtles turtles cache null))
       (set! cache empty-cache))
     
-    (define (move-turtle dist)
+    (define/private (move-turtle dist)
       (lambda (turtle)
         (let ([x (turtle-x turtle)]
               [y (turtle-y turtle)]
