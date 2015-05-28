@@ -8,4 +8,4 @@
   (list 
    (string-constant stepper-button-label)
    x:step-img
-   (λ (drs-frame) (send drs-frame stepper-button-callback))))
+   (λ (drs-frame) (send (send drs-frame get-current-tab) stepper-button-callback))))
