@@ -300,7 +300,7 @@
                                        }
   @defproc[(complex? [x any/c]) boolean?]{
                                           Determines whether some value is complex. 
-                                          @interaction[#:eval (bsl) (real? 1-2i)]
+                                          @interaction[#:eval (bsl) (complex? 1-2i)]
                                           }
   
   ;; common utilities 
