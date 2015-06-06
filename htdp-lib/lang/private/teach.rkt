@@ -906,7 +906,7 @@
                               (cons prop:custom-write
                                     ;; Need a transparent-like printer, but hide auto field.
                                     ;; This simplest way to do that is to create an instance
-                                    ;; of a transparet structure with the same name and field values.
+                                    ;; of a transparent structure with the same name and field values.
                                     (let-values ([(struct:plain make-plain plain? plain-ref plain-set)
                                                   (make-struct-type 'name_ #f #,field# 0 #f null #f)])
                                       (lambda (r port mode)
@@ -2495,7 +2495,7 @@
                              (syntax id)
                              "expected a variable after set!, but found a ~a" (syntax-e #'id))]))
                        ;; If we're in a module, we'd like to check here whether
-                       ;;  the identier is bound, but we need to delay that check
+                       ;;  the identifier is bound, but we need to delay that check
                        ;;  in case the id is defined later in the module. So only
                        ;;  do this in continuing mode:
                        (when continuing?

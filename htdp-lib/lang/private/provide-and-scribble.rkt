@@ -155,8 +155,8 @@ tests to run:
                          ;; Section  = [Listof (cons Identifier Doc)]
                          ;; Sections = [Listof (list Title Section)]
                          (provide 
-                          ;; Identfier ... *-> Sections 
-                          ;; retrieve the document without the specified identfiers
+                          ;; Identifier ... *-> Sections
+                          ;; retrieve the document without the specified identifiers
                           docs
                           
                           ;; Sections String -> [Listof ScribbleBox]

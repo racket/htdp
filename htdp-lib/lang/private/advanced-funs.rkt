@@ -239,7 +239,7 @@
    ("Hash Tables"
     @defproc[((advanced-make-hash make-hash)) (hash X Y)]{
     Constructs a mutable hash table from an optional list of mappings that
-    uses equal? for comparisions.
+    uses equal? for comparisons.
     @interaction[#:eval (asl)
       (make-hash)
       (make-hash '((b 69) (e 61) (i 999)))
@@ -247,7 +247,7 @@
     } 
     @defproc[((advanced-make-hasheq make-hasheq)) (hash X Y)]{
     Constructs a mutable hash table from an optional list of mappings that
-    uses eq? for comparisions.
+    uses eq? for comparisons.
     @interaction[#:eval (asl)
       (make-hasheq)
       (make-hasheq '((b 69) (e 61) (i 999)))
@@ -255,7 +255,7 @@
     } 
     @defproc[((advanced-make-hasheqv make-hasheqv)) (hash X Y)]{
     Constructs a mutable hash table from an optional list of mappings that
-    uses eqv? for comparisions.
+    uses eqv? for comparisons.
     @interaction[#:eval (asl)
       (make-hasheqv)
       (make-hasheqv '((b 69) (e 61) (i 999)))
@@ -263,7 +263,7 @@
     } 
     @defproc[((advanced-make-immutable-hash make-immutable-hash)) (hash X Y)]{
     Constructs an immutable hash table from an optional list of mappings
-    that uses equal? for comparisions.
+    that uses equal? for comparisons.
     @interaction[#:eval (asl)
       (make-immutable-hash)
       (make-immutable-hash '((b 69) (e 61) (i 999)))
@@ -271,7 +271,7 @@
     } 
     @defproc[((advanced-make-immutable-hasheq make-immutable-hasheq)) (hash X Y)]{
     Constructs an immutable hash table from an optional list of mappings
-    that uses eq? for comparisions.
+    that uses eq? for comparisons.
     @interaction[#:eval (asl)
       (make-immutable-hasheq)
       (make-immutable-hasheq '((b 69) (e 61) (i 999)))
@@ -279,7 +279,7 @@
     } 
     @defproc[((advanced-make-immutable-hasheqv make-immutable-hasheqv)) (hash X Y)]{
     Constructs an immutable hash table from an optional list of mappings
-    that uses eqv? for comparisions.
+    that uses eqv? for comparisons.
     @interaction[#:eval (asl)
       (make-immutable-hasheqv)
       (make-immutable-hasheqv '((b 69) (e 61) (i 999)))
@@ -405,27 +405,27 @@
 
 @defproc[((advanced-make-hash make-hash) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
  Constructs a mutable hash table from an optional list of mappings that
- uses equal? for comparisions.} 
+ uses equal? for comparisons.}
 
 @defproc[((advanced-make-hasheq make-hasheq) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
  Constructs a mutable hash table from an optional list of mappings that
- uses eq? for comparisions.} 
+ uses eq? for comparisons.}
 
 @defproc[((advanced-make-hasheqv make-hasheqv) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
  Constructs a mutable hash table from an optional list of mappings that
- uses eqv? for comparisions.} 
+ uses eqv? for comparisons.}
 
 @defproc[((advanced-make-immutable-hash make-immutable-hash) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
  Constructs an immutable hash table from an optional list of mappings that
- uses equal? for comparisions.} 
+ uses equal? for comparisons.}
 
 @defproc[((advanced-make-immutable-hasheq make-immutable-hasheq) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
  Constructs an immutable hash table from an optional list of mappings that
- uses eq? for comparisions.} 
+ uses eq? for comparisons.}
 
 @defproc[((advanced-make-immutable-hasheqv make-immutable-hasheqv) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
  Constructs an immutable hash table from an optional list of mappings that
- uses eqv? for comparisions.} 
+ uses eqv? for comparisons.}
 
 @defproc[(hash-ref (case-> ((hash X Y) X -> Y) ((hash X Y) X Y -> Y) ((hash X Y) X (-> Y) -> Y))]{
  Extracts the value associated with a key from a hash table; the three

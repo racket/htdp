@@ -149,11 +149,11 @@
                                                                         @interaction[#:eval (bsl) (/ 12 2) (/ 12 2 3)]
                                                                         }
   @defproc[(max [x real][y real] ...) real]{
-                                            Determines the largest number---aka, the @index["maximum"]{maxiumum}. 
+                                            Determines the largest number---aka, the @index["maximum"]{maximum}.
                                                                                      @interaction[#:eval (bsl) (max 3 2 8 7 2 9 0)]
                                                                                      }
   @defproc[(min [x real][y real] ...) real]{
-                                            Determines the smallest number---aka, the @index["minimum"]{miniumum}. 
+                                            Determines the smallest number---aka, the @index["minimum"]{minimum}.
                                                                                       @interaction[#:eval (bsl) (min 3 2 8 7 2 9 0)]
                                                                                       }
   @defproc[(quotient [x integer][y integer]) integer]{
@@ -305,7 +305,7 @@
   
   ;; common utilities 
   @defproc[(add1 [x number]) number]{
-                                     Incrementes the given number.
+                                     Increments the given number.
                                      @interaction[#:eval (bsl) (add1 2)]
                                      }
   @defproc[(sub1 [x number]) number]{
@@ -317,7 +317,7 @@
                                                      @interaction[#:eval (bsl) (lcm 6 12 8)]
                                                      }
   @defproc[(gcd [x integer][y integer] ...) integer]{
-                                                     Determines the greatest common divisior of two integers (exact or inexact). 
+                                                     Determines the greatest common divisor of two integers (exact or inexact).
                                                      @interaction[#:eval (bsl) (gcd 6 12 8)]
                                                      }
   @defproc[(numerator [x rational?]) integer]{
@@ -325,7 +325,7 @@
                                               @interaction[#:eval (bsl) (numerator 2/3)]
                                               }
   @defproc[(denominator [x rational?]) integer]{
-                                                Computees the denominator of a rational.
+                                                Computes the denominator of a rational.
                                                 @interaction[#:eval (bsl) (denominator 2/3)]
                                                 }
   @defproc[(floor [x real]) integer]{
@@ -388,7 +388,7 @@
                                                @interaction[#:eval (bsl) (number->string 42)]
                                                }
   @defproc[(integer->char [x exact-integer?]) char]{
-                                                    Lookups the character that corresponds to the given exact integer in the ASCII table (if any). 
+                                                    Looks up the character that corresponds to the given exact integer in the ASCII table (if any).
                                                     @interaction[#:eval (bsl) (integer->char 42)]
                                                     }
   @defproc[((beginner-random random) [x natural]) natural]{
@@ -656,7 +656,7 @@
                                                            @interaction[#:eval (bsl) (char=? #\b #\a)]
                                                            }
   @defproc[(char<? [x char][d char][e char] ...) boolean?]{
-                                                           Determines whether the characterc are ordered in a strictly increasing manner. 
+                                                           Determines whether the characters are ordered in a strictly increasing manner.
                                                            @interaction[#:eval (bsl) (char<? #\a #\b #\c)]
                                                            }
   @defproc[(char>? [c char][d char][e char] ...) boolean?]{
@@ -664,7 +664,7 @@
                                                            @interaction[#:eval (bsl) (char>? #\A #\z #\a)]
                                                            }
   @defproc[(char<=? [c char][d char][e char] ...) boolean?]{
-                                                            Determines whether the characterc are ordered in a strictly increasing manner. 
+                                                            Determines whether the characters are ordered in a strictly increasing manner.
                                                             @interaction[#:eval (bsl) (char<=? #\a #\a #\b)]
                                                             }
   @defproc[(char>=? [c char][d char][e char] ...) boolean?]{
@@ -677,7 +677,7 @@
                                                               @interaction[#:eval (bsl) (char-ci=? #\b #\B)]
                                                               }
   @defproc[(char-ci<? [c char][d char][e char] ...) boolean?]{
-                                                              Determines whether the characterc are ordered in a strictly increasing and case-insensitive manner. 
+                                                              Determines whether the characters are ordered in a strictly increasing and case-insensitive manner.
                                                               @interaction[#:eval (bsl) (char-ci<? #\B #\c) (char<? #\b #\B)]
                                                               }
   @defproc[(char-ci>? [c char][d char][e char] ...) boolean?]{
@@ -685,7 +685,7 @@
                                                               @interaction[#:eval (bsl) (char-ci>? #\b #\B) (char>? #\b #\B)]
                                                               }
   @defproc[(char-ci<=? [c char][d char][e char] ...) boolean?]{
-                                                               Determines whether the characterc are ordered in an increasing and case-insensitive manner. 
+                                                               Determines whether the characters are ordered in an increasing and case-insensitive manner.
                                                                @interaction[#:eval (bsl) (char-ci<=? #\b #\B) (char<=? #\b #\B)]
                                                                }
   @defproc[(char-ci>=? [c char][d char][e char] ...) boolean?]{
@@ -721,7 +721,7 @@
                                           @interaction[#:eval (bsl) (char-downcase #\T)]
                                           }
   @defproc[(char->integer [c char]) integer]{
-                                             Lookups the number that corresponds to the given character in the ASCII table (if any). 
+                                             Looks up the number that corresponds to the given character in the ASCII table (if any).
                                              @interaction[#:eval (bsl) (char->integer #\a) (char->integer #\z)]
                                              })
  
