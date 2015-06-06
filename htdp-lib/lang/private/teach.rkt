@@ -463,7 +463,7 @@
         "a keyword"
         (something-else stx)))
   
-  (define (make-name-inventer)
+  (define (make-name-inventor)
     ;; Normally we'd use (make-syntax-introducer) because gensyming makes
     ;;  identifiers that play badly with exporting. But we don't have
     ;;  to worry about exporting in the teaching languages, while we do
@@ -475,7 +475,7 @@
   
   (define (wrap-func-definitions first-order? kinds names argcs k)
     (if first-order?
-        (let ([name2s (map (make-name-inventer) names)])
+        (let ([name2s (map (make-name-inventor) names)])
           (values (quasisyntax
                    (begin
                      #,@(map
