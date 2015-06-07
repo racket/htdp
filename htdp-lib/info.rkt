@@ -27,6 +27,7 @@
     "web-server-lib"
     "wxme-lib"
     "drracket"
+    "deinprogramm-signature"
     "deinprogramm"))
 (define build-deps '("racket-index"
                      "at-exp-lib"
