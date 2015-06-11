@@ -492,15 +492,13 @@
                 #f))))
 
 (define/chk (scene+line image x1 y1 x2 y2 color)
-  (let* ([dx (abs (min 0 x1 x2))]
-         [dy (abs (min 0 y1 y2))])
-    (make-image (make-overlay
-                 (make-crop (rectangle-points (get-right image) (get-bottom image))
-                            (make-line-segment (make-point x1 y1) (make-point x2 y2) color))
-                 (image-shape image))
-                (image-bb image)
-                #f
-                (send image get-pinhole))))
+  (make-image (make-overlay
+               (make-crop (rectangle-points (get-right image) (get-bottom image))
+                          (make-line-segment (make-point x1 y1) (make-point x2 y2) color))
+               (image-shape image))
+              (image-bb image)
+              #f
+              (send image get-pinhole)))
 
 (define/chk (scene+polygon image posns-or-pulled-points mode color)
   (check-mode/color-combination 'scene+polygon 4 mode color)
@@ -520,17 +518,15 @@
     
 
 (define/chk (scene+curve image x1 y1 angle1 pull1 x2 y2 angle2 pull2 color)
-  (let* ([dx (abs (min 0 x1 x2))]
-         [dy (abs (min 0 y1 y2))])
-    (make-image (make-overlay
-                 (make-crop (rectangle-points (get-right image) (get-bottom image))
-                            (make-curve-segment (make-point x1 y1) angle1 pull1
-                                                (make-point x2 y2) angle2 pull2
-                                                'outline color))
-                 (image-shape image))
-                (image-bb image)
-                #f
-                (send image get-pinhole))))
+  (make-image (make-overlay
+               (make-crop (rectangle-points (get-right image) (get-bottom image))
+                          (make-curve-segment (make-point x1 y1) angle1 pull1
+                                              (make-point x2 y2) angle2 pull2
+                                              'outline color))
+               (image-shape image))
+              (image-bb image)
+              #f
+              (send image get-pinhole)))
 
 ;; frame : image -> image
 ;; draws a black frame around a image where the bounding box is
