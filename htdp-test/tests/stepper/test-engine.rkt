@@ -1,6 +1,7 @@
 #lang racket
 
-(require stepper/private/shared
+(require syntax/modread
+         stepper/private/shared
          stepper/private/model
          tests/utils/sexp-diff
          lang/run-teaching-program
@@ -156,6 +157,20 @@
        (test-sequence/core render-settings expander-thunk expected-steps error-box)
        (done-thunk)])))
 
+;; FIXME: experimenting...
+(define (test-sequence/hashlang the-ll-model exp-str expected-steps extra-files error-box)
+  (parameterize ([current-directory test-directory])
+    (match-define (list expander-thunk done-thunk)
+      (string->expander-thunk/hashlang exp-str extra-files))
+    (match the-ll-model
+      [(struct ll-model (namespace-spec render-settings enable-testing?))
+       (unless (display-only-errors)
+         (printf "testing string: ~v\n" exp-str))
+       (test-sequence/core render-settings expander-thunk expected-steps error-box)
+       (done-thunk)])))
+
+;; NB: I'm expecting to delete this function when everyone uses
+;; htdp/bsl rather than setting the language level:
 
 ;; given a language level model and string representing a program and a list of
 ;; extra files, produce a thunk that returns syntax objects expanded in the
@@ -178,6 +193,40 @@
                (delete-file TEMP-FILE)
                (for ([f (in-list extra-files)])
                  (delete-file (first f))))))]))
+
+;; given a string representing a program and a list of extra
+;; files, produce a thunk that produces a thunk that returns
+;; expanded objects, along with a post-thunk to call when finished.
+;; NB: this is for the hashlang world, so the string had better
+;; begin with '#lang ...'.
+;; PRECONDITION: in order to allow files to refer to other files, the
+;; current directory must be set before this call and maintained until
+;; expansion is finished.
+(define (string->expander-thunk/hashlang exp-str extra-files)
+  (for ([f (in-list extra-files)])
+    (display-to-file (second f) (first f) #:exists 'truncate))
+  (display-to-file exp-str TEMP-FILE #:exists 'truncate)
+  (define input-port (open-input-file TEMP-FILE))
+  ;; thunk this so that read-syntax errors happen within the error handlers:
+  (list (lambda ()
+          (once-then-eof
+           (with-module-reading-parameterization
+            (lambda ()
+              (read-syntax "stepper-test" input-port)))))
+        (lambda ()
+          (close-input-port input-port)
+          (delete-file TEMP-FILE)
+          (for ([f (in-list extra-files)])
+            (delete-file (first f))))))
+
+;; produce a thunk that returns a value, then ever after
+;; returns #<eof>
+(define (once-then-eof val)
+  (let ([done? (box #f)])
+    (lambda ()
+      (cond [(unbox done?) eof]
+            [else (set-box! done? #t)
+                  val]))))
 
 ;; test-sequence/core : render-settings? boolean? syntax? steps?
 ;; this is a front end for calling the stepper's "go"; the main 
@@ -222,6 +271,8 @@
 
 ;; it seems to be okay to use the same namespace for all of the tests... 
 (define test-namespace (make-base-namespace))
+;; yikes, this code looks ancient. I'm guessing there's an easier/better way
+;; to do this now:
 (namespace-attach-module (namespace-anchor->empty-namespace n-anchor)
                          'mzlib/pconvert-prop
                          test-namespace)
