@@ -920,7 +920,7 @@ see note on @racket[check-expect] for details.  }
        (make-flow
         (list
          (make-paragraph
-          (list "In function calls, the function appearing immediatly after the open parenthesis can be any functions
+          (list "In function calls, the function appearing immediately after the open parenthesis can be any functions
 defined with " (racket define) " or " (racket define-struct) ", or any one of:")))))
       (apply
        append
