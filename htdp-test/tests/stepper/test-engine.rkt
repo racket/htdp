@@ -10,7 +10,15 @@
 
 
 (provide (contract-out [string->expanded-syntax-list (-> ll-model? string? (listof syntax?))]
-                       [run-one-test (-> symbol? model-or-models/c string? (listof step?) (listof (list/c string? string?)) boolean?)]))
+                       [run-one-test (-> symbol? stepper-test? boolean?)]
+                       [struct stepper-test ([models (listof ll-model?)]
+                                             [string string?]
+                                             [expected-steps (listof step?)]
+                                             [extra-files (listof (list/c string? string?))])]))
+
+;; model-or-models/c string? (listof step?) (listof (list/c string? string?))
+
+(struct stepper-test (models string expected-steps extra-files))
 
 ;; A SIMPLE EXAMPLE OF USING THIS FRAMEWORK:
 
@@ -88,7 +96,7 @@
 ;; THE METHOD THAT RUNS A TEST:
 
 
-;; run-one-test : symbol? model-or-models? string? steps? extra-files -> boolean?
+;; run-one-test : symbol? stepper-test? -> boolean?
 
 ;; the ll-model determines the behavior of the stepper w.r.t. "language-level"-y things:
 ;; how should values be rendered, should steps be displayed (i.e, will the input & output
@@ -104,15 +112,17 @@
 
 ;; run the named test, return #t if a failure occurred during the test.
 
-(define (run-one-test name models exp-str expected-steps extra-files)
-  (unless (display-only-errors)
-    (printf "running test: ~v\n" name))
-  (let ([error-has-occurred-box (box #f)])
-    (test-sequence/many models exp-str expected-steps extra-files error-has-occurred-box)
-    (if (unbox error-has-occurred-box)
-        (begin (eprintf "...Error has occurred during test: ~v\n" name)
-               #f)
-        #t)))
+(define (run-one-test name the-test)
+  (match the-test
+    [(struct stepper-test (models exp-str expected-steps extra-files))
+     (unless (display-only-errors)
+       (printf "running test: ~v\n" name))
+     (let ([error-has-occurred-box (box #f)])
+       (test-sequence/many models exp-str expected-steps extra-files error-has-occurred-box)
+       (if (unbox error-has-occurred-box)
+           (begin (eprintf "...Error has occurred during test: ~v\n" name)
+                  #f)
+           #t))]))
 
 
 ;; given a model and a string, return the fully expanded source.

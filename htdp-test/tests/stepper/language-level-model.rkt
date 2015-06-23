@@ -6,6 +6,9 @@
 
 ;; DEFINING A LANGUAGE FOR THE PURPOSES OF TESTING
 
+;; distant future FIXME: I think we can dump the namespace-spec and the enable-testing
+;; when all stepper use is hashlang-ed.
+
 ;; ll-model : a representation of the behavior of a language level w.r.t. the stepper
 (define-struct ll-model (namespace-spec render-settings enable-testing?))
 

@@ -22,42 +22,20 @@
 
 (provide run-test run-tests run-all-tests run-all-tests-except)
 
-
-(define list-of-tests null)
-
-(define (add-test test)
-  (match test
-    [(list name models string expected-steps extra-files)
-     (unless (symbol? name)
-       (error 'add-test "expected name to be a symbol, got: ~e" name))
-     (unless (or (m:ll-model? models)
-                 (and (list? models) (andmap m:ll-model? models)))
-       (error 'add-test "expected models to be a list of models, got: ~e" models))
-     (unless (string? string)
-       (error 'add-test "expected string to be a string, got: ~e" string))
-     (unless (list? expected-steps)
-       (error 'add-test "expected expected-steps to be a list, got: ~e" expected-steps))
-     (match extra-files
-       [(list (list (? string? filename) (? string? content)) ...) #t]
-       [other (error 'add-test 
-                     "expected list of extra file specifications, got: ~e" 
-                     other)])
-     (when (assq name list-of-tests)
-       (error 'add-test "name ~v is already in the list of tests" name))
-     (set! list-of-tests 
-           (append list-of-tests 
-                   (list (list name
-                               (rest test)))))]))
-
 ;; add all the tests imported from the test cases file(s):
-(for-each add-test the-test-cases)
-
-
+(define list-of-tests
+  (for/list ([test-spec (in-list the-test-cases)])
+    (match test-spec
+      [(list name models string expected-steps extra-files)
+       (define models-list
+         (cond [(list? models) models]
+               [else (list models)]))
+       (list name (stepper-test models-list string expected-steps extra-files))])))
 
 ;; run a test : (list symbol test-thunk) -> boolean
 ;; run the named test, return #t if a failure occurred during the test
 (define (run-one-test/helper test-pair)
-  (apply run-one-test (car test-pair) (cadr test-pair)))
+  (run-one-test (car test-pair) (cadr test-pair)))
 
 (define (run-all-tests)
   (andmap/no-shortcut 
@@ -70,11 +48,12 @@
    (filter (lambda (pr) (not (member (car pr) nix-list)))
            list-of-tests)))
 
+;; given the name of a test, look it up and run it
 (define (run-test name)
-  (let ([maybe-test (assq name list-of-tests)])
-    (if maybe-test
-        (run-one-test/helper maybe-test)
-        (error 'run-test "test not found: ~.s" name))))
+  (match (filter (lambda (test) (eq? (first test) name)) list-of-tests)
+    [(list) (error 'run-test "test not found: ~.s" name)]
+    [(list t) (run-one-test/helper t)]
+    [other (error 'run-test "more than one test found with name ~a" name)]))
 
 (define (run-tests names)
   (ormap/no-shortcut run-test names))
@@ -104,7 +83,7 @@
       #;(run-tests '(check-expect forward-ref check-within check-within-bad
                                   check-error check-error-bad))
       #;(run-tests '(teachpack-universe))
-      #;(run-test 'temp-letrec)
+      #;(run-test 'require-test)
       (run-all-tests)
 
       #;(string->expanded-syntax-list m:mz "(if true 3 4)"
@@ -119,6 +98,7 @@
         [(_ _ _ 
             (_ _ (_ _ (_ _ it) _))) #'it])
       ))
+
 
 
 
