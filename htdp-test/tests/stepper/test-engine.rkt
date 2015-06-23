@@ -119,7 +119,8 @@
      (unless (display-only-errors)
        (printf "running test: ~v\n" name))
      (let ([error-has-occurred-box (box #f)])
-       (test-sequence/many models exp-str expected-steps extra-files error-has-occurred-box)
+       (for ([model (in-list models)])
+         (test-sequence model exp-str expected-steps extra-files error-has-occurred-box))
        (if (unbox error-has-occurred-box)
            (begin (eprintf "...Error has occurred during test: ~v\n" name)
                   #f)
@@ -135,13 +136,6 @@
       (define next (expander-thunk))
       (cond [(eof-object? next) (begin (done-thunk) '())]
             [else (cons next (loop))]))))
-
-;; test-sequence/many : model-or-models/c string? steps? -> (void)
-;; run a given test through a bunch of language models (or just one).
-(define (test-sequence/many models exp-str expected-steps extra-files error-box)
-  (cond [(list? models)(for-each (lambda (model) (test-sequence model exp-str expected-steps extra-files error-box))
-                                 models)]
-        [else (test-sequence models exp-str expected-steps extra-files error-box)]))
 
 ;; test-sequence : ll-model? string? steps? extra-files? -> (void)
 ;; given a language model and an expression and a sequence of steps,
