@@ -164,6 +164,11 @@ namespace.
     (check-second 'remove a b)
     (remove a b)))
 
+(define-teach beginner remove-all
+  (lambda (a b)
+    (check-second 'remove-all a b)
+    (remove* (list a) b)))
+
 (define-teach beginner cons 
   (lambda (a b)
     (check-second 'cons a b)
@@ -420,6 +425,7 @@ namespace.
  beginner-memq
  beginner-memq?
  beginner-remove
+ beginner-remove-all
  beginner-cons
  beginner-car
  beginner-cdr

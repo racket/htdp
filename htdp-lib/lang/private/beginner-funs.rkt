@@ -102,7 +102,8 @@
         (define w (list (list (list (list "bye") 3) true) 42))
         (define z (list (list (list (list 'a 'b) 2 3) ) (list false true) "world"))
         (define y (list (list (list 1 2 3) false "world")))
-        (define x (list 2 "hello" true))))
+        (define x (list 2 "hello" true))
+	(define z (list 2 "hello" true "hello"))))
      (set! bsl (lambda () *bsl))
      *bsl))
  
@@ -545,7 +546,12 @@
   @defproc[((beginner-remove remove) [x any/c][l list?]) list?]{
                                                                 Constructs a list like the given one with the first occurrence of the
                                                                 given item removed (comparing values with equal?).
-                                                                @interaction[#:eval (bsl) x (remove "hello" x)]
+                                                                @interaction[#:eval (bsl) x (remove "hello" x) z (remove "hello" z)]
+                                                                }
+  @defproc[((beginner-remove-all remove-all) [x any/c][l list?]) list?]{
+                                                                Constructs a list like the given one with the first occurrence of the
+                                                                given item removed (comparing values with equal?).
+                                                                @interaction[#:eval (bsl) x (remove-all "hello" x) z (remove-all "hello" z)]
                                                                 }
   @defproc[(reverse [l list?]) list]{
                                      Creates a reversed version of a list.
