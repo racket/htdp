@@ -19,3 +19,15 @@
 
 
 (check-not-exn (lambda () (try-annotating "(check-expect 2 2)")))
+
+(define (try-annotating/hashlang str)
+  (define expanded 
+    (car (string->expanded-syntax-list/hashlang str)))
+  ;(printf "expanded: ~s\n" expanded)
+  (annotate expanded (lambda (a b c) 'bogus) #f))
+
+(eval
+ (try-annotating/hashlang "#lang htdp/bsl
+
+(/ 3 0)
+(+ 9 123)"))

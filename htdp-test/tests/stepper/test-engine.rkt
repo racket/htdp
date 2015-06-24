@@ -10,12 +10,18 @@
          "language-level-model.rkt")
 
 
-(provide (contract-out [string->expanded-syntax-list (-> ll-model? string? (listof syntax?))]
-                       [run-one-test (-> symbol? stepper-test? boolean?)]
-                       [struct stepper-test ([models (listof ll-model?)]
-                                             [string string?]
-                                             [expected-steps (listof step?)]
-                                             [extra-files (listof (list/c string? string?))])]))
+(provide (contract-out
+          [string->expanded-syntax-list
+           (-> ll-model? string? (listof syntax?))]
+          [string->expanded-syntax-list/hashlang
+           (-> string? (listof syntax?))]
+          [run-one-test (-> symbol? stepper-test? boolean?)]
+          [run-one-test/hashlang
+           (-> symbol? stepper-test? boolean?)]
+          [struct stepper-test ([models (listof ll-model?)]
+                                [string string?]
+                                [expected-steps (listof step?)]
+                                [extra-files (listof (list/c string? string?))])]))
 
 ;; model-or-models/c string? (listof step?) (listof (list/c string? string?))
 
@@ -126,11 +132,36 @@
                   #f)
            #t))]))
 
+;; FIXME experimenting...
+(define (run-one-test/hashlang name the-test)
+  (match the-test
+    [(struct stepper-test (models exp-str expected-steps extra-files))
+     (unless (display-only-errors)
+       (printf "running test: ~v\n" name))
+     (let ([error-has-occurred-box (box #f)])
+       (for ([model (in-list models)])
+         (test-sequence/hashlang model exp-str expected-steps extra-files error-has-occurred-box))
+       (if (unbox error-has-occurred-box)
+           (begin (eprintf "...Error has occurred during test: ~v\n" name)
+                  #f)
+           #t))]))
 
 ;; given a model and a string, return the fully expanded source.
 (define (string->expanded-syntax-list ll-model exp-str)
   (parameterize ([current-directory test-directory])
-    (match-define (list expander-thunk-thunk done-thunk) (string->expander-thunk ll-model exp-str empty))
+    (match-define (list expander-thunk-thunk done-thunk)
+      (string->expander-thunk ll-model exp-str empty))
+    (define expander-thunk (expander-thunk-thunk))
+    (let loop ()
+      (define next (expander-thunk))
+      (cond [(eof-object? next) (begin (done-thunk) '())]
+            [else (cons next (loop))]))))
+
+;; FIXME experimenting...
+(define (string->expanded-syntax-list/hashlang exp-str)
+  (parameterize ([current-directory test-directory])
+    (match-define (list expander-thunk-thunk done-thunk)
+      (string->expander-thunk/hashlang exp-str empty))
     (define expander-thunk (expander-thunk-thunk))
     (let loop ()
       (define next (expander-thunk))
@@ -165,6 +196,8 @@
 
 ;; NB: I'm expecting to delete this function when everyone uses
 ;; htdp/bsl rather than setting the language level:
+
+;; FIXME: Wait! Is this ... fully expanded?
 
 ;; given a language level model and string representing a program and a list of
 ;; extra files, produce a thunk that returns syntax objects expanded in the
@@ -204,9 +237,11 @@
   ;; thunk this so that read-syntax errors happen within the error handlers:
   (list (lambda ()
           (once-then-eof
-           (with-module-reading-parameterization
-            (lambda ()
-              (read-syntax "stepper-test" input-port)))))
+           (parameterize ([current-namespace test-namespace])
+             (expand
+              (with-module-reading-parameterization
+               (lambda ()
+                 (read-syntax "stepper-test" input-port)))))))
         (lambda ()
           (close-input-port input-port)
           (delete-file TEMP-FILE)
@@ -365,3 +400,30 @@
 
 
 
+
+(define b (box #f))
+;; should cause an error!
+(test-sequence/hashlang mz "#lang htdp/bsl
+
+(+ 3 1234)"
+                        '(foo bar baz)
+                        '()
+                        b)
+
+;; should cause an error!
+
+(define exp-str
+  "#lang htdp/bsl
+
+(/ 3 0)")
+
+(eval
+(car
+ (parameterize ([current-directory test-directory])
+    (match-define (list expander-thunk-thunk done-thunk)
+      (string->expander-thunk/hashlang exp-str empty))
+    (define expander-thunk (expander-thunk-thunk))
+    (let loop ()
+      (define next (expander-thunk))
+      (cond [(eof-object? next) (begin (done-thunk) '())]
+            [else (cons next (loop))])))))
