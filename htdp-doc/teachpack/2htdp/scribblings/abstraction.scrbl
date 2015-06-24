@@ -124,7 +124,6 @@ applicable ideas of program design.
 
 @interaction[
 (for*/or ([i 2][j i])
-   (displayln `(,i ,j))
    (if (> j i) (list i j) #false))
 ]
 }
@@ -152,7 +151,6 @@ applicable ideas of program design.
 
 @interaction[
 (for*/and ([i 2][j i])
-   (displayln `(,i ,j))
    (if (< j i) (list i j) #false))
 ]
 }
