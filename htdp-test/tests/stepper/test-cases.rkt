@@ -13,7 +13,7 @@
 
 
 (define (make-teachpack-ll-model teachpack-specs)
-  (m:make-ll-model `(lib "htdp-beginner.ss" "lang") teachpack-specs fake-beginner-render-settings #f #f))
+  (m:ll-ll-model `(lib "htdp-beginner.ss" "lang") teachpack-specs fake-beginner-render-settings #f #f))
 
 
 (define err '(/ 1 0))
@@ -116,8 +116,6 @@
 ;                    ((hilite ,h-p)) 3)))
 
 ;(syntax-object->datum (cadr (annotate-expr test2 'mzscheme 0 (lambda (x) x))))
-
-   
 
 (t 'simple-if m:upto-int/lam
    (if true false true)

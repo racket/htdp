@@ -17,17 +17,16 @@
   ;(printf "expanded: ~s\n" expanded)
   (annotate expanded (lambda (a b c) 'bogus) #f))
 
-
 (check-not-exn (lambda () (try-annotating "(check-expect 2 2)")))
 
 (define (try-annotating/hashlang str)
   (define expanded 
-    (car (string->expanded-syntax-list/hashlang str)))
+    (car (string->expanded-syntax-list/hashlang intermediate/h str)))
   ;(printf "expanded: ~s\n" expanded)
   (annotate expanded (lambda (a b c) 'bogus) #f))
 
-(eval
- (try-annotating/hashlang "#lang htdp/bsl
-
+(check-not-exn
+ (lambda ()
+   (try-annotating/hashlang "
 (/ 3 0)
-(+ 9 123)"))
+(+ 9 123)")))

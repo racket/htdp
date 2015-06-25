@@ -12,12 +12,10 @@
 
 (provide (contract-out
           [string->expanded-syntax-list
-           (-> ll-model? string? (listof syntax?))]
+           (-> ll-ll-model? string? (listof syntax?))]
           [string->expanded-syntax-list/hashlang
-           (-> string? (listof syntax?))]
+           (-> ll-hashlang-model? string? (listof syntax?))]
           [run-one-test (-> symbol? stepper-test? boolean?)]
-          [run-one-test/hashlang
-           (-> symbol? stepper-test? boolean?)]
           [struct stepper-test ([models (listof ll-model?)]
                                 [string string?]
                                 [expected-steps (listof step?)]
@@ -76,6 +74,7 @@
 ;; and I don't think "make-temporary file" provides promises that all
 ;; files will be generated in the same directory.
 (define TEMP-FILE "stepper-temp")
+(define temp-file-require-name (string->symbol TEMP-FILE))
 
 ;; DATA DEFINITIONS:
 
@@ -94,11 +93,6 @@
     [(list 'finished-stepping) #t]
     [(list 'ignore) #t]
     [else #f]))
-
-;; a model-or-models is one of
-;; - an ll-model, or
-;; - (listof ll-model?)
-(define model-or-models/c (or/c ll-model? (listof ll-model?)))
 
 ;; THE METHOD THAT RUNS A TEST:
 
@@ -126,21 +120,8 @@
        (printf "running test: ~v\n" name))
      (let ([error-has-occurred-box (box #f)])
        (for ([model (in-list models)])
-         (test-sequence model exp-str expected-steps extra-files error-has-occurred-box))
-       (if (unbox error-has-occurred-box)
-           (begin (eprintf "...Error has occurred during test: ~v\n" name)
-                  #f)
-           #t))]))
-
-;; FIXME experimenting...
-(define (run-one-test/hashlang name the-test)
-  (match the-test
-    [(struct stepper-test (models exp-str expected-steps extra-files))
-     (unless (display-only-errors)
-       (printf "running test: ~v\n" name))
-     (let ([error-has-occurred-box (box #f)])
-       (for ([model (in-list models)])
-         (test-sequence/hashlang model exp-str expected-steps extra-files error-has-occurred-box))
+         (test-sequence model exp-str expected-steps
+                               extra-files error-has-occurred-box))
        (if (unbox error-has-occurred-box)
            (begin (eprintf "...Error has occurred during test: ~v\n" name)
                   #f)
@@ -149,8 +130,12 @@
 ;; given a model and a string, return the fully expanded source.
 (define (string->expanded-syntax-list ll-model exp-str)
   (parameterize ([current-directory test-directory])
-    (match-define (list expander-thunk-thunk done-thunk)
-      (string->expander-thunk ll-model exp-str empty))
+    (match-define (list input-port done-thunk)
+      (prepare-filesystem exp-str empty))
+    (define expander-thunk-thunk
+      (create-provider-thunk (ll-ll-model-namespace-spec ll-model)
+                             (ll-ll-model-enable-testing? ll-model)
+                             input-port))
     (define expander-thunk (expander-thunk-thunk))
     (let loop ()
       (define next (expander-thunk))
@@ -158,10 +143,17 @@
             [else (cons next (loop))]))))
 
 ;; FIXME experimenting...
-(define (string->expanded-syntax-list/hashlang exp-str)
+(define (string->expanded-syntax-list/hashlang ll-model exp-str)
   (parameterize ([current-directory test-directory])
-    (match-define (list expander-thunk-thunk done-thunk)
-      (string->expander-thunk/hashlang exp-str empty))
+    (match-define (list input-port done-thunk)
+      (prepare-filesystem (add-hashlang-line
+                           (ll-hashlang-model-name ll-model)
+                           exp-str)
+                          empty))
+    (define expander-thunk-thunk
+      (create-hashlang-provider-thunk
+       (ll-hashlang-model-enable-testing? ll-model)
+       input-port))
     (define expander-thunk (expander-thunk-thunk))
     (let loop ()
       (define next (expander-thunk))
@@ -171,91 +163,89 @@
 ;; test-sequence : ll-model? string? steps? extra-files? -> (void)
 ;; given a language model and an expression and a sequence of steps,
 ;; check to see whether the stepper produces the desired steps
-(define (test-sequence the-ll-model exp-str expected-steps extra-files error-box)
+(define (test-sequence the-ll-model exp-str expected-steps
+                       extra-files error-box)
   (parameterize ([current-directory test-directory])
-    (match-define (list expander-thunk done-thunk)
-      (string->expander-thunk the-ll-model exp-str extra-files))
-    (match the-ll-model
-      [(struct ll-model (namespace-spec render-settings enable-testing?))
-       (unless (display-only-errors)
-         (printf "testing string: ~v\n" exp-str))
-       (test-sequence/core render-settings expander-thunk expected-steps error-box)
-       (done-thunk)])))
+    (match-define (list render-settings provider-thunk done-thunk)
+      (match the-ll-model
+        [(struct ll-ll-model (namespace-spec render-settings enable-testing?))
+         (match-define (list input-port done-thunk)
+           (prepare-filesystem exp-str extra-files))
+         (define provider-thunk
+           (create-provider-thunk namespace-spec enable-testing? input-port))
+         (list render-settings
+               provider-thunk
+               done-thunk)]
+        [(struct ll-hashlang-model (name render-settings enable-testing?))
+         (match-define (list input-port done-thunk)
+           (prepare-filesystem (add-hashlang-line
+                                name
+                                exp-str)
+                               extra-files))
+         (define provider-thunk
+           (create-hashlang-provider-thunk enable-testing? input-port))
+         (list render-settings
+               provider-thunk
+               done-thunk)]))
+    (unless (display-only-errors)
+      (printf "testing string: ~v\n" exp-str))
+    (test-sequence/core render-settings provider-thunk
+                        expected-steps error-box)
+    (done-thunk)))
 
-;; FIXME: experimenting...
-(define (test-sequence/hashlang the-ll-model exp-str expected-steps extra-files error-box)
-  (parameterize ([current-directory test-directory])
-    (match-define (list expander-thunk done-thunk)
-      (string->expander-thunk/hashlang exp-str extra-files))
-    (match the-ll-model
-      [(struct ll-model (namespace-spec render-settings enable-testing?))
-       (unless (display-only-errors)
-         (printf "testing string: ~v\n" exp-str))
-       (test-sequence/core render-settings expander-thunk expected-steps error-box)
-       (done-thunk)])))
-
-;; NB: I'm expecting to delete this function when everyone uses
-;; htdp/bsl rather than setting the language level:
+;; add the #lang line to a string
+(define (add-hashlang-line lang-str str)
+  (string-append "#lang "lang-str"\n\n"
+                 str))
 
 ;; FIXME: Wait! Is this ... fully expanded?
 
 ;; given a language level model and string representing a program and a list of
-;; extra files, produce a thunk that returns syntax objects expanded in the
-;; given language, along with a post-thunk to call when finished:
+;; extra files, return a port opened on a file containing the program,
+;; along with a thunk to be called when finished.
 ;; PRECONDITION: in order for files to refer to other files, the
 ;; current directory must be set before this call and maintained until
 ;; expansion is finished.
-(define (string->expander-thunk the-ll-model exp-str extra-files)
-  (match the-ll-model
-    [(struct ll-model (namespace-spec render-settings enable-testing?))
-     (for ([f (in-list extra-files)])
-       (display-to-file (second f) (first f) #:exists 'truncate))
-     (display-to-file exp-str TEMP-FILE #:exists 'truncate)
-     (define input-port (open-input-file TEMP-FILE))
-     (let* ([module-id (gensym "stepper-module-name-")])
-       ;; thunk this so that syntax errors happen within the error handlers:
-       (list (lambda () (expand-teaching-program input-port read-syntax namespace-spec '() module-id enable-testing?))
-             (lambda ()
-               (close-input-port input-port)
-               (delete-file TEMP-FILE)
-               (for ([f (in-list extra-files)])
-                 (delete-file (first f))))))]))
-
-;; given a string representing a program and a list of extra
-;; files, produce a thunk that produces a thunk that returns
-;; expanded objects, along with a post-thunk to call when finished.
-;; NB: this is for the hashlang world, so the string had better
-;; begin with '#lang ...'.
-;; PRECONDITION: in order to allow files to refer to other files, the
-;; current directory must be set before this call and maintained until
-;; expansion is finished.
-(define (string->expander-thunk/hashlang exp-str extra-files)
+(define (prepare-filesystem exp-str extra-files)
   (for ([f (in-list extra-files)])
     (display-to-file (second f) (first f) #:exists 'truncate))
   (display-to-file exp-str TEMP-FILE #:exists 'truncate)
   (define input-port (open-input-file TEMP-FILE))
-  ;; thunk this so that read-syntax errors happen within the error handlers:
-  (list (lambda ()
-          (once-then-eof
-           (parameterize ([current-namespace test-namespace])
-             (expand
-              (with-module-reading-parameterization
-               (lambda ()
-                 (read-syntax "stepper-test" input-port)))))))
+  ;; thunk this so that syntax errors happen within the error handlers:
+  (list input-port
         (lambda ()
           (close-input-port input-port)
           (delete-file TEMP-FILE)
           (for ([f (in-list extra-files)])
             (delete-file (first f))))))
 
-;; produce a thunk that returns a value, then ever after
+(define (create-provider-thunk namespace-spec enable-testing? input-port)
+  (lambda ()
+    (let ([module-id (gensym "stepper-module-name-")])
+      (expand-teaching-program input-port read-syntax
+                               namespace-spec '()
+                               module-id enable-testing?))))
+
+(define (create-hashlang-provider-thunk enable-testing? input-port)
+  (lambda ()
+    (list-then-eof
+     (parameterize ([current-namespace test-namespace])
+       (list
+        (expand
+         (with-module-reading-parameterization
+          (lambda ()
+            (read-syntax "ignored..." input-port))))
+        (make-dynamic-requirer temp-file-require-name enable-testing?))))))
+
+;; produce a thunk that returns elements from a list, then ever after
 ;; returns #<eof>
-(define (once-then-eof val)
-  (let ([done? (box #f)])
+(define (list-then-eof l)
+  (let ([remaining (box l)])
     (lambda ()
-      (cond [(unbox done?) eof]
-            [else (set-box! done? #t)
-                  val]))))
+      (cond [(null? (unbox remaining)) eof]
+            [else (define next (car (unbox remaining)))
+                  (set-box! remaining (cdr (unbox remaining)))
+                  next]))))
 
 ;; test-sequence/core : render-settings? boolean? syntax? steps?
 ;; this is a front end for calling the stepper's "go"; the main 
@@ -399,31 +389,3 @@
 
 
 
-
-
-(define b (box #f))
-;; should cause an error!
-(test-sequence/hashlang mz "#lang htdp/bsl
-
-(+ 3 1234)"
-                        '(foo bar baz)
-                        '()
-                        b)
-
-;; should cause an error!
-
-(define exp-str
-  "#lang htdp/bsl
-
-(/ 3 0)")
-
-(eval
-(car
- (parameterize ([current-directory test-directory])
-    (match-define (list expander-thunk-thunk done-thunk)
-      (string->expander-thunk/hashlang exp-str empty))
-    (define expander-thunk (expander-thunk-thunk))
-    (let loop ()
-      (define next (expander-thunk))
-      (cond [(eof-object? next) (begin (done-thunk) '())]
-            [else (cons next (loop))])))))
