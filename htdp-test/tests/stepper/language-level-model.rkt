@@ -65,24 +65,34 @@
   (list beginner
         beginner/h
         beginner-wla
+        beginner-wla/h
         intermediate
+        intermediate/h
         intermediate-lambda
-        ;; FIXME: add the #lang ones here, and for the remainder...
+        intermediate-lambda/h
         ))
 
 (define upto-int
   (list beginner
+        beginner/h
         beginner-wla
-        intermediate))
+        beginner-wla/h
+        intermediate
+        intermediate/h))
 
 (define bwla-to-int/lam
   (list beginner-wla
+        beginner-wla/h
         intermediate
-        intermediate-lambda))
+        intermediate/h
+        intermediate-lambda
+        intermediate-lambda/h))
 
 (define both-intermediates
   (list intermediate
-        intermediate-lambda))
+        intermediate/h
+        intermediate-lambda
+        intermediate-lambda/h))
 
 
 
