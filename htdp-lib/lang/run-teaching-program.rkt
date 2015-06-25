@@ -17,7 +17,8 @@
                                 any/c
                                 (listof any/c))
                                (symbol? boolean?)
-                               any)])
+                               any)]
+ [make-dynamic-requirer (-> any/c boolean? syntax?)])
 
 ;; this function expands a port providing a program and a bunch of 
 ;; arguments describing the user environment, and returns a thunk
@@ -77,23 +78,28 @@
              (vector (object-name port) #f #f #f #f)))))]
       [(require)
        (set! state 'done-or-exn)
-       (stepper-skip
-        #`(let ([done-already? #f])
-            (dynamic-wind
-             void
-             (lambda () 
-               (dynamic-require ''#,module-name #f))  ;; work around a bug in dynamic-require
-             (lambda () 
-               (unless done-already?
-                 (set! done-already? #t)
-                 #,(if enable-testing? 
-                       #'(test) 
-                       #'(begin))
-                 (current-namespace (module->namespace ''#,module-name)))))))]
+       (make-dynamic-requirer module-name enable-testing?)]
       [(done-or-exn)
        (cond
          [saved-exn (raise saved-exn)]
          [else      eof])])))
+
+;; generate the 'dynamic-require' syntax used to evaluate
+;; the module that we've just defined.
+(define (make-dynamic-requirer module-name enable-testing?)
+  (stepper-skip
+   #`(let ([done-already? #f])
+       (dynamic-wind
+        void
+        (lambda ()
+          (dynamic-require ''#,module-name #f))  ;; work around a bug in dynamic-require
+        (lambda ()
+          (unless done-already?
+            (set! done-already? #t)
+            #,(if enable-testing?
+                  #'(test)
+                  #'(begin))
+            (current-namespace (module->namespace ''#,module-name))))))))
 
 ;; take all of the body expressions from the port
 (define (suck-all-exps port reader)
