@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 (require syntax/modread
          stepper/private/shared
@@ -6,7 +6,9 @@
          tests/utils/sexp-diff
          lang/run-teaching-program
          (only-in srfi/13 string-contains)
-         scheme/contract
+         racket/match
+         racket/contract
+         racket/file
          "language-level-model.rkt")
 
 
@@ -129,18 +131,17 @@
 
 ;; given a model and a string, return the fully expanded source.
 (define (string->expanded-syntax-list ll-model exp-str)
-  (parameterize ([current-directory test-directory])
-    (match-define (list input-port done-thunk)
-      (prepare-filesystem exp-str empty))
-    (define expander-thunk-thunk
-      (create-provider-thunk (ll-ll-model-namespace-spec ll-model)
-                             (ll-ll-model-enable-testing? ll-model)
-                             input-port))
-    (define expander-thunk (expander-thunk-thunk))
-    (let loop ()
-      (define next (expander-thunk))
-      (cond [(eof-object? next) (begin (done-thunk) '())]
-            [else (cons next (loop))]))))
+  (match-define (list input-port done-thunk)
+    (prepare-filesystem exp-str null))
+  (define expander-thunk-thunk
+    (create-provider-thunk (ll-ll-model-namespace-spec ll-model)
+                           (ll-ll-model-enable-testing? ll-model)
+                           input-port))
+  (define expander-thunk (expander-thunk-thunk))
+  (let loop ()
+    (define next (expander-thunk))
+    (cond [(eof-object? next) (begin (done-thunk) '())]
+          [else (cons next (loop))])))
 
 ;; FIXME experimenting...
 (define (string->expanded-syntax-list/hashlang ll-model exp-str)
@@ -149,7 +150,7 @@
       (prepare-filesystem (add-hashlang-line
                            (ll-hashlang-model-name ll-model)
                            exp-str)
-                          empty))
+                          null))
     (define expander-thunk-thunk
       (create-hashlang-provider-thunk
        (ll-hashlang-model-enable-testing? ll-model)
@@ -203,21 +204,24 @@
 ;; given a language level model and string representing a program and a list of
 ;; extra files, return a port opened on a file containing the program,
 ;; along with a thunk to be called when finished.
-;; PRECONDITION: in order for files to refer to other files, the
-;; current directory must be set before this call and maintained until
-;; expansion is finished.
 (define (prepare-filesystem exp-str extra-files)
   (for ([f (in-list extra-files)])
-    (display-to-file (second f) (first f) #:exists 'truncate))
-  (display-to-file exp-str TEMP-FILE #:exists 'truncate)
-  (define input-port (open-input-file TEMP-FILE))
+    (display-to-file (cadr f)
+                     (build-path test-directory (car f))
+                     #:exists 'truncate))
+  #;(define temp-file (generate-temporary-file "stepper-temp-~a" #f
+                                             (current-directory)))
+  (display-to-file exp-str
+                   (build-path test-directory TEMP-FILE)
+                   #:exists 'truncate)
+  (define input-port (open-input-file (build-path test-directory TEMP-FILE)))
   ;; thunk this so that syntax errors happen within the error handlers:
   (list input-port
         (lambda ()
           (close-input-port input-port)
-          (delete-file TEMP-FILE)
+          (delete-file (build-path test-directory TEMP-FILE))
           (for ([f (in-list extra-files)])
-            (delete-file (first f))))))
+            (delete-file (build-path test-directory (car f)))))))
 
 (define (create-provider-thunk namespace-spec enable-testing? input-port)
   (lambda ()
