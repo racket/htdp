@@ -602,7 +602,7 @@
                                                          }
   @defproc[(caadr [x list?]) any/c]{
                                     LISP-style selector: @racket[(car (car (cdr x)))].
-                                                         @interaction[#:eval (bsl) z (caadr z)]
+				     @interaction[#:eval (bsl) (caadr (cons 1 (cons (cons 'a '()) (cons (cons 'd '()) '()))))]
                                                          }
   @defproc[(caaar [x list?]) any/c]{
                                     LISP-style selector: @racket[(car (car (car (car x))))].
@@ -631,7 +631,13 @@
   @defproc[(cadddr [x list?]) any/c]{
                                      LISP-style selector: @racket[(car (cdr (cdr (cdr x))))].
                                                           @interaction[#:eval (bsl) v (cadddr v)]
-                                                          })
+                                                          }
+ @defproc[(assoc [x any] [l (listof any)]) (union (listof any) false)]{
+    Produces the first pair on @racket[l] whose @racket[first] is @racket[equal?] to @racket[x];
+     otherwise it produces @racket[false].
+    @interaction[#:eval (bsl) (assoc "hello" '(("world" 2) ("hello" 3) ("good" 0)))]
+    }
+ )
  
  ("Posns"
   ; @defproc[(posn) signature]{Signature for posns.}
