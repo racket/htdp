@@ -137,11 +137,7 @@
     Creates a single list from several.
     In ASL, @racket[list*] also deals with cyclic lists. 
     } 
-    @defproc[(assoc [x any] [l (listof any)]) (union (listof any) false)]{
-    Produces the first pair on @racket[l] whose @racket[first] is @racket[equal?] to @racket[x];
-     otherwise it produces @racket[false].
-    @interaction[#:eval (asl) (assoc "hello" '(("world" 2) ("hello" 3) ("good" 0)))]
-    }) 
+)
    
    ("Misc"
     @defproc[(gensym) symbol?]{
