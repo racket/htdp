@@ -428,13 +428,12 @@
    :: {(cons 1 2)}
    -> error: "cons: second argument must be a list, but received 1 and 2")
 
-
-
-(t1 'prims
-    m:beginner "(cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3)"
-    (let ([defs `((cons 3 (cons 1 empty)))])
-      `((before-after (,@defs (hilite (list 1 2 3)))
-                      (,@defs (hilite (cons 1 (cons 2 (cons 3 empty)))))))))
+(t 'prims (list m:beginner m:beginner/h)
+    (cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3) (+ 3 4)
+    :: (cons 3 (cons 1 empty)) {(list 1 2 3)} 
+    -> (cons 3 (cons 1 empty)) {(cons 1 (cons 2 (cons 3 empty)))}
+    :: (cons 3 (cons 1 empty)) (cons 1 (cons 2 (cons 3 empty))) (define-struct aa (b)) (make-aa 3) {(+ 3 4)}
+    -> (cons 3 (cons 1 empty)) (cons 1 (cons 2 (cons 3 empty))) (define-struct aa (b)) (make-aa 3) {7})
 
 (t1 'prims/non-beginner
     m:bwla-to-int/lam "(cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3)"

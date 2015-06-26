@@ -54,7 +54,19 @@
          ;; for breakpoint display
          ;; (commented out to allow nightly testing)
          #;"display-break-stuff.rkt"
-         (for-syntax scheme/base))
+         (for-syntax racket/base))
+
+(provide
+ (contract-out
+  [go (->*
+       (program-expander-contract       ; program-expander
+        (step-result? . -> . void?)     ; receive-result
+        (or/c render-settings? false/c)) ; render-settings
+       (#:raw-step-receiver
+        (-> continuation-mark-set? symbol? void?)
+        #:disable-error-handling? boolean?)
+       void?)])
+ (struct-out posn-info))
 
 (define-logger stepper)
 
@@ -65,21 +77,7 @@
    . -> .
    void?))
 
-(provide/contract
- [go (->*
-      (program-expander-contract       ; program-expander
-       (step-result? . -> . void?)     ; receive-result
-       (or/c render-settings? false/c)) ; render-settings
-      (#:raw-step-receiver
-       (-> continuation-mark-set? symbol? void?)
-       #:disable-error-handling? boolean?)
-      void?)])
-
-
 (define-struct posn-info (posn span))
-
-(provide (struct-out posn-info))
-
 
 ; go starts a stepper instance
 ; see provide stmt for contract
@@ -113,6 +111,7 @@
     (set! lhs-recon-thunk null))
 
   ; used when determining whether to skip step with ellipses on LHS
+  ;; ... needs example!
   (define last-rhs-exps null)
 
   ; thunk that can re-reconstruct the last lhs
@@ -515,6 +514,8 @@
        (error-display-handler err-display-handler)))
    (lambda (expanded continue-thunk) ; iter
      (r:reset-special-values)
+     (log-stepper-debug "model received expanded syntax object: ~v"
+                        (and (syntax? expanded) (syntax->datum expanded)))
      (if (eof-object? expanded)
          (receive-result (finished-stepping))
          (begin (step-through-expression expanded)

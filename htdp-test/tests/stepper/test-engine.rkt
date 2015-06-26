@@ -208,7 +208,6 @@
                    temp-file
                    #:exists 'truncate)
   (define input-port (open-input-file temp-file))
-  ;; thunk this so that syntax errors happen within the error handlers:
   (list input-port
         (path->string temp-file-name)
         (lambda ()
@@ -222,6 +221,7 @@
 ;; expanded expressions from the file, one at a time.
 ;; for use with language-level situations.
 (define (create-provider-thunk namespace-spec enable-testing? input-port)
+  ;; thunk this so that syntax errors happen within the error handlers:
   (lambda ()
     (let ([module-id (gensym "stepper-module-name-")])
       (expand-teaching-program input-port read-syntax
@@ -235,6 +235,7 @@
 (define (create-hashlang-provider-thunk filename enable-testing? input-port)
   (match filename
     [(regexp #px"^(.*)\\.rkt$" (list _ stem))
+     ;; thunk this so that syntax errors happen within the error handlers:
      (lambda ()
        (list-then-eof
         (parameterize ([current-namespace test-namespace])
