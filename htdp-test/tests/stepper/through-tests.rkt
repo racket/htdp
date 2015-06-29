@@ -13,12 +13,7 @@
          ;; (all-except xml/xml-snipclass snip-class)
          ;; (all-except xml/scheme-snipclass snip-class)
          ;; mred
-
          )
-
-(require stepper/private/annotate)
-
-
 
 (provide run-test run-tests run-all-tests run-all-tests-except)
 
@@ -83,7 +78,7 @@
       #;(run-tests '(check-expect forward-ref check-within check-within-bad
                                   check-error check-error-bad))
       #;(run-tests '(teachpack-universe))
-      #;(run-test 'require-test)
+      #;(run-tests '(top-def-ref top-def-ref))
       (run-all-tests)
 
       #;(string->expanded-syntax-list m:mz "(if true 3 4)"
@@ -98,7 +93,5 @@
         [(_ _ _ 
             (_ _ (_ _ (_ _ it) _))) #'it])
       ))
-
-
 
 

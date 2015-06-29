@@ -3,20 +3,18 @@
 ; a varref at the top of the mark-list must either be a top-level-variable
 ;  or have a value in some mark somewhere (or both).
 
-#lang scheme/base
+#lang racket/base
 
 (require (prefix-in kernel: syntax/kerncase)
-           mzlib/list
-           mzlib/etc
-	   mzlib/contract
-           scheme/match
-           "marks.rkt"
-           "model-settings.rkt"
-           "shared.rkt"
-           "syntax-property.rkt"
-           "my-macros.rkt"
-           (for-syntax scheme/base)
-           racket/private/promise)
+         racket/contract
+         racket/match
+         "marks.rkt"
+         "model-settings.rkt"
+         "shared.rkt"
+         "syntax-property.rkt"
+         "my-macros.rkt"
+         (for-syntax racket/base)
+         racket/private/promise)
 
 (provide/contract 
  [reconstruct-completed (syntax? 
@@ -109,7 +107,7 @@
 ; of a let, or unless there _is_ no name.
 
 (define recon-value
-  (opt-lambda (val render-settings [assigned-name #f] 
+  (lambda (val render-settings [assigned-name #f]
                    [current-so-far nothing-so-far] [seen-promises null])
     (if (hash-ref finished-xml-box-table val (lambda () #f))
         (stepper-syntax-property #`(quote #,val) 'stepper-xml-value-hint 'from-xml-box)
@@ -161,7 +159,7 @@
                              (cons (list val assigned-name) seen-promises))]
                ; for cyclic lists, use assigned name if it's available
                [(let ([v (assq val seen-promises)])
-                  (and v (second v)))]
+                  (and v (cadr v)))]
                ; unknown promise: promise not in src code, created in library fn
                [(hash-ref unknown-promises-table val (λ () #f))
                 =>
@@ -801,7 +799,7 @@
               (recon-source-expr expr mark-list null null render-settings))]
            [top-mark (car mark-list)]
            [exp (mark-source top-mark)]
-           [iota (lambda (x) (build-list x (lambda (x) x)))]
+           [iota (lambda (x) (for/list ([i (in-range x)]) x))]
            
            [recon-let
             (lambda ()
@@ -914,7 +912,8 @@
             (attach-info
              (match-let* 
                  ([sub-exprs (syntax->list (syntax terms))]
-                  [arg-temps (build-list (length sub-exprs) get-arg-var)]
+                  [arg-temps (for/list ([i (in-range (length sub-exprs))])
+                               (get-arg-var i))]
                   [arg-vals (map (lambda (arg-temp) 
                                    (lookup-binding mark-list arg-temp))
                                  arg-temps)]
