@@ -217,30 +217,30 @@ substring consumes 2 or 3 arguments
              (string-append "implode: " 1-LETTER* " expected, given " 
                             (format "~s" '("he" "l"))))
 
-(check-expect (beginner-string-numeric? "0") true)
-(check-expect (beginner-string-numeric? "10") true)
-(check-expect (beginner-string-numeric? "a") false)
+(check-expect (beginner-string-numeric? "0") #true)
+(check-expect (beginner-string-numeric? "10") #true)
+(check-expect (beginner-string-numeric? "a") #false)
 (check-expect (beginner-string-numeric? "ab") false)
 (check-error (beginner-string-numeric? 10)
              (string-append "string-numeric?: <string> expected, given 10"))
 
 
 (check-expect (beginner-string-alphabetic? "a0") false)
-(check-expect (beginner-string-alphabetic? "a") true)
-(check-expect (beginner-string-alphabetic? "ba") true)
-(check-expect (beginner-string-alphabetic? "ab") true)
+(check-expect (beginner-string-alphabetic? "a") #true)
+(check-expect (beginner-string-alphabetic? "ba") #true)
+(check-expect (beginner-string-alphabetic? "ab") #true)
 
-(check-expect (beginner-string-whitespace? "  ") true)
-(check-expect (beginner-string-whitespace? "  \t") true)
+(check-expect (beginner-string-whitespace? "  ") #true)
+(check-expect (beginner-string-whitespace? "  \t") #true)
 (check-expect (beginner-string-whitespace? "ABC") false)
 
 (check-expect (beginner-string-upper-case? "  ") false)
 (check-expect (beginner-string-upper-case? "AB\t") false)
-(check-expect (beginner-string-upper-case? "ABC") true)
+(check-expect (beginner-string-upper-case? "ABC") #true)
 
 (check-expect (beginner-string-lower-case? "  ") false)
 (check-expect (beginner-string-lower-case? "ab\t") false)
-(check-expect (beginner-string-lower-case? "abc") true)
+(check-expect (beginner-string-lower-case? "abc") #true)
 
 
 

@@ -53,13 +53,13 @@
     Creates a single list from several, by concatenation of the items.
     In ISL and up: @racket[append] also works when applied to one list or none. 
     @interaction[#:eval (isl)
-		  (append (cons 1 (cons 2 empty)) (cons "a" (cons "b" empty)))
+		  (append (cons 1 (cons 2 '())) (cons "a" (cons "b" '())))
 		  (append)]}
     @defproc[((beginner-list? list?) [x any]) boolean?]{
     Checks whether the given value is a list.
     @interaction[#:eval (isl)
 		  (list? 42)
-		  (list? (cons 1 (cons 2 empty)))]}
+		  (list? (cons 1 (cons 2 '())))]}
 )
  
   ("Higher-Order Functions"
@@ -164,9 +164,9 @@
 		  (argmax second '((sam 98) (carl 78) (vincent 93) (asumu 99)))
 		  ]
     }
-    @defproc[(memf [p? (X -> any)] [l (listof X)]) (union false (listof X))]{
-    Produces @racket[false] if @racket[p?] produces @racket[false] for all
-    items on @racket[l]. If @racket[p?] produces @racket[true] for any of
+    @defproc[(memf [p? (X -> any)] [l (listof X)]) (union #false (listof X))]{
+    Produces @racket[#false] if @racket[p?] produces @racket[false] for all
+    items on @racket[l]. If @racket[p?] produces @racket[#true] for any of
     the items on @racket[l], @racket[memf] returns the sub-list starting
     from that item.
     @interaction[#:eval (isl)
