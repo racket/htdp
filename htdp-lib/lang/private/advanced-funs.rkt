@@ -49,7 +49,7 @@
           (define b (box 33))
 
           (define s "hello world")
-          (define x (list 2 "hello" true))))
+          (define x (list 2 "hello" #true))))
        (set! asl (lambda () *bsl))
        *bsl))
    
@@ -106,7 +106,7 @@
     @defproc[((pp pretty-print) [x any]) void]{
     Pretty prints S-expressions (like @racket[write]). 
     @interaction[#:eval (asl)
-                  (pretty-print '((1 2 3) ((a) ("hello world" true) (((false "good bye"))))))
+                  (pretty-print '((1 2 3) ((a) ("hello world" #true) (((false "good bye"))))))
                   (pretty-print (build-list 10 (lambda (i) (build-list 10 (lambda (j) (= i j))))))
                   ]
     }

@@ -99,11 +99,11 @@
         
         (define a (list (list 'a 22) (list 'b 8) (list 'c 70)))
         (define v (list 1 2 3 4 5 6 7 8 9 'A))
-        (define w (list (list (list (list "bye") 3) true) 42))
-        (define z (list (list (list (list 'a 'b) 2 3) ) (list false true) "world"))
-        (define y (list (list (list 1 2 3) false "world")))
-        (define x (list 2 "hello" true))
-	(define z (list 2 "hello" true "hello"))))
+        (define w (list (list (list (list "bye") 3) #true) 42))
+        (define z (list (list (list (list 'a 'b) 2 3) ) (list #false #true) "world"))
+        (define y (list (list (list 1 2 3) #false "world")))
+        (define x (list 2 "hello" #true))
+	(define z (list 2 "hello" #true "hello"))))
      (set! bsl (lambda () *bsl))
      *bsl))
  
@@ -410,19 +410,19 @@
  ("Booleans"
   @defproc[(boolean? [x any/c]) boolean?]{
                                           Determines whether some value is a boolean. 
-                                          @interaction[#:eval (bsl) (boolean? 42) (boolean? false)]
+                                          @interaction[#:eval (bsl) (boolean? 42) (boolean? #false)]
                                           }
   @defproc[(boolean=? [x boolean?][y boolean?]) boolean?]{
                                                           Determines whether two booleans are equal.
-                                                          @interaction[#:eval (bsl) (boolean=? true false)]
+                                                          @interaction[#:eval (bsl) (boolean=? #true #false)]
                                                           }
   @defproc[(false? [x any/c]) boolean?]{
                                         Determines whether a value is false.
-                                        @interaction[#:eval (bsl) (false? false)]
+                                        @interaction[#:eval (bsl) (false? #false)]
                                         }
   @defproc[((beginner-not not) [x boolean?]) boolean?]{
                                                        Negates a boolean value.
-                                                       @interaction[#:eval (bsl) (not false)]
+                                                       @interaction[#:eval (bsl) (not #false)]
                                                        })
  
  ("Symbols"
@@ -442,15 +442,15 @@
  ("Lists"
   @defproc[(cons? [x any/c]) boolean?]{
                                        Determines whether some value is a constructed list. 
-                                       @interaction[#:eval (bsl-eval) (cons? (cons 1 empty)) (cons? 42)]
+                                       @interaction[#:eval (bsl-eval) (cons? (cons 1 '())) (cons? 42)]
                                        }
   @defproc[(empty? [x any/c]) boolean?]{
                                         Determines whether some value is the empty list.
-                                        @interaction[#:eval (bsl) (empty? empty) (empty? 42)]
+                                        @interaction[#:eval (bsl) (empty? '()) (empty? 42)]
                                         }
   @defproc[((beginner-cons cons) [x any/x][y list?]) list?]{
                                                             Constructs a list.
-                                                            @interaction[#:eval (bsl-eval) (cons 1 empty)]
+                                                            @interaction[#:eval (bsl-eval) (cons 1 '())]
                                                             }
   @defproc[((beginner-first first) [x cons?]) any/c]{
                                                      Selects the first item of a non-empty list.
@@ -504,7 +504,7 @@
                                                                                 }
   @defproc[((beginner-list* list*) [x any/c]  ... [l list?]) list?]{
                                                                     Constructs a list by adding multiple items to a list.
-                                                                    @interaction[#:eval (bsl-eval (define x (list 2 "hello" true))) x (list* 4 3 x)]
+                                                                    @interaction[#:eval (bsl-eval (define x (list 2 "hello" #true))) x (list* 4 3 x)]
                                                                     }
   @defproc[((beginner-range range) [start number][end number][step number]) list?]{
                                                                                    Constructs a list of numbers by @racket[step]ping from @racket[start]
@@ -513,7 +513,7 @@
                                                                                                                    }
   @defproc[((beginner-append append) [x list?][y list?][z list?]  ...) list?]{
                                                                               Creates a single list from several, by concatenation of the items.  
-                                                                              @interaction[#:eval (bsl) (append (cons 1 (cons 2 empty)) (cons "a" (cons "b" empty)))]
+                                                                              @interaction[#:eval (bsl) (append (cons 1 (cons 2 '())) (cons "a" (cons "b" empty)))]
                                                                               }
   @defproc[(length (l list?)) natural-number?]{
                                                Evaluates the number of items on a list.
@@ -529,7 +529,7 @@
                                                                                                using @racket[eq?] to compare @racket[x] with items on @racket[l].
                                                                                                @interaction[#:eval (bsl) x (memq? (list (list 1 2 3)) x)]
                                                                                                }
-  @defproc[(memv [x any/c][l list?]) (or/c false list)]{
+  @defproc[(memv [x any/c][l list?]) (or/c #false list)]{
                                                         Determines whether some value is on the list if so, it produces the
                                                         suffix of the list that starts with x if not, it produces false. (It
                                                         compares values with the eqv? predicate.)  
@@ -557,7 +557,7 @@
                                      Creates a reversed version of a list.
                                      @interaction[#:eval (bsl) x (reverse x)]
                                      }
-  @defproc[(assq [x any/c][l list?]) (union false cons?)]{
+  @defproc[(assq [x any/c][l list?]) (union #false cons?)]{
                                                           Determines whether some item is the first item of a pair in a list of
                                                           pairs. (It compares the items with @racket[eq?].)
                                                           @interaction[#:eval (bsl) a (assq 'b a)]
@@ -567,7 +567,7 @@
   ;; LISP-ish selectors:
   @defproc[(null? [x any/c]) boolean?]{
                                        Determines whether some value is the empty list.
-                                       @interaction[#:eval (bsl) (null? empty) (null? 42)]
+                                       @interaction[#:eval (bsl) (null? '()) (null? 42)]
                                        }
   @defthing[null list]{Another name for the empty list
                         @interaction[#:eval (bsl) null]
@@ -632,9 +632,9 @@
                                      LISP-style selector: @racket[(car (cdr (cdr (cdr x))))].
                                                           @interaction[#:eval (bsl) v (cadddr v)]
                                                           }
- @defproc[(assoc [x any] [l (listof any)]) (union (listof any) false)]{
+ @defproc[(assoc [x any] [l (listof any)]) (union (listof any) #false)]{
     Produces the first pair on @racket[l] whose @racket[first] is @racket[equal?] to @racket[x];
-     otherwise it produces @racket[false].
+     otherwise it produces @racket[#false].
     @interaction[#:eval (bsl) (assoc "hello" '(("world" 2) ("hello" 3) ("good" 0)))]
     }
  )
@@ -643,7 +643,7 @@
   ; @defproc[(posn) signature]{Signature for posns.}
   @defproc[(make-posn [x any/c][y any/c]) posn]{
                                                 Constructs a posn from two arbitrary values.
-                                                @interaction[#:eval (bsl) (make-posn 3 3) (make-posn "hello" true)]
+                                                @interaction[#:eval (bsl) (make-posn 3 3) (make-posn "hello" #true)]
                                                 }
   @defproc[(posn? [x any/c]) boolean?]{
                                        Determines if its input is a posn.
@@ -768,7 +768,7 @@
                                                                     }
   @defproc[((beginner-implode implode) [l list?]) string]{
                                                           Concatenates the list of 1-letter strings into one string. 
-                                                          @interaction[#:eval (bsl) (implode (cons "c" (cons "a" (cons "t" empty))))]
+                                                          @interaction[#:eval (bsl) (implode (cons "c" (cons "a" (cons "t" '()))))]
                                                           }
   @defproc[((beginner-string-numeric? string-numeric?) [s string]) boolean?]{
                                                                              Determines whether all 'letters' in the string are numeric. 
@@ -863,7 +863,7 @@
                                                Converts a string into a symbol. 
                                                @interaction[#:eval (bsl) (string->symbol "hello")]
                                                }
-  @defproc[(string->number [s string]) (union number false)]{
+  @defproc[(string->number [s string]) (union number #false)]{
                                                              Converts a string into a number, produce false if impossible. 
                                                              @interaction[#:eval (bsl) (string->number "-2.03") (string->number "1-2i")]
                                                              }
@@ -873,7 +873,7 @@
                                                     }
   @defproc[(list->string [l list?]) string]{
                                             Converts a s list of characters into a string. 
-                                            @interaction[#:eval (bsl) (list->string (cons #\c (cons #\a (cons #\t empty))))]
+                                            @interaction[#:eval (bsl) (list->string (cons #\c (cons #\a (cons #\t '()))))]
                                             }
   @defproc[(format [f string] [x any/c] ...) string]{
                                                      Formats a string, possibly embedding values. 
@@ -919,11 +919,11 @@
                                                                    }
   @defproc[(eq? [x any/c][y any/c]) boolean?]{
                                               Determines whether two values are equivalent from the computer's perspective (intensional). 
-                                              @interaction[#:eval (bsl) (eq? (cons 1 empty) (cons 1 empty)) one (eq? one one)]
+                                              @interaction[#:eval (bsl) (eq? (cons 1 '()) (cons 1 '())) one (eq? one one)]
                                               }
   @defproc[(eqv? [x any/c][y any/c]) boolean?]{
                                                Determines whether two values are equivalent from the perspective of all functions that can be applied to it (extensional). 
-                                               @interaction[#:eval (bsl) (eqv? (cons 1 empty) (cons 1 empty)) one (eqv? one one)]
+                                               @interaction[#:eval (bsl) (eqv? (cons 1 '()) (cons 1 '())) one (eqv? one one)]
                                                }
   @defproc[((beginner-=~ =~) [x number][y number][z non-negative-real]) boolean?]{
                                                                                   Checks whether @racket[x] and @racket[y] are within @racket[z] of either other. 

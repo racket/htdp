@@ -21,7 +21,7 @@
 
 ;; Left-to-right reporting sometimes requires an explicit expression
 ;; check before reporting some other error. For example, in the
-;; expression (cond [true + 1 2]), the reported error should ideally
+;; expression (cond [#true + 1 2]), the reported error should ideally
 ;; be for a misuse of "+", not that there are two extra parts in the
 ;; clause. This check requires local-expanding, so it doesn't work
 ;; when checking top-level forms like `define' (because not all of the
