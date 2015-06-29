@@ -18,7 +18,7 @@ To provide uniform error messages from teachpacks, this module provides several 
  Reports an error for function @scheme[name] 
   telling students what kind of data is @scheme[expected] at the @scheme[position]-th argument 
   and displaying what value was actually @scheme[given],
-  unless @scheme[chk] is @scheme[true].}
+  unless @scheme[chk] is @scheme[#true].}
 
 @defproc[(check-arity [name (or/c symbol? string?)]
 		      [arg# (or/c (and/c positive? integer?) string?)?]
@@ -28,7 +28,7 @@ To provide uniform error messages from teachpacks, this module provides several 
  Reports an error for function @scheme[name] 
   telling students that @scheme[(length args)] arguments were provided but
   @scheme[arg#] were expected, unless @scheme[(= (length args) arg#)]
-  produces @scheme[true].} 
+  produces @scheme[#true].} 
 
 @defproc[(check-proc [name (or/c symbol? string?)]
 		     [proc any/c]
@@ -89,14 +89,14 @@ To provide uniform error messages from teachpacks, this module provides several 
 
 @defproc[(find-non [pred? (-> any/c boolean?)] [l list?]) (or/c any/c false/c)]{
  Find an element of @scheme[l] for which @scheme[(pred? l)] produces
- @scheme[true]; otherwise return @scheme[false].}
+ @scheme[#true]; otherwise return @scheme[#false].}
  
 @defproc[(check-dependencies [name (or/c symbol? string?)]
 			     [chk  boolean?]
 			     [fmt format-string?]
 			     [arg any/c] ...) 
           void?]{
- Unless @scheme[chk] is @scheme[true], it raises an error called
+ Unless @scheme[chk] is @scheme[#true], it raises an error called
  @scheme[name] whose message is composed from @scheme[fmt] and the
  @scheme[arg]s. 
  }
