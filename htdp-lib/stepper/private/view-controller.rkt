@@ -51,7 +51,7 @@
                      "    European Symposium on Programming, 2001\n")]))
   (send dlg show #t))
 
-(define (go drracket-tab program-expander selection-start selection-end)
+(define (go drracket-tab program-expander dynamic-requirer selection-start selection-end)
   
   ;; get the language-level:
   (define language-settings 
@@ -475,7 +475,8 @@
   ;; START THE MODEL
   (start-listener-thread stepper-frame-eventspace)
   (model:go
-   program-expander-prime 
+   program-expander-prime
+   dynamic-requirer
    ;; what do do with the results:
    deliver-result-to-gui
    (get-render-settings render-to-string

@@ -60,6 +60,7 @@
  (contract-out
   [go (->*
        (program-expander-contract       ; program-expander
+        (-> void?)                      ; dynamic requirer
         (step-result? . -> . void?)     ; receive-result
         (or/c render-settings? false/c)) ; render-settings
        (#:raw-step-receiver
@@ -81,7 +82,7 @@
 
 ; go starts a stepper instance
 ; see provide stmt for contract
-(define (go program-expander receive-result render-settings
+(define (go program-expander dynamic-requirer receive-result render-settings
             #:disable-error-handling? [disable-error-handling? #f]
             #:raw-step-receiver [raw-step-receiver #f])
 
@@ -516,7 +517,11 @@
      (log-stepper-debug "model received expanded syntax object: ~v"
                         (and (syntax? expanded) (syntax->datum expanded)))
      (if (eof-object? expanded)
-         (receive-result (finished-stepping))
+         (begin
+           ;; is this synchronous?
+           (dynamic-requirer)
+           ;; if not synchronous, going to have to figure out a different way to do this...
+           (receive-result (finished-stepping)))
          (begin (r:reset-lazy-tables)
                 (step-through-expression expanded)
                 (continue-thunk))))))

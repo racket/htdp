@@ -246,31 +246,48 @@
       ;; program-expander : produces expanded expressions from the
       ;; definitions window one at a time and calls 'iter' on each one
       (define (program-expander init iter)
-        (let* ([lang-settings
-                (send (get-defs) get-next-settings)]
-               [lang (drracket:language-configuration:language-settings-language lang-settings)]
-               [settings (drracket:language-configuration:language-settings-settings lang-settings)])
-          (drracket:eval:expand-program
-           (drracket:language:make-text/pos
-            (get-defs)
-            0
-            (send (get-defs) last-position))
-           lang-settings
-           #f
-           (lambda ()
-             (init)
-             (error-value->string-handler
-              (lambda (val len)
-                (let ([sp (open-output-string)])
-                  (send lang render-value val settings sp)
-                  (let ([str (get-output-string sp)])
-                    (if ((string-length str) . <= . len)
-                        str
-                        (string-append (substring str 0 (max 0 (- len 3)))
-                                       "..."))))))
-             (current-print void))
-           void ; kill
-           iter)))
+        (define lang-settings (send (get-defs) get-next-settings))
+        (define lang (drracket:language-configuration:language-settings-language lang-settings))
+        (define settings (drracket:language-configuration:language-settings-settings lang-settings))
+        (drracket:eval:expand-program
+         (drracket:language:make-text/pos
+          (get-defs)
+          0
+          (send (get-defs) last-position))
+         lang-settings
+         #f
+         (lambda ()
+           (init)
+           (error-value->string-handler
+            (lambda (val len)
+              (let ([sp (open-output-string)])
+                (send lang render-value val settings sp)
+                (let ([str (get-output-string sp)])
+                  (if ((string-length str) . <= . len)
+                      str
+                      (string-append (substring str 0 (max 0 (- len 3)))
+                                     "..."))))))
+           (current-print void))
+         void ; kill
+         iter))
+
+      ;; a thunk which calls the language's front-end/finished-complete-program thunk
+      ;; to trigger a dynamic-require of the user's module
+      (define (dynamic-requirer)
+        (define lang-settings (send (get-defs) get-next-settings))
+        (define lang (drracket:language-configuration:language-settings-language lang-settings))
+        (define settings (drracket:language-configuration:language-settings-settings lang-settings))
+        ;; copied from rep.rkt... how we actually dyn-req the program:
+        (call-with-continuation-prompt
+         (λ ()
+           (send lang front-end/finished-complete-program settings)
+           ;; not sure we need this. Hope not....
+           #;(call-with-break-parameterization
+              user-break-parameterization
+              (λ ()
+                (send lang front-end/finished-complete-program settings))))
+         (default-continuation-prompt-tag)
+         (λ args (void))))
       
 
       ;; called from drracket-button.rkt, installed via the #lang htdp/bsl (& co) reader into drracket
@@ -289,7 +306,8 @@
               (parameterize ([current-directory (or (get-directory) (current-directory))])
                 (set! stepper-frame
                       (go this 
-                          program-expander 
+                          program-expander
+                          dynamic-requirer
                           (+ 1 (send (get-defs) get-start-position))
                           (+ 1 (send (get-defs) get-end-position)))))
               (message-box

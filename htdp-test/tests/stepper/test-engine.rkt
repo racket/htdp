@@ -159,15 +159,18 @@
 (define (test-sequence the-ll-model exp-str expected-steps
                        extra-files error-box)
   (parameterize ([current-directory test-directory])
-    (match-define (list render-settings provider-thunk done-thunk)
+    (match-define (list render-settings provider-thunk dynamic-requirer done-thunk)
       (match the-ll-model
         [(struct ll-ll-model (namespace-spec render-settings enable-testing?))
          (match-define (list input-port filename done-thunk)
            (prepare-filesystem exp-str extra-files))
          (define provider-thunk
            (create-provider-thunk namespace-spec enable-testing? input-port))
+         (define (dynamic-requirer)
+           (dynamic-require (filename->spec filename)))
          (list render-settings
                provider-thunk
+               dynamic-requirer
                done-thunk)]
         [(struct ll-hashlang-model (name render-settings enable-testing?))
          (match-define (list input-port filename done-thunk)
@@ -177,12 +180,14 @@
                                extra-files))
          (define provider-thunk
            (create-hashlang-provider-thunk filename enable-testing? input-port))
+         (define (dynamic-requirer) 'nothing-to-do-here)
          (list render-settings
                provider-thunk
+               dynamic-requirer
                done-thunk)]))
     (unless (display-only-errors)
       (printf "testing string: ~v\n" exp-str))
-    (test-sequence/core render-settings provider-thunk
+    (test-sequence/core render-settings provider-thunk dynamic-requirer
                         expected-steps error-box)
     (done-thunk)))
 
@@ -216,6 +221,12 @@
           (for ([f (in-list extra-files)])
             (delete-file (build-path test-directory (car f)))))))
 
+;; extract the stem of a path for use in a dynamic-require, e.g. "/tmp/foo.rkt" -> 'foo
+(define (filename->spec filename)
+  (match filename
+    [(regexp #px"^(.*)\\.rkt$" (list _ stem))
+     (string->symbol stem)]))
+
 ;; given the namespace-spec, whether testing is enabled, and an input-port,
 ;; return a thunk that when evaluated returns a thunk that produces
 ;; expanded expressions from the file, one at a time.
@@ -243,8 +254,7 @@
            (expand
             (with-module-reading-parameterization
              (lambda ()
-               (read-syntax "ignored..." input-port))))
-           (make-dynamic-requirer (string->symbol stem) enable-testing?)))))]))
+               (read-syntax "ignored..." input-port))))))))]))
 
 ;; produce a thunk that returns elements from a list, then ever after
 ;; returns #<eof>
@@ -256,11 +266,10 @@
                   (set-box! remaining (cdr (unbox remaining)))
                   next]))))
 
-;; test-sequence/core : render-settings? boolean? syntax? steps?
 ;; this is a front end for calling the stepper's "go"; the main 
 ;; responsibility here is to fake the behavior of DrRacket and collect the
 ;; resulting steps.
-(define (test-sequence/core render-settings expanded-thunk expected-steps error-box)
+(define (test-sequence/core render-settings expanded-thunk dynamic-requirer expected-steps error-box)
   (let* ([current-error-display-handler (error-display-handler)]
          [all-steps
           (append expected-steps '((finished-stepping)))]
@@ -291,7 +300,7 @@
             (call-iter-on-each (expanded-thunk) iter))])
     (let/ec escape
       (parameterize ([error-escape-handler (lambda () (escape (void)))])
-        (go iter-caller receive-result render-settings
+        (go iter-caller dynamic-requirer receive-result render-settings
             #:disable-error-handling? (disable-stepper-error-handling))))
     (error-display-handler current-error-display-handler)))
 
