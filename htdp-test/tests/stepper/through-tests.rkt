@@ -1,7 +1,6 @@
 #lang racket
 
-(require (only-in stepper/private/model stepper-model-debug?)
-         (prefix-in m: "language-level-model.rkt")
+(require (prefix-in m: "language-level-model.rkt")
          "test-engine.rkt"
          "test-cases.rkt"
          
@@ -73,8 +72,7 @@
     (parameterize (#;[disable-stepper-error-handling #t]
                    #;[display-only-errors #t]
                    #;[store-steps #f]
-                   #;[show-all-steps #t]
-                   #;[stepper-model-debug? #t])
+                   #;[show-all-steps #t])
       #;(run-tests '(check-expect forward-ref check-within check-within-bad
                                   check-error check-error-bad))
       #;(run-tests '(teachpack-universe))

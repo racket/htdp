@@ -16,6 +16,8 @@
          (for-syntax racket/base)
          racket/private/promise)
 
+(define-logger stepper)
+
 (provide/contract 
  [reconstruct-completed (syntax? 
                          (or/c (listof natural-number/c) false/c)
