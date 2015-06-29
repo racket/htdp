@@ -28,6 +28,7 @@
       (or expr expr expr ...)
       name
       (code:line @#,elem{@racketvalfont{'}@racket[name]})
+      (code:line @#,elem{@racketvalfont{'}@racket[()]})
       number
       boolean 
       string
@@ -51,7 +52,7 @@
 )]{
 
 A quoted @racket[name] is a symbol. A symbol is a value, just like
-@racket[0] or @racket[empty].}
+@racket[0] or @racket['()].}
 
 @(prim-forms ("beginner")
              define 
