@@ -29,6 +29,7 @@
       name
       (code:line @#,elem{@racketvalfont{'}@racket[_quoted]})
       (code:line @#,elem{@racketvalfont{`}@racket[_quasiquoted]})
+      (code:line @#,elem{@racketvalfont{'}@racket[()]})
       number
       boolean
       string

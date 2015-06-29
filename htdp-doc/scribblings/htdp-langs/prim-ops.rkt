@@ -50,7 +50,7 @@
  (require test-engine/racket-tests)
 (define (sorted? l)
   (cond
-    [(empty? (rest l)) true]
+    [(empty? (rest l)) #true]
     [else (and (<= (first l) (second l)) (sorted? (rest l)))]))
 
 (define (htdp-sort l)
