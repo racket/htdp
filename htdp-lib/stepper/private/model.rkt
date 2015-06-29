@@ -513,12 +513,12 @@
      (unless disable-error-handling?
        (error-display-handler err-display-handler)))
    (lambda (expanded continue-thunk) ; iter
-     (r:reset-special-values)
      (log-stepper-debug "model received expanded syntax object: ~v"
                         (and (syntax? expanded) (syntax->datum expanded)))
      (if (eof-object? expanded)
          (receive-result (finished-stepping))
-         (begin (step-through-expression expanded)
+         (begin (r:reset-lazy-tables)
+                (step-through-expression expanded)
                 (continue-thunk))))))
 
 

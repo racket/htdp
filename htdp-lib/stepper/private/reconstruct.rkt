@@ -46,7 +46,7 @@
  [skip-step? (-> break-kind? (or/c mark-list? false/c) render-settings? boolean?)]
  [step-was-app? (-> mark-list? boolean?)]
  
- [reset-special-values (-> any)])
+ [reset-lazy-tables (-> any)])
 
 (define nothing-so-far (gensym "nothing-so-far-"))
 
@@ -301,7 +301,9 @@
 
 ;; skip-redex-step : mark-list? render-settings? -> boolean?
 (define (skip-redex-step? mark-list render-settings)
-  
+
+  ;; this could probably be dumped now that we're ignoring steps where
+  ;; before & after are the same (JBC, 2015-06-24)
   (define (varref-skip-step? varref)
     (with-handlers ([exn:fail:contract:variable? (lambda (dc-exn) #f)])
       (let ([val (lookup-binding mark-list varref)])
@@ -333,53 +335,11 @@
                   (varref-skip-step? expr)])]
               [(#%top . id-stx)
                (varref-skip-step? #`id-stx)]
-              [(#%plain-app . terms)
-               ; don't halt for proper applications of constructors
-               (let ([fun-val (lookup-binding mark-list (get-arg-var 0))])
-                 (and (procedure? fun-val)
-                      (procedure-arity-includes? 
-                       fun-val
-                       (length (cdr (syntax->list (syntax terms)))))
-                      (or (and (render-settings-constructor-style-printing? render-settings)
-                               (if (render-settings-abbreviate-cons-as-list? render-settings)
-                                   (eq? fun-val special-list-value)
-                                   (and (eq? fun-val special-cons-value)
-                                        (second-arg-is-list? mark-list))))
-                          ;(model-settings:special-function? 'vector fun-val)
-                          (and (eq? fun-val void)
-                               (eq? (cdr (syntax->list (syntax terms))) null))
-                          (struct-constructor-procedure? fun-val))))]
+              [(#%plain-app . terms) #f]
               [else #f])))))
 
-;; find-special-value finds the value associated with the given name.  Applications of 
-;; functions like 'list' should not be shown as steps, because the before and after steps will 
-;; be the same.  it might be easier simply to discover and discard these at display time.
-(define (find-special-value name valid-args)
-  (let* ([expanded-application (expand (cons name valid-args))]
-         [stepper-safe-expanded (skipto/auto expanded-application 'discard (lambda (x) x))]
-         [just-the-fn 
-          (kernel:kernel-syntax-case 
-           (syntax-disarm stepper-safe-expanded saved-code-inspector) #f
-           ; STC: lazy racket case
-           ;      Must change this case if lazy language changes!
-           [(#%plain-app 
-             (#%plain-app toplevelforcer)
-             (#%plain-app extra-lazy-lambda (#%plain-app force fn) . args))
-            (and (eq? (syntax->datum #'toplevelforcer) 'toplevel-forcer)
-                 (eq? (syntax->datum #'force) '!))
-            #'fn]
-           [(#%plain-app fn . rest) #`fn]
-           [else (error 'find-special-name "couldn't find expanded name for ~a" name)])])
-    (eval just-the-fn)))
 
-;; these are delayed so that they use the userspace expander.  I'm sure
-;; there's a more robust & elegant way to do this.
-(define special-list-value #f)
-(define special-cons-value #f)
-
-(define (reset-special-values)
-  (set! special-list-value (find-special-value 'list '(3)))
-  (set! special-cons-value (find-special-value 'cons '(3 empty)))
+(define (reset-lazy-tables)
   (set! unknown-promises-table (make-weak-hash))
   (set! next-unknown-promise 0))
 
