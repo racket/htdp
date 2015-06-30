@@ -16,6 +16,23 @@
 
 (provide run-test run-tests run-all-tests run-all-tests-except)
 
+(define legal-last-steps '(finished-stepping before-error error))
+
+;; make sure that the test ends with an error or finished stepping
+(define (check-final-step name steps)
+  (when (empty? steps)
+    (raise-argument-error 'check-final-step
+                          (format "nonempty list for test ~v" name)
+                          0 steps))
+  (define tag-of-last-step (first (last steps)))
+  (when (not (member tag-of-last-step legal-last-steps))
+    (raise-argument-error
+     'check-final-step
+     (format
+      "sequence of steps ending legally for test ~v"
+      name)
+     0 steps)))
+
 ;; add all the tests imported from the test cases file(s):
 (define list-of-tests
   (for/list ([test-spec (in-list the-test-cases)])
@@ -24,6 +41,7 @@
        (define models-list
          (cond [(list? models) models]
                [else (list models)]))
+       (check-final-step name expected-steps)
        (list name (stepper-test models-list string expected-steps extra-files))])))
 
 ;; run a test : (list symbol test-thunk) -> boolean

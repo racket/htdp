@@ -444,7 +444,8 @@
 (t1 'prims/non-beginner
     m:bwla-to-int/lam "(cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3)"
     `((before-after ((cons 3 (hilite (cons 1 empty)))) ((cons 3 (hilite (list 1)))))
-      (before-after ((hilite (cons 3 (list 1)))) ((hilite (list 3 1))))))
+      (before-after ((hilite (cons 3 (list 1)))) ((hilite (list 3 1))))
+      (finished-stepping)))
 
 
 (t1 'map
@@ -457,16 +458,18 @@
                     ((... (hilite 4) ...)))
       (before-after (...)
                     ((... (hilite 5) ...)))
-      (before-after (...) ((hilite `(3 4 5))))))
+      (before-after (...) ((hilite `(3 4 5))))
+      (finished-stepping)))
 
 (t1 'quoted-list
     m:beginner-wla "'(3 4 5)"
-    `())
+    `((finished-stepping)))
 
 (t1 'quoted-list-display
     m:bwla-to-int/lam "(define (f x) '((a))) (+ 3 4)"
     `((before-after ((define (f x) (list (list 'a))) (hilite (+ 3 4)))
-                    ((define (f x) (list (list 'a))) (hilite 7)))))
+                    ((define (f x) (list (list 'a))) (hilite 7)))
+      (finished-stepping)))
 
 
 ;;;;;;;;;;;;;
@@ -485,14 +488,16 @@
                     ((cons 3 (cons 4 (hilite (list 9))))))
       (before-after ((cons 3 (hilite (cons 4 (list 9)))))
                     ((cons 3 (hilite (list 4 9)))))
-      (before-after ((hilite (cons 3 (list 4 9)))) ((hilite (list 3 4 9))))))
+      (before-after ((hilite (cons 3 (list 4 9)))) ((hilite (list 3 4 9))))
+      (finished-stepping)))
 
 (t1 'qq-splice
     m:beginner-wla "`(3 ,@(list (+ 3 4) 5) 6)"
     `((before-after ((cons 3 (append (list (hilite (+ 3 4)) 5) (cons 6 empty)))) ((cons 3 (append (list (hilite 7) 5) (cons 6 empty)))))
       (before-after ((cons 3 (append (list 7 5) (hilite (cons 6 empty))))) ((cons 3 (append (list 7 5) (list 6)))))
       (before-after ((cons 3 (hilite (append (list 7 5) (list 6))))) ((cons 3 (hilite (list 7 5 6)))))
-      (before-after ((hilite (cons 3 (list 7 5 6)))) ((hilite (list 3 7 5 6))))))
+      (before-after ((hilite (cons 3 (list 7 5 6)))) ((hilite (list 3 7 5 6))))
+      (finished-stepping)))
 
 ;;;;;;;;;;;;;
 ;;
@@ -501,7 +506,8 @@
 ;;;;;;;;;;;;;
 
 (t1 'let1 m:both-intermediates "(let ([a 3]) 4)"
-    `((before-after ((hilite (let ([a 3]) 4))) ((hilite (define a_0 3)) (hilite 4)))))
+    `((before-after ((hilite (let ([a 3]) 4))) ((hilite (define a_0 3)) (hilite 4)))
+      (finished-stepping)))
 
 (t1 'let2
     m:both-intermediates "(let ([a (+ 4 5)] [b (+ 9 20)]) (+ a b))"
@@ -1113,7 +1119,8 @@
         (before-after (9 (check-within (hilite (+ 3 4)) 18 100))
                       (9 (check-within (hilite 7) 18 100)))
         (before-after (9 true (check-expect (hilite (+ 1 1)) 2))
-                      (9 true (check-expect (hilite 2) 2)))))
+                      (9 true (check-expect (hilite 2) 2)))
+        (finished-stepping)))
   
 
   
@@ -1128,7 +1135,8 @@
         (before-after (9 (check-within (hilite (+ 3 4)) 18 0.01))
                       (9 (check-within (hilite 7) 18 0.01)))
         (before-after (9 false (check-expect (hilite (+ 1 1)) 2))
-                      (9 false (check-expect (hilite 2) 2)))))
+                      (9 false (check-expect (hilite 2) 2)))
+        (finished-stepping)))
 
   (let ([errmsg "rest: expected argument of type <non-empty list>; given ()"])
     (t1 'check-error
@@ -1146,7 +1154,8 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
           (before-after (9 (check-error (+ (hilite (+ 3 4)) (rest empty)) ,errmsg))
                         (9 (check-error (+ (hilite 7) (rest empty)) ,errmsg)))
           (before-after (9 true (check-expect (hilite (+ 3 1)) 4))
-                        (9 true (check-expect (hilite 4) 4))))))
+                        (9 true (check-expect (hilite 4) 4)))
+          (finished-stepping))))
 
   (t1 'check-error-bad
       m:upto-int/lam
@@ -1158,7 +1167,8 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
         (before-after (9 (check-error (+ (hilite (+ 3 4)) (rest empty)) "bogus"))
                       (9 (check-error (+ (hilite 7) (rest empty)) "bogus")))
         (before-after (9 false (check-expect (hilite (+ 3 1)) 4))
-                      (9 false (check-expect (hilite 4) 4)))))
+                      (9 false (check-expect (hilite 4) 4)))
+        (finished-stepping)))
   
   ;;;;;;;;;;;;
   ;;
@@ -1172,7 +1182,7 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
   (define apply-nim-move
     (lambda (s)
       (if s s s)))"
-      '())
+      '((finished-stepping)))
 
 
   ;  ;;;;;;;;;;;;;
@@ -1317,7 +1327,8 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
           (before-after (,@defs (define a (hilite i2_0)))
                         (,@defs (define a (hilite (lambda (x) i1_0)))))
           (before-after (,@defs (define a (lambda (x) i1_0)) (hilite (+ 3 4)))
-                        (,@defs (define a (lambda (x) i1_0)) (hilite 7))))))
+                        (,@defs (define a (lambda (x) i1_0)) (hilite 7)))
+          (finished-stepping))))
 
   (t1 'set!
       m:advanced "(define a 3) (set! a (+ 4 5)) a"
@@ -1369,7 +1380,8 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
         (before-after ((+ 3 (hilite (begin 5 6))))
                       ((+ 3 (hilite 6))))
         (before-after ((hilite (+ 3 6)))
-                      ((hilite 9)))))
+                      ((hilite 9)))
+        (finished-stepping)))
 
   (t1 'begin
       m:advanced "(begin (+ 3 4) (+ 4 5) (+ 9 8))"
@@ -2205,7 +2217,8 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
         '((before-after ((require "foo.rkt") (+ (hilite a) 4))
                         ((require "foo.rkt") (+ (hilite 3) 4)))
           (before-after ((require "foo.rkt") (hilite (+ 3 4)))
-                        ((require "foo.rkt") (hilite 7))))
+                        ((require "foo.rkt") (hilite 7)))
+          (finished-stepping))
         '(("foo.rkt" "#lang racket \n(provide a) (define a 3)")))
    
     
