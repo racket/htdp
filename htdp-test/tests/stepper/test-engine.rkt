@@ -270,39 +270,38 @@
 ;; responsibility here is to fake the behavior of DrRacket and collect the
 ;; resulting steps.
 (define (test-sequence/core render-settings expanded-thunk dynamic-requirer expected-steps error-box)
-  (let* ([current-error-display-handler (error-display-handler)]
-         [all-steps
-          (append expected-steps '((finished-stepping)))]
-         ;; the values of certain parameters aren't surviving; create 
-         ;; lexical bindings for them:
-         [current-show-all-steps (show-all-steps)]
-         [current-display-only-errors (display-only-errors)]
-         [receive-result
-          (lambda (result)
-            (if (null? all-steps)
+  (define current-error-display-handler (error-display-handler))
+  (define all-steps (append expected-steps '((finished-stepping))))
+  ;; the values of certain parameters aren't surviving; create
+  ;; lexical bindings for them:
+  (define current-show-all-steps (show-all-steps))
+  (define current-display-only-errors (display-only-errors))
+  (define receive-result
+    (λ (result)
+      (if (null? all-steps)
+          (warn error-box
+                'test-sequence
+                "ran out of expected steps. Given result: ~v" result)
+          (begin
+            (if (compare-steps result (car all-steps) error-box)
+                (when (and current-show-all-steps (not current-display-only-errors))
+                  (printf "test-sequence: steps match for expected result: ~v\n"
+                          (car all-steps)))
                 (warn error-box
                       'test-sequence
-                      "ran out of expected steps. Given result: ~v" result)
-                (begin
-                  (if (compare-steps result (car all-steps) error-box)
-                      (when (and current-show-all-steps (not current-display-only-errors))
-                        (printf "test-sequence: steps match for expected result: ~v\n"
-                                (car all-steps)))
-                      (warn error-box
-                            'test-sequence
-                            "steps do not match\n   given: ~v\nexpected: ~v"
-                            (show-result result error-box)
-                            (car all-steps)))
-                  (set! all-steps (cdr all-steps)))))]
-         [iter-caller
-          (lambda (init iter)
-            (init)
-            (call-iter-on-each (expanded-thunk) iter))])
-    (let/ec escape
-      (parameterize ([error-escape-handler (lambda () (escape (void)))])
-        (go iter-caller dynamic-requirer receive-result render-settings
-            #:disable-error-handling? (disable-stepper-error-handling))))
-    (error-display-handler current-error-display-handler)))
+                      "steps do not match\n   given: ~v\nexpected: ~v"
+                      (show-result result error-box)
+                      (car all-steps)))
+            (set! all-steps (cdr all-steps))))))
+  (define iter-caller
+    (λ (init iter)
+      (init)
+      (call-iter-on-each (expanded-thunk) iter)))
+  (let/ec escape
+    (parameterize ([error-escape-handler (lambda () (escape (void)))])
+      (go iter-caller dynamic-requirer receive-result render-settings
+          #:disable-error-handling? (disable-stepper-error-handling))))
+  (error-display-handler current-error-display-handler))
 
 (define-namespace-anchor n-anchor)
 

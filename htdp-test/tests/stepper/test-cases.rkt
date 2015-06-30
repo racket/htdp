@@ -13,7 +13,8 @@
 
 
 (define (make-teachpack-ll-model teachpack-specs)
-  (m:ll-ll-model `(lib "htdp-beginner.ss" "lang") teachpack-specs fake-beginner-render-settings #f #f))
+  (m:ll-ll-model `(lib "htdp-beginner.ss" "lang")
+                 teachpack-specs fake-beginner-render-settings #f #f))
 
 
 (define err '(/ 1 0))
@@ -105,10 +106,15 @@
      (if 3 4)
      :: {(if 3 4)} -> {4})
 
-;(m:mz "((call-with-current-continuation call-with-current-continuation) (call-with-current-continuation call-with-current-continuation))"
-;                  `((before-after (((hilite ,h-p) (call-with-current-continuation call-with-current-continuation))) ((call-with-current-continuation call-with-current-continuation))
-;                    (((hilite ,h-p) (call-with-current-continuation call-with-current-continuation))) ((lambda args ...)))
-;                    (before-after (((lambda args ...) (hilite ,h-p))) ((call-with-current-continuation call-with-current-continuation))
+;(m:mz "((call-with-current-continuation call-with-current-continuation)
+; (call-with-current-continuation call-with-current-continuation))"
+;                  `((before-after (((hilite ,h-p)
+; (call-with-current-continuation call-with-current-continuation)))
+; ((call-with-current-continuation call-with-current-continuation))
+;                    (((hilite ,h-p) (call-with-current-continuation
+; call-with-current-continuation))) ((lambda args ...)))
+;                    (before-after (((lambda args ...) (hilite ,h-p)))
+; ((call-with-current-continuation call-with-current-continuation))
 ;                    (((lambda args ...) (hilite ,h-p))) ((lambda args ...)))))
 
 ;(m:mz '(begin (define g 3) g)
@@ -460,8 +466,7 @@
 (t1 'quoted-list-display
     m:bwla-to-int/lam "(define (f x) '((a))) (+ 3 4)"
     `((before-after ((define (f x) (list (list 'a))) (hilite (+ 3 4)))
-                    ((define (f x) (list (list 'a))) (hilite 7)))
-      (finished-stepping)))
+                    ((define (f x) (list (list 'a))) (hilite 7)))))
 
 
 ;;;;;;;;;;;;;
@@ -480,16 +485,14 @@
                     ((cons 3 (cons 4 (hilite (list 9))))))
       (before-after ((cons 3 (hilite (cons 4 (list 9)))))
                     ((cons 3 (hilite (list 4 9)))))
-      (before-after ((hilite (cons 3 (list 4 9)))) ((hilite (list 3 4 9))))
-      (finished-stepping)))
+      (before-after ((hilite (cons 3 (list 4 9)))) ((hilite (list 3 4 9))))))
 
 (t1 'qq-splice
     m:beginner-wla "`(3 ,@(list (+ 3 4) 5) 6)"
     `((before-after ((cons 3 (append (list (hilite (+ 3 4)) 5) (cons 6 empty)))) ((cons 3 (append (list (hilite 7) 5) (cons 6 empty)))))
       (before-after ((cons 3 (append (list 7 5) (hilite (cons 6 empty))))) ((cons 3 (append (list 7 5) (list 6)))))
       (before-after ((cons 3 (hilite (append (list 7 5) (list 6))))) ((cons 3 (hilite (list 7 5 6)))))
-      (before-after ((hilite (cons 3 (list 7 5 6)))) ((hilite (list 3 7 5 6))))
-      (finished-stepping)))
+      (before-after ((hilite (cons 3 (list 7 5 6)))) ((hilite (list 3 7 5 6))))))
 
 ;;;;;;;;;;;;;
 ;;
@@ -498,8 +501,7 @@
 ;;;;;;;;;;;;;
 
 (t1 'let1 m:both-intermediates "(let ([a 3]) 4)"
-    `((before-after ((hilite (let ([a 3]) 4))) ((hilite (define a_0 3)) (hilite 4)))
-      (finished-stepping)))
+    `((before-after ((hilite (let ([a 3]) 4))) ((hilite (define a_0 3)) (hilite 4)))))
 
 (t1 'let2
     m:both-intermediates "(let ([a (+ 4 5)] [b (+ 9 20)]) (+ a b))"
@@ -577,7 +579,8 @@
       (finished-stepping)))
 
 (t1 'let-deriv
-    m:intermediate "(define (f g) (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
+    m:intermediate "(define (f g) (let ([gp (lambda (x) (/
+(- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
     (let ([defs `((define (f g) 
                     (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))])
                       gp)))])
@@ -588,8 +591,11 @@
                                                     (/ (- (cos (+ x 0.1)) (cos x))
                                                        0.001))]) 
                                           gp)))))
-        (before-after (,@defs (define gprime (hilite (let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))))
-                      (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001)))) (define gprime (hilite gp_0))))
+        (before-after (,@defs (define gprime
+                                (hilite (let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))])
+                                          gp))))
+                      (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))))
+                              (define gprime (hilite gp_0))))
         (finished-stepping))))
 
 (t1 'let-assigned
@@ -891,7 +897,8 @@
   ; test generativity... that is, multiple evaluations of a local should get different lifted names:
 
   (t1 'local-generative
-      m:intermediate "(define (a13 b13 c13) (b13 c13)) (define (f9 x) (local ((define (maker dc) x)) maker)) (define m1 (f9 3)) (a13 (f9 4) 1)"
+      m:intermediate "(define (a13 b13 c13) (b13 c13))
+(define (f9 x) (local ((define (maker dc) x)) maker)) (define m1 (f9 3)) (a13 (f9 4) 1)"
       (let* ([defs1 `((define (a13 b13 c13) (b13 c13))
                       (define (f9 x) (local ((define (maker dc) x)) maker)))]
              [defs2 (append defs1 `((define (maker_0 dc) 3) (define m1 maker_0)))]
@@ -911,7 +918,8 @@
           (finished-stepping))))
 
   (t1 'local-generative/lambda
-      m:intermediate-lambda "(define (a13 b13 c13) (b13 c13)) (define (f9 x) (local ((define (maker dc) x)) maker)) (define m1 (f9 3)) (a13 (f9 4) 1)"
+      m:intermediate-lambda "(define (a13 b13 c13) (b13 c13))
+(define (f9 x) (local ((define (maker dc) x)) maker)) (define m1 (f9 3)) (a13 (f9 4) 1)"
       (let* ([defs1 `((define (a13 b13 c13) (b13 c13))
                       (define (f9 x) (local ((define (maker dc) x)) maker)))]
              [defs2 (append defs1 `((define (maker_0 dc) 3)))]
@@ -1125,10 +1133,15 @@
   (let ([errmsg "rest: expected argument of type <non-empty list>; given ()"])
     (t1 'check-error
         m:upto-int/lam
-        "(check-error (+ (+ 3 4) (rest empty)) (string-append \"rest: \" \"expected argument of type <non-empty list>; given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
+        "(check-error (+ (+ 3 4) (rest empty)) \
+(string-append \"rest: \" \"expected argument of type <non-empty list>; \
+given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
         `((before-after ((hilite (+ 4 5)))
                         ((hilite 9)))
-          (before-after (9 (check-error (+ (+ 3 4) (rest empty)) (hilite (string-append "rest: " "expected argument of type <non-empty list>; given ()"))))
+          (before-after (9 (check-error (+ (+ 3 4) (rest empty))
+                                        (hilite
+                                         (string-append
+                                          "rest: " "expected argument of type <non-empty list>; given ()"))))
                         (9 (check-error (+ (+ 3 4) (rest empty)) (hilite ,errmsg))))
           (before-after (9 (check-error (+ (hilite (+ 3 4)) (rest empty)) ,errmsg))
                         (9 (check-error (+ (hilite 7) (rest empty)) ,errmsg)))
@@ -1261,14 +1274,22 @@
   (t1 'teachpack-web-interaction
       (make-teachpack-ll-model
        `(htdp/servlet2))
-      "(define (adder go) (inform (number->string (+ (single-query (make-number \"enter 10\")) (single-query (make-number \"enter 20\")))))) (adder true)"
-      `((before-after-finished ((define (adder go) (inform (number->string (+ (single-query (make-number "enter 10")) (single-query (make-number "enter 20")))))))
+      "(define (adder go) (inform (number->string (+ (single-query (make-number \"enter 10\"))
+       (single-query (make-number \"enter 20\")))))) (adder true)"
+      `((before-after-finished ((define (adder go) (inform (number->string (+ (single-query (make-number "enter 10"))
+                                                                              (single-query (make-number "enter 20")))))))
                                ((hilite (adder true)))
-                               ((hilite (inform (number->string (+ (single-query (make-number "enter 10")) (single-query (make-number "enter 20"))))))))
-        (before-after ((inform (number->string (+ (single-query (hilite (make-number "enter 10"))) (single-query (make-number "enter 20")))))) ; this step looks wrong wrong wrong.
-                      ((inform (number->string (+ (single-query (hilite (make-numeric "enter 10"))) (single-query (make-number "enter 20")))))))
-        (before-after ((inform (number->string (+ (hilite (single-query (make-numeric "enter 10"))) (single-query (make-number "enter 20"))))))
-                      ((inform (number->string (+ (hilite 10) (single-query (make-number "enter 20")))))))
+                               ((hilite (inform (number->string (+ (single-query (make-number "enter 10"))
+                                                                   (single-query (make-number "enter 20"))))))))
+        (before-after ((inform (number->string (+ (single-query (hilite (make-number "enter 10")))
+                                                  (single-query (make-number "enter 20")))))
+                       ) ; this step looks wrong wrong wrong.
+                      ((inform (number->string (+ (single-query (hilite (make-numeric "enter 10")))
+                                                  (single-query (make-number "enter 20")))))))
+        (before-after ((inform (number->string (+ (hilite (single-query (make-numeric "enter 10")))
+                                                  (single-query (make-number "enter 20"))))))
+                      ((inform (number->string (+ (hilite 10)
+                                                  (single-query (make-number "enter 20")))))))
         (before-after ((inform (number->string (+ 10 (single-query (hilite (make-number "enter 20")))))))
                       ((inform (number->string (+ 10 (single-query (hilite (make-numeric "enter 20"))))))))
         (before-after ((inform (number->string (+ 10 (hilite (single-query (make-numeric "enter 20")))))))

@@ -1,6 +1,10 @@
 #lang racket
 
-(require "through-tests.rkt")
+(require "through-tests.rkt"
+         (only-in "test-engine.rkt"
+                  disable-stepper-error-handling
+                  display-only-errors
+                  show-all-steps))
 
 ;; NB: unlike standard linux config-file convention, the values
 ;; associated with the commented-out parameters are *not* the 
@@ -8,9 +12,8 @@
 ;; to use instead of the default.
 (parameterize (#;[disable-stepper-error-handling #t]
                #;[display-only-errors #t]
-               #;[store-steps #f]
-               #;[show-all-steps #t])
-  (run-test 'lazy-take)
+               [show-all-steps #t])
+  (run-test 'app)
   #;(run-all-tests)
   
   

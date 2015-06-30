@@ -18,6 +18,8 @@
 
 ;; the built-in ll-models:
 (define mz
+  (ll-ll-model 'racket fake-mz-render-settings #f))
+#;(define mz/h
   (ll-ll-model 'mzscheme fake-mz-render-settings #f))
 
 (define beginner
