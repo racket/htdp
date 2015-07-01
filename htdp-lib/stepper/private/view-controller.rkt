@@ -51,7 +51,8 @@
                      "    European Symposium on Programming, 2001\n")]))
   (send dlg show #t))
 
-(define (go drracket-tab program-expander dynamic-requirer selection-start selection-end)
+;; create a new view-controller, start the model
+(define (vc-go drracket-tab program-expander dynamic-requirer selection-start selection-end)
   
   ;; get the language-level:
   (define language-settings 

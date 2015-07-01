@@ -719,5 +719,5 @@
     (struct-field-index base))
   
   
-  (define-signature view-controller^ (go))
+  (define-signature view-controller^ (vc-go))
   (define-signature stepper-frame^ (stepper-frame%))

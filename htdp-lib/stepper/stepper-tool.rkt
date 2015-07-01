@@ -305,11 +305,11 @@
                   (is-a? language-level drracket:module-language:module-language<%>))
               (parameterize ([current-directory (or (get-directory) (current-directory))])
                 (set! stepper-frame
-                      (go this 
-                          program-expander
-                          dynamic-requirer
-                          (+ 1 (send (get-defs) get-start-position))
-                          (+ 1 (send (get-defs) get-end-position)))))
+                      (vc-go this 
+                             program-expander
+                             dynamic-requirer
+                             (+ 1 (send (get-defs) get-start-position))
+                             (+ 1 (send (get-defs) get-end-position)))))
               (message-box
                (string-constant stepper-name)
                (format (string-constant stepper-language-level-message)
