@@ -6,6 +6,8 @@
                   display-only-errors
                   show-all-steps))
 
+(printf "ready to run tests.\n")
+
 ;; NB: unlike standard linux config-file convention, the values
 ;; associated with the commented-out parameters are *not* the 
 ;; default ones, but rather the ones you're likely to want
@@ -13,8 +15,8 @@
 (parameterize (#;[disable-stepper-error-handling #t]
                #;[display-only-errors #t]
                [show-all-steps #t])
-  (run-test 'app)
-  #;(run-all-tests)
+  #;(run-test 'app)
+  (run-all-tests)
   
   
   #;(syntax-case

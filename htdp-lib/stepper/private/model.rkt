@@ -518,9 +518,7 @@
                         (and (syntax? expanded) (syntax->datum expanded)))
      (if (eof-object? expanded)
          (begin
-           ;; is this synchronous?
            (dynamic-requirer)
-           ;; if not synchronous, going to have to figure out a different way to do this...
            (receive-result (finished-stepping)))
          (begin (r:reset-lazy-tables)
                 (step-through-expression expanded)

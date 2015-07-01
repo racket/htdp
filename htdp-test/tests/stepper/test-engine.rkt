@@ -69,6 +69,10 @@
 ;; (so that you can take advantage of DrRacket's error reporting)
 (define disable-stepper-error-handling (make-parameter #f))
 
+;; if a test takes more than this many seconds, it's a failure:
+(define MAX-TEST-WAIT 10)
+
+
 ;; DATA DEFINITIONS:
 
 ;; a step is one of 
@@ -166,8 +170,7 @@
            (prepare-filesystem exp-str extra-files))
          (define provider-thunk
            (create-provider-thunk namespace-spec enable-testing? input-port))
-         (define (dynamic-requirer)
-           (dynamic-require (filename->spec filename)))
+         (define (dynamic-requirer) (void))
          (list render-settings
                provider-thunk
                dynamic-requirer
@@ -180,7 +183,8 @@
                                extra-files))
          (define provider-thunk
            (create-hashlang-provider-thunk filename enable-testing? input-port))
-         (define (dynamic-requirer) 'nothing-to-do-here)
+         (define (dynamic-requirer)
+           (dynamic-require (list 'quote (filename->spec filename)) #f))
          (list render-settings
                provider-thunk
                dynamic-requirer
@@ -244,17 +248,15 @@
 ;; expanded expressions from the file, one at a time.
 ;; for use with #lang situations.
 (define (create-hashlang-provider-thunk filename enable-testing? input-port)
-  (match filename
-    [(regexp #px"^(.*)\\.rkt$" (list _ stem))
-     ;; thunk this so that syntax errors happen within the error handlers:
-     (lambda ()
-       (list-then-eof
-        (parameterize ([current-namespace test-namespace])
-          (list
-           (expand
-            (with-module-reading-parameterization
-             (lambda ()
-               (read-syntax "ignored..." input-port))))))))]))
+  ;; thunk this so that syntax errors happen within the error handlers:
+  (lambda ()
+    (list-then-eof
+     (parameterize ([current-namespace test-namespace])
+       (list
+        (expand
+         (with-module-reading-parameterization
+          (lambda ()
+            (read-syntax "ignored..." input-port)))))))))
 
 ;; produce a thunk that returns elements from a list, then ever after
 ;; returns #<eof>
@@ -271,17 +273,20 @@
 ;; resulting steps.
 (define (test-sequence/core render-settings expanded-thunk dynamic-requirer expected-steps error-box)
   (define current-error-display-handler (error-display-handler))
-  (define all-steps (append expected-steps '((finished-stepping))))
+  (define all-steps expected-steps)
   ;; the values of certain parameters aren't surviving; create
   ;; lexical bindings for them:
   (define current-show-all-steps (show-all-steps))
   (define current-display-only-errors (display-only-errors))
+  (define test-finished-semaphore (make-semaphore))
   (define receive-result
     (λ (result)
       (if (null? all-steps)
-          (warn error-box
-                'test-sequence
-                "ran out of expected steps. Given result: ~v" result)
+          (begin (warn error-box
+                       'test-sequence
+                       "ran out of expected steps. Given result: ~v" result)
+                 ;; test is finished, release the semaphore:
+                 (semaphore-post test-finished-semaphore))
           (begin
             (if (compare-steps result (car all-steps) error-box)
                 (when (and current-show-all-steps (not current-display-only-errors))
@@ -292,15 +297,29 @@
                       "steps do not match\n   given: ~v\nexpected: ~v"
                       (show-result result error-box)
                       (car all-steps)))
-            (set! all-steps (cdr all-steps))))))
+            (set! all-steps (cdr all-steps))
+            (when (null? all-steps)
+              ;; test is happy, release the semaphore:
+              (semaphore-post test-finished-semaphore))))))
   (define iter-caller
     (λ (init iter)
       (init)
       (call-iter-on-each (expanded-thunk) iter)))
   (let/ec escape
-    (parameterize ([error-escape-handler (lambda () (escape (void)))])
+    (parameterize ([error-escape-handler
+                    ;; in the real stepper, it's okay to allow an error to terminate the
+                    ;; whole computation, because it's running in its own thread.
+                    ;; During testing, we want to simply abort out
+                    ;; to this escape continuation.
+                    (λ ()
+                      (semaphore-post test-finished-semaphore)
+                      (escape (void)))])
       (go iter-caller dynamic-requirer receive-result render-settings
           #:disable-error-handling? (disable-stepper-error-handling))))
+  (match (sync/timeout MAX-TEST-WAIT test-finished-semaphore)
+    [#f (warn error-box 'test-sequence
+              "test engine timeout while waiting for steps")]
+    [(? semaphore? s) 'success])
   (error-display-handler current-error-display-handler))
 
 (define-namespace-anchor n-anchor)
@@ -326,13 +345,12 @@
 (define (call-iter-on-each stx-thunk iter)
   (parameterize ([current-namespace test-namespace])
     (let iter-loop ()
-      (let* ([next (stx-thunk)]
-             [followup-thunk (if (eof-object? next) 
-                                 void
-                                 iter-loop)]
-             [expanded (expand next)])
-        ;;(printf "~v\n" expanded)
-        (iter expanded followup-thunk)))))
+      (define next (stx-thunk))
+      (cond [(eof-object? next)
+             (iter next void)]
+            [else
+             ;; I think this expand is unneccessary:
+             (iter (expand next) iter-loop)]))))
 
 
 (define (warn error-box who fmt . args)
