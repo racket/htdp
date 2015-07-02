@@ -196,7 +196,7 @@
                   #'check-member-of @racket[check-member-of]
                   #'check-range @racket[check-range]
                   #'require @racket[require]
-                  @racket[true] @racket[false]
+                  @racket[#true] @racket[#false]
                   with-beginner-function-call))
 
 (define (gen-prim-forms define-struct-id define-struct-elem ds-extras
@@ -455,12 +455,12 @@ defined functions to formulate test suites:
 ;; [cons Number [List-of Number]] -> Boolean 
 ;; a function for testing @racket[htdp-sort]
 
-(check-expect (sorted? (list 1 2 3)) true)
-(check-expect (sorted? (list 2 1 3)) false)
+(check-expect (sorted? (list 1 2 3)) #true)
+(check-expect (sorted? (list 2 1 3)) #false)
 
 (define (sorted? l)
   (cond
-    [(empty? (rest l)) true]
+    [(empty? (rest l)) #true]
     [else (and (<= (first l) (second l)) (sorted? (rest l)))]))
 
 ;; [List-of Number] -> [List-of Number]
