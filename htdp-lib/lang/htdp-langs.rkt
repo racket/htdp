@@ -52,7 +52,8 @@
       
       ;; tracing? : boolean
       ;; teachpacks : (listof require-spec)
-      (define-struct (htdp-lang-settings drscheme:language:simple-settings) (tracing? teachpacks))
+      (define-struct (htdp-lang-settings drscheme:language:simple-settings)
+        (tracing? teachpacks true/false/empty-as-ids?))
       (define htdp-lang-settings->vector (make-->vector htdp-lang-settings))
       (define teachpacks-field-index (+ (procedure-arity drscheme:language:simple-settings) 1))
       
@@ -86,34 +87,44 @@
              #t
              'none
              #f 
-             (preferences:get 'drracket:htdp:last-set-teachpacks/multi-lib)))
+             (preferences:get 'drracket:htdp:last-set-teachpacks/multi-lib)
+             #f))
           
           (define/override (default-settings? s)
             (and (super default-settings? s)
                  (not (htdp-lang-settings-tracing? s))
-                 (null? (htdp-lang-settings-teachpacks s))))
+                 (null? (htdp-lang-settings-teachpacks s))
+                 (not (htdp-lang-settings-true/false/empty-as-ids? s))))
           
           (define/override (marshall-settings x)
             (list (super marshall-settings x)
                   (htdp-lang-settings-tracing? x)
-                  (htdp-lang-settings-teachpacks x)))
+                  (htdp-lang-settings-teachpacks x)
+                  (htdp-lang-settings-true/false/empty-as-ids? x)))
           
           (define/override (unmarshall-settings x)
-            (if (and (list? x)
-                     (= (length x) 3)
-                     (boolean? (list-ref x 1))
-                     (list-of-require-specs? (list-ref x 2)))
-                (let ([drs-settings (super unmarshall-settings (first x))])
-                  (make-htdp-lang-settings
-                   (drscheme:language:simple-settings-case-sensitive drs-settings)
-                   (drscheme:language:simple-settings-printing-style  drs-settings)
-                   (drscheme:language:simple-settings-fraction-style  drs-settings)
-                   (drscheme:language:simple-settings-show-sharing  drs-settings)
-                   (drscheme:language:simple-settings-insert-newlines  drs-settings)
-                   (drscheme:language:simple-settings-annotations drs-settings)
-                   (cadr x)
-                   (caddr x)))
-                (default-settings)))
+            (cond
+              [(and (list? x)
+                    (or (= (length x) 3)
+                        (= (length x) 4))
+                    (boolean? (list-ref x 1))
+                    (list-of-require-specs? (list-ref x 2))
+                    (implies (= (length x) 4)
+                             (boolean? (list-ref x 3))))
+               (define drs-settings (super unmarshall-settings (first x)))
+               (make-htdp-lang-settings
+                (drscheme:language:simple-settings-case-sensitive drs-settings)
+                (drscheme:language:simple-settings-printing-style drs-settings)
+                (drscheme:language:simple-settings-fraction-style drs-settings)
+                (drscheme:language:simple-settings-show-sharing drs-settings)
+                (drscheme:language:simple-settings-insert-newlines drs-settings)
+                (drscheme:language:simple-settings-annotations drs-settings)
+                (cadr x)
+                (caddr x)
+                (if (= (length x) 4)
+                    (list-ref x 3)
+                    #f))]
+              [else (default-settings)]))
           
           (define/private (list-of-require-specs? l)
             (and (list? l)
@@ -198,7 +209,8 @@
                   (is-a? val cache-image-snip%) ;; htdp/image
                   (is-a? val image-snip%)       ;; literal image constant
                   (is-a? val bitmap%)))         ;; works in other places, so include it here too
-            (parameterize ([pc:booleans-as-true/false #f]
+            (define tfe-ids? (htdp-lang-settings-true/false/empty-as-ids? settings))
+            (parameterize ([pc:booleans-as-true/false tfe-ids?]
                            [pc:add-make-prefix-to-constructor #t]
                            [print-boolean-long-form #t]
                            [pc:abbreviate-cons-as-list (get-abbreviate-cons-as-list)]
@@ -206,7 +218,7 @@
                             (let ([ph (pc:current-print-convert-hook)])
                               (lambda (val basic sub)
                                 (cond
-                                  [(equal? val '()) ''()]
+                                  [(and (not tfe-ids?) (equal? val '())) ''()]
                                   [(equal? val set!-result) '(void)]
                                   [else (ph val basic sub)])))]
                            [pretty-print-show-inexactness #t]
@@ -281,128 +293,161 @@
       ;;                         -> (case-> (-> settings) (settings -> void))
       ;; constructs the config-panel for a language without a sharing option.
       (define (sharing/not-config-panel allow-sharing-config? accept-quasiquote? _parent)
-        (let* ([parent (make-object vertical-panel% _parent)]
+        (define parent (make-object vertical-panel% _parent))
+        (define input-panel (new group-box-panel%
+                                 [parent parent]
+                                 [label (string-constant input-syntax)]
+                                 [alignment '(left center)]))
+        
+        (define output-panel (new group-box-panel%
+                                  [parent parent]
+                                  [label (string-constant output-syntax)]
+                                  [alignment '(left center)]))
                
-               [input-panel (instantiate group-box-panel% ()
-                              (parent parent)
-                              (label (string-constant input-syntax))
-                              (alignment '(left center)))]
-               
-               [output-panel (instantiate group-box-panel% ()
-                               (parent parent)
-                               (label (string-constant output-syntax))
-                               (alignment '(left center)))]
-               
-               [tp-group-box (instantiate group-box-panel% ()
-                               (label (string-constant teachpacks))
-                               (parent parent)
-                               (alignment '(center top)))]
-               [tp-panel (new vertical-panel%
+        (define tp-group-box (new group-box-panel%
+                                  [label (string-constant teachpacks)]
+                                  [parent parent]
+                                  [alignment '(center top)]))
+        (define tp-panel (new vertical-panel%
                               [parent tp-group-box]
                               [alignment '(center center)]
                               [stretchable-width #f]
-                              [stretchable-height #f])]
-               
-               [case-sensitive (make-object check-box%
+                              [stretchable-height #f]))
+        
+        (define case-sensitive (make-object check-box%
                                  (string-constant case-sensitive-label)
                                  input-panel
-                                 void)]
-               [output-style (make-object radio-box%
-                               (string-constant output-style-label)
-                               (if accept-quasiquote?
-                                   (list (string-constant constructor-printing-style)
-                                         (string-constant quasiquote-printing-style)
-                                         (string-constant write-printing-style))
-                                   (list (string-constant constructor-printing-style)
-                                         (string-constant write-printing-style)))
-                               output-panel
-                               void)]
-               [show-sharing #f]
-               [insert-newlines (make-object check-box%
-                                  (string-constant use-pretty-printer-label)
-                                  output-panel
-                                  void)]
-               [tracing (new check-box%
-                             (parent output-panel)
-                             (label (string-constant tracing-enable-tracing))
-                             (callback void))]
-               [fraction-style
-                (make-object radio-box% (string-constant fraction-style)
-                  (list (string-constant use-mixed-fractions)
-                        (string-constant use-repeating-decimals))
-                  output-panel
-                  void)]
-               
-               [tps '()])
+                                 void))
+        (define insert-newlines (new check-box%
+                                     [label (string-constant use-pretty-printer-label)]
+                                     [parent output-panel]
+                                     [callback void]))
+        (define tracing (new check-box%
+                             [parent output-panel]
+                             [label (string-constant tracing-enable-tracing)]
+                             [callback void]))
+
+        (define radiobox-parent-panel (new vertical-panel%
+                                           [parent output-panel]
+                                           [stretchable-height #f]))
+        (define radiobox-labels '())
+        (define (mk-radiobox label choices)
+          (define hp (new horizontal-panel%
+                          [parent radiobox-parent-panel]
+                          [stretchable-height #f]))
+          (new horizontal-panel% [parent hp] [stretchable-width #t])
+          (set! radiobox-labels (cons (new message% [label label] [parent hp])
+                                      radiobox-labels))
+          (new radio-box%
+               [label #f]
+               [parent hp]
+               [choices choices]))
+
+        (define output-style (mk-radiobox
+                              (string-constant output-style-label)
+                              (if accept-quasiquote?
+                                  (list (string-constant constructor-printing-style)
+                                        (string-constant quasiquote-printing-style)
+                                        (string-constant write-printing-style))
+                                  (list (string-constant constructor-printing-style)
+                                        (string-constant write-printing-style)))))
+        (define output-tfe (mk-radiobox
+                            (string-constant true-false-empty-style-label)
+                            (list (string-constant true-false-empty-style-read)
+                                  (string-constant true-false-empty-style-ids))))
+        (define fraction-style
+          (mk-radiobox (string-constant fraction-style)
+                       (list (string-constant use-mixed-fractions)
+                             (string-constant use-repeating-decimals))))
+
+        (define show-sharing #f)
+
+        (define (get-biggest-width lst)
+          (for/fold ([s 0])
+                    ([lab (in-list lst)])
+            (define-values (w h) (send lab get-graphical-min-size))
+            (max w s)))
+
+        (let* ([rbs (list output-style output-tfe fraction-style)]
+               [min-width (get-biggest-width rbs)])
+          (for ([par (in-list rbs)])
+            (send par min-width min-width)))
+        
+        (define tps '())
           
-          (when allow-sharing-config?
-            (set! show-sharing
-                  (instantiate check-box% ()
-                    (parent output-panel)
-                    (label (string-constant sharing-printing-label))
-                    (callback void))))
-          
-          ;; set the characteristics of the GUI
-          (send _parent set-alignment 'center 'center)
-          (send parent stretchable-height #f)
-          (send parent stretchable-width #f)
-          (send parent set-alignment 'center 'center)
-          
-          (case-lambda
-            [()
-             (make-htdp-lang-settings
-              (send case-sensitive get-value)
-              (if accept-quasiquote?
-                  (case (send output-style get-selection)
-                    [(0) 'constructor]
-                    [(1) 'quasiquote]
-                    [(2) 'write])
-                  (case (send output-style get-selection)
-                    [(0) 'constructor]
-                    [(1) 'write]))
-              (case (send fraction-style get-selection)
-                [(0) 'mixed-fraction]
-                [(1) 'repeating-decimal])
-              (and allow-sharing-config? (send show-sharing get-value))
-              (send insert-newlines get-value)
-              'none
-              (send tracing get-value)
-              tps)]
-            [(settings)
-             (send case-sensitive set-value 
-                   (drscheme:language:simple-settings-case-sensitive settings))
-             (send output-style set-selection
-                   (if accept-quasiquote?
-                       (case (drscheme:language:simple-settings-printing-style settings)
-                         [(constructor) 0]
-                         [(quasiquote) 1]
-                         [(print trad-write write) 2])
-                       (case (drscheme:language:simple-settings-printing-style settings)
-                         [(constructor) 0]
-                         [(quasiquote) 0]
-                         [(print trad-write write) 1])))
-             (send fraction-style set-selection
-                   (case (drscheme:language:simple-settings-fraction-style settings)
-                     [(mixed-fraction) 0]
-                     [(repeating-decimal) 1]))
-             (when allow-sharing-config?
-               (send show-sharing set-value
-                     (drscheme:language:simple-settings-show-sharing settings)))
-             (send insert-newlines set-value 
-                   (drscheme:language:simple-settings-insert-newlines settings))
-             (set! tps (htdp-lang-settings-teachpacks settings))
-             (send tp-panel change-children (λ (l) '()))
-             (if (null? tps)
-                 (new message%
-                      [parent tp-panel]
-                      [label (string-constant teachpacks-none)])
-                 (for-each
-                  (λ (tp) (new message% 
-                               [parent tp-panel]
-                               [label (format "~s" tp)]))
-                  tps))
-             (send tracing set-value (htdp-lang-settings-tracing? settings))
-             (void)])))
+        (when allow-sharing-config?
+          (set! show-sharing
+                (new check-box%
+                  [parent output-panel]
+                  [label (string-constant sharing-printing-label)]
+                  [callback void])))
+        
+        ;; set the characteristics of the GUI
+        (send _parent set-alignment 'center 'center)
+        (send parent stretchable-height #f)
+        (send parent stretchable-width #f)
+        (send parent set-alignment 'center 'center)
+        
+        (case-lambda
+          [()
+           (make-htdp-lang-settings
+            (send case-sensitive get-value)
+            (if accept-quasiquote?
+                (case (send output-style get-selection)
+                  [(0) 'constructor]
+                  [(1) 'quasiquote]
+                  [(2) 'write])
+                (case (send output-style get-selection)
+                  [(0) 'constructor]
+                  [(1) 'write]))
+            (case (send fraction-style get-selection)
+              [(0) 'mixed-fraction]
+              [(1) 'repeating-decimal])
+            (and allow-sharing-config? (send show-sharing get-value))
+            (send insert-newlines get-value)
+            'none
+            (send tracing get-value)
+            tps
+            (equal? (send output-tfe get-selection) 1))]
+          [(settings)
+           (send case-sensitive set-value 
+                 (drscheme:language:simple-settings-case-sensitive settings))
+           (send output-style set-selection
+                 (if accept-quasiquote?
+                     (case (drscheme:language:simple-settings-printing-style settings)
+                       [(constructor) 0]
+                       [(quasiquote) 1]
+                       [(print trad-write write) 2])
+                     (case (drscheme:language:simple-settings-printing-style settings)
+                       [(constructor) 0]
+                       [(quasiquote) 0]
+                       [(print trad-write write) 1])))
+           (send fraction-style set-selection
+                 (case (drscheme:language:simple-settings-fraction-style settings)
+                   [(mixed-fraction) 0]
+                   [(repeating-decimal) 1]))
+           (when allow-sharing-config?
+             (send show-sharing set-value
+                   (drscheme:language:simple-settings-show-sharing settings)))
+           (send insert-newlines set-value 
+                 (drscheme:language:simple-settings-insert-newlines settings))
+           (set! tps (htdp-lang-settings-teachpacks settings))
+           (send tp-panel change-children (λ (l) '()))
+           (if (null? tps)
+               (new message%
+                    [parent tp-panel]
+                    [label (string-constant teachpacks-none)])
+               (for-each
+                (λ (tp) (new message% 
+                             [parent tp-panel]
+                             [label (format "~s" tp)]))
+                tps))
+           (send tracing set-value (htdp-lang-settings-tracing? settings))
+           (send output-tfe set-selection
+                 (if (htdp-lang-settings-true/false/empty-as-ids? settings)
+                     1
+                     0))
+           (void)]))
       
       (define simple-htdp-language%
         (class* drscheme:language:simple-module-based-language% (htdp-language<%>)
@@ -572,11 +617,12 @@
                     (htdp-lang-settings-teachpacks settings)))
              (λ (settings parent) 
                (define old-tps (htdp-lang-settings-teachpacks settings))
-	       (define tp-dirs (list "htdp" "2htdp"))
-	       (define labels (list (string-constant teachpack-pre-installed/htdp)
-				    (string-constant teachpack-pre-installed/2htdp)))
-	       (define tp-syms '(htdp-teachpacks 2htdp-teachpacks))
-               (define-values (tp-to-remove tp-to-add) (get-teachpack-from-user parent tp-dirs labels tp-syms old-tps))
+               (define tp-dirs (list "htdp" "2htdp"))
+               (define labels (list (string-constant teachpack-pre-installed/htdp)
+                                    (string-constant teachpack-pre-installed/2htdp)))
+               (define tp-syms '(htdp-teachpacks 2htdp-teachpacks))
+               (define-values (tp-to-remove tp-to-add)
+                 (get-teachpack-from-user parent tp-dirs labels tp-syms old-tps))
                (define new-tps (let ([removed (if tp-to-remove
                                                   (remove tp-to-remove old-tps)
                                                   old-tps)])
@@ -597,7 +643,8 @@
                 (drscheme:language:simple-settings-insert-newlines settings)
                 (drscheme:language:simple-settings-annotations settings)
                 (htdp-lang-settings-tracing? settings)
-                new-tps))
+                new-tps
+                (htdp-lang-settings-true/false/empty-as-ids? settings)))
              (λ (settings name) 
                (let ([new-tps (filter (λ (x) (not (equal? (tp-require->str x) name)))
                                       (htdp-lang-settings-teachpacks settings))])
@@ -610,7 +657,8 @@
                   (drscheme:language:simple-settings-insert-newlines settings)
                   (drscheme:language:simple-settings-annotations settings)
                   (htdp-lang-settings-tracing? settings)
-                  new-tps)))
+                  new-tps
+                  (htdp-lang-settings-true/false/empty-as-ids? settings))))
              (λ (settings) 
                (preferences:set 'drracket:htdp:last-set-teachpacks/multi-lib '())
                (make-htdp-lang-settings
@@ -621,7 +669,8 @@
                 (drscheme:language:simple-settings-insert-newlines settings)
                 (drscheme:language:simple-settings-annotations settings)
                 (htdp-lang-settings-tracing? settings)
-                '()))))
+                '()
+                (htdp-lang-settings-true/false/empty-as-ids? settings)))))
         
           (inherit-field reader-module)
           (define/override (get-reader-module) reader-module)
@@ -653,9 +702,12 @@
             (cond
               [ssv
                (define settings-list (vector->list (cadr ssv)))
+               (define settings-list-len (length settings-list))
                (cond
-                 [(equal? (length settings-list)
-                          (procedure-arity make-htdp-lang-settings))
+                 [(or (equal? settings-list-len
+                              (procedure-arity make-htdp-lang-settings))
+                      (equal? settings-list-len
+                              (- (procedure-arity make-htdp-lang-settings) 1)))
                   (define new-settings-list
                     (for/list ([i (in-naturals)]
                                [e (in-list settings-list)])
@@ -663,7 +715,9 @@
                         [(= i teachpacks-field-index)
                          (unmarshall-teachpack-settings e)]
                         [else e])))
-                  (apply make-htdp-lang-settings new-settings-list)]
+                  (if (= settings-list-len (procedure-arity make-htdp-lang-settings))
+                      (apply make-htdp-lang-settings new-settings-list)
+                      (apply make-htdp-lang-settings (append new-settings-list '(#f))))]
                  [else
                   (default-settings)])]
               [else (default-settings)]))
