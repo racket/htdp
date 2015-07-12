@@ -7,7 +7,8 @@
                      (module-begin advanced-module-begin)))
 
 (require deinprogramm/signature/signature
-         lang/private/signature-syntax)
+         lang/private/signature-syntax
+         test-engine/racket-tests)
 
 (require (for-syntax scheme/base)
          (for-syntax racket/list)
@@ -139,7 +140,8 @@
 	  ;; the module-expansion machinery can be used to handle
 	  ;; requires, etc.:
 	  #`(#%plain-module-begin
-	     (module-continue (e1 ...) () ())))))
+	     (module-continue (e1 ...) () ())
+             (module+ test (test))))))
 
      ;; module-continue
      (lambda (stx)
