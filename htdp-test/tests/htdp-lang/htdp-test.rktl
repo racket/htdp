@@ -95,9 +95,9 @@
      ;;  when using the real module-begin:
      #'(mz-let ([name (gensym)])
                (eval
-                #`(module #,name #,(add-teachpacks current-htdp-lang)
-                    #,@body-accum
-                    #,(strip-context #'expr)))
+                (strip-context #`(module #,name #,(add-teachpacks current-htdp-lang)
+                                   #,@body-accum
+                                   expr)))
                (dynamic-require `',name #f))]
     [_ 
      (printf "~s\n" (syntax->datum stx))
