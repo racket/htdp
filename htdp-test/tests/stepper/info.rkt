@@ -4,3 +4,5 @@
                           "big-bang-test.rkt"))
 
 (define test-responsibles '((all clements)))
+(define test-timeouts '(("run-manual-tests.rkt" 300)
+                        ("automatic-tests.rkt" 300)))
