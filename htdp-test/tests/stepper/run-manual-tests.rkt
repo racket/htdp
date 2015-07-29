@@ -6,6 +6,11 @@
                   display-only-errors
                   show-all-steps))
 
+;; this file is for manual checking of individual normally-automated tests.
+
+;; omit from testing
+(module* test racket/base)
+
 (printf "ready to run tests.\n")
 
 ;; NB: unlike standard linux config-file convention, the values
