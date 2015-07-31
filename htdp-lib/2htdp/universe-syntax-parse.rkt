@@ -30,7 +30,7 @@
 (module clauses scheme
   
   (require syntax/parse 'auxs
-           (for-syntax scheme 'auxs unstable/syntax)
+           (for-syntax scheme 'auxs)
            (for-template scheme/base 'auxs))
   
   (provide define-clause)
