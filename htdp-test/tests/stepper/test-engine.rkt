@@ -11,6 +11,13 @@
          racket/file
          "language-level-model.rkt")
 
+;; framework for simulating DrS for running stepper test cases.
+;; this file currently supports two different testing setups; one
+;; is the old style, pre #lang (before 2015), when student-level
+;; languages did not expand into a single module. The second
+;; is for programs starting with (e.g.) #lang htdp/bsl. Presumably,
+;; the first kind will be deleted when we switch to all-#lang.
+
 
 (provide (contract-out
           [string->expanded-syntax-list
@@ -70,7 +77,7 @@
 (define disable-stepper-error-handling (make-parameter #f))
 
 ;; if a test takes more than this many seconds, it's a failure:
-(define MAX-TEST-WAIT 10)
+(define MAX-TEST-WAIT 3)
 
 
 ;; DATA DEFINITIONS:
@@ -199,8 +206,6 @@
 (define (add-hashlang-line lang-str str)
   (string-append "#lang "lang-str"\n\n"
                  str))
-
-;; FIXME: Wait! Is this ... fully expanded?
 
 ;; given a language level model and string representing a program and a list of
 ;; extra files, return a port opened on a file containing the program,
