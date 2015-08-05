@@ -676,7 +676,7 @@ All @tech{MouseEvent}s are represented via strings:
          #:contracts
          ([last-world? (-> (unsyntax @tech{WorldState}) boolean?)])]{
  tells DrRacket to call the @racket[last-world?] function whenever the canvas is
- drawn. If this call produces @racket[true], the world program is shut
+ drawn. If this call produces @racket[#true], the world program is shut
  down. Specifically, the  clock is stopped; no more
  tick events, @tech{KeyEvent}s, or @tech{MouseEvent}s are forwarded to
  the respective handlers. The @racket[big-bang] expression returns this
@@ -690,7 +690,7 @@ All @tech{MouseEvent}s are represented via strings:
           [last-picture (-> (unsyntax @tech{WorldState}) scene?)])]{
 @note-scene
  tells DrRacket to call the @racket[last-world?] function whenever the canvas is
- drawn. If this call produces @racket[true], the world program is shut
+ drawn. If this call produces @racket[#true], the world program is shut
  down after displaying the world one last time, this time using the image
  rendered with @racket[last-picture]. Specifically, the  clock is stopped; no more
  tick events, @tech{KeyEvent}s, or @tech{MouseEvent}s are forwarded to
@@ -716,7 +716,7 @@ and @racket[big-bang] will close down all event handling.}
          #:contracts
          ([world-expr? (-> Any boolean?)])]{
  tells DrRacket to call the @racket[world-expr?] function on the result of
- every world handler call. If this call produces @racket[true], the result
+ every world handler call. If this call produces @racket[#true], the result
  is considered a world; otherwise the world program signals an error.
 }}
 
@@ -1111,8 +1111,8 @@ The three sample iworlds are provided so that you can test your functions
 for universe programs. For example:
 
 @racketblock[
-(check-expect (iworld=? iworld1 iworld2) false)
-(check-expect (iworld=? iworld2 iworld2) true)
+(check-expect (iworld=? iworld1 iworld2) #false)
+(check-expect (iworld=? iworld2 iworld2) #true)
 ]
 }
 
