@@ -11,6 +11,7 @@
 @include-section["image-guide.scrbl"]
 @include-section["image.scrbl"]
 @include-section["universe.scrbl"]
+@include-section["itunes.scrbl"]
 @include-section["abstraction.scrbl"]
 @include-section["planetcute.scrbl"]
 @include-section["port.scrbl"]
