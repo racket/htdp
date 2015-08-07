@@ -1,12 +1,22 @@
 #lang scribble/doc
 
-@(require scribble/manual "shared.rkt" scribble/eval
-          (for-label (only-in lang/htdp-beginner check-expect)
+@(require scribble/manual "shared.rkt" scribble/eval racket/sandbox
+          (for-label lang/htdp-beginner
+	             (only-in lang/htdp-beginner check-expect)
                      teachpack/2htdp/itunes))
-@(require scribble/struct)
+@;(require scribble/struct )
 
-@(define WorldState @tech[#:tag-prefixes '("world")]{WorldState})
-@(define S-expression @tech[#:tag-prefixes '("universe")]{S-expression})
+@(define my-eval
+   (let ([e (make-base-eval)])
+     (e '(require 2htdp/itunes))
+     e))
+
+@(define (track) @tech[#:tag-prefixes '("itunes-data")]{Track})
+@(define (date)  @tech[#:tag-prefixes '("itunes-data")]{Date})
+@(define (association) @tech[#:tag-prefixes '("itunes-data")]{Association})
+@(define (ltracks) @tech[#:tag-prefixes '("itunes-data")]{LTracks})
+@(define (llists) @tech[#:tag-prefixes '("itunes-data")]{LLists})
+@(define (bsl) @tech[#:tag-prefixes '("itunes-data")]{BSL-Values})
 
 @; -----------------------------------------------------------------------------
 
@@ -28,7 +38,8 @@ In iTunes, select @tt{Library} from the @tt{File} menu and then choose
  @tt{Export Library}. Doing so exports a description of your iTunes
  collection as a file in XML format. 
 
-@section{Data Definitions}
+@; ---------------------------------------------------------------------------------------------------
+@section[#:tag-prefix "itunes-data"]{Data Definitions}
 
 @defstruct[track ([name string?]
 		  [artist string?]
@@ -60,74 +71,50 @@ In iTunes, select @tt{Library} from the @tt{File} menu and then choose
  @racket[0] and @racket[23]), @racket[minute] (between @racket[0] and
  @racket[59]), and @racket[second] (between @racket[0] and @racket[59]).}
 
-In this context, we need the following data definitions: 
+In this context, we introduce the following data definitions: 
 @;%
 @(begin
 #reader scribble/comment-reader
 (racketblock
+ ;; @deftech{Track} is a @racket[track?]
+ ;; @deftech{Date} is @racket[date?]
+
  ;; @deftech{LTracks} is one of:
  ;; -- @racket['()]
- ;; -- @racket[(cons #, @tech{Track} #, @tech{LTracks})]
+ ;; -- @racket[(cons #, @track[] #, @ltracks[])]
  
  ;; @deftech{LLists} is one of:
  ;; -- @racket['()]
- ;; -- @racket[(cons #, @tech{Association} #, @tech{LLists})]
+ ;; -- @racket[(cons #, @association[] #, @llists[])]
 
- ;; @deftech{Association} is @racket[(cons string? (cons #, @tech{BSL-Value} '()))]
+ ;; @deftech{Association} is @racket[(cons string? (cons #, @bsl[] '()))]
 
- ;; @deftech{BSL-Value} satisfies either @racket[string?], @racket[integer?], @racket[real?], @racket[date?], or @racket[boolean?].
-))
-@;%
-
-@;%
-@(begin
-#reader scribble/comment-reader
-(racketblock
- ;; Any Any Any Any Any Any Any Any -> Track or #false
- create-track 
- track?
- track-name
- track-artist
- track-album
- track-time
- track-track#
- track-added
- track-play#
- track-played
- 
- ;; Any Any Any Any Any Any -> Date or #false
- create-date
- date?
- date-year
- date-month
- date-day
- date-hour
- date-minute
- date-second)
+ ;; @deftech{BSL-Value} satisfies either @racket[string?], @racket[integer?], @racket[real?], @date[], or @racket[boolean?].
 ))
 @;%
 
 @; ---------------------------------------------------------------------------------------------------
+@section[#:tag-prefix "itunes-api"]{Exported Funcions}
 
-@defproc[(read-itunes-as-list [file-name string?]) @tech{LLists}]{creates a
+@defproc[(read-itunes-as-lists [file-name string?]) #, @llists[]]{
 @;
-list of lists representation for all tracks in file, an XML export from an
-iTunes library 
+creates a list-of-lists representation for all tracks in
+@racket[file-name], an XML export from an iTunes library.
  
-@bold{effect} reads an XML document from @racket[file-name] 
+@bold{Effect} reads an XML document from @racket[file-name] 
 
 Example:
 @racketblock[
-(read-itunes-as-list "Library.xml")
+(read-itunes-as-lists "Library.xml")
 ]
 }
 
-@defproc[(read-itunes-as-tracks [file-name string?]) @tech{LTracks}]{
+@defproc[(read-itunes-as-tracks [file-name string?]) #, @ltracks[]]{
 @;
-creates list of tracks representation for all tracks in
-file, an XML export from an iTunes library
+creates a list-of-tracks representation for all tracks in
+@racket[file-name], an XML export from an iTunes library.
 
-@bold{effect} reads an XML document from @racket[file-name] 
+@bold{Effect} reads an XML document from @racket[file-name] 
 
 Example:
 @racketblock[
@@ -151,6 +138,19 @@ Example:
  predicates. Otherwise it produces @racket[#false].
 
 @bold{Note} This is a @emph{checked} constructor. 
+
+@interaction[#:eval my-eval
+(create-track "one"
+              "two"
+	      "three"
+	      4
+	      5
+	      (create-date 1 2 3 4 5 6)
+	      7
+	      (create-date 1 2 3 4 5 6))
+(create-track "one" "two" "three" 4 5 "a date" 7 "another date")
+]
+
 }
 
 @defproc[(create-date
@@ -166,4 +166,36 @@ Example:
  predicates. Otherwise it produces @racket[#false].
 
 @bold{Note} This is a @emph{checked} constructor. 
+
+@interaction[#:eval my-eval
+(create-date 1 2 3 4 5 6)
+(create-date 1 2 3 "four" 5 6)
+]
+
 }
+
+In addition to the above, the teachpack exports the predicates for
+@track[] and @date[] plus all selectors:
+@;%
+@(begin
+#reader scribble/comment-reader
+(racketblock
+ track?
+ track-name
+ track-artist
+ track-album
+ track-time
+ track-track#
+ track-added
+ track-play#
+ track-played
+
+ date?
+ date-year
+ date-month
+ date-day
+ date-hour
+ date-minute
+ date-second
+))
+@;%
