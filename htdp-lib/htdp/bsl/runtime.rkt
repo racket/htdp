@@ -60,17 +60,11 @@
                             (string-length img-str)
                             (oh val display? port))))])
       (thunk)))
-  (current-print
-   (lambda (v)
-     (unless (void? v)
-       (define converted (print-convert v))
-       (set-handlers
-        (λ () (pretty-write converted))))))
   (error-display-handler
-    (let ([o-d-h (error-display-handler)])
-      (lambda (msg exn)
-	(define x (get-rewriten-error-message exn))
-	(o-d-h x exn))))
+   (let ([o-d-h (error-display-handler)])
+     (λ (msg exn)
+       (define x (get-rewriten-error-message exn))
+       (o-d-h x exn))))
   (let ([orig (global-port-print-handler)])
     (global-port-print-handler
      (lambda (val port [depth 0])
