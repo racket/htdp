@@ -429,8 +429,11 @@ eos
      ;; Smaller units may be omitted with a loss of precision)
      (define d:struct
        (regexp-match #px"(\\d\\d\\d\\d)-(\\d\\d)-(\\d\\d).(\\d\\d):(\\d\\d):(\\d\\d)" d))
+
+     (define the-pieces (map string->number (rest d:struct)))
+
      (if d:struct
-         (apply make-date (rest d:struct))
+         (apply make-date the-pieces)
          (error 'attribute->value "not a proper date: ~e" d))]
     [`(true ,_attributes) #true]
     [`(false ,_attributes) #false]
