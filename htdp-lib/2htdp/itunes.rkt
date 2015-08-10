@@ -346,7 +346,7 @@ eos
    (map dict->track sample-itunes:xexpr)))
   
 
-;; Symbol String [Xexpr -> X] -> [-> [Listof X]]
+;; Symbol String [Xexpr -> [Maybe X]] -> [-> [Listof X]]
 ;; create list of tracks
 ;; effetc: read XML document exported frim iTunes from stdin port
 (define (read-itunes tag file process)
