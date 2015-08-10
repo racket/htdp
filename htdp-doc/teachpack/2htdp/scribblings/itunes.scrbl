@@ -16,7 +16,8 @@
 @(define (association) @tech[#:tag-prefixes '("itunes-data")]{Association})
 @(define (ltracks) @tech[#:tag-prefixes '("itunes-data")]{LTracks})
 @(define (llists) @tech[#:tag-prefixes '("itunes-data")]{LLists})
-@(define (bsl) @tech[#:tag-prefixes '("itunes-data")]{BSL-Values})
+@(define (lassoc) @tech[#:tag-prefixes '("itunes-data")]{LAssoc})
+@(define (bsl) @tech[#:tag-prefixes '("itunes-data")]{BSDN})
 
 @; -----------------------------------------------------------------------------
 
@@ -76,20 +77,24 @@ In this context, we introduce the following data definitions:
 @(begin
 #reader scribble/comment-reader
 (racketblock
- ;; @deftech{Track} is a @racket[track?]
- ;; @deftech{Date} is @racket[date?]
+;; @deftech{Track} is a @racket[track?]
+;; @deftech{Date} is @racket[date?]
 
- ;; @deftech{LTracks} is one of:
- ;; -- @racket['()]
- ;; -- @racket[(cons #, @track[] #, @ltracks[])]
+;; @deftech{LTracks} is one of:
+;; -- @racket['()]
+;; -- @racket[(cons #, @track[] #, @ltracks[])]
  
- ;; @deftech{LLists} is one of:
- ;; -- @racket['()]
- ;; -- @racket[(cons #, @association[] #, @llists[])]
+;; @deftech{LLists} is one of:
+;; -- @racket['()]
+;; -- @racket[(cons #, @lassoc[] #, @llists[])]
 
- ;; @deftech{Association} is @racket[(cons string? (cons #, @bsl[] '()))]
+;; @deftech{LAssoc} is one of: 
+;; -- @racket['()]
+;; -- @racket[(cons #, @association[] #, @lassoc[])]
 
- ;; @deftech{BSL-Value} satisfies either @racket[string?], @racket[integer?], @racket[real?], @date[], or @racket[boolean?].
+;; @deftech{Association} is @racket[(cons string? (cons #, @bsl[] '()))]
+
+;; @deftech{BSDN} satisfies either @racket[string?], @racket[integer?], @racket[real?], @date[], or @racket[boolean?].
 ))
 @;%
 
