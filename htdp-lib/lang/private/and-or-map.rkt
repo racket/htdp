@@ -35,21 +35,35 @@
 
 ;; --- refined function definitions --- 
 
-(define-syntax-rule
-  (define-boolean name)
-  (define-teach intermediate name
-    (lambda (f . l)
-      (arity-check 'name "first" f (length l))
-      (for/and ([l l])
-        (list-check? 'name "second" l)
-        (unless (beginner-list? l) 
-          (hocheck 'name "expected a list for the second argument, given ~e" l)))
-      (define g (boolean-test-wrapper 'name (f . x)))
-      (apply name g l))))
+(define-syntax define-boolean
+  (syntax-rules ()
+    [(define-boolean name)
+     (define-teach intermediate name
+       (lambda (f . l)
+         (arity-check 'name "first" f (length l))
+         (for/and ([l l] [i (in-naturals)])
+                  (list-check? 'name (format "~ath" (+ i 2)) l)
+           (unless (beginner-list? l) 
+             (hocheck 'name (format "expected a list for the ~a argument, given ~e" (+ i 2)) l)))
+         (define g (boolean-test-wrapper 'name (f . x)))
+         (apply name g l)))]
+    [(define-boolean name A)
+     (define-teach intermediate name
+       (lambda (f . l)
+         (unless (= (length l) A)
+           (error 'name "expected only ~a arguments, found ~a" (+ A 1) (+ (length l) 1)))
+         ;; MF: stupid code replication, worry later 
+         (arity-check 'name "first" f (length l))
+         (for/and ([l l] [i (in-naturals)])
+                  (list-check? 'name (format "~ath" (+ i 2)) l)
+           (unless (beginner-list? l) 
+             (hocheck 'name (format "expected a list for the ~a argument, given ~e" (+ i 2)) l)))
+         (define g (boolean-test-wrapper 'name (f . x)))
+         (apply name g l)))]))
 
 (define-boolean andmap)
 (define-boolean ormap)
-(define-boolean filter)
+(define-boolean filter 1)
 
 (define-syntax-rule
   (define-sort name)
