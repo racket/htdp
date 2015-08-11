@@ -88,20 +88,26 @@
 		  (filter (lambda (x) (>= x threshold)) '(0 1 2 3 4 5 6 7 8 9))
 		  ]
     }
-    @defproc[((intermediate-foldr foldr) [f (X Y -> Y)] [base Y] [l (listof X)]) Y]{
+    @defproc[((intermediate-foldr foldr) [f (X ... Y -> Y)] [base Y] [l (listof X)] ...) Y]{
     @codeblock{(foldr f base (list x-1 ... x-n)) = (f x-1 ... (f x-n base))}
+    @codeblock{(foldr f base (list x-1 ... x-n) (list y-1 ... y-n))
+                = (f x-1 y-1 ... (f x-n y-n base))}
     @interaction[#:eval (isl)
-		  (foldr + 0 '(0 1 2 3 4 5 6 7 8 9))
-		  a-list
-		  (foldr (lambda (x r) (if (> x threshold) (cons (* 2 x) r) r)) '() a-list)
-		  ]
+                 (foldr + 0 '(0 1 2 3 4 5 6 7 8 9))
+                 a-list
+                 (foldr (lambda (x r) (if (> x threshold) (cons (* 2 x) r) r)) '() a-list)
+                 (foldr (lambda (x y r) (+ x y r)) 0 '(1 2 3) '(10 11 12))
+                 ]
     }
     @defproc[((intermediate-foldl foldl) [f (X Y -> Y)] [base Y] [l (listof X)]) Y]{
     @codeblock{(foldl f base (list x-1 ... x-n)) = (f x-n ... (f x-1 base))}
+    @codeblock{(foldl f base (list x-1 ... x-n) (list x-1 ... x-n))
+                = (f x-n y-n ... (f x-1 y-1 base))}
     @interaction[#:eval (isl)
 		  (foldl + 0 '(0 1 2 3 4 5 6 7 8 9))
 		  a-list
 		  (foldl (lambda (x r) (if (> x threshold) (cons (* 2 x) r) r)) '() a-list)
+                  (foldl (lambda (x y r) (+ x y r)) 0 '(1 2 3) '(10 11 12))
 		  ]
     }
     @defproc[(build-list [n nat] [f (nat -> X)]) (listof X)]{
