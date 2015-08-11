@@ -17,13 +17,13 @@
         (hocheck t "~a argument must be a function that accepts ~a arguments, given ~e" r a f))))
 
 (define-syntax-rule
-  (boolean-test-wrapper tag (f z ...))
+  (boolean-test-wrapper tag (f . z))
   (let ()
     (define msg (format "the function given to ~a" tag))
     (define *name (object-name f))
     (define name (if *name (format "~a (~a)" *name msg) msg))
-    (define (g z ...)
-      (define f@x (f z ...))
+    (define (g . z)
+      (define f@x (apply f z))
       (if (boolean? f@x)
           f@x
           (error tag "expected a boolean from ~a, but received ~e" name f@x)))
@@ -38,13 +38,14 @@
 (define-syntax-rule
   (define-boolean name)
   (define-teach intermediate name
-    (lambda (f l)
-      (arity-check 'name "first" f 1)
-      (list-check? 'name "second" l)
-      (unless (beginner-list? l) 
-        (hocheck 'name "expected a list for the second argument, given ~e" l))
-      (define g (boolean-test-wrapper 'name (f x)))
-      (name g l))))
+    (lambda (f . l)
+      (arity-check 'name "first" f (length l))
+      (for/and ([l l])
+        (list-check? 'name "second" l)
+        (unless (beginner-list? l) 
+          (hocheck 'name "expected a list for the second argument, given ~e" l)))
+      (define g (boolean-test-wrapper 'name (f . x)))
+      (apply name g l))))
 
 (define-boolean andmap)
 (define-boolean ormap)
@@ -56,7 +57,7 @@
     (lambda (l cmp?)
       (list-check? 'name "first" l)
       (arity-check 'name "second" cmp? 2)
-      (define dmp? (boolean-test-wrapper 'name (cmp? x y)))
+      (define dmp? (boolean-test-wrapper 'name (cmp? . x)))
       (sort l dmp?))))
 
 (define-sort sort)
@@ -89,6 +90,10 @@
 (exn-tester 11 "quick" intermediate-quicksort '(1 2 3) (lambda (x y) (if (< x y) y #false)))
 
 (unless (equal? (intermediate-ormap odd? '(1 2 3)) #t) (error 'x "1"))
+(unless (equal? (intermediate-andmap (lambda (f x) (f x)) (list odd? even? odd?) '(1 2 3)) #t)
+  (error 'x "1a"))
+(unless (equal? (intermediate-ormap (lambda (f x) (f x)) (list even? odd? odd?) '(1 2 3)) #t)
+  (error 'x "1b"))
 (unless (equal? (intermediate-andmap odd? '(1 2 3)) #f) (error 'x "2"))
 (unless (equal? (intermediate-andmap odd? '(1 3 5)) #t) (error 'x "3"))
 (unless (equal? (intermediate-ormap even? '(1 3 5)) #f) (error 'x "4"))
