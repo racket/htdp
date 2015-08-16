@@ -1,11 +1,5 @@
 #lang racket/load
 
-(let ([ol (current-load)]) 
-  (current-load
-   (λ x
-     (printf "cl ~s\n" x)
-     (apply ol x))))
-
 (load-relative (collection-file-path "loadtest.rktl" "tests/racket"))
 
 (define testing-path (collection-file-path "testing.rktl" "tests/racket"))
