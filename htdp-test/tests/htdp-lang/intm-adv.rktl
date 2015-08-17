@@ -108,10 +108,10 @@
 (htdp-syntax-test #'(time (define x 5)) "define: found a definition that is not at the top level")
 
 (htdp-err/rt-test (foldr car 2 '(1 2 3))
-                  "foldr : first argument must be a function that expects two arguments, given")
+                  "foldr : first argument must be a function that expects 2 arguments, given")
 
 (htdp-err/rt-test (foldl car 2 '(1 2 3))
-  "foldl : first argument must be a function that expects two arguments, given #<procedure:car>")
+  "foldl : first argument must be a function that expects 2 arguments, given #<procedure:car>")
 
 (htdp-err/rt-test (build-string 2 add1)
   "build-string : the second argument must be a function that produces a character, given #<procedure:add1>, which produced 1 when given 0")
