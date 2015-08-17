@@ -15,8 +15,8 @@ namespace.
 (require mzlib/list 
          mzlib/math
          mzlib/etc
-	 deinprogramm/signature/signature
-	 deinprogramm/signature/signature-english)
+         deinprogramm/signature/signature
+         deinprogramm/signature/signature-english)
 
 (define-syntax (define-teach stx)
   (syntax-case stx ()
@@ -197,7 +197,7 @@ namespace.
     (cerr 'range (real? end) "real" end)
     (cerr 'range (real? step) "real" step)
     (range start end step)))
-    
+
 (define-teach beginner append
   (lambda (a b . x)
     (check-last 'append (cons a (cons b x)))
@@ -221,9 +221,9 @@ namespace.
             string-append
             (if f (format "~a: " f) "")
             (for/list ([ele (in-list stuff1)])
-              (if (string? ele)
-                  ele
-                  (format "~e" ele)))))))
+                      (if (string? ele)
+                          ele
+                          (format "~e" ele)))))))
 
 (define-teach beginner struct?
   (lambda (x)
@@ -260,17 +260,17 @@ namespace.
                                  prev)))))])
     (lambda (a b)
       (let ([a (union-find a)]
-	    [b (union-find b)])
-	(if (eq? a b)
-	    #t
-	    (begin
-	      (hash-set! ht b a)
-	      #f))))))
+            [b (union-find b)])
+        (if (eq? a b)
+            #t
+            (begin
+              (hash-set! ht b a)
+              #f))))))
 
 (define (tequal? x y epsilon)
   (let ([union-equal!? (make-union-equal!?)]
-	[fail (lambda (fmt arg)
-		(raise
+        [fail (lambda (fmt arg)
+                (raise
                  (make-exn:fail:contract
                   (if (or (eq? arg x)
                           (eq? arg y))
@@ -282,40 +282,40 @@ namespace.
         [(number? a)
          (and (number? b)
               (beginner-=~ a b epsilon))]
-	[(procedure? a)
-	 (fail "first argument of equality cannot be a function, given ~e" a)]
-	[(procedure? b)
-	 (fail "second argument of equality cannot be a function, given ~e" b)]
+        [(procedure? a)
+         (fail "first argument of equality cannot be a function, given ~e" a)]
+        [(procedure? b)
+         (fail "second argument of equality cannot be a function, given ~e" b)]
         [(union-equal!? a b) #t]
         [else (equal?/recur a b ?)]))))
 
 (define (teach-equal? x y)
-
+  
   (let ([fail (lambda (fmt arg)
-		(raise
+                (raise
                  (make-exn:fail:contract 
                   (if (or (eq? arg x)
                           (eq? arg y))
                       (format fmt arg)
                       (format "~a (originally comparing ~e and ~e)" (format fmt arg) x y))
                   (current-continuation-marks))))]
-	[union-equal!? (make-union-equal!?)])
-	      
+        [union-equal!? (make-union-equal!?)])
+    
     (let recur ([a x] [b y])
       (cond
-       [(procedure? a)
-	(fail "first argument of equality cannot be a function, given ~e" a)]
-       [(procedure? b)
-	(fail "second argument of equality cannot be a function, given ~e" b)]
-       [(and (number? a)
-	     (inexact? a))
-	(fail "first argument of equality cannot be an inexact number, given ~e" a)]
-       [(and (number? b)
-	     (inexact? b))
-	(fail "first argument of equality cannot be an inexact number, given ~e" b)]
-       [(union-equal!? a b) #t]
-       [else
-	(equal?/recur a b recur)]))))
+        [(procedure? a)
+         (fail "first argument of equality cannot be a function, given ~e" a)]
+        [(procedure? b)
+         (fail "second argument of equality cannot be a function, given ~e" b)]
+        [(and (number? a)
+              (inexact? a))
+         (fail "first argument of equality cannot be an inexact number, given ~e" a)]
+        [(and (number? b)
+              (inexact? b))
+         (fail "first argument of equality cannot be an inexact number, given ~e" b)]
+        [(union-equal!? a b) #t]
+        [else
+         (equal?/recur a b recur)]))))
 
 (define-teach beginner equal?
   (lambda (a b)
@@ -339,29 +339,32 @@ namespace.
 
 (provide hocheck)
 
-(define-teach intermediate foldr
-  (lambda (f e . l)
-    (define LE (length l))
-    (unless (> LE 0)
-      (error 'foldr "expects (at least) 2 arguments, given 1"))
-    (unless (and (procedure? f) (procedure-arity-includes? f (+ LE 1)))
-      (hocheck 'foldr "first argument must be a function that expects ~a arguments, given ~e" (+ LE 1) f))
-    (for ([l l] [i (in-naturals)])
-         (unless (beginner-list? l) 
-           (hocheck 'foldr "~ath argument must be a list, given ~e" (+ i 2) l)))
-    (apply foldr f e l)))
+;; to give the generated function a name and to use tag as both a function and a name 
+(define-syntax-rule
+  (make-teachable-fold tag)
+  (let* ([FMT "first argument must be a function that expects ~a arguments, given ~e"]
+         [tag
+          (lambda (f e . l)
+            (define LE (length l))
+            (unless (> LE 0)
+              (error 'tag "expects (at least) 2 arguments, given 1"))
+            (unless (and (procedure? f) (procedure-arity-includes? f (+ LE 1)))
+              (define name (object-name f))
+              (define numb
+                (case (+ LE 1)
+                  [(2) "two"]
+                  [(3) "three"]
+                  [else (+ LE 1)]))
+              (hocheck 'tag FMT numb name))
+            (for ([l l] [i (in-naturals)])
+                 (unless (beginner-list? l) 
+                   (hocheck 'tag"~ath argument must be a list, given ~e" (+ i 2) l)))
+            (apply tag f e l))])
+    tag))
 
-(define-teach intermediate foldl
-  (lambda (f e . l)
-    (define LE (length l))
-    (unless (> LE 0)
-      (error 'foldl "expects (at least) 2 arguments, given 1"))
-    (unless (and (procedure? f) (procedure-arity-includes? f (+ LE 1)))
-      (hocheck 'foldl "first argument must be a function that expects ~a arguments, given ~e" (+ LE 1) f))
-    (for ([l l] [i (in-naturals)])
-         (unless (beginner-list? l) 
-           (hocheck 'foldl "~ath argument must be a list, given ~e" (+ i 2) l)))
-    (apply foldl f e l)))
+(define-teach intermediate foldr (make-teachable-fold foldr))
+
+(define-teach intermediate foldl (make-teachable-fold foldl))
 
 (define-teach intermediate build-string
   (lambda (n f)
