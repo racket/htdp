@@ -59,8 +59,7 @@
 				      (lambda (v w? op)
 					(if (convertible? v) (write-special v op) (prev v w? op)))))
 
-				  ((dynamic-require 'htdp/bsl/runtime 'configure)
-				   (dynamic-require reader 'options))))
+				  (dynamic-require `(submod ,module-lang configure-runtime) #f)))
     (call-in-sandbox-context me (lambda () (namespace-require module-lang)))
     (interaction-eval #:eval me (require 2htdp/image))
     (interaction-eval #:eval me (require 2htdp/batch-io))

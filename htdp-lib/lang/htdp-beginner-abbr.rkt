@@ -34,7 +34,7 @@
           [intermediate-quasiquote quasiquote]
           [intermediate-unquote unquote]
           [intermediate-unquote-splicing unquote-splicing]
-          [beginner-module-begin #%module-begin]
+          [beginner-abbr-module-begin #%module-begin]
           [beginner-true true]
           [beginner-false false])
          check-expect

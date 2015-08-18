@@ -1,10 +1,12 @@
-#lang scheme/base
+#lang racket/base
 
 ; Once upon a time, there were three different variants.  Preserve the
 ; ability to do this.
-(provide (rename-out (module-begin beginner-module-begin)
-                     (module-begin intermediate-module-begin)
-                     (module-begin advanced-module-begin)))
+(provide beginner-module-begin
+         beginner-abbr-module-begin
+         intermediate-module-begin
+         intermediate-lambda-module-begin
+         advanced-module-begin)
 
 (require deinprogramm/signature/signature
          lang/private/signature-syntax
@@ -39,7 +41,12 @@
   ;; (even if void values are printed)
   (values))
   
-(define-syntaxes (module-begin module-continue)
+(define-syntaxes (beginner-module-begin
+                  beginner-abbr-module-begin
+                  intermediate-module-begin
+                  intermediate-lambda-module-begin
+                  advanced-module-begin
+                  module-continue)
   (let ()
     ;; takes a list of syntax objects (the result of syntax-e) and returns all the syntax objects that correspond to
     ;; a signature declaration. Syntax: (: id signature)
@@ -130,18 +137,34 @@
 		 (syntax/loc (car exprs)
 			     (begin
 			       ?first ?rest))))))))))
+
+    (define (mk-module-begin options)
+      (lambda (stx)
+        (syntax-case stx ()
+          ((_ e1 ...)
+           ;; module-begin-continue takes a sequence of expanded
+           ;; exprs and a sequence of to-expand exprs; that way,
+           ;; the module-expansion machinery can be used to handle
+           ;; requires, etc.:
+           #`(#%plain-module-begin
+              (module-continue (e1 ...) () ())
+              (module configure-runtime racket/base
+                (require htdp/bsl/runtime)
+                (configure '#,options))
+              (module+ test (test)))))))
+    
     (values
      ;; module-begin
-     (lambda (stx)
-       (syntax-case stx ()
-	 ((_ e1 ...)
-	  ;; module-begin-continue takes a sequence of expanded
-	  ;; exprs and a sequence of to-expand exprs; that way,
-	  ;; the module-expansion machinery can be used to handle
-	  ;; requires, etc.:
-	  #`(#%plain-module-begin
-	     (module-continue (e1 ...) () ())
-             (module+ test (test))))))
+     (mk-module-begin '())
+     (mk-module-begin '(abbreviate-cons-as-list
+                        read-accept-quasiquote))
+     (mk-module-begin '(abbreviate-cons-as-list
+                        read-accept-quasiquote))
+     (mk-module-begin '(abbreviate-cons-as-list
+                        read-accept-quasiquote))
+     (mk-module-begin '(abbreviate-cons-as-list
+                        read-accept-quasiquote
+                        show-sharing))
 
      ;; module-continue
      (lambda (stx)

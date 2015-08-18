@@ -38,7 +38,7 @@
           [intermediate-unquote unquote]
           [intermediate-unquote-splicing unquote-splicing]
           [intermediate-time time]
-          [intermediate-module-begin #%module-begin]
+          [intermediate-lambda-module-begin #%module-begin]
           [beginner-true true]
           [beginner-false false]
           )

@@ -12,7 +12,6 @@
    #:read (wrap-reader read options)
    #:read-syntax (wrap-reader read-syntax options)
    #:info (make-info options)
-   #:language-info (make-language-info options)
 
    (provide options)
    (define options opts)))
@@ -38,6 +37,3 @@
     [(drracket:show-big-defs/ints-labels) #t]
     
     [else (use-default key default)]))
-
-(define (make-language-info options)
-  `#(htdp/bsl/language-info get-info ,options))
