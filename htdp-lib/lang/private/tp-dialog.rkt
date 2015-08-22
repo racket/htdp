@@ -13,6 +13,7 @@
          string-constants
          framework
          compiler/compile-file
+         compiler/module-suffix
          
          "create-htdp-executable.rkt")
 
@@ -362,6 +363,7 @@
 
 
 (define (tp-dir->tps tp-sym)
+  (define rx:module-suffix (get-module-suffix-regexp))
   (filter
    values
    (for*/list ([dir (in-list (find-relevant-directories (list tp-sym)))]
@@ -373,7 +375,7 @@
                                  [(eq? files 'all)
                                   (for/list ([x (in-list (directory-list dir))]
                                              #:when
-                                             (regexp-match #rx"[.](ss|scm|rkt)$"
+                                             (regexp-match rx:module-suffix
                                                            (path->string x))
                                              #:unless
                                              (member (path->string x) '("info.rkt" "info.ss")))

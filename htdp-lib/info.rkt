@@ -3,7 +3,7 @@
 (define collection 'multi)
 
 (define deps
-  '("base"
+  '(["base" #:version "6.2.900.10"]
     "compatibility-lib"
     "draw-lib"
     ("drracket-plugin-lib" #:version "1.1")
