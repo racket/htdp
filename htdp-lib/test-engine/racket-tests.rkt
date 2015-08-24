@@ -396,13 +396,11 @@
   (match-let ([(list result result-val exn)
                (with-handlers ([exn:fail:wish?
                                 (lambda (e)
-                                  (define display (error-display-handler))
                                   (define name (exn:fail:wish-name e))
                                   (define args (exn:fail:wish-args e))
                                   (list (unimplemented-wish src (test-format) name args) 'error #f))]
                                [exn:fail?
                                 (lambda (e)
-                                  (define display (error-display-handler))
                                   (define msg (get-rewriten-error-message e))
                                   (if (and (pair? kind) (eq? 'check-satisfied (car kind)))
                                       (list (unsatisfied-error src (test-format) (cadr kind) msg e) 
