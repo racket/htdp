@@ -782,7 +782,7 @@ see note on @racket[check-expect] for details.  }
     Normally, quasi-quotations are written with a backquote,
     @litchar{`}, like @racket[`(apple ,(+ 1 2))], but they can also be
     written with @quasiquote-elem, like
-    @racket[(@quasiquote-elem (apple ,(+ 1 2)))].}
+    @racket[(#, @quasiquote-elem (apple ,(+ 1 2)))].}
  
  
    @deftogether[(
