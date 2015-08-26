@@ -135,69 +135,72 @@
       (filter pred? (map (lambda (a) (send a provide-info)) analyses)))))
 
 ; helper for printing error messages
-(define (print-reason print-string print-formatted fail)
-  (let ((print
-         (lambda (fstring . vals)
-           (apply print-with-values fstring print-string print-formatted vals)))
-        (formatter (check-fail-format fail)))
+(define (print-reason fail)
+  (define (print-formatted val)
+    (define cff (check-fail-format fail))
     (cond
-      [(unsatisfied-error? fail)
-       (print 
-        "check-satisfied encountered an error instead of the expected kind of value, ~F. \n   :: ~a"
-        (formatter (unsatisfied-error-expected fail))
-        (unsatisfied-error-message fail))]
-      [(unexpected-error? fail)
-       (print
-        "check-expect encountered the following error instead of the expected value, ~F. \n   :: ~a"
-        (formatter (unexpected-error-expected fail))
-        (unexpected-error-message fail))]
-      [(satisfied-failed? fail)
-       (print "Actual value ~F does not satisfy ~F.\n"
-              (formatter (satisfied-failed-actual fail))
-              (formatter (satisfied-failed-name fail)))]
-      [(unequal? fail)
-       (print "Actual value ~F differs from ~F, the expected value."
-              (formatter (unequal-test fail))
-              (formatter (unequal-actual fail)))]
-      [(outofrange? fail)
-       (print "Actual value ~F is not within ~a of expected value ~F."
-              (formatter (outofrange-test fail))
-              (formatter  (outofrange-range fail))
-              (formatter (outofrange-actual fail)))]
-      [(incorrect-error? fail)
-       (print "check-error encountered the following error instead of the expected ~a\n   :: ~a"
-              (incorrect-error-expected fail)
-              (incorrect-error-message fail))]
-      [(expected-error? fail)
-       (print "check-error expected the following error, but instead received the value ~F.\n ~a"
-              (formatter (expected-error-value fail))
-              (expected-error-message fail))]
-      [(message-error? fail)
-       (for-each print-formatted (message-error-strings fail))]
-      [(not-mem? fail)
-       (print "Actual value ~F differs from all given members in ~F."
-              (formatter (not-mem-test fail))
-              (formatter (not-mem-set fail)))]
-      [(not-range? fail)
-       (print "Actual value ~F is not between ~F and ~F, inclusive."
-              (formatter (not-range-test fail))
-              (formatter (not-range-min fail))
-              (formatter (not-range-max fail)))]
-      [(unimplemented-wish? fail)
-       (print (string-append "Test relies on a call to wished-for function ~F "
-                             " that has not been implemented, with arguments ~F.")
-              (unimplemented-wish-name fail)
-              (formatter (unimplemented-wish-args fail)))]
-      [(property-fail? fail)
-       (print-string "Property falsifiable with")
-       (for-each (lambda (arguments)
-                   (for-each (lambda (p)
-                               (if (car p)
-                                   (print " ~a = ~F" (car p) (formatter (cdr p)))
-                                   (print "~F" (formatter (cdr p)))))
-                             arguments))
-                 (result-arguments-list (property-fail-result fail)))]
-      [(property-error? fail)
-       (print "check-property encountered the following error\n:: ~a"
-              (property-error-message fail))])
-    (print-string "\n")))
+      [(procedure-arity-includes? cff 2)
+       (cff val (current-output-port))]
+      [else
+       (display (cff val))]))
+  (define (do-printing fstring . vals)
+    (apply print-with-values fstring display print-formatted vals))
+  (cond
+    [(unsatisfied-error? fail)
+     (do-printing 
+      "check-satisfied encountered an error instead of the expected kind of value, ~F. \n   :: ~a"
+      (unsatisfied-error-expected fail)
+      (unsatisfied-error-message fail))]
+    [(unexpected-error? fail)
+     (do-printing
+      "check-expect encountered the following error instead of the expected value, ~F. \n   :: ~a"
+      (unexpected-error-expected fail)
+      (unexpected-error-message fail))]
+    [(satisfied-failed? fail)
+     (do-printing "Actual value ~F does not satisfy ~F.\n"
+                  (satisfied-failed-actual fail)
+                  (satisfied-failed-name fail))]
+    [(unequal? fail)
+     (do-printing "Actual value ~F differs from ~F, the expected value."
+                  (unequal-test fail)
+                  (unequal-actual fail))]
+    [(outofrange? fail)
+     (do-printing "Actual value ~F is not within ~a of expected value ~F."
+                  (outofrange-test fail)
+                  (outofrange-range fail)
+                  (outofrange-actual fail))]
+    [(incorrect-error? fail)
+     (do-printing "check-error encountered the following error instead of the expected ~a\n   :: ~a"
+                  (incorrect-error-expected fail)
+                  (incorrect-error-message fail))]
+    [(expected-error? fail)
+     (do-printing "check-error expected the following error, but instead received the value ~F.\n ~a"
+                  (expected-error-value fail)
+                  (expected-error-message fail))]
+    [(message-error? fail)
+     (for-each display (message-error-strings fail))]
+    [(not-mem? fail)
+     (do-printing "Actual value ~F differs from all given members in ~F."
+                  (not-mem-test fail)
+                  (not-mem-set fail))]
+    [(not-range? fail)
+     (do-printing "Actual value ~F is not between ~F and ~F, inclusive."
+                  (not-range-test fail)
+                  (not-range-min fail)
+                  (not-range-max fail))]
+    [(unimplemented-wish? fail)
+     (do-printing (string-append "Test relies on a call to wished-for function ~F "
+                                 " that has not been implemented, with arguments ~F.")
+                  (unimplemented-wish-name fail)
+                  (unimplemented-wish-args fail))]
+    [(property-fail? fail)
+     (display "Property falsifiable with")
+     (for ([arguments (in-list (result-arguments-list (property-fail-result fail)))])
+       (for ([p (in-list arguments)])
+         (if (car p)
+             (do-printing " ~a = ~F" (car p) (cdr p))
+             (do-printing "~F" (cdr p)))))]
+    [(property-error? fail)
+     (do-printing "check-property encountered the following error\n:: ~a"
+                  (property-error-message fail))])
+    (display "\n"))

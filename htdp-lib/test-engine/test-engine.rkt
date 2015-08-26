@@ -114,7 +114,7 @@
 
     ;; make-link: (listof (U check-fail (U string snip%))) src -> void
     (define (make-link reason dest)
-      (print-reason display display reason)
+      (print-reason reason)
       (printf "~a" (format-src dest)))
 
     (define (format-src src)
@@ -232,7 +232,7 @@
     (define/pubment (run-testcase testcase)
       (inner (void) run-testcase testcase))))
 
-(define test-format (make-parameter (lambda (v) (format "~a" v))))
+(define test-format (make-parameter (λ (v p) (print v p))))
 (define test-execute (make-parameter #t))
 (define error-handler (make-parameter (lambda (e) (e))))
 (define test-silence (make-parameter #f))

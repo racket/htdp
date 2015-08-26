@@ -255,83 +255,87 @@
       #;(write (list 'display-reason fail (check-fail? fail) (message-error? fail))
                (current-error-port))
       #;(newline (current-error-port))
-
-      (let* ((print-string
+      
+      (let* ([print-string
               (lambda (m)
-                (send text insert m)))
-             (print-formatted
-              (lambda (m)
-                (when (is-a? m snip%)
-                  (send m set-style (send (send text get-style-list)
-                                          find-named-style "Standard")))
-                (send text insert m)))
-             (print
+                (send text insert m))]
+             [print-formatted
+              (lambda (v)
+                (define cff (check-fail-format fail))
+                (cond
+                  [(procedure-arity-includes? cff 2)
+                   (cff (open-output-text-editor text) v)]
+                  [else
+                   (define m (cff v))
+                   (when (is-a? m snip%)
+                     (send m set-style (send (send text get-style-list)
+                                             find-named-style "Standard")))
+                   (send text insert m)]))]
+             [the-printer
               (lambda (fstring . vals)
-                (apply print-with-values fstring print-string print-formatted vals)))
-             (formatter (check-fail-format fail)))
+                (apply print-with-values fstring print-string print-formatted vals))]
+             [formatter values])
         (cond
-         [(unexpected-error? fail)
-          (print (string-constant test-engine-check-encountered-error)
-                 (formatter (unexpected-error-expected fail))
-                 (unexpected-error-message fail))]
-         [(unsatisfied-error? fail)
-          (print
-           "check-satisfied encountered an error instead of the expected kind of value, ~F. \n  :: ~a"
-           (unsatisfied-error-expected fail)
-           (unsatisfied-error-message fail))]
-         [(unequal? fail)
-          (print (string-constant test-engine-actual-value-differs-error)
-                 (formatter (unequal-test fail))
-                 (formatter (unequal-actual fail)))]
-	 [(satisfied-failed? fail)
-	  (print "Actual value ~F does not satisfy ~a."
-	         (formatter (satisfied-failed-actual fail))
-                 (satisfied-failed-name fail))]
-         [(outofrange? fail)
-          (print (string-constant test-engine-actual-value-not-within-error)
-                 (formatter (outofrange-test fail))
-                 (outofrange-range fail)
-                 (formatter (outofrange-actual fail)))]
-         [(incorrect-error? fail)
-          (print (string-constant test-engine-encountered-error-error)
-                 (incorrect-error-expected fail)
-                 (incorrect-error-message fail))]
-         [(expected-error? fail)
-          (print (string-constant test-engine-expected-error-error)
-                 (formatter (expected-error-value fail))
-                 (expected-error-message fail))]
-         [(expected-an-error? fail)
-          (print (string-constant test-engine-expected-an-error-error)
-                 (formatter (expected-an-error-value fail)))]
-         [(message-error? fail)
-          (for-each print-formatted (message-error-strings fail))]
-         [(not-mem? fail)
-          (print (string-constant test-engine-not-mem-error)
-                 (formatter (not-mem-test fail)))
-          (for-each (lambda (a) (print " ~F" (formatter a))) (not-mem-set fail))
-          (print ".")]
-         [(not-range? fail)
-          (print (string-constant test-engine-not-range-error)
-                 (formatter (not-range-test fail))
-                 (formatter (not-range-min fail))
-                 (formatter (not-range-max fail)))]
-         [(unimplemented-wish? fail)
-           (print "Test relies on a call to wished for function ~F that has not been implemented, with arguments ~F."
-              (symbol->string (unimplemented-wish-name fail))
-              (formatter (unimplemented-wish-args fail)))]
-         [(property-fail? fail)
-          (print-string (string-constant test-engine-property-fail-error))
-          (for-each (lambda (arguments)
-                      (for-each (lambda (p)
-                                  (if (car p)
-                                      (print " ~a = ~F" (car p) (formatter (cdr p)))
-                                      (print "~F" (formatter (cdr p)))))
-                                arguments))
-                    (result-arguments-list (property-fail-result fail)))]
-         [(property-error? fail)
-          (print (string-constant test-engine-property-error-error)
-                 (property-error-message fail))]
-         )
+          [(unexpected-error? fail)
+           (the-printer (string-constant test-engine-check-encountered-error)
+                        (unexpected-error-expected fail)
+                        (unexpected-error-message fail))]
+          [(unsatisfied-error? fail)
+           (the-printer
+            "check-satisfied encountered an error instead of the expected kind of value, ~F. \n  :: ~a"
+            (unsatisfied-error-expected fail)
+            (unsatisfied-error-message fail))]
+          [(unequal? fail)
+           (the-printer (string-constant test-engine-actual-value-differs-error)
+                        (unequal-test fail)
+                        (unequal-actual fail))]
+          [(satisfied-failed? fail)
+           (the-printer "Actual value ~F does not satisfy ~a."
+                        (satisfied-failed-actual fail)
+                        (satisfied-failed-name fail))]
+          [(outofrange? fail)
+           (the-printer (string-constant test-engine-actual-value-not-within-error)
+                        (outofrange-test fail)
+                        (outofrange-range fail)
+                        (outofrange-actual fail))]
+          [(incorrect-error? fail)
+           (the-printer (string-constant test-engine-encountered-error-error)
+                        (incorrect-error-expected fail)
+                        (incorrect-error-message fail))]
+          [(expected-error? fail)
+           (the-printer (string-constant test-engine-expected-error-error)
+                        (expected-error-value fail)
+                        (expected-error-message fail))]
+          [(expected-an-error? fail)
+           (the-printer (string-constant test-engine-expected-an-error-error)
+                        (expected-an-error-value fail))]
+          [(message-error? fail)
+           (for-each print-formatted (message-error-strings fail))]
+          [(not-mem? fail)
+           (the-printer (string-constant test-engine-not-mem-error)
+                        (not-mem-test fail))
+           (for ([a (in-list (not-mem-set fail))])
+             (the-printer " ~F" a))
+           (the-printer ".")]
+          [(not-range? fail)
+           (the-printer (string-constant test-engine-not-range-error)
+                        (not-range-test fail)
+                        (not-range-min fail)
+                        (not-range-max fail))]
+          [(unimplemented-wish? fail)
+           (the-printer "Test relies on a call to wished for function ~F that has not been implemented, with arguments ~F."
+                        (symbol->string (unimplemented-wish-name fail))
+                        (unimplemented-wish-args fail))]
+          [(property-fail? fail)
+           (print-string (string-constant test-engine-property-fail-error))
+           (for ([arguments (in-list (result-arguments-list (property-fail-result fail)))])
+             (for ([p (in-list arguments)])
+               (if (car p)
+                   (the-printer " ~a = ~F" (car p) (cdr p))
+                   (the-printer "~F" (cdr p)))))]
+          [(property-error? fail)
+           (the-printer (string-constant test-engine-property-error-error)
+                        (property-error-message fail))])
         (print-string "\n")))
     
     ;; make-error-link: text% check-fail exn src editor -> void

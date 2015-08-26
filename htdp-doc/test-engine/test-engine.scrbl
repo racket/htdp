@@ -128,10 +128,18 @@ and reports the results.  When using the gui module, the results are
 provided in a separate window, otherwise the results are printed to
 the current output port.}
 
-@defparam[test-format format (any/c . -> . string?)]{
+@defparam[test-format format (or/c (-> any/c (or/c (is-a?/c snip%) string?))
+                                   (-> any/c output-port? void?))]{
+ A parameter that stores the formatting function for the values tested
+ by the check forms.
 
-A parameter that stores the formatting function for the values tested
-by the check forms.}
+ If the parameter is a function of two arguments, then it is supplied the value
+ and an output port to render the value to. Otherwise, if it is a function of one
+ argument, then the resulting string is used to render the value.
+
+ The default value accepts two arguments and @racket[print]s the @racket[any/c]
+ argument to the given port.
+}
 
 
 @defboolparam[test-silence silence?]{
