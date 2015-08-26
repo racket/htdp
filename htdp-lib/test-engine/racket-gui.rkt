@@ -8,10 +8,16 @@
   
   (define (make-formatter printer)
     (lambda (value)
-      (let* ([text* (new (editor:standard-style-list-mixin text%))]
+      (let* ([text* (new (text:ports-mixin
+                          (text:wide-snip-mixin
+                           (text:basic-mixin
+                            (editor:standard-style-list-mixin
+                             (editor:basic-mixin
+                              text%))))))]
              [text-snip (new editor-snip% [editor text*])])
-        (printer value (open-output-text-editor text* 0))
-        (send text* delete (send text* get-end-position) 'back)
+        (printer value (send text* get-value-port))
+        (flush-output (send text* get-value-port))
+        (send text* delete/io (- (send text* last-position) 1) (send text* last-position))
         (send text* lock #t) 
         text-snip)))
   
