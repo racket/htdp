@@ -303,6 +303,8 @@
 
   ;; this could probably be dumped now that we're ignoring steps where
   ;; before & after are the same (JBC, 2015-06-24)
+  ;; ... but I'd rather not, because it seems like a somewhat more
+  ;; principled way to obtain this result (JBC, 2015-08-31)
   (define (varref-skip-step? varref)
     (with-handlers ([exn:fail:contract:variable? (lambda (dc-exn) #f)])
       (let ([val (lookup-binding mark-list varref)])

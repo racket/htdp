@@ -17,7 +17,7 @@
       (and (pair? v)
            ((flat-contract-predicate (cons/c identifier? arglist?)) v))        
       (and (syntax? v) (null? (syntax-e v)))
-      (and (syntax? v) 
+      (and (syntax? v)
            ((flat-contract-predicate (cons/c identifier? arglist?)) (syntax-e v)))))
 
 #;(provide/contract
@@ -97,6 +97,10 @@
  view-controller^
  stepper-frame^
  )
+
+(provide/contract [syntax->interned-datum (syntax? ; input
+                                           . -> .
+                                           any)]) ; sexp
 
   
   ; A step-result is either:
@@ -648,23 +652,19 @@
   
   (define finished-xml-box-table (make-weak-hash))
   
-  (provide/contract [syntax->interned-datum (syntax? ; input
-                                                    . -> .
-                                                    any)]) ; sexp 
-  
-  ;; syntax->interned-datum : like syntax->datum, except
-  ;; that it re-interns all identifiers.  Useful in checking whether
-  ;; two sexps will have the same printed representation.
-  
-  (define (syntax->interned-datum stx)
-    (syntax-case stx ()
-      [(a . rest) (cons (syntax->interned-datum #`a) (syntax->interned-datum #`rest))]
-      [id
-       (identifier? stx)
-       (string->symbol (symbol->string (syntax-e stx)))]
-      [else (if (syntax? stx)
-                (syntax->datum stx)
-                stx)]))
+;; syntax->interned-datum : like syntax->datum, except
+;; that it re-interns all identifiers.  Useful in checking whether
+;; two sexps will have the same printed representation.
+
+(define (syntax->interned-datum stx)
+  (syntax-case stx ()
+    [(a . rest) (cons (syntax->interned-datum #`a) (syntax->interned-datum #`rest))]
+    [id
+     (identifier? stx)
+     (string->symbol (symbol->string (syntax-e stx)))]
+    [else (if (syntax? stx)
+              (syntax->datum stx)
+              stx)]))
   
   
   ;; the xml-snip-creation@ unit accepts the xml-snip% and scheme-snip% classes and

@@ -1,11 +1,7 @@
 #lang racket
 
-(require (prefix-in m: "language-level-model.rkt")
-         "test-engine.rkt"
+(require "test-engine.rkt"
          "test-cases.rkt"
-         
-         ;; poor man's testing:
-         "annotation.rkt"
          
          ;; for xml testing:
          ;; mzlib/class
@@ -13,6 +9,9 @@
          ;; (all-except xml/scheme-snipclass snip-class)
          ;; mred
          )
+
+;; no point in testing this file
+(module* test racket/base)
 
 (provide run-test run-tests run-all-tests run-all-tests-except)
 

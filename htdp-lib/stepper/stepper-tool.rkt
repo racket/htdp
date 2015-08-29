@@ -7,6 +7,7 @@
          mrlib/switchable-button
          mzlib/pconvert
          racket/pretty
+         racket/match
          string-constants
          lang/stepper-language-interface
          (prefix-in x: "private/mred-extensions.rkt")
@@ -16,6 +17,8 @@
 
 (import drracket:tool^ xml^ view-controller^)
 (export drracket:tool-exports^ stepper-frame^)
+
+(define-logger stepper)
 
 ;; tool magic here:
 (define (phase1)
@@ -43,13 +46,34 @@
        (define (stepper:render-to-sexp val settings language-level)
          (parameterize ([pretty-print-show-inexactness (stepper:show-inexactness?)]
                         [current-print-convert-hook stepper-print-convert-hook])
-           (set-print-settings
-            language-level
-            settings
+           (call-with-values
             (lambda ()
-              (simple-module-based-language-convert-value
-               val
-               settings)))))
+              ;; I'm not sure that these print settings actually need to be set...
+              (call-with-print-settings
+               language-level
+               settings
+               (lambda ()
+                 (drracket:language:simple-module-based-language-convert-value
+                  val
+                  settings))))
+            (lambda args
+              (match args
+                [(list value should-be-written?)
+                 (cond [should-be-written?
+                        ;; warning, don't know if this happens in the stepper:
+                        (log-stepper-debug "print-convert returned writable: ~v\n" value)
+                        value]
+                       [else
+                        (let ([ans (let ([os-port (open-output-string)])
+                                     (print value os-port)
+                                     ;; this 'read' is somewhat scary. I'd like to
+                                     ;; get rid of this:
+                                     (read (open-input-string (get-output-string os-port))))])
+                          (log-stepper-debug "print-convert returned string that read mapped to: ~s\n" ans)
+                          ans)])]
+                [(list value)
+                 (log-stepper-debug "render-to-sexp: value returned from convert-value: ~v\n" value)
+                 value])))))
 
        (super-instantiate ())))))
 
@@ -382,45 +406,15 @@
 (drracket:get/extend:extend-definitions-text stepper-definitions-text-mixin)
 (drracket:get/extend:extend-tab stepper-tab-mixin)
 
-  ;; COPIED FROM drracket/private/language.rkt
-;; simple-module-based-language-convert-value : TST STYLE boolean -> TST
-(define (simple-module-based-language-convert-value value settings)
-  (case (drracket:language:simple-settings-printing-style settings)
-    [(print) value]
-    [(write trad-write) value]
-    [(constructor)
-     (parameterize
-         ([constructor-style-printing #t]
-          [show-sharing (drracket:language:simple-settings-show-sharing settings)]
-          [current-print-convert-hook
-           (leave-snips-alone-hook (current-print-convert-hook))])
-       (stepper-print-convert value))]
-    [(quasiquote)
-     (parameterize
-         ([constructor-style-printing #f]
-          [show-sharing (drracket:language:simple-settings-show-sharing settings)]
-          [current-print-convert-hook
-           (leave-snips-alone-hook (current-print-convert-hook))])
-       (stepper-print-convert value))]
-    [else (error "Internal stepper error: time to resync with simple-module-based-language-convert-value")]))
-
-(define ((leave-snips-alone-hook sh) expr basic-convert sub-convert)
-  (if (or (is-a? expr snip%)
-          ;; FIXME: internal in language.rkt (to-snip-value? expr)
-          )
-      expr
-      (sh expr basic-convert sub-convert)))
-
-;; mflatt: MINOR HACK - work around temporary
-;;         print-convert problems
-(define (stepper-print-convert v)
-  (or (and (procedure? v) (object-name v))
-      (print-convert v)))
-
-
 ;; set-print-settings ; settings ( -> TST) -> TST
-(define (set-print-settings language simple-settings thunk)
-  (if (method-in-interface? 'set-printing-parameters (object-interface language))
+(define (call-with-print-settings language simple-settings thunk)
+  ;; I have to say, I'm somewhat alarmed by the presence of the pretty-print
+  ;; width here. I'm hoping it doesn't affect the thunks that we're using here...
+  ((drracket:language:make-setup-printing-parameters) thunk simple-settings 'infinity)
+  ;; okay, this is getting interesting. I'm updating this code for 2015, and ...
+  ;; things are a little scary. In particular, it looks like 'set-printing-parameters
+  ;; is no longer the name of this method... this kind of dynamic dispatch is frightening.
+  #;(if (method-in-interface? 'set-printing-parameters (object-interface language))
       (send language set-printing-parameters simple-settings thunk)
       ;; assume that the current print-convert context is fine
       ;; (error 'stepper-tool "language object does not contain set-printing-parameters method")
