@@ -27,6 +27,7 @@ Therefore, the stepper's syntax-property additions occur in two
 textual locations: collects/lang/private/teach.ss, and
 collects/stepper/private/annotate.ss (with a few stray ones
 in collects/lang/private/teachhelp.ss).
+[Ed note: these paths are long since changed... 2015-08-28, JBC]
 
 In order to make it easy to move the stepper's syntax properties
 as a group and also in order to check that only sane ones are
@@ -95,7 +96,7 @@ stepper-hint :
  [ 'comes-from-check-expect ] : expression was expanded from a 'check-expect'
  [ 'comes-from-check-within ] : ... from a 'check-within'
  [ 'comes-from-check-error ] : ... from a 'check-error'
- 
+
 stepper-define-type:
  this is attached to the right-hand sides of defines to indicate what
  kind of define they came from.
