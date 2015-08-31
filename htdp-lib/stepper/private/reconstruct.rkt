@@ -110,99 +110,99 @@
 
 (define (recon-value val render-settings [assigned-name #f]
                      [current-so-far nothing-so-far] [seen-promises null])
-  (if (hash-ref finished-xml-box-table val (lambda () #f))
-      (stepper-syntax-property #`(quote #,val) 'stepper-xml-value-hint 'from-xml-box)
-      (let* ([extracted-proc (unwrap-proc val)]
-             [closure-record? (and (annotated-proc? extracted-proc)
-                                   (annotated-proc-info extracted-proc))])
+  (cond
+    [(hash-ref finished-xml-box-table val (lambda () #f))
+     (stepper-syntax-property #`(quote #,val) 'stepper-xml-value-hint 'from-xml-box)]
+    [else
+     (define extracted-proc (unwrap-proc val))
+     (define closure-record? (and (annotated-proc? extracted-proc)
+                                  (annotated-proc-info extracted-proc)))
+     (cond
+       [closure-record?
+        (let* ([mark (closure-record-mark closure-record?)]
+               [base-name (closure-record-name closure-record?)])
+          (if base-name
+              (let* ([lifted-index
+                      (closure-record-lifted-index closure-record?)]
+                     [name
+                      (if lifted-index
+                          (construct-lifted-name base-name lifted-index)
+                          base-name)])
+                (if (and assigned-name
+                         (free-identifier=? base-name assigned-name))
+                    (recon-source-expr
+                     (mark-source mark) (list mark) null null render-settings)
+                    #`#,name))
+              (recon-source-expr
+               (mark-source mark) (list mark) null null render-settings)))]
+       ; promise does not have annotation info,
+       ; must be from library code, or it's a running promise
+       ; or it's a nested promise?
+       [(promise? val)
         (cond
-          [closure-record?
-           (let* ([mark (closure-record-mark closure-record?)]
-                  [base-name (closure-record-name closure-record?)])
-             (if base-name
-                 (let* ([lifted-index
-                         (closure-record-lifted-index closure-record?)]
-                        [name
-                         (if lifted-index
-                             (construct-lifted-name base-name lifted-index)
-                             base-name)])
-                   (if (and assigned-name
-                            (free-identifier=? base-name assigned-name))
-                       (recon-source-expr
-                        (mark-source mark) (list mark) null null render-settings)
-                       #`#,name))
-                 (recon-source-expr
-                  (mark-source mark) (list mark) null null render-settings)))]
-          ; promise does not have annotation info,
-          ; must be from library code, or it's a running promise
-          ; or it's a nested promise?
-          [(promise? val)
-           (cond
-             ; running promise cached by recon-inner
-             [(or (hash-ref partially-evaluated-promises-table val (λ () #f))
-                  ; can be an extra promise layer when dealing with lists
-                  (hash-ref partially-evaluated-promises-table (pref val) (λ () #f)))]
-             ; running promise not found by search in recon-inner
-             ; must be a nested running promise
-             [(and (nested-promise-running? val)
-                   (not (eq? current-so-far nothing-so-far)))
-              (hash-set! partially-evaluated-promises-table val current-so-far)
-              current-so-far]
-             #;[(and (nested-promise-running? val)
-                     (not (null? last-so-far)))
-                last-so-far]
-             ; promise is not running if we get here
-             [(and (promise-forced? val)
-                   (not (nested-promise-running? val))
-                   (not (assq val seen-promises)))
-              (recon-value (force val) render-settings
-                           assigned-name current-so-far
-                           (cons (list val assigned-name) seen-promises))]
-             ; for cyclic lists, use assigned name if it's available
-             [(let ([v (assq val seen-promises)])
-                (and v (cadr v)))]
-             ; unknown promise: promise not in src code, created in library fn
-             [(hash-ref unknown-promises-table val (λ () #f))
-              =>
-              render-unknown-promise]
-             [else ; else generate a fresh unknown promise
-              (begin0
-                (render-unknown-promise next-unknown-promise)
-                (hash-set! unknown-promises-table
-                           val next-unknown-promise)
-                (set! next-unknown-promise
-                      (add1 next-unknown-promise)))])]
-          ; STC: handle lists here, instead of deferring to render-to-sexp fn
-          ; because there may be nested promises
-          #;[(null? val) #'empty]
-          [(and (not (null? val))
-                (list? val)
-                (ormap promise? val))
-           (with-syntax
-               ([(reconed-vals ...)
-                 (map
-                  (lx (recon-value _ render-settings #f current-so-far seen-promises))
-                  val)])
-             (if (render-settings-constructor-style-printing? render-settings)
-                 #'(#%plain-app list reconed-vals ...)
-                 #'`(reconed-vals ...)))]
-          [(and (pair? val)
-                (or (promise? (car val))
-                    (promise? (cdr val))))
-           (with-syntax
-               ([reconed-car
-                 (recon-value (car val) render-settings
-                              #f current-so-far seen-promises)]
-                [reconed-cdr
-                 (recon-value (cdr val) render-settings
-                              #f current-so-far seen-promises)])
-             #'(#%plain-app cons reconed-car reconed-cdr))]
-          [else
-           (let* ([rendered
-                   ((render-settings-render-to-sexp render-settings) val)])
-             (if (symbol? rendered)
-                 #`#,rendered
-                 #`(quote #,rendered)))]))))
+          ; running promise cached by recon-inner
+          [(or (hash-ref partially-evaluated-promises-table val (λ () #f))
+               ; can be an extra promise layer when dealing with lists
+               (hash-ref partially-evaluated-promises-table (pref val) (λ () #f)))]
+          ; running promise not found by search in recon-inner
+          ; must be a nested running promise
+          [(and (nested-promise-running? val)
+                (not (eq? current-so-far nothing-so-far)))
+           (hash-set! partially-evaluated-promises-table val current-so-far)
+           current-so-far]
+          #;[(and (nested-promise-running? val)
+                  (not (null? last-so-far)))
+             last-so-far]
+          ; promise is not running if we get here
+          [(and (promise-forced? val)
+                (not (nested-promise-running? val))
+                (not (assq val seen-promises)))
+           (recon-value (force val) render-settings
+                        assigned-name current-so-far
+                        (cons (list val assigned-name) seen-promises))]
+          ; for cyclic lists, use assigned name if it's available
+          [(let ([v (assq val seen-promises)])
+             (and v (cadr v)))]
+          ; unknown promise: promise not in src code, created in library fn
+          [(hash-ref unknown-promises-table val (λ () #f))
+           =>
+           render-unknown-promise]
+          [else ; else generate a fresh unknown promise
+           (begin0
+             (render-unknown-promise next-unknown-promise)
+             (hash-set! unknown-promises-table
+                        val next-unknown-promise)
+             (set! next-unknown-promise
+                   (add1 next-unknown-promise)))])]
+       ; STC: handle lists here, instead of deferring to render-to-sexp fn
+       ; because there may be nested promises
+       #;[(null? val) #'empty]
+       [(and (not (null? val))
+             (list? val)
+             (ormap promise? val))
+        (with-syntax
+            ([(reconed-vals ...)
+              (for/list ([v (in-list val)])
+                (recon-value v render-settings #f current-so-far seen-promises))])
+          (if (render-settings-constructor-style-printing? render-settings)
+              #'(#%plain-app list reconed-vals ...)
+              #'`(reconed-vals ...)))]
+       [(and (pair? val)
+             (or (promise? (car val))
+                 (promise? (cdr val))))
+        (with-syntax
+            ([reconed-car
+              (recon-value (car val) render-settings
+                           #f current-so-far seen-promises)]
+             [reconed-cdr
+              (recon-value (cdr val) render-settings
+                           #f current-so-far seen-promises)])
+          #'(#%plain-app cons reconed-car reconed-cdr))]
+       [else
+        (define rendered ((render-settings-render-to-sexp render-settings) val))
+        (if (symbol? rendered)
+            #`#,rendered
+            #`(quote #,rendered))])]))
 
 ; STC: helper fns for recon-value, to reconstruct promises
 ; extract-proc-if-struct : any -> procedure? or any
@@ -755,273 +755,265 @@
 
 
   (define (recon-inner mark-list so-far)
-    (let* ([recon-source-current-marks
-            (lambda (expr)
-              (recon-source-expr expr mark-list null null render-settings))]
-           [top-mark (car mark-list)]
-           [exp (mark-source top-mark)]
-           [iota (lambda (x) (for/list ([i (in-range x)]) x))]
-
-           [recon-let
-            (lambda ()
-              (with-syntax ([(label ((vars rhs) ...) . bodies) exp])
-                (match-let*
-                    ([binding-sets (map syntax->list (syntax->list #'(vars ...)))]
-                     [binding-list (apply append binding-sets)]
-                     [glumps
-                      (map (lambda (binding-set rhs)
-                             (make-let-glump
-                              (map (lambda (binding)
-                                     (stepper-syntax-property binding
-                                                              'stepper-lifted-name
-                                                              (binding-lifted-name mark-list binding)))
-                                   binding-set)
-                              rhs
-                              (map (lambda (arg-binding)
-                                     (lookup-binding mark-list arg-binding))
-                                   binding-set)))
-                           binding-sets
-                           (syntax->list #`(rhs ...)))]
-                     [num-defns-done (lookup-binding mark-list let-counter)]
-                     [(vector done-glumps not-done-glumps)
-                      (n-split-list num-defns-done glumps)]
-                     [recon-lifted
-                      (lambda (names expr)
-                        #`(#,names #,expr))]
-                     [before-bindings
-                      (map
-                       (lambda (glump)
-                         (let* ([name-set (let-glump-name-set glump)]
-                                [rhs-val-set (map (lambda (val)
-                                                    (if (> (length name-set) 0)
-                                                        (recon-value val render-settings (car name-set))
-                                                        (recon-value val render-settings)))
-                                                  (let-glump-val-set glump))])
-                           (if (= (length rhs-val-set) 1)
-                               #`(#,name-set #,@rhs-val-set)
-                               #`(#,name-set (values #,rhs-val-set)))))
-                       done-glumps)]
-                     [reconstruct-remaining-def
-                      (lambda (glump)
-                        (let ([rhs-source (let-glump-exp glump)]
-                              [rhs-name-set (let-glump-name-set glump)])
-                          (recon-lifted rhs-name-set
-                                        (recon-source-current-marks rhs-source))))]
-                     [after-bindings
-                      (if (pair? not-done-glumps)
-                          (if (eq? so-far nothing-so-far)
-                              (map reconstruct-remaining-def not-done-glumps)
-                              (cons (recon-lifted (let-glump-name-set (car not-done-glumps)) so-far)
-                                    (map reconstruct-remaining-def (cdr not-done-glumps))))
-                          null)]
-                     [recon-bindings (append before-bindings after-bindings)]
-                     ;; JBC: deleted a bunch of dead code here referring to a never-set "stepper-offset" index...
-                     ;; frightening.
-                     [rectified-bodies
-                      (for/list ([body (in-list (syntax->list #'bodies))])
+    (define (recon-source-current-marks expr)
+      (recon-source-expr expr mark-list null null render-settings))
+    (define top-mark (car mark-list))
+    (define exp (mark-source top-mark))
+    (define (recon-let)
+      (with-syntax ([(label ((vars rhs) ...) . bodies) exp])
+        (match-let*
+            ([binding-sets (map syntax->list (syntax->list #'(vars ...)))]
+             [binding-list (apply append binding-sets)]
+             [glumps
+              (map (lambda (binding-set rhs)
+                     (make-let-glump
+                      (map (lambda (binding)
+                             (stepper-syntax-property binding
+                                                      'stepper-lifted-name
+                                                      (binding-lifted-name mark-list binding)))
+                           binding-set)
+                      rhs
+                      (map (lambda (arg-binding)
+                             (lookup-binding mark-list arg-binding))
+                           binding-set)))
+                   binding-sets
+                   (syntax->list #`(rhs ...)))]
+             [num-defns-done (lookup-binding mark-list let-counter)]
+             [(vector done-glumps not-done-glumps)
+              (n-split-list num-defns-done glumps)]
+             [recon-lifted
+              (lambda (names expr)
+                #`(#,names #,expr))]
+             [before-bindings
+              (map
+               (lambda (glump)
+                 (let* ([name-set (let-glump-name-set glump)]
+                        [rhs-val-set (map (lambda (val)
+                                            (if (> (length name-set) 0)
+                                                (recon-value val render-settings (car name-set))
+                                                (recon-value val render-settings)))
+                                          (let-glump-val-set glump))])
+                   (if (= (length rhs-val-set) 1)
+                       #`(#,name-set #,@rhs-val-set)
+                       #`(#,name-set (values #,rhs-val-set)))))
+               done-glumps)]
+             [reconstruct-remaining-def
+              (lambda (glump)
+                (let ([rhs-source (let-glump-exp glump)]
+                      [rhs-name-set (let-glump-name-set glump)])
+                  (recon-lifted rhs-name-set
+                                (recon-source-current-marks rhs-source))))]
+             [after-bindings
+              (if (pair? not-done-glumps)
+                  (if (eq? so-far nothing-so-far)
+                      (map reconstruct-remaining-def not-done-glumps)
+                      (cons (recon-lifted (let-glump-name-set (car not-done-glumps)) so-far)
+                            (map reconstruct-remaining-def (cdr not-done-glumps))))
+                  null)]
+             [recon-bindings (append before-bindings after-bindings)]
+             [rectified-bodies
+              (for/list ([body (in-list (syntax->list #'bodies))])
                         (recon-source-expr body mark-list binding-list binding-list render-settings))])
-                  (attach-info #`(label #,recon-bindings #,@rectified-bodies) exp))))])
+          (attach-info #`(label #,recon-bindings #,@rectified-bodies) exp))))
 
-      ; STC: cache any running promises in the top mark
-      ; Means that promise is being evaluated.
-      ; NOTE: This wont wind running promises nested in another promise.
-      ;       Those wont be detected until the outer promise is being
-      ;       reconed, so we cant handle it until then.
-      (let ([maybe-running-promise
-             (findf (λ (f) (and (promise? f) (nested-promise-running? f)))
-                    (map mark-binding-value (mark-bindings top-mark)))])
-        (when (and maybe-running-promise
-                   (not (hash-has-key? partially-evaluated-promises-table
-                                       maybe-running-promise))
-                   (not (eq? so-far nothing-so-far)))
-          (hash-set! partially-evaluated-promises-table
-                     maybe-running-promise so-far)))
+    ; STC: cache any running promises in the top mark
+    ; Means that promise is being evaluated.
+    ; NOTE: This wont wind running promises nested in another promise.
+    ;       Those wont be detected until the outer promise is being
+    ;       reconed, so we cant handle it until then.
+    (let ([maybe-running-promise
+           (findf (λ (f) (and (promise? f) (nested-promise-running? f)))
+                  (map mark-binding-value (mark-bindings top-mark)))])
+      (when (and maybe-running-promise
+                 (not (hash-has-key? partially-evaluated-promises-table
+                                     maybe-running-promise))
+                 (not (eq? so-far nothing-so-far)))
+        (hash-set! partially-evaluated-promises-table
+                   maybe-running-promise so-far)))
 
-      (if (stepper-syntax-property exp 'stepper-fake-exp)
+    (if (stepper-syntax-property exp 'stepper-fake-exp)
 
-          (kernel:kernel-syntax-case
-           exp #f
-           [(begin . bodies)
-            (if (eq? so-far nothing-so-far)
-                (error 'recon-inner "breakpoint before a begin reduction should have a result value in exp: ~a" (syntax->datum exp))
-                #`(begin #,so-far #,@(map recon-source-current-marks (cdr (syntax->list #'bodies)))))]
-           [(begin0 first-body . rest-bodies)
-            (if (eq? so-far nothing-so-far)
-                (error 'recon-inner "breakpoint before a begin0 reduction should have a result value in exp: ~a" (syntax->datum exp))
-                #`(begin0 #,(recon-value (lookup-binding mark-list begin0-temp) render-settings)
-                          #,so-far
-                          #,@(map recon-source-current-marks (syntax->list #`rest-bodies))))]
-           [else
-            (error 'recon-inner "unexpected fake-exp expression: ~a" (syntax->datum exp))])
+        (kernel:kernel-syntax-case exp #f
+         [(begin . bodies)
+          (if (eq? so-far nothing-so-far)
+              (error 'recon-inner "breakpoint before a begin reduction should have a result value in exp: ~a" (syntax->datum exp))
+              #`(begin #,so-far #,@(map recon-source-current-marks (cdr (syntax->list #'bodies)))))]
+         [(begin0 first-body . rest-bodies)
+          (if (eq? so-far nothing-so-far)
+              (error 'recon-inner "breakpoint before a begin0 reduction should have a result value in exp: ~a" (syntax->datum exp))
+              #`(begin0 #,(recon-value (lookup-binding mark-list begin0-temp) render-settings)
+                        #,so-far
+                        #,@(map recon-source-current-marks (syntax->list #`rest-bodies))))]
+         [else
+          (error 'recon-inner "unexpected fake-exp expression: ~a" (syntax->datum exp))])
 
-          (kernel:kernel-syntax-case
-           exp #f
-           ; variable references
-           [id
-            (identifier? (syntax id))
-            (if (eq? so-far nothing-so-far)
-                (recon-source-current-marks exp)
-                (error 'recon-inner "variable reference given as context: ~a" exp))]
+        (kernel:kernel-syntax-case exp #f
+         ; variable references
+         [id
+          (identifier? (syntax id))
+          (if (eq? so-far nothing-so-far)
+              (recon-source-current-marks exp)
+              (error 'recon-inner "variable reference given as context: ~a" exp))]
 
-           [(#%top . id)
-            (if (eq? so-far nothing-so-far)
-                (recon-source-current-marks exp)
-                (error 'recon-inner "variable reference given as context: ~a" exp))]
+         [(#%top . id)
+          (if (eq? so-far nothing-so-far)
+              (recon-source-current-marks exp)
+              (error 'recon-inner "variable reference given as context: ~a" exp))]
 
-           ; applications
-           [(#%plain-app . terms)
+         ; applications
+         [(#%plain-app . terms)
+          (attach-info
+           (match-let*
+               ([sub-exprs (syntax->list (syntax terms))]
+                [arg-temps (for/list ([i (in-range (length sub-exprs))])
+                                     (get-arg-var i))]
+                [arg-vals (map (lambda (arg-temp)
+                                 (lookup-binding mark-list arg-temp))
+                               arg-temps)]
+                [(vector evaluated unevaluated) (split-list (lambda (x) (eq? (cadr x) *unevaluated*))
+                                                            (zip sub-exprs arg-vals))]
+                [rectified-evaluated (map (lx (recon-value _ render-settings #f so-far))
+                                          (map cadr evaluated))])
+             (case (mark-label (car mark-list))
+               ((not-yet-called)
+                (if (null? unevaluated)
+                    #`(#%plain-app . #,rectified-evaluated)
+                    #`(#%plain-app
+                       #,@rectified-evaluated
+                       #,so-far
+                       #,@(map recon-source-current-marks (cdr (map car unevaluated))))))
+               ((called) ; unevaluated = null
+                (stepper-syntax-property
+                 (if (eq? so-far nothing-so-far)
+                     (datum->syntax #'here `(,#'#%plain-app ...)) ; in unannotated code ... can this occur?
+                     ; dont show ellipses for force (and other lazy fns)
+                     ; object-name is good enough here, so dont need to add another "special val"
+                     (let ([obj-name (object-name (car arg-vals))])
+                       (cond [(ormap
+                               (lx (eq? obj-name _))
+                               '(force ! !! !list !!list
+                                       caar cadr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar
+                                       cdddr caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
+                                       cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr
+                                       first second third fourth fifth sixth seventh eighth take
+                                       eq? eqv? equal? list? length list-ref list-tail append reverse
+                                       empty? assoc assq assv cons? remove remq remv member memq memv))
+                              #`(#%plain-app . #,rectified-evaluated)]
+                             [else
+                              (datum->syntax #'here `(,#'#%plain-app ... ,so-far ...))])))
+                 'stepper-args-of-call
+                 rectified-evaluated))
+               (else
+                (error 'recon-inner "bad label (~v) in application mark in expr: ~a" (mark-label (car mark-list)) exp))))
+           exp)]
+
+         ; define-struct
+         ;
+         ;               [(z:struct-form? expr)
+         ;                 (if (comes-from-define-struct? expr)
+         ;                     so-far
+         ;                     (let ([super-expr (z:struct-form-super expr)]
+         ;                           [raw-type (utils:read->raw (z:struct-form-type expr))]
+         ;                           [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
+         ;                       (if super-expr
+         ;                           `(struct (,raw-type ,so-far)
+         ;                                    ,raw-fields)
+         ;                           `(struct ,raw-type ,raw-fields))))]
+
+         ; if
+         [(if test then else)
+          (begin
+            (when (eq? so-far nothing-so-far)
+              (error 'reconstruct "breakpoint before an if reduction should have a result value"))
             (attach-info
-             (match-let*
-                 ([sub-exprs (syntax->list (syntax terms))]
-                  [arg-temps (for/list ([i (in-range (length sub-exprs))])
-                               (get-arg-var i))]
-                  [arg-vals (map (lambda (arg-temp)
-                                   (lookup-binding mark-list arg-temp))
-                                 arg-temps)]
-                  [(vector evaluated unevaluated) (split-list (lambda (x) (eq? (cadr x) *unevaluated*))
-                                                              (zip sub-exprs arg-vals))]
-                  [rectified-evaluated (map (lx (recon-value _ render-settings #f so-far))
-                                            (map cadr evaluated))])
-               (case (mark-label (car mark-list))
-                 ((not-yet-called)
-                  (if (null? unevaluated)
-                      #`(#%plain-app . #,rectified-evaluated)
-                      #`(#%plain-app
-                         #,@rectified-evaluated
-                         #,so-far
-                         #,@(map recon-source-current-marks (cdr (map car unevaluated))))))
-                 ((called) ; unevaluated = null
-                  (stepper-syntax-property
-                   (if (eq? so-far nothing-so-far)
-                       (datum->syntax #'here `(,#'#%plain-app ...)) ; in unannotated code ... can this occur?
-                       ; dont show ellipses for force (and other lazy fns)
-                       ; object-name is good enough here, so dont need to add another "special val"
-                       (let ([obj-name (object-name (car arg-vals))])
-                         (cond [(ormap
-                                 (lx (eq? obj-name _))
-                                 '(force ! !! !list !!list
-                                         caar cadr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar
-                                         cdddr caaaar caaadr caadar caaddr cadaar cadadr caddar cadddr
-                                         cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr
-                                         first second third fourth fifth sixth seventh eighth take
-                                         eq? eqv? equal? list? length list-ref list-tail append reverse
-                                         empty? assoc assq assv cons? remove remq remv member memq memv))
-                                #`(#%plain-app . #,rectified-evaluated)]
-                               [else
-                                (datum->syntax #'here `(,#'#%plain-app ... ,so-far ...))])))
-                   'stepper-args-of-call
-                   rectified-evaluated))
-                 (else
-                  (error 'recon-inner "bad label (~v) in application mark in expr: ~a" (mark-label (car mark-list)) exp))))
+             #`(if #,so-far
+                   #,(recon-source-current-marks (syntax then))
+                   #,(recon-source-current-marks (syntax else)))
+             exp))]
+
+         ; one-armed if
+
+         [(if test then)
+          (begin
+            (when (eq? so-far nothing-so-far)
+              (error 'reconstruct "breakpoint before an if reduction should have a result value"))
+            (attach-info
+             #`(if #,so-far #,(recon-source-current-marks (syntax then)))
+             exp))]
+
+         ; quote : there is no break on a quote.
+
+         ;; advanced-begin : okay, here comes advanced-begin.
+
+         [(begin . terms)
+          ;; even in advanced, begin expands into a let-values.
+          (error 'reconstruct/inner "begin in non-teaching-languages not implemented in reconstruct")]
+
+         ; begin : in the current expansion of begin, there are only two-element begin's, one-element begins, and
+         ;; zero-element begins; these arise as the expansion of ... ?
+
+         ;; these are all dead code, right?
+
+         #;[(begin stx-a stx-b)
+            (attach-info
+             (if (eq? so-far nothing-so-far)
+                 #`(begin #,(recon-source-current-marks #`stx-a) #,(recon-source-current-marks #`stx-b))
+                 #`(begin #,so-far #,(recon-source-current-marks #`stx-b))))]
+
+         #;[(begin clause)
+            (attach-info
+             (if (eq? so-far nothing-so-far)
+                 #`(begin #,(recon-source-current-marks (syntax clause)))
+                 (error
+                  'recon-inner
+                  "stepper:reconstruct: one-clause begin appeared as context: ~a" (syntax->datum exp)))
              exp)]
 
-           ; define-struct
-           ;
-           ;               [(z:struct-form? expr)
-           ;                 (if (comes-from-define-struct? expr)
-           ;                     so-far
-           ;                     (let ([super-expr (z:struct-form-super expr)]
-           ;                           [raw-type (utils:read->raw (z:struct-form-type expr))]
-           ;                           [raw-fields (map utils:read->raw (z:struct-form-fields expr))])
-           ;                       (if super-expr
-           ;                           `(struct (,raw-type ,so-far)
-           ;                                    ,raw-fields)
-           ;                           `(struct ,raw-type ,raw-fields))))]
+         #;[(begin)
+            (attach-info
+             (if (eq? so-far nothing-so-far)
+                 #`(begin)
+                 (error
+                  'recon-inner
+                  "stepper-reconstruct: zero-clause begin appeared as context: ~a" (syntax->datum exp))))]
 
-           ; if
-           [(if test then else)
-            (begin
-              (when (eq? so-far nothing-so-far)
-                (error 'reconstruct "breakpoint before an if reduction should have a result value"))
-              (attach-info
-               #`(if #,so-far
-                     #,(recon-source-current-marks (syntax then))
-                     #,(recon-source-current-marks (syntax else)))
-               exp))]
+         ; begin0 :
+         ;; one-body begin0: perhaps this will turn out to be a special case of the
+         ;; many-body case.
+         [(begin0 body)
+          (if (eq? so-far nothing-so-far)
+              (recon-source-current-marks exp)
+              (error 'recon-inner "one-body begin0 given as context: ~a" exp))]
 
-           ; one-armed if
+         ;; the only time begin0 shows up other than in a fake-exp is when the first
+         ;; term is being evaluated
+         [(begin0 first-body . rest-bodies)
+          (if (eq? so-far nothing-so-far)
+              (error 'foo "not implemented")
+              ;; don't know what goes hereyet
+              #`(begin0 #,so-far #,@(map recon-source-current-marks (syntax->list #`rest-bodies))))]
 
-           [(if test then)
-            (begin
-              (when (eq? so-far nothing-so-far)
-                (error 'reconstruct "breakpoint before an if reduction should have a result value"))
-              (attach-info
-               #`(if #,so-far #,(recon-source-current-marks (syntax then)))
-               exp))]
+         ; let-values
 
-           ; quote : there is no break on a quote.
+         [(let-values . rest) (recon-let)]
 
-           ;; advanced-begin : okay, here comes advanced-begin.
+         [(letrec-values . rest) (recon-let)]
 
-           [(begin . terms)
-            ;; even in advanced, begin expands into a let-values.
-            (error 'reconstruct/inner "begin in non-teaching-languages not implemented in reconstruct")]
+         [(set! var rhs)
+          (begin
+            (when (eq? so-far nothing-so-far)
+              (error 'reconstruct "breakpoint before an if reduction should have a result value"))
+            (attach-info
+             (let ([rendered-var (reconstruct-set!-var mark-list #`var)])
+               #`(set! #,rendered-var #,so-far))
+             exp))]
 
-           ; begin : in the current expansion of begin, there are only two-element begin's, one-element begins, and
-           ;; zero-element begins; these arise as the expansion of ... ?
+         ; lambda : there is no break on a lambda
 
-           ;; these are all dead code, right?
-
-           #;[(begin stx-a stx-b)
-              (attach-info
-               (if (eq? so-far nothing-so-far)
-                   #`(begin #,(recon-source-current-marks #`stx-a) #,(recon-source-current-marks #`stx-b))
-                   #`(begin #,so-far #,(recon-source-current-marks #`stx-b))))]
-
-           #;[(begin clause)
-              (attach-info
-               (if (eq? so-far nothing-so-far)
-                   #`(begin #,(recon-source-current-marks (syntax clause)))
-                   (error
-                    'recon-inner
-                    "stepper:reconstruct: one-clause begin appeared as context: ~a" (syntax->datum exp)))
-               exp)]
-
-           #;[(begin)
-              (attach-info
-               (if (eq? so-far nothing-so-far)
-                   #`(begin)
-                   (error
-                    'recon-inner
-                    "stepper-reconstruct: zero-clause begin appeared as context: ~a" (syntax->datum exp))))]
-
-           ; begin0 :
-           ;; one-body begin0: perhaps this will turn out to be a special case of the
-           ;; many-body case.
-           [(begin0 body)
-            (if (eq? so-far nothing-so-far)
-                (recon-source-current-marks exp)
-                (error 'recon-inner "one-body begin0 given as context: ~a" exp))]
-
-           ;; the only time begin0 shows up other than in a fake-exp is when the first
-           ;; term is being evaluated
-           [(begin0 first-body . rest-bodies)
-            (if (eq? so-far nothing-so-far)
-                (error 'foo "not implemented")
-                ;; don't know what goes hereyet
-                #`(begin0 #,so-far #,@(map recon-source-current-marks (syntax->list #`rest-bodies))))]
-
-           ; let-values
-
-           [(let-values . rest) (recon-let)]
-
-           [(letrec-values . rest) (recon-let)]
-
-           [(set! var rhs)
-            (begin
-              (when (eq? so-far nothing-so-far)
-                (error 'reconstruct "breakpoint before an if reduction should have a result value"))
-              (attach-info
-               (let ([rendered-var (reconstruct-set!-var mark-list #`var)])
-                 #`(set! #,rendered-var #,so-far))
-               exp))]
-
-           ; lambda : there is no break on a lambda
-
-           [else
-            (error
-             'recon-inner
-             "stepper:reconstruct: unknown object to reconstruct: ~a" (syntax->datum exp))]))))
+         [else
+          (error
+           'recon-inner
+           "stepper:reconstruct: unknown object to reconstruct: ~a" (syntax->datum exp))])))
 
   ; the main recursive reconstruction loop is in recon:
   ; recon : (syntax mark-list boolean -> syntax)
@@ -1055,61 +1047,55 @@
                            (syntax->datum (mark-source (car mark-list))))
                       returned-value-list))
 
-  (define answer
-    (begin
-      ; STC: reset partial-eval-promise table on each call to recon
-      (set! partially-evaluated-promises-table (make-weak-hash))
-      (set! last-so-far null)
+  ; STC: reset partial-eval-promise table on each call to recon
+  (set! partially-evaluated-promises-table (make-weak-hash))
+  (set! last-so-far null)
 
-      (case break-kind
-        ((left-side)
-         (let* ([innermost
-                 (if returned-value-list ; is it a normal-break/values?
-                     (begin
-                       (unless (and (pair? returned-value-list)
-                                    (null? (cdr returned-value-list)))
-                         (error 'reconstruct
-                                "context expected one value, given ~v"
-                                returned-value-list))
-                       (recon-value (car returned-value-list) render-settings))
-                     nothing-so-far)])
-           (recon innermost mark-list #t)))
-        ((right-side)
-         (let* ([innermost
-                 (if returned-value-list ; is it an expr -> value reduction?
-                     (begin
-                       (unless (and (pair? returned-value-list)
-                                    (null? (cdr returned-value-list)))
-                         (error 'reconstruct
-                                "context expected one value, given ~v"
-                                returned-value-list))
-                       (recon-value (car returned-value-list) render-settings))
-                     (recon-source-expr (mark-source (car mark-list))
-                                        mark-list null null render-settings))])
-           (recon (mark-as-highlight innermost) (cdr mark-list) #f)))
-        ((double-break)
-         (let* ([source-expr (mark-source (car mark-list))]
-                [innermost-before
-                 (mark-as-highlight
-                  (recon-source-expr source-expr mark-list null null render-settings))]
-                [newly-lifted-bindings
-                 (syntax-case source-expr (letrec-values)
-                   [(letrec-values ([vars . rest] ...) . bodies)
-                    (apply append (map syntax->list (syntax->list #`(vars ...))))]
-                   [(let-values ([vars . rest] ...) . bodies)
-                    (apply append (map syntax->list (syntax->list #`(vars ...))))]
-                   [else (error
-                          'reconstruct
-                          "expected a let-values as source for a double-break, got: ~.s"
-                          (syntax->datum source-expr))])]
-                [innermost-after
-                 (mark-as-highlight
-                  (recon-source-expr
-                   (mark-source (car mark-list))
-                   mark-list null newly-lifted-bindings render-settings))])
-           (list (recon innermost-before (cdr mark-list) #f)
-                 (recon innermost-after (cdr mark-list) #f)))))))
-
-
-  answer
-  )
+  (case break-kind
+    ((left-side)
+     (let* ([innermost
+             (if returned-value-list ; is it a normal-break/values?
+                 (begin
+                   (unless (and (pair? returned-value-list)
+                                (null? (cdr returned-value-list)))
+                     (error 'reconstruct
+                            "context expected one value, given ~v"
+                            returned-value-list))
+                   (recon-value (car returned-value-list) render-settings))
+                 nothing-so-far)])
+       (recon innermost mark-list #t)))
+    ((right-side)
+     (let* ([innermost
+             (if returned-value-list ; is it an expr -> value reduction?
+                 (begin
+                   (unless (and (pair? returned-value-list)
+                                (null? (cdr returned-value-list)))
+                     (error 'reconstruct
+                            "context expected one value, given ~v"
+                            returned-value-list))
+                   (recon-value (car returned-value-list) render-settings))
+                 (recon-source-expr (mark-source (car mark-list))
+                                    mark-list null null render-settings))])
+       (recon (mark-as-highlight innermost) (cdr mark-list) #f)))
+    ((double-break)
+     (let* ([source-expr (mark-source (car mark-list))]
+            [innermost-before
+             (mark-as-highlight
+              (recon-source-expr source-expr mark-list null null render-settings))]
+            [newly-lifted-bindings
+             (syntax-case source-expr (letrec-values)
+               [(letrec-values ([vars . rest] ...) . bodies)
+                (apply append (map syntax->list (syntax->list #`(vars ...))))]
+               [(let-values ([vars . rest] ...) . bodies)
+                (apply append (map syntax->list (syntax->list #`(vars ...))))]
+               [else (error
+                      'reconstruct
+                      "expected a let-values as source for a double-break, got: ~.s"
+                      (syntax->datum source-expr))])]
+            [innermost-after
+             (mark-as-highlight
+              (recon-source-expr
+               (mark-source (car mark-list))
+               mark-list null newly-lifted-bindings render-settings))])
+       (list (recon innermost-before (cdr mark-list) #f)
+             (recon innermost-after (cdr mark-list) #f))))))

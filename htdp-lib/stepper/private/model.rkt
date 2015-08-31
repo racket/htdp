@@ -272,7 +272,56 @@
             any/c any/c any/c
             any)
 
-        (define (send-it)
+        (log-stepper-debug "maybe sending step ... \n")
+        (log-stepper-debug "LHS = ~a\n" (map syntax->hilite-datum lhs-exps))
+        (log-stepper-debug "RHS = ~a\n" (map syntax->hilite-datum rhs-exps))
+
+        (define send?
+          (cond
+            ; SKIPPING step, lhs = rhs
+            ; if highlights differ, push highlight-stack and set last-rhs-exp
+            [(step=? lhs-exps rhs-exps)
+             (log-stepper-debug "SKIPPING STEP (LHS = RHS)\n")
+             (when (not (step-and-highlight=? lhs-exps rhs-exps))
+               (log-stepper-debug "Pushing onto highlight-stack:\n  ~a thunk\n"
+                                  (syntax->hilite-datum (car lhs-exps)))
+               (highlight-stack-push mark-list)
+               (set! last-rhs-exps rhs-exps))
+             #f]
+            [(step=? lhs-exps (list #'(... ...)))
+             (cond
+               ; SKIPPING step, lhs = ellipses and rhs = last-rhs-exps
+               [(step=? rhs-exps last-rhs-exps)
+                (log-stepper-debug "SKIPPING STEP (LHS = ellipses and RHS = last RHS)\n")
+                #f]
+               ; SKIPPING step, lhs = ellipses and highlight-stack = null and
+               ; last-rhs = null
+               ; if last-rhs != null, send step (lhs = ...)
+               [(null? highlight-stack)
+                (if (not (null? last-rhs-exps))
+                    #t
+                    (begin
+                      (log-stepper-debug "SKIPPING STEP (LHS = ellipses and highlight-stack = null)\n")
+                      #f))]
+               ; if top-called-fn = top of highlight stack,
+               ;    then send step with lhs = lhs-thunk on highlight stack
+               ; else if last-rhs != null, send it, else skip
+               [else
+                (let ([top-called-fn (caar highlight-stack)]
+                      [lhs-thunk (cdar highlight-stack)])
+                  (if (and (eq? (find-top-called-fn mark-list) top-called-fn)
+                           (eq? break-kind 'result-value-break))
+                      (begin
+                        (set! lhs-exps (lhs-thunk))
+                        (set! lhs-finished-exps rhs-finished-exps)
+                        (log-stepper-debug "Popping highlight-stack\n")
+                        (highlight-stack-pop)
+                        #t)
+                      (not (null? last-rhs-exps))))])]
+            ; sending step
+            [else #t]))
+
+        (when send?
           (receive-result
            (before-after-result
             (append lhs-finished-exps lhs-exps)
@@ -282,52 +331,7 @@
           (log-stepper-debug "step sent:\n")
           (log-stepper-debug "LHS = ~a\n" (map syntax->hilite-datum lhs-exps))
           (log-stepper-debug "RHS = ~a\n" (map syntax->hilite-datum rhs-exps))
-          (set! last-rhs-exps rhs-exps))
-
-        (log-stepper-debug "maybe sending step ... \n")
-        (log-stepper-debug "LHS = ~a\n" (map syntax->hilite-datum lhs-exps))
-        (log-stepper-debug "RHS = ~a\n" (map syntax->hilite-datum rhs-exps))
-
-        (cond
-          ; SKIPPING step, lhs = rhs
-          ; if highlights differ, push highlight-stack and set last-rhs-exp
-          [(step=? lhs-exps rhs-exps)
-           (log-stepper-debug "SKIPPING STEP (LHS = RHS)\n")
-           (when (not (step-and-highlight=? lhs-exps rhs-exps))
-             (log-stepper-debug "Pushing onto highlight-stack:\n  ~a thunk\n"
-                                (syntax->hilite-datum (car lhs-exps)))
-             (highlight-stack-push mark-list)
-             (set! last-rhs-exps rhs-exps))]
-          [(step=? lhs-exps (list #'(... ...)))
-           (cond
-             ; SKIPPING step, lhs = ellipses and rhs = last-rhs-exps
-             [(step=? rhs-exps last-rhs-exps)
-              (log-stepper-debug "SKIPPING STEP (LHS = ellipses and RHS = last RHS)\n")]
-             ; SKIPPING step, lhs = ellipses and highlight-stack = null and
-             ; last-rhs = null
-             ; if last-rhs != null, send step (lhs = ...)
-             [(null? highlight-stack)
-              (if (not (null? last-rhs-exps))
-                  (send-it)
-                  (log-stepper-debug "SKIPPING STEP (LHS = ellipses and highlight-stack = null)\n"))]
-             ; if top-called-fn = top of highlight stack,
-             ;    then send step with lhs = lhs-thunk on highlight stack
-             ; else if last-rhs != null, send it, else skip
-             [else
-              (let ([top-called-fn (caar highlight-stack)]
-                    [lhs-thunk (cdar highlight-stack)])
-                (if (and (eq? (find-top-called-fn mark-list) top-called-fn)
-                         (eq? break-kind 'result-value-break))
-                    (begin
-                      (set! lhs-exps (lhs-thunk))
-                      (set! lhs-finished-exps rhs-finished-exps)
-                      (log-stepper-debug "Popping highlight-stack\n")
-                      (highlight-stack-pop)
-                      (send-it))
-                    (when (not (null? last-rhs-exps))
-                      (send-it))))])]
-          ; sending step
-          [else (send-it)]))
+          (set! last-rhs-exps rhs-exps)))
 
       ; compares the lhs and rhs of a step (lists of syntaxes)
       ; and returns true if the underlying datums are equal
@@ -493,8 +497,8 @@
   ;; step through a single expanded expression.
   (define (step-through-expression expanded)
     (define annotated (a:annotate expanded break show-lambdas-as-lambdas?))
-    #;(printf "annotated: ~s\n" annotated)
-    (parameterize ([test-engine:test-silence #t])
+    (parameterize (;; I think this parameterization is pointless in the #lang world
+                   [test-engine:test-silence #t])
       (eval-syntax annotated)))
 
   (define (err-display-handler message exn)
