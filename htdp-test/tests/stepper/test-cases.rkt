@@ -165,7 +165,7 @@
      -> ,def {false}))
 
 (let ([defs `((define (a12 x) (+ x 9)) (define b12 a12))])
-  (t 'top-interref m:intermediate
+  (t 'top-interref m:intermediate/both
      ,@defs (b12 12)
      :: ,@defs ({b12} 12)
      -> ,@defs ({a12} 12)
@@ -176,7 +176,7 @@
 ;;intermediate/lambda hof
 (let ([a-def `(define (a x)
                 (lambda (y) (+ x y)))])
-  (t 'intermediate-lambda-hof m:intermediate-lambda
+  (t 'intermediate-lambda-hof m:intermediate-lambda/both
      ,a-def (define b (a 9)) (b 5)
      :: ,a-def (define b ({a} 9))
      -> ,a-def (define b ({(lambda (x) (lambda (y) (+ x y)))} 9))
@@ -218,7 +218,7 @@
      -> ,def {(and true false)}
      -> ,def {false})
   ;;
-  (t 'and3/lam m:intermediate-lambda
+  (t 'and3/lam m:intermediate-lambda/both
      (define (b2 x) (and true x)) (b2 false)
      :: ,def ({b2} false)
      -> ,def ({(lambda (x) (and true x))} false)
@@ -291,19 +291,19 @@
    -> {3})
 
 ;;  reconstruct can't handle 'begin'
-#;
-(m:mz "(cond [#f 3 4] [#t (+ 3 4) (+ 4 9)])"
-                  `((before-after ((hilite (cond (#f 3 4) (#t (+ 3 4) (+ 4 9)))))
-                                  ((hilite (cond (#t (+ 3 4) (+ 4 9))))))
-                    (before-after ((hilite (cond (#t (+ 3 4) (+ 4 9)))))
-                                  ((hilite (begin (+ 3 4) (+ 4 9)))))
-                    (before-after ((begin (hilite (+ 3 4)) (+ 4 9)))
-                                  ((begin (hilite 7) (+ 4 9))))
-                    (before-after ((hilite (begin 7 (+ 4 9))))
-                                  ((hilite (+ 4 9))))
-                    (before-after ((hilite (+ 4 9)))
-                                  ((hilite 13)))
-                    (finished-stepping)))
+(t1 'trying-again-in-2015 m:mz
+   "(cond [#f 3 4] [#t (+ 3 4) (+ 4 9)])"
+   `((before-after ((hilite (cond (#f 3 4) (#t (+ 3 4) (+ 4 9)))))
+                   ((hilite (cond (#t (+ 3 4) (+ 4 9))))))
+     (before-after ((hilite (cond (#t (+ 3 4) (+ 4 9)))))
+                   ((hilite (begin (+ 3 4) (+ 4 9)))))
+     (before-after ((begin (hilite (+ 3 4)) (+ 4 9)))
+                   ((begin (hilite 7) (+ 4 9))))
+     (before-after ((hilite (begin 7 (+ 4 9))))
+                   ((hilite (+ 4 9))))
+     (before-after ((hilite (+ 4 9)))
+                   ((hilite 13)))
+     (finished-stepping)))
 
 (t 'nested-cond2 m:upto-int/lam
    (cond [false 3] [else (cond [true 4])])
@@ -312,23 +312,23 @@
    -> {(cond (true 4))}
    -> {4})
 
-(t 'top-ref m:intermediate
+(t 'top-ref m:intermediate/both
    (define a4 +) a4
    :: (define a4 +) {a4}
    -> (define a4 +) {+})
 
-(t 'top-ref2 m:intermediate
+(t 'top-ref2 m:intermediate/both
    (define (f123 x) (+ x 13)) f123
    ::)
 
-(t 'top-ref3 m:intermediate-lambda
+(t 'top-ref3 m:intermediate-lambda/both
    (define (f123 x) (+ x 13)) f123
    :: (define (f123 x) (+ x 13)) {f123}
    -> (define (f123 x) (+ x 13)) {(lambda (x) (+ x 13))})
 
 (let* ([defs1 `((define (a x) (+ x 5)) (define b a))]
        [defs2 (append defs1 `((define c a)))])
-  (t 'top-ref4 m:intermediate
+  (t 'top-ref4 m:intermediate/both
      ,@defs1 (define c b) (c 3)
      :: ,@defs1 (define c {b})
      -> ,@defs1 (define c {a})
@@ -351,7 +351,7 @@
      -> ,def {36}))
 
 (let ([def `(define a5 (lambda (a5) (+ a5 13)))])
-  (t 'lam-def/lam m:intermediate-lambda
+  (t 'lam-def/lam m:intermediate-lambda/both
      ,def (a5 23)
      :: ,def ({a5} 23)
      -> ,def ({(lambda (a5) (+ a5 13))} 23)
@@ -360,7 +360,7 @@
      -> ,def {36}))
 
 (let ([def `(define a_0 (lambda (x) (+ x 5)))])
-  (t 'lam-let m:intermediate
+  (t 'lam-let m:intermediate/both
      (let ([a (lambda (x) (+ x 5))]) (a 6))
      :: {(let ([a (lambda (x) (+ x 5))]) (a 6))}
      -> {(define a_0 (lambda (x) (+ x 5)))} {(a_0 6)}
@@ -381,7 +381,7 @@
 
 (let ([defs `((define c1 false)
               (define (d2 x) (or c1 false x)))])
-  (t 'whocares/lam m:intermediate-lambda
+  (t 'whocares/lam m:intermediate-lambda/both
      ,@defs (d2 false)
      :: ,@defs ({d2} false)
      -> ,@defs ({(lambda (x) (or c1 false x))} false)
@@ -404,7 +404,7 @@
      -> ,@defs {1}))
 
 (let ([defs `((define (f x) (+ (g x) 10)) (define (g x) (- x 22)))])
-  (t 'forward-ref/lam m:intermediate-lambda
+  (t 'forward-ref/lam m:intermediate-lambda/both
      ,@defs (f 13)
      :: ,@defs ({f} 13)
      -> ,@defs ({(lambda (x) (+ (g x) 10))} 13)
@@ -422,7 +422,7 @@
 ;; loops; I should add a mechanism to stop testing after n steps...
 #;(let ([defs '((define (f x) (cond (else (f x))))
                 (define (g x) x))])
-    (t 'pnkfelix m:intermediate-lambda
+    (t 'pnkfelix m:intermediate-lambda/both
        ,@defs (f (g empty))
        :: ,@defs ({f} (g empty))
        -> ,@defs ({(lambda (x) (cond (else (f x))))} (g empty))
@@ -434,7 +434,7 @@
    :: {(cons 1 2)}
    -> error: "cons: second argument must be a list, but received 1 and 2")
 
-(t 'prims (list m:beginner m:beginner/h)
+(t 'prims m:beginner/both
     (cons 3 (cons 1 empty)) (list 1 2 3) (define-struct aa (b)) (make-aa 3) (+ 3 4)
     :: (cons 3 (cons 1 empty)) {(list 1 2 3)} 
     -> (cons 3 (cons 1 empty)) {(cons 1 (cons 2 (cons 3 empty)))}
@@ -462,7 +462,7 @@
       (finished-stepping)))
 
 (t1 'quoted-list
-    m:beginner-wla "'(3 4 5)"
+    m:beginner-wla/both "'(3 4 5)"
     `((finished-stepping)))
 
 (t1 'quoted-list-display
@@ -481,7 +481,7 @@
 ; note: we currently punt on trying to unwind quasiquote.
 
 (t1 'qq1
-    m:beginner-wla "`(3 4 ,(+ 4 5))"
+    m:beginner-wla/both "`(3 4 ,(+ 4 5))"
     `((before-after ((cons 3 (cons 4 (cons (hilite (+ 4 5)) empty))))
                     ((cons 3 (cons 4 (cons (hilite 9) empty)))))
       (before-after ((cons 3 (cons 4 (hilite (cons 9 empty)))))
@@ -492,7 +492,7 @@
       (finished-stepping)))
 
 (t1 'qq-splice
-    m:beginner-wla "`(3 ,@(list (+ 3 4) 5) 6)"
+    m:beginner-wla/both "`(3 ,@(list (+ 3 4) 5) 6)"
     `((before-after ((cons 3 (append (list (hilite (+ 3 4)) 5) (cons 6 empty)))) ((cons 3 (append (list (hilite 7) 5) (cons 6 empty)))))
       (before-after ((cons 3 (append (list 7 5) (hilite (cons 6 empty))))) ((cons 3 (append (list 7 5) (list 6)))))
       (before-after ((cons 3 (hilite (append (list 7 5) (list 6))))) ((cons 3 (hilite (list 7 5 6)))))
@@ -526,7 +526,7 @@
       (finished-stepping)))
 
 (t1 'let-scoping1
-    m:intermediate "(let ([a 3]) (let ([a (lambda (x) (+ a x))]) (a 4)))"
+    m:intermediate/both "(let ([a 3]) (let ([a (lambda (x) (+ a x))]) (a 4)))"
     (let ([d1 `(define a_0 3)]
           [d2 `(define a_1 (lambda (x) (+ a_0 x)))])
       `((before-after ((hilite (let ([a 3]) (let ([a (lambda (x) (+ a x))]) (a 4)))))
@@ -543,7 +543,7 @@
 
 
 (t1 'let-scoping2
-    m:intermediate-lambda "(let ([a 3]) (let ([a (lambda (x) (+ a x))]) (a 4)))"
+    m:intermediate-lambda/both "(let ([a 3]) (let ([a (lambda (x) (+ a x))]) (a 4)))"
     (let* ([d1 `(define a_0 3)]
            [defs `(,d1 (define a_1 (lambda (x) (+ a_0 x))))])
       `((before-after ((hilite (let ([a 3]) (let ([a (lambda (x) (+ a x))]) (a 4)))))
@@ -558,7 +558,7 @@
         (finished-stepping))))
 
 (t1 'let-scoping3
-    m:intermediate "(define a12 3) (define c12 19) (let ([a12 13] [b12 a12]) (+ b12 a12 c12))"
+    m:intermediate/both "(define a12 3) (define c12 19) (let ([a12 13] [b12 a12]) (+ b12 a12 c12))"
     (let* ([defs1 `((define a12 3) (define c12 19))]
            [defs2 `(,@defs1 (define a12_0 13))]
            [defs3 `(,@defs2 (define b12_0 3))])
@@ -577,7 +577,7 @@
         (finished-stepping))))
 
 (t1 'let-lifting1
-    m:intermediate "(let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+    m:intermediate/both "(let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
     `((before-after ((hilite (let ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)))
                     ((hilite (define a_0 (lambda (x) (+ x 14)))) (hilite (define b_0 (+ 3 4))) (hilite 9)))
       (before-after ((define a_0 (lambda (x) (+ x 14))) (define b_0 (hilite (+ 3 4))) 9)
@@ -585,7 +585,7 @@
       (finished-stepping)))
 
 (t1 'let-deriv
-    m:intermediate "(define (f g) (let ([gp (lambda (x) (/
+    m:intermediate/both "(define (f g) (let ([gp (lambda (x) (/
 (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
     (let ([defs `((define (f g) 
                     (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))])
@@ -605,13 +605,13 @@
         (finished-stepping))))
 
 (t1 'let-assigned
-    m:intermediate "(define a (let ([f (lambda (x) (+ x 13))]) f))"
+    m:intermediate/both "(define a (let ([f (lambda (x) (+ x 13))]) f))"
     `((before-after ((define a (hilite (let ([f (lambda (x) (+ x 13))]) f))))
                     ((hilite (define f_0 (lambda (x) (+ x 13)))) (define a (hilite f_0))))
       (finished-stepping)))
 
 (t1 'let-assigned/lam
-    m:intermediate-lambda "(define a (let ([f (lambda (x) (+ x 13))]) f))"
+    m:intermediate-lambda/both "(define a (let ([f (lambda (x) (+ x 13))]) f))"
     `((before-after ((define a (hilite (let ([f (lambda (x) (+ x 13))]) f))))
                     ((hilite (define f_0 (lambda (x) (+ x 13)))) (define a (hilite f_0))))
       (before-after ((define f_0 (lambda (x) (+ x 13))) (define a (hilite f_0)))
@@ -648,7 +648,7 @@
         (finished-stepping))))
 
 (t1 'let*-lifting1
-    m:intermediate "(let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+    m:intermediate/both "(let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
     (let ([defs `((define a_0 (lambda (x) (+ x 14))))])
       `((before-after ((hilite (let* ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)))
                       ((hilite (define a_0 (lambda (x) (+ x 14)))) (hilite (let* ([b (+ 3 4)]) 9))))
@@ -659,7 +659,7 @@
         (finished-stepping))))
 
 (t1 'let*-deriv
-    m:intermediate "(define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
+    m:intermediate/both "(define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
     (let ([defs `((define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))])
       `((before-after (,@defs (define gprime (hilite (f cos))))
                       (,@defs (define gprime (hilite (let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))))
@@ -691,14 +691,14 @@
 ;;;;;;;;;;;;;
 
 (t1 'temp-letrec
-    m:intermediate "(letrec ([a 13]) 9)"
+    m:intermediate/both "(letrec ([a 13]) 9)"
     (let* ([defs2 `((define a_0 13))])
       `((before-after ((hilite (letrec ([a 13]) 9)))
                       ((hilite (define a_0 13)) (hilite 9)))
         (finished-stepping))))
 
 (t1 'letrec1
-    m:intermediate "(define a 3) (define c 19) (letrec ([a 13] [b a]) (+ b a c))"
+    m:intermediate/both "(define a 3) (define c 19) (letrec ([a 13] [b a]) (+ b a c))"
     (let* ([defs1 `((define a 3) (define c 19))]
            [defs2 (append defs1 `((define a_0 13)))]
            [defs3 (append defs2 `((define b_0 13)))])
@@ -717,7 +717,7 @@
         (finished-stepping))))
 
   (t1 'letrec2
-      m:intermediate "(letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
+      m:intermediate/both "(letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)"
       `((before-after ((hilite (letrec ([a (lambda (x) (+ x 14))] [b (+ 3 4)]) 9)))
                       ((hilite (define a_0 (lambda (x) (+ x 14)))) (hilite (define b_0 (+ 3 4))) (hilite 9)))
         (before-after ((define a_0 (lambda (x) (+ x 14))) (define b_0 (hilite (+ 3 4))) 9)
@@ -725,7 +725,7 @@
         (finished-stepping)))
 
   (t1 'letrec3
-      m:intermediate "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
+      m:intermediate/both "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
       (let ([defs `((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))])
         `((before-after (,@defs (define gprime (hilite (f cos))))
                         (,@defs (define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))))
@@ -744,7 +744,7 @@
   ;; not hidden.  Fixing this involves parameterizing the unwind by what kind of break it was.  Yuck!  So we just fudge the test case.
 
   (t1 'recur
-      m:advanced "(define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))) (countdown 2)"
+      m:advanced/both "(define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))) (countdown 2)"
       (let* ([defs1 `((define (countdown n) (recur loop ([n n]) (if (= n 0) 13 (loop (- n 1))))))]
              [defs2 (append defs1 `((define (loop_0 n) (if (= n 0) 13 (loop_0 (- n 1))))))])
         `((before-after (,@defs1 ((hilite countdown) 2))
@@ -803,7 +803,7 @@
         (finished-stepping)))
 
   (t1 'local2
-      m:intermediate "(local ((define (a x) (+ x 9))) (a 6))"
+      m:intermediate/both "(local ((define (a x) (+ x 9))) (a 6))"
       (let ([defs `((define (a_0 x) (+ x 9)))])
         `((before-after ((hilite (local ((define (a x) (+ x 9))) (a 6))))
                         ((hilite (define (a_0 x) (+ x 9))) (hilite (a_0 6))))
@@ -814,7 +814,7 @@
           (finished-stepping))))
 
   (t1 'local3
-      m:intermediate-lambda "(local ((define (a x) (+ x 9))) (a 6))"
+      m:intermediate-lambda/both "(local ((define (a x) (+ x 9))) (a 6))"
       (let ([defs `((define (a_0 x) (+ x 9)))])
         `((before-after ((hilite (local ((define (a x) (+ x 9))) (a 6))))
                         ((hilite (define (a_0 x) (+ x 9))) (hilite (a_0 6))))
@@ -827,12 +827,12 @@
           (finished-stepping))))
 
   (t1 'local4
-      m:intermediate "(local ((define (a x) (+ x 13))) a)"
+      m:intermediate/both "(local ((define (a x) (+ x 13))) a)"
       `((before-after ((hilite (local ((define (a x) (+ x 13))) a))) ((hilite (define (a_0 x) (+ x 13))) (hilite a_0)))
         (finished-stepping)))
 
   (t1 'local5
-      m:intermediate-lambda "(local ((define (a x) (+ x 13))) a)"
+      m:intermediate-lambda/both "(local ((define (a x) (+ x 13))) a)"
       `((before-after ((hilite (local ((define (a x) (+ x 13))) a)))
                       ((hilite (define (a_0 x) (+ x 13))) (hilite a_0)))
         (before-after ((define (a_0 x) (+ x 13)) (hilite a_0))
@@ -842,7 +842,7 @@
 
 
   (t1 'local-interref1
-      m:intermediate "(local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1))"
+      m:intermediate/both "(local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1))"
       (let* ([defs1 `((define (a_0 x) (+ x 9)) (define b_0 a_0))]
              [defs2 (append defs1 `((define p_0 7)))])
         `((before-after ((hilite (local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1))))
@@ -858,7 +858,7 @@
           (finished-stepping))))
 
   (t1 'local-interref2
-      m:intermediate-lambda "(local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1))"
+      m:intermediate-lambda/both "(local ((define (a x) (+ x 9)) (define b a) (define p (+ 3 4))) (b 1))"
       (let* ([defs1 `((define (a_0 x) (+ x 9)))]
              [defs2 (append defs1 `((define b_0 (lambda (x) (+ x 9)))))]
              [defs3 (append defs2 `((define p_0 7)))])
@@ -877,7 +877,7 @@
           (finished-stepping))))
 
   (t1 'local-gprime
-      m:intermediate "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
+      m:intermediate/both "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
       (let ([defs `((define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)))])
         `((before-after (,@defs (define gprime (hilite (f12 cos))))
                         (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp)))))
@@ -886,7 +886,7 @@
           (finished-stepping))))
 
   (t1 'local-gprime/lambda
-      m:intermediate-lambda "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
+      m:intermediate-lambda/both "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
       (let ([defs `((define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)))])
         `((before-after (,@defs (define gprime ((hilite f12) cos)))
                         (,@defs (define gprime ((hilite (lambda (g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp))) cos))))
@@ -903,7 +903,7 @@
   ; test generativity... that is, multiple evaluations of a local should get different lifted names:
 
   (t1 'local-generative
-      m:intermediate "(define (a13 b13 c13) (b13 c13))
+      m:intermediate/both "(define (a13 b13 c13) (b13 c13))
 (define (f9 x) (local ((define (maker dc) x)) maker)) (define m1 (f9 3)) (a13 (f9 4) 1)"
       (let* ([defs1 `((define (a13 b13 c13) (b13 c13))
                       (define (f9 x) (local ((define (maker dc) x)) maker)))]
@@ -924,7 +924,8 @@
           (finished-stepping))))
 
   (t1 'local-generative/lambda
-      m:intermediate-lambda "(define (a13 b13 c13) (b13 c13))
+      m:intermediate-lambda/both
+      "(define (a13 b13 c13) (b13 c13))
 (define (f9 x) (local ((define (maker dc) x)) maker)) (define m1 (f9 3)) (a13 (f9 4) 1)"
       (let* ([defs1 `((define (a13 b13 c13) (b13 c13))
                       (define (f9 x) (local ((define (maker dc) x)) maker)))]
@@ -962,7 +963,8 @@
   ;;;;;;;;;;;;;
 
   (t1 'int/lam1
-      m:intermediate-lambda "(define f ((lambda (x) x) (lambda (x) x))) (f f)"
+      m:intermediate-lambda/both
+      "(define f ((lambda (x) x) (lambda (x) x))) (f f)"
       (let ([defs `((define f (lambda (x) x)))])
         `((before-after ((define f (hilite ((lambda (x) x) (lambda (x) x)))))
                         ((define f (hilite (lambda (x) x)))))
@@ -976,7 +978,8 @@
 
 
   (t1 'int/lam2
-      m:intermediate-lambda "(define f (if false (lambda (x) x) (lambda (x) x))) (f f)"
+      m:intermediate-lambda/both
+      "(define f (if false (lambda (x) x) (lambda (x) x))) (f f)"
       (let ([defs `((define f (lambda (x) x)))])
         `((before-after ((define f (hilite (if false (lambda (x) x) (lambda (x) x)))))
                         ((define f (hilite (lambda (x) x)))))
@@ -997,7 +1000,7 @@
   ;
 
   (t1 'time
-      m:intermediate "(time (+ 3 4))"
+      m:intermediate/both "(time (+ 3 4))"
       `((before-after ((hilite (+ 3 4)))
                       ((hilite 7)))
         (finished-stepping)))
@@ -1094,7 +1097,6 @@
   ; add image test: (image-width (filled-rect 10 10 'blue))
 
 
-  
   (t 'check-expect m:upto-int/lam
      (check-expect (+ 3 4) (+ 8 9)) (check-expect (+ 1 1) 2) (check-expect (+ 2 2) 4) (+ 4 5)
      :: {(+ 4 5)} -> {9}
@@ -1102,10 +1104,6 @@
      :: 9 (check-expect {(+ 3 4)} 17) -> 9 (check-expect {7} 17)
      :: 9 false (check-expect {(+ 1 1)} 2) -> 9 false (check-expect {2} 2)
      :: 9 false true (check-expect {(+ 2 2)} 4) -> 9 false true (check-expect {4} 4))
-  
-  (t 'simple-check-expect m:beginner
-     (check-expect (+ 3 4) 7)
-     :: (check-expect {(+ 3 4)} 7) -> (check-expect {7} 7))
   
   (t1 'check-within
       m:upto-int/lam
@@ -1121,9 +1119,6 @@
         (before-after (9 true (check-expect (hilite (+ 1 1)) 2))
                       (9 true (check-expect (hilite 2) 2)))
         (finished-stepping)))
-  
-
-  
   
   (t1 'check-within-bad
       m:upto-int/lam
@@ -1320,7 +1315,7 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
   ;;;;;;;;;;;;;
 
   (t1 'top-ref-to-lifted
-      m:advanced "(define a (local ((define i1 0) (define (i2 x) i1)) i2)) (+ 3 4)"
+      m:advanced/both "(define a (local ((define i1 0) (define (i2 x) i1)) i2)) (+ 3 4)"
       (let ([defs `((define i1_0 0) (define (i2_0 x) i1_0))])
         `((before-after ((define a (hilite (local ((define i1 0) (define (i2 x) i1)) i2))))
                         ((hilite (define i1_0 0)) (hilite (define (i2_0 x) i1_0)) (define a (hilite i2_0))))
@@ -1331,7 +1326,7 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
           (finished-stepping))))
 
   (t1 'set!
-      m:advanced "(define a 3) (set! a (+ 4 5)) a"
+      m:advanced/both "(define a 3) (set! a (+ 4 5)) a"
       `((before-after ((define a 3) (set! a (hilite (+ 4 5))))
                       ((define a 3) (set! a (hilite 9))))
         (before-after ((hilite (define a 3)) (hilite (set! a 9)))
@@ -1341,7 +1336,7 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
         (finished-stepping)))
 
   (t1 'local-set!
-      m:advanced
+      m:advanced/both
       "(define a (local ((define in 14) (define (getter dc) in) (define (modder n) (set! in n))) modder)) (a 15)"
       (let ([d1 `(define in_0 14)]
             [d2 `(define (getter_0 dc) in_0)]
@@ -1366,7 +1361,7 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
   ;;;;;;;;;;;
 
   (t1 'simple-begin
-      m:advanced "(+ 3 (begin 4 5))"
+      m:advanced/both "(+ 3 (begin 4 5))"
       `((before-after ((+ 3 (hilite (begin 4 5))))
                       ((+ 3 (hilite 5))))
         (before-after ((hilite (+ 3 5)))
@@ -1374,7 +1369,8 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
         (finished-stepping)))
 
   (t1 'begin-onlyvalues
-      m:advanced "(+ 3 (begin 4 5 6))"
+      m:advanced/both
+      "(+ 3 (begin 4 5 6))"
       `((before-after ((+ 3 (hilite (begin 4 5 6))))
                       ((+ 3 (hilite (begin 5 6)))))
         (before-after ((+ 3 (hilite (begin 5 6))))
@@ -1383,8 +1379,8 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
                       ((hilite 9)))
         (finished-stepping)))
 
-  (t1 'begin
-      m:advanced "(begin (+ 3 4) (+ 4 5) (+ 9 8))"
+  (t1 'begin m:advanced/both
+      "(begin (+ 3 4) (+ 4 5) (+ 9 8))"
       `((before-after ((begin (hilite (+ 3 4)) (+ 4 5) (+ 9 8)))
                       ((begin (hilite 7) (+ 4 5) (+ 9 8))))
         (before-after ((hilite (begin 7 (+ 4 5) (+ 9 8))))
@@ -1397,7 +1393,7 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
                       ((hilite 17)))
         (finished-stepping)))
   
-  (t 'begin-let-bug m:advanced
+  (t 'begin-let-bug m:advanced/both
      (let ([x 3]) (begin 3 4))
      :: {(let ([x 3]) (begin 3 4))}
      -> {(define x_0 3)} {(begin 3 4)}
@@ -1405,7 +1401,8 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
      -> (define x_0 3) 4)
 
   (t1 'empty-begin
-      m:advanced "(begin)"
+      m:advanced/both
+      "(begin)"
       `((error "begin: expected at least one expression after begin, but nothing's there")))
 
   ;;;;;;;;;;;;
@@ -1415,33 +1412,32 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
   ;;;;;;;;;;;;
   
   (t1 'empty-begin0
-      m:advanced "(begin0)"
+      m:advanced/both
+      "(begin0)"
       `((error "begin0: expected at least one expression after begin0, but nothing's there")))
   
-  (t1 'trivial-begin0
-      m:advanced "(begin0 3)"
+  (t1 'trivial-begin0 m:advanced/both
+      "(begin0 3)"
       `((before-after ((hilite (begin0 3)))
                       ((hilite 3)))
         (finished-stepping)))
   
-
-  
   ;; urg.. the first element of a begin0 is in tail position if there's only one.
-  (t1 'one-item-begin0
-      m:advanced "(begin0 (+ 3 4))"
+  (t1 'one-item-begin0 m:advanced/both
+      "(begin0 (+ 3 4))"
       `((before-after ((hilite (begin0 (+ 3 4))))
                       ((hilite (+ 3 4))))
         (before-after ((hilite (+ 3 4)))
                       ((hilite 7)))
         (finished-stepping)))
   
-  (t 'begin0-onlyvalues m:advanced
+  (t 'begin0-onlyvalues m:advanced/both
      (begin0 3 4 5)
      :: {(begin0 3 4 5)}
      -> {(begin0 3 5)}
      -> {3})
   
-  (t 'begin0 m:advanced
+  (t 'begin0 m:advanced/both
      (begin0 (+ 3 4) (+ 4 5) (+ 6 7))
      :: (begin0 {(+ 3 4)} (+ 4 5) (+ 6 7))
      -> (begin0 {7} (+ 4 5) (+ 6 7))
@@ -2197,13 +2193,13 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
       "(and)"
       `((error "foo")))
   
-  (t 'local-struct/i m:intermediate
+  (t 'local-struct/i m:intermediate/both
      (define (f x) (local ((define-struct a (b c))) x))  (f 1)
      :: (define (f x) (local ((define-struct a (b c))) x)) {(f 1)}
      -> (define (f x) (local ((define-struct a (b c))) x)) 
      {(define-struct a_1 (b c))} {1})
   
-  (t 'local-struct/ilam m:intermediate-lambda
+  (t 'local-struct/ilam m:intermediate-lambda/both
      (define (f x) (local ((define-struct a (b c))) x))  (f 1)
      :: (define (f x) (local ((define-struct a (b c))) x)) {(f 1)}
      -> (define (f x) (local ((define-struct a (b c))) x)) 

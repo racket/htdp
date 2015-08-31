@@ -9,7 +9,10 @@
          racket/match
          racket/contract
          racket/file
-         "language-level-model.rkt")
+         racket/class
+         "language-level-model.rkt"
+         (only-in test-engine/racket-tests
+                  reset-tests))
 
 ;; framework for simulating DrS for running stepper test cases.
 ;; this file currently supports two different testing setups; one
@@ -28,7 +31,8 @@
           [struct stepper-test ([models (listof ll-model?)]
                                 [string string?]
                                 [expected-steps (listof step?)]
-                                [extra-files (listof (list/c string? string?))])]))
+                                [extra-files (listof (list/c string? string?))])]
+          ))
 
 ;; model-or-models/c string? (listof step?) (listof (list/c string? string?))
 
@@ -62,7 +66,8 @@
 (provide test-directory
          display-only-errors
          show-all-steps
-         disable-stepper-error-handling)
+         disable-stepper-error-handling
+         ignore-non-lang-tests?)
 
 (define test-directory (find-system-path 'temp-dir))
 
@@ -79,6 +84,9 @@
 ;; if a test takes more than this many seconds, it's a failure:
 (define MAX-TEST-WAIT 3)
 
+;; this parameter causes all tests of old non-#lang-style programs
+;; to trivially succeed
+(define ignore-non-lang-tests? (make-parameter #f))
 
 ;; DATA DEFINITIONS:
 
@@ -133,21 +141,23 @@
 
 ;; given a model and a string, return the fully expanded source.
 (define (string->expanded-syntax-list ll-model exp-str)
-  (match-define (list input-port filename done-thunk)
-    (prepare-filesystem exp-str null))
-  (define expander-thunk-thunk
-    (create-provider-thunk (ll-ll-model-namespace-spec ll-model)
-                           (ll-ll-model-enable-testing? ll-model)
-                           input-port))
-  (define expander-thunk (expander-thunk-thunk))
-  (let loop ()
-    (define next (expander-thunk))
-    (cond [(eof-object? next) (begin (done-thunk) '())]
-          [else (cons next (loop))])))
+  (parameterize ([current-namespace (make-base-namespace)])
+    (match-define (list input-port filename done-thunk)
+      (prepare-filesystem exp-str null))
+    (define expander-thunk-thunk
+      (create-provider-thunk (ll-ll-model-namespace-spec ll-model)
+                             (ll-ll-model-enable-testing? ll-model)
+                             input-port))
+    (define expander-thunk (expander-thunk-thunk))
+    (let loop ()
+      (define next (expander-thunk))
+      (cond [(eof-object? next) (begin (done-thunk) '())]
+            [else (cons next (loop))]))))
 
 ;; FIXME experimenting...
 (define (string->expanded-syntax-list/hashlang ll-model exp-str)
-  (parameterize ([current-directory test-directory])
+  (parameterize ([current-directory test-directory]
+                 [current-namespace (make-base-namespace)])
     (match-define (list input-port filename done-thunk)
       (prepare-filesystem (add-hashlang-line
                            (ll-hashlang-model-name ll-model)
@@ -170,19 +180,31 @@
 (define (test-sequence the-ll-model exp-str expected-steps
                        extra-files error-box)
   (parameterize ([current-directory test-directory])
-    (match-define (list render-settings provider-thunk dynamic-requirer done-thunk)
+    (unless (display-only-errors)
+      (printf "testing string: ~v\n" exp-str))
+    (parameterize ([current-namespace (make-base-namespace)])
       (match the-ll-model
         [(struct ll-ll-model (namespace-spec render-settings enable-testing?))
-         (match-define (list input-port filename done-thunk)
-           (prepare-filesystem exp-str extra-files))
-         (define provider-thunk
-           (create-provider-thunk namespace-spec enable-testing? input-port))
-         (define (dynamic-requirer) (void))
-         (list render-settings
-               provider-thunk
-               dynamic-requirer
-               done-thunk)]
+         (cond [(not (ignore-non-lang-tests?))
+                (unless (display-only-errors)
+                  (printf "  using language level ~v\n" namespace-spec))
+                (namespace-require 'test-engine/racket-tests)
+                ;; make the test engine happy by adding a binding for test~object:
+                (namespace-set-variable-value! 'test~object #f)
+                (match-define (list input-port filename done-thunk)
+                  (prepare-filesystem exp-str extra-files))
+                (define provider-thunk
+                  (create-provider-thunk namespace-spec enable-testing? input-port))
+                (define (dynamic-requirer) (void))
+                (test-sequence/core render-settings provider-thunk dynamic-requirer
+                                    expected-steps error-box)
+                (done-thunk)]
+               [else
+                (unless (display-only-errors)
+                  (printf "ignoring non-lang test of string: ~v\n" exp-str))])]
         [(struct ll-hashlang-model (name render-settings enable-testing?))
+         (unless (display-only-errors)
+           (printf "  using language level ~v\n" name))
          (match-define (list input-port filename done-thunk)
            (prepare-filesystem (add-hashlang-line
                                 name
@@ -191,16 +213,15 @@
          (define provider-thunk
            (create-hashlang-provider-thunk filename enable-testing? input-port))
          (define (dynamic-requirer)
-           (dynamic-require (list 'quote (filename->spec filename)) #f))
-         (list render-settings
-               provider-thunk
-               dynamic-requirer
-               done-thunk)]))
-    (unless (display-only-errors)
-      (printf "testing string: ~v\n" exp-str))
-    (test-sequence/core render-settings provider-thunk dynamic-requirer
-                        expected-steps error-box)
-    (done-thunk)))
+           (define modspec (list 'quote (filename->spec filename)))
+           (dynamic-require modspec #f)
+           (namespace-require modspec)
+           (define submod-spec `(submod ,modspec test))
+           (when (module-declared? submod-spec)
+             (dynamic-require submod-spec #f)))
+         (test-sequence/core render-settings provider-thunk dynamic-requirer
+                             expected-steps error-box)
+         (done-thunk)]))))
 
 ;; add the #lang line to a string
 (define (add-hashlang-line lang-str str)
@@ -248,6 +269,9 @@
                                namespace-spec '()
                                module-id enable-testing?))))
 
+;; can we at least re-use this?
+(define expansion-namespace (make-base-namespace))
+
 ;; given the filename, whether testing is enabled, and an input port,
 ;; return a thunk that when evaluated returns a thunk that produces
 ;; expanded expressions from the file, one at a time.
@@ -256,12 +280,15 @@
   ;; thunk this so that syntax errors happen within the error handlers:
   (lambda ()
     (list-then-eof
-     (parameterize ([current-namespace test-namespace])
+     (parameterize (;;could this be causing the problem? Hmm, no...
+                    #;[current-namespace expansion-namespace])
        (list
-        (expand
-         (with-module-reading-parameterization
-          (lambda ()
-            (read-syntax "ignored..." input-port)))))))))
+        (let ([ans 
+               (expand
+                (with-module-reading-parameterization
+                 (lambda ()
+                   (read-syntax "ignored..." input-port))))])
+          ans))))))
 
 ;; produce a thunk that returns elements from a list, then ever after
 ;; returns #<eof>
@@ -328,7 +355,6 @@
   (error-display-handler current-error-display-handler))
 
 (define-namespace-anchor n-anchor)
-
 ;; it seems to be okay to use the same namespace for all of the tests... 
 (define test-namespace (make-base-namespace))
 ;; yikes, this code looks ancient. I'm guessing there's an easier/better way
@@ -340,22 +366,21 @@
                          'racket/private/promise
                          test-namespace)
 (parameterize ([current-namespace test-namespace])
-    (namespace-require 'test-engine/racket-tests)
-    ;; make the test engine happy by adding a binding for test~object:
-    (namespace-set-variable-value! 'test~object #f))
+  (namespace-require 'test-engine/racket-tests)
+  ;; make the test engine happy by adding a binding for test~object:
+  (namespace-set-variable-value! 'test~object #f))
 
 ;; call-iter-on-each : (-> syntax?) (syntax? (-> 'a) -> 'a) -> void/c
 ;; call the given iter on each syntax in turn (iter bounces control
 ;; back to us by calling the followup-thunk).
 (define (call-iter-on-each stx-thunk iter)
-  (parameterize ([current-namespace test-namespace])
-    (let iter-loop ()
-      (define next (stx-thunk))
-      (cond [(eof-object? next)
-             (iter next void)]
-            [else
-             ;; I think this expand is unneccessary:
-             (iter (expand next) iter-loop)]))))
+  (let iter-loop ()
+    (define next (stx-thunk))
+    (cond [(eof-object? next)
+           (iter next void)]
+          [else
+           ;; I think this expand is unneccessary:
+           (iter (expand next) iter-loop)])))
 
 
 (define (warn error-box who fmt . args)
@@ -426,6 +451,3 @@
       (begin (warn error-box 'not-equal?
                    "~.s:\nactual:   ~e =/= \nexpected: ~e\n  here's the diff: ~e" name actual expected (sexp-diff actual expected))
              #f)))
-
-
-

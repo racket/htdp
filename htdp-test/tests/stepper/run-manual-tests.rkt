@@ -1,10 +1,8 @@
 #lang racket
 
 (require "through-tests.rkt"
-         (only-in "test-engine.rkt"
-                  disable-stepper-error-handling
-                  display-only-errors
-                  show-all-steps))
+         (prefix-in m: "language-level-model.rkt")
+         "test-engine.rkt")
 
 ;; this file is for manual checking of individual normally-automated tests.
 
@@ -19,8 +17,10 @@
 ;; to use instead of the default.
 (parameterize (#;[disable-stepper-error-handling #t]
                #;[display-only-errors #t]
-               [show-all-steps #t])
-  #;(run-test 'app)
+               #;[show-all-steps #t]
+               #;[ignore-non-lang-tests? #t])
+  #;(run-test 'simple-if)
+  #;(run-test 'simple-if)
   (run-all-tests)
   
   

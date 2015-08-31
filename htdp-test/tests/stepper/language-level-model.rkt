@@ -26,26 +26,31 @@
   (ll-ll-model `(lib "htdp-beginner.ss" "lang") fake-beginner-render-settings #t))
 (define beginner/h
   (ll-hashlang-model "htdp/bsl" fake-beginner-render-settings #t))
+(define beginner/both (list beginner beginner/h))
 
 (define beginner-wla
   (ll-ll-model `(lib "htdp-beginner-abbr.ss" "lang") fake-beginner-wla-render-settings #t))
 (define beginner-wla/h
   (ll-hashlang-model "htdp/bsl+" fake-beginner-wla-render-settings #t))
+(define beginner-wla/both (list beginner-wla beginner-wla/h))
 
 (define intermediate
   (ll-ll-model `(lib "htdp-intermediate.ss" "lang") fake-intermediate-render-settings #t))
 (define intermediate/h
   (ll-hashlang-model "htdp/isl" fake-intermediate-render-settings #t))
+(define intermediate/both (list intermediate intermediate/h))
 
 (define intermediate-lambda
   (ll-ll-model `(lib "htdp-intermediate-lambda.ss" "lang") fake-intermediate/lambda-render-settings #t))
 (define intermediate-lambda/h
   (ll-hashlang-model "htdp/isl+" fake-intermediate/lambda-render-settings #t))
+(define intermediate-lambda/both (list intermediate-lambda intermediate-lambda/h))
 
 (define advanced
   (ll-ll-model `(lib "htdp-advanced.ss" "lang") fake-advanced-render-settings #t))
 (define advanced/h
   (ll-hashlang-model "htdp/asl" fake-advanced-render-settings #t))
+(define advanced/both (list advanced advanced/h))
 
 (define lazy
   (ll-ll-model `(lib "lazy.rkt" "lazy") fake-lazy-render-settings #f))
@@ -95,6 +100,3 @@
         intermediate/h
         intermediate-lambda
         intermediate-lambda/h))
-
-
-
