@@ -65,11 +65,15 @@
      (λ (msg exn)
        (define x (get-rewriten-error-message exn))
        (o-d-h x exn))))
+  (error-value->string-handler
+   (let ([ev->sh (error-value->string-handler)])
+     (λ (v i)
+       (parameterize ([pretty-print-columns 'infinity])
+         (ev->sh v i)))))
   (let ([orig (global-port-print-handler)])
     (global-port-print-handler
      (lambda (val port [depth 0])
        (parameterize ([global-port-print-handler orig])
          (let ([val (print-convert val)])
-           (parameterize ([pretty-print-columns 'infinity])
-             (set-handlers
-              (λ () (pretty-write val port))))))))))
+           (set-handlers
+            (λ () (pretty-write val port)))))))))
