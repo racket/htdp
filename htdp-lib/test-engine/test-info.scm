@@ -1,6 +1,7 @@
-#lang scheme/base
+#lang racket/base
 
-(require scheme/class
+(require racket/class
+         racket/pretty
          deinprogramm/quickcheck/quickcheck
          "print.ss")
 
@@ -161,9 +162,47 @@
                   (satisfied-failed-actual fail)
                   (satisfied-failed-name fail))]
     [(unequal? fail)
-     (do-printing "Actual value ~F differs from ~F, the expected value."
-                  (unequal-test fail)
-                  (unequal-actual fail))]
+     (do-printing "Actual value differs from the expected value.\n")
+     (define (to-los v)
+       (define sp (open-output-string))
+       (parameterize ([pretty-print-columns 40])
+         (print v sp))
+       (for/list ([i (in-lines (open-input-string
+                                (get-output-string sp)))])
+         i))
+     (define prefix "  ")
+     (define between "  ")
+     (define expected-los (cons "Actual value:" (to-los (unequal-test fail))))
+     (define actual-los (cons "Expected value:" (to-los (unequal-actual fail))))
+     (define max-expected (apply max 0 (map string-length expected-los)))
+     (define padded-expected-los
+       (for/list ([l (in-list expected-los)])
+         (string-append l
+                        (make-string (- max-expected (string-length l))
+                                     #\space))))
+     (let loop ([los-left padded-expected-los]
+                [los-right actual-los])
+       (cond
+         [(and (null? los-left) (null? los-right)) (void)]
+         [(null? los-left)
+          (display prefix)
+          (display (make-string max-expected #\space))
+          (display between)
+          (display (car los-right))
+          (newline)
+          (loop '() (cdr los-right))]
+         [(null? los-right)
+          (display prefix)
+          (display (car los-left))
+          (newline)
+          (loop (cdr los-left) '())]
+         [else
+          (display prefix)
+          (display (car los-left))
+          (display between)
+          (display (car los-right))
+          (newline)
+          (loop (cdr los-left) (cdr los-right))]))]
     [(outofrange? fail)
      (do-printing "Actual value ~F is not within ~a of expected value ~F."
                   (outofrange-test fail)
