@@ -4,4 +4,4 @@
 
 (define test-responsibles '((all matthias)))
 
-(define test-omit-files (list "balls.ss"))
+(define test-omit-paths (list "balls.ss"))
