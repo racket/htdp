@@ -151,9 +151,7 @@
               (module configure-runtime racket/base
                 (require htdp/bsl/runtime)
                 (configure '#,options))
-              (module+ test
-                (require (submod ".." configure-runtime))
-                (test)))))))
+              (module+ test (test)))))))
     
     (values
      ;; module-begin
