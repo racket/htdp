@@ -83,6 +83,8 @@
 (htdp-syntax-test #'(set! x 2 3) "set!: expected only one expression for the new value, but found 1 extra part")
 (htdp-syntax-test #'(set! set! 2) "set!: expected a variable after set!, but found a set!")
 (htdp-syntax-test #'(set! x 1) "x: this variable is not defined")
+(htdp-syntax-test #'(define x (lambda)) "lambda: expected (lambda (variable ...) expression), but nothing's there")
+(htdp-syntax-test #'(define x (lambda y)) "lambda: expected (lambda (variable ...) expression), but found something else")
 (htdp-syntax-test #'(lambda (x) (set! x 2)) "set!: expected a mutable variable after set!, but found a variable that cannot be modified: x")
 (htdp-syntax-test #'(let ([x 5]) (lambda (x) (set! x 2))) "set!: expected a mutable variable after set!, but found a variable that cannot be modified")
 

@@ -879,7 +879,9 @@
                               [(proc-name ...) proc-names]
                               [(getter-id ...) getter-names])
                   (define defns
-                    #`(define-values (#;#,signature-name #,parametric-signature-name def-proc-name ...)
+                    #;
+                    (#,signature-name #,parametric-signature-name def-proc-name ...)
+                    #`(define-values (#,parametric-signature-name def-proc-name ...)
                         (let ()
                           (define-values (type-descriptor
                                           raw-constructor
@@ -2194,7 +2196,7 @@
                'lambda
                stx
                (syntax arg-seq)
-               "expected at least one variable after lambda, but found none"))
+               "expected at least one variable, but found none"))
             (let ([dup (check-duplicate-identifier args)])
               (when dup
                 (teach-syntax-error
@@ -2214,15 +2216,15 @@
           (teach-syntax-error
            'lambda
            stx
-           (syntax args)
-           "expected at least one variable (in parentheses) after lambda, but found ~a"
-           (something-else (syntax args)))]
+           #false ;  (syntax stx)
+           "expected (lambda (variable more-variable ...) expression), but found ~a"
+           (something-else (syntax stx)))]
          [(_)
           (teach-syntax-error
            'lambda
            stx
            #f
-           "expected at least one variable (in parentheses) after lambda, but nothing's there")]
+           "expected (lambda (variable more-variable ...) expression), but nothing's there")]
          [_else
           (bad-use-error 'lambda stx)]))))
   
@@ -2416,19 +2418,19 @@
                                      (syntax->list (syntax exprs))
                                      names)
             (syntax/loc stx (lambda (name ...) . exprs)))]
-         [(_ arg-non-seq . exprs)
+         [(_ args . __)
           (teach-syntax-error
            'lambda
            stx
-           (syntax arg-non-seq)
-           "expected at least one variable (in parentheses) after lambda, but found ~a"
-           (something-else (syntax arg-non-seq)))]
+           #false ;  (syntax stx)
+           "expected (lambda (variable ...) expression), but found ~a"
+           (something-else (syntax stx)))]
          [(_)
           (teach-syntax-error
            'lambda
            stx
            #f
-           "expected at least one variable (in parentheses) after lambda, but nothing's there")]
+           "expected (lambda (variable ...) expression), but nothing's there")]
          [_else
           (bad-use-error 'lambda stx)]))))
   
