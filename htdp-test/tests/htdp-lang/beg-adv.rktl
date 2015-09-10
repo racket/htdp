@@ -27,9 +27,10 @@
 (htdp-syntax-test #'(define () 10) "define: expected a name for the function, but nothing's there")
 (htdp-syntax-test #'(define 1 10) "define: expected a variable name, or a function name and its variables (in parentheses), but found a number")
 (htdp-syntax-test #'(define x lambda) "lambda: expected an open parenthesis before lambda, but found none")
-(htdp-syntax-test #'(define x (lambda)) "lambda: expected at least one variable (in parentheses) after lambda, but nothing's there")
+;; copied this line and second-next to advanced and beg-intml because lambda signals different error messages depending on level
+; (htdp-syntax-test #'(define x (lambda)) "lambda: expected (lambda (variable more-variable ...) expression), but nothing's there")
 (htdp-syntax-test #'(define x (lambda (x))) "lambda: expected an expression for the function body, but nothing's there")
-(htdp-syntax-test #'(define x (lambda y)) "lambda: expected at least one variable (in parentheses) after lambda, but found something else")
+; (htdp-syntax-test #'(define x (lambda y)) "lambda: expected (lambda (variable more-variable ...) expression), but found something else")
 (htdp-syntax-test #'(define x (lambda y 10) "lambda: expected at least one variable (in parentheses) after lambda, but found something else"))
 (htdp-syntax-test #'(define x (lambda (10) 10)) "lambda: expected a variable, but found a number")
 (htdp-syntax-test #'(define x (lambda (x 10) 10)) "lambda: expected a variable, but found a number")
