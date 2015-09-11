@@ -759,7 +759,7 @@
                'lambda
                rhs
                (syntax arg-seq)
-               "expected at least one variable after lambda, but found none"))
+               "expected (lambda (variable more-variable ...) expression), but found no variables"))
             (let ([dup (check-duplicate-identifier args)])
               (when dup
                 (teach-syntax-error
@@ -779,7 +779,7 @@
            'lambda
            rhs
            (syntax args)
-           "expected at least one variable (in parentheses) after lambda, but found ~a"
+           "expected (lambda (variable more-variable ...) expression), but found ~a"
            (something-else (syntax args)))]
          ;; Bad lambda, no args:
          [(lam)
@@ -787,7 +787,7 @@
            'lambda
            rhs
            #f
-           "expected at least one variable (in parentheses) after lambda, but nothing's there")]
+           "expected (lambda (variable more-variable ...) expression), but nothing's there")]
          [_else 'ok])]
       [_else 'ok]))
   
@@ -2196,7 +2196,7 @@
                'lambda
                stx
                (syntax arg-seq)
-               "expected at least one variable, but found none"))
+               "expected (lambda (variable more-variable ...) expression), but found no variables"))
             (let ([dup (check-duplicate-identifier args)])
               (when dup
                 (teach-syntax-error

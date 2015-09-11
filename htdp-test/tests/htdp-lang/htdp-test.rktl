@@ -65,15 +65,32 @@
 		    #,@body-accum
 		    #,(strip-context stx))
 		(lambda (x)
-		  (and (exn:fail:syntax? x)
-                       (regexp-match (if (string? rx) (regexp-quote rx) rx) 
-                                     (get-rewriten-error-message x))
+		  (define s1 (exn:fail:syntax? x))
+		  (define s2
+		    (regexp-match (if (string? rx) (regexp-quote rx) rx) (get-rewriten-error-message x)))
+		  (and (or s1
+			   (displayln `(**failure** exn:fail:syntax ,x))
+			   #f)
+		       (or s2
+			   (displayln `(**failure** ,(string? rx) ,(regexp-quote rx) ,rx ,(get-rewriten-error-message x)))
+			   #f)
                        (let ([locs ((exn:srclocs-accessor x) x)])
-                         (and (not (empty? locs))
-                              (andmap (lambda (s) (and (srcloc-source s)
-                                                       (regexp-match #rx"htdp-test[/\\]tests" (srcloc-source s))
-                                                       (srcloc-position s) (srcloc-span s))) 
-
+			 (define r0 (not (empty? locs)))
+                         (and (or r0
+				  (displayln `(not (empty? locs)))
+				  #f)
+                              (andmap (lambda (s)
+					(define r1 (srcloc-source s))
+					(define r2 (regexp-match #rx"htdp-test[/\\]tests" (srcloc-source s)))
+					(define r3 (srcloc-position s))
+					(define r (and r1 r2 r3 (srcloc-span s)))
+					(or r
+					    (displayln
+					      `(**failure**
+						 (srcloc-source ,r1)
+						 (regexp-match ,r2)
+						 (srcloc-position ,r3)))
+					    #f))
                                       locs))))))]))
 
 (require (only-in mzscheme 
