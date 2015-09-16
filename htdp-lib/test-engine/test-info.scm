@@ -2,6 +2,8 @@
 
 (require racket/class
          racket/pretty
+         racket/port
+         racket/list
          deinprogramm/quickcheck/quickcheck
          "print.ss")
 
@@ -163,46 +165,100 @@
                   (satisfied-failed-name fail))]
     [(unequal? fail)
      (do-printing "Actual value differs from the expected value.\n")
-     (define (to-los v)
-       (define sp (open-output-string))
-       (parameterize ([pretty-print-columns 40])
-         (print v sp))
-       (for/list ([i (in-lines (open-input-string
-                                (get-output-string sp)))])
-         i))
+
+     ;; any -> (listof (listof (or/c string? <special>)))
+     (define (to-loloss v)
+       (define-values (in out) (make-pipe-with-specials))
+       (thread
+        (λ ()
+          (parameterize ([pretty-print-columns 40])
+            (print v out))
+          (close-output-port out)))
+       (define (fetch-line)
+         (let loop ([sofar '()])
+           (define c (read-char-or-special in))
+           (cond
+             [(eof-object? c)
+              (if (null? sofar)
+                  #f
+                  sofar)]
+             [(equal? #\newline c)
+              (reverse sofar)]
+             [else (loop (cons c sofar))])))
+       (define lines
+         (let loop ([lines 0])
+           (cond
+             [(= lines 40) (list (string->list "..."))]
+             [else
+              (define l (fetch-line))
+              (cond
+                [l (cons l (loop (+ lines 1)))]
+                [else '()])])))
+       (close-input-port in)
+       lines)
+     
+     (define (send-loss loss)
+       (for ([ele (in-list loss)])
+         (cond
+           [(char? ele) (display ele)]
+           [(port-writes-special? (current-output-port))
+            (write-special ele)]
+           [else (display ele)])))
+     
      (define prefix "  ")
      (define between "  ")
-     (define expected-los (cons "Actual value:" (to-los (unequal-test fail))))
-     (define actual-los (cons "Expected value:" (to-los (unequal-actual fail))))
-     (define max-expected (apply max 0 (map string-length expected-los)))
-     (define padded-expected-los
-       (for/list ([l (in-list expected-los)])
-         (string-append l
-                        (make-string (- max-expected (string-length l))
-                                     #\space))))
-     (let loop ([los-left padded-expected-los]
-                [los-right actual-los])
-       (cond
-         [(and (null? los-left) (null? los-right)) (void)]
-         [(null? los-left)
-          (display prefix)
-          (display (make-string max-expected #\space))
-          (display between)
-          (display (car los-right))
-          (newline)
-          (loop '() (cdr los-right))]
-         [(null? los-right)
-          (display prefix)
-          (display (car los-left))
-          (newline)
-          (loop (cdr los-left) '())]
-         [else
-          (display prefix)
-          (display (car los-left))
-          (display between)
-          (display (car los-right))
-          (newline)
-          (loop (cdr los-left) (cdr los-right))]))]
+     (define plain-expected-los (to-loloss (unequal-actual fail)))
+     (define plain-actual-los (to-loloss (unequal-test fail)))
+     (define actual-value   "Actual value:")
+     (define expected-value "Expected value:")
+     (cond
+       [(and (= 1 (length plain-expected-los))
+             (= 1 (length plain-actual-los)))
+        (define δ (- (string-length expected-value) (string-length actual-value)))
+        (display prefix)
+        (display (make-string (max 0 δ) #\space))
+        (display actual-value)
+        (display " ")
+        (send-loss (car plain-actual-los))
+        (newline)
+        (display prefix)
+        (display (make-string (max 0 (- δ)) #\space))
+        (display expected-value)
+        (display " ")
+        (send-loss (car plain-expected-los))
+        (newline)]
+       [else
+        (define expected-los (cons (string->list actual-value) plain-actual-los))
+        (define actual-los (cons (string->list expected-value) plain-expected-los))
+        (define max-expected (apply max 0 (map length expected-los)))
+        (define padded-expected-los
+          (for/list ([l (in-list expected-los)])
+            (append l
+                    (make-list (- max-expected (length l))
+                               #\space))))
+        (let loop ([los-left padded-expected-los]
+                   [los-right actual-los])
+          (cond
+            [(and (null? los-left) (null? los-right)) (void)]
+            [(null? los-left)
+             (display prefix)
+             (display (make-string max-expected #\space))
+             (display between)
+             (send-loss (car los-right))
+             (newline)
+             (loop '() (cdr los-right))]
+            [(null? los-right)
+             (display prefix)
+             (send-loss (car los-left))
+             (newline)
+             (loop (cdr los-left) '())]
+            [else
+             (display prefix)
+             (send-loss (car los-left))
+             (display between)
+             (send-loss (car los-right))
+             (newline)
+             (loop (cdr los-left) (cdr los-right))]))])]
     [(outofrange? fail)
      (do-printing "Actual value ~F is not within ~a of expected value ~F."
                   (outofrange-test fail)
