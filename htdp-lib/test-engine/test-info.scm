@@ -275,9 +275,19 @@
     [(message-error? fail)
      (for-each display (message-error-strings fail))]
     [(not-mem? fail)
-     (do-printing "Actual value ~F differs from all given members in ~F."
-                  (not-mem-test fail)
-                  (not-mem-set fail))]
+     (define items (not-mem-set fail))
+     (cond
+       [(null? (cdr items))
+        (do-printing "Actual value ~F differs from ~F."
+                     (not-mem-test fail)
+                     (car items))]
+       [else
+        (do-printing "Actual value ~F differs from all given members in: ~F"
+                     (not-mem-test fail)
+                     (car items))
+        (for ([a (in-list (cdr items))])
+          (do-printing ", ~F" a))
+        (do-printing ".")])]
     [(not-range? fail)
      (do-printing "Actual value ~F is not between ~F and ~F, inclusive."
                   (not-range-test fail)
