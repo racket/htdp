@@ -60,6 +60,7 @@
     (class* object% (start-stop<%>)
       (inspect #f)
       (init-field world0)
+      (init-field display-mode)
       (init-field name state register port check-with on-key on-release on-pad on-mouse record?)
       (init on-receive on-draw stop-when)
       
@@ -97,8 +98,8 @@
                    ;; --- "the universe disconnected" should come from here ---
                    (define msg (tcp-receive in))
                    (cond
-                    [(sexp? msg) (prec msg) RECEIVE] ;; break loop if EOF
-                    [else (error 'RECEIVE "sexp expected, received: ~e" msg)])))))))
+                     [(sexp? msg) (prec msg) RECEIVE] ;; break loop if EOF
+                     [else (error 'RECEIVE "sexp expected, received: ~e" msg)])))))))
           RECEIVE)
         ;; --- now register, obtain connection, and spawn a thread for receiving
         (parameterize ([current-custodian *rec*])
@@ -203,14 +204,36 @@
       ;; effect: create, show and set the-frame
       (define/pubment (create-frame/universe)
         (define play-back:cust (make-custodian))
-        (define frame (new (class frame%
-                             (super-new)
-                             (define/augment (on-close)  
-                               (callback-stop! 'frame-stop)
-                               (custodian-shutdown-all play-back:cust)))
-                           (label (if name (format "~a" name) "World"))
-                           (alignment '(center center))
-                           (style '(no-resize-border metal))))
+        
+        (define frame-x 2)
+        (define frame-y 2)
+        
+        (define-values (mode-width mode-height mode-frame-x mode-frame-y mode-style)
+          (case display-mode
+            [(normal)
+             (values width height frame-x frame-y '(no-resize-border #;no-caption))]
+            [(fullscreen)
+             (define-values (w h) (get-display-size #t))
+             (set! width (or w width))
+             (set! height (or h height))
+             (values width height frame-x frame-y '(fullscreen-button))]))
+        
+        (define frame
+          (new
+           (class frame%
+             (super-new)
+             (inherit move resize)
+             (define/augment (on-close)
+               (displayln `(on-close ,mode-style))
+               (callback-stop! 'frame-stop)
+               (custodian-shutdown-all play-back:cust)))
+           (label (if name (format "~a" name) "World"))
+           (alignment '(center center))
+           [width  mode-width]
+           [height mode-height]
+           [x      mode-frame-x]
+           [y      mode-frame-y]
+           [style  mode-style]))
         
         (define editor-canvas
           (new (deal-with-key (deal-with-mouse editor-canvas%))
@@ -226,6 +249,10 @@
         (set!-values (enable-images-button disable-images-button)
                      (inner (values void void) create-frame/universe frame play-back:cust))
         (send editor-canvas focus)
+
+        (define x (eq? display-mode 'fullscreen))
+        (displayln `(fullscreen ,x ,mode-style))
+        (send frame fullscreen x)
         (send frame show #t))
       
       ;; Image -> Void

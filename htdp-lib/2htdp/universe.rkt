@@ -120,6 +120,9 @@
   ;; -- should the session be recorded and turned into PNGs and an animated GIF
   ;; -- if the value is a string and is the name of a local directory, use it! 
   [record? DEFAULT #'#f (expr-with-check any> "")]
+
+  [display-mode DEFAULT #''normal
+                (expr-with-check display-mode> "expected a display mode ('normal, 'fullscreen)")]
   ;; (U #f String)
   ;; -- name specifies one string 
   [name DEFAULT #'#f (expr-with-check string-or-symbol> "expected a string")]

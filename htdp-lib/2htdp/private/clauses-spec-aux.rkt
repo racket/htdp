@@ -3,7 +3,9 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; provides constants and functions for specifying the shape of clauses in big-bang and universe 
 
-(provide port> nat> nat? proc> bool> num> ip> string> symbol> string-or-symbol> any> K False True)
+(provide
+ port> nat> nat? proc> bool> num> ip> string> symbol> display-mode> string-or-symbol> any>
+ K False True)
 
 (require htdp/error "check-aux.rkt")
 
@@ -28,6 +30,13 @@
 ;; Symbol X -> X : symbol? 
 (define (symbol> tag x)
   (check-arg tag (symbol? x) "symbol" "second" x)
+  x)
+
+(define DMODE '(normal fullscreen))
+
+;; Symbol X -> X : symbol? 
+(define (display-mode> tag x)
+  (check-arg tag (and (symbol? x) (memq x DMODE)) "display mode" "second" x)
   x)
 
 ;; Symbol X -> X : symbol?  or string? 
