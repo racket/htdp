@@ -183,7 +183,7 @@ The design of a world program demands that you come up with a data
 @defform/subs[#:id big-bang
               #:literals
               (on-tick to-draw on-draw on-key on-pad on-release on-mouse on-receive stop-when
-              check-with register record? state name)
+              check-with register record? display-mode state name port)
               (big-bang state-expr clause ...)
               ([clause
                  (on-tick tick-expr)
@@ -198,6 +198,7 @@ The design of a world program demands that you come up with a data
                  (stop-when stop-expr) (stop-when stop-expr last-scene-expr)
                  (check-with world?-expr)
                  (record? r-expr)
+                 (display-mode d-expr)
                  (state expr)
                  (on-receive rec-expr)
                  (register IP-expr)
@@ -734,6 +735,18 @@ and @racket[big-bang] will close down all event handling.}
  directory/folder (in the local directory/folder), the directory is used to
  deposit the images.
 }}
+
+@item{
+
+@defform[#:literals (display-mode)
+         (display-mode d-expr)
+         #:contracts
+         ([d-expr (or/c 'fullscreen 'normal)])]{
+ informs DrRacket to choose one of two display modes: @racket['normal] or
+ @racket['fullscreen]. The @racket['normal] mode is the default and uses
+ the size specifications from the @racket[to-draw] clause. If the
+ @racket['fullscreen] mode is specified, @racket[big-bang] takes over the
+ full screen.}}
 
 @item{
 
