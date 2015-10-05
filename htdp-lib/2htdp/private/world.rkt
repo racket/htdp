@@ -224,7 +224,6 @@
              (super-new)
              (inherit move resize)
              (define/augment (on-close)
-               (displayln `(on-close ,mode-style))
                (callback-stop! 'frame-stop)
                (custodian-shutdown-all play-back:cust)))
            (label (if name (format "~a" name) "World"))
@@ -249,10 +248,8 @@
         (set!-values (enable-images-button disable-images-button)
                      (inner (values void void) create-frame/universe frame play-back:cust))
         (send editor-canvas focus)
-
-        (define x (eq? display-mode 'fullscreen))
-        (displayln `(fullscreen ,x ,mode-style))
-        (send frame fullscreen x)
+        
+        (send frame fullscreen (eq? display-mode 'fullscreen))
         (send frame show #t))
       
       ;; Image -> Void

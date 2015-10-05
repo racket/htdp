@@ -7,7 +7,7 @@
  port> nat> nat? proc> bool> num> ip> string> symbol> display-mode> string-or-symbol> any>
  K False True)
 
-(require htdp/error "check-aux.rkt")
+(require racket/format racket/string htdp/error "check-aux.rkt")
 
 (define (K w . r) w)
 (define (False w) #f)
@@ -36,7 +36,9 @@
 
 ;; Symbol X -> X : symbol? 
 (define (display-mode> tag x)
-  (check-arg tag (and (symbol? x) (memq x DMODE)) "display mode" "second" x)
+  (define d (map (λ (x) (format "'~a" x)) DMODE))
+  (define dd (string-append "display mode [" (string-join d ", ")  "]"))
+  (check-arg tag (and (symbol? x) (memq x DMODE)) dd "first" x)
   x)
 
 ;; Symbol X -> X : symbol?  or string? 
