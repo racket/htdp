@@ -44,6 +44,8 @@
 
        (public stepper:render-to-sexp)
        (define (stepper:render-to-sexp val settings language-level)
+         (or (and (procedure? val)
+                  (object-name val))
          (parameterize ([pretty-print-show-inexactness (stepper:show-inexactness?)]
                         [current-print-convert-hook stepper-print-convert-hook])
            (call-with-values
@@ -73,7 +75,7 @@
                           ans)])]
                 [(list value)
                  (log-stepper-debug "render-to-sexp: value returned from convert-value: ~v\n" value)
-                 value])))))
+                 value]))))))
 
        (super-instantiate ())))))
 
