@@ -544,12 +544,12 @@
                                                                    @interaction[#:eval (bsl) x (member "hello" x)]
                                                                    }
   @defproc[((beginner-remove remove) [x any/c][l list?]) list?]{
-                                                                Constructs a list like the given one with the first occurrence of the
+                                                                Constructs a list like the given one, with the first occurrence of the
                                                                 given item removed (comparing values with equal?).
                                                                 @interaction[#:eval (bsl) x (remove "hello" x) z (remove "hello" z)]
                                                                 }
   @defproc[((beginner-remove-all remove-all) [x any/c][l list?]) list?]{
-                                                                Constructs a list like the given one with the first occurrence of the
+                                                                Constructs a list like the given one, with all occurrences of the
                                                                 given item removed (comparing values with equal?).
                                                                 @interaction[#:eval (bsl) x (remove-all "hello" x) z (remove-all "hello" z)]
                                                                 }
