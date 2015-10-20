@@ -1,4 +1,11 @@
 ------------------------------------------------------------------------
+Version 6.3				  [Mon Oct 19 21:50:57 EDT 2015]
+
+* added display-mode option to big-bang so it can take over the whole
+  screen
+* small bug fixes
+
+------------------------------------------------------------------------
 Version 6.2
 
 * new teachpack: 2htdp/abstraction -- 
