@@ -11,7 +11,7 @@
 
 (define-syntax-rule 
   (test body expected-value expected-output)
-  (begin
+  (with-handlers ((exn:fail? (lambda (x) (displayln (exn-message x)) #false)))
     (define actual-value (gensym))
     (define actual-output (with-output-to-string (lambda () (set! actual-value body))))
     (unless (equal? actual-value expected-value)
