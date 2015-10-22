@@ -110,6 +110,8 @@
 
 (define (recon-value val render-settings [assigned-name #f]
                      [current-so-far nothing-so-far] [seen-promises null])
+  (when (boolean? val)
+    (log-stepper-debug "got a boolean: ~v\n" val))
   (cond
     [(hash-ref finished-xml-box-table val (lambda () #f))
      (stepper-syntax-property #`(quote #,val) 'stepper-xml-value-hint 'from-xml-box)]
