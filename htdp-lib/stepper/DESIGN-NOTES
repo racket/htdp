@@ -334,8 +334,8 @@ that's been a long time coming. At some point, I'm also hoping to
 combine the stepper into the main DrScheme frame.
 
 Oh yes, another major change was that evaluation is now strictly on a
-one- expression-at-a-time basis.  The read, parse, and step are now done
-indiv- idually for each expression.  This has the ancillary benefit that
+one-expression-at-a-time basis.  The read, parse, and step are now done
+individually for each expression.  This has the ancillary benefit that
 there's no longer any need to reconstruct _all_ of the old expressions
 at every step.
 
@@ -370,15 +370,15 @@ the width of an element.  The result of this procedure is used to decide
 whether a line break is necessary.  However, this hook is _also_ used to
 determine whether or not the pretty-printer will try to print the string
 itself or hand off responsibility to the display-handler hook.  In other
-words, if the width- hook procedure returns a non-false value, then the
+words, if the width-hook procedure returns a non-false value, then the
 display-handler will be called to print the actual string.  The other
-pair of hook procedures is first, a procedure which is called _before_
-display of any subexpression, and one which is called _after_ display of
-any subexpression.
+pair of hook procedures is: first, a procedure which is called _before_
+display of any subexpression, and second, one which is called _after_
+display of any subexpression.
 
 So how does the stepper use this to do its work?  Well, the stepper has
 two tricky tasks to accomplish.  First, it must highlight some
-subexpression.  Second, it must manually insert elements (i.e. images)
+subexpressions.  Second, it must manually insert elements (i.e. images)
 which the pretty-printer does not handle.
 
 Let's talk about images first.  In order to display images, the
