@@ -134,7 +134,7 @@
 (define stepper-sub-text%
   (class f:text:standard-style-list%
     
-    (init-field exps highlight-color show-inexactness?)
+    (init-field exps highlight-color show-inexactness? print-boolean-long-form?)
     
     (inherit insert get-style-list set-style-list change-style highlight-range last-position lock erase
              begin-edit-sequence end-edit-sequence get-start-position select-all clear)
@@ -177,6 +177,7 @@
       (parameterize 
           ([pretty-print-show-inexactness show-inexactness?]
            [pretty-print-columns pretty-printed-width]
+           [print-boolean-long-form print-boolean-long-form?]
            
            ; the pretty-print-size-hook decides whether this object should be printed by the new pretty-print-hook
            [pretty-print-size-hook
@@ -234,8 +235,7 @@
            ;; mflatt: MAJOR HACK - this setting needs to come from the language
            ;;  somehow
            ;; jbc : this could be fixed in the same way that inexact-number printing is handled....
-           [read-case-sensitive #t]
-           )
+           [read-case-sensitive #t])
         (pretty-write sexp text-port)))
     
     (define/public (format-whole-step)
@@ -336,7 +336,7 @@
 (define stepper-text%
   (class f:text:standard-style-list%
     
-    (init-field left-side right-side show-inexactness?)
+    (init-field left-side right-side show-inexactness? print-boolean-long-form?)
     
     (inherit find-snip insert change-style highlight-range last-position lock erase auto-wrap
              begin-edit-sequence end-edit-sequence get-start-position get-style-list set-style-list
@@ -402,7 +402,9 @@
             (cond [(string? error-or-exps) 
                    (make-object stepper-sub-error-text% error-or-exps)]
                   [else 
-                   (make-object stepper-sub-text% error-or-exps highlight-color show-inexactness?)])))
+                   (make-object stepper-sub-text%
+                     error-or-exps highlight-color show-inexactness?
+                     print-boolean-long-form?)])))
     
     (setup-editor-snip before-snip left-side redex-highlight-color)
     (setup-editor-snip after-snip right-side reduct-highlight-color)
@@ -520,30 +522,35 @@
 
 ;; testing code
 
-(define (stepper-text-test . args)
-  (let* ([new-frame (make-object frame% "test-frame")]
-         [new-text (apply make-object stepper-text% args)]
-         [new-canvas (make-object stepper-canvas% new-frame new-text)])
-    (send new-canvas min-width 200)
-    (send new-canvas min-height 200)
-    (send new-frame show #t)
-    (send new-text reset-width new-canvas)
-    new-canvas))
-
-
-#;(define a
+(module+ test
+  
+  
+  (define (stepper-text-test . args)
+    (let* ([new-frame (make-object frame% "test-frame")]
+           [new-text (apply make-object stepper-text% args)]
+           [new-canvas (make-object stepper-canvas% new-frame new-text)])
+      (send new-canvas min-width 200)
+      (send new-canvas min-height 200)
+      (send new-frame show #t)
+      (send new-text reset-width new-canvas)
+      new-canvas))
+  
+  
+  #;(define a
     (stepper-text-test (build-stx-with-highlight `((* 13 (hilite (* 15 16)))))
                        (build-stx-with-highlight `((hilite (+ 3 4)) (define y 4) 13 14 (+  (hilite 13) (hilite #f)) 13 
                                                                     298 1 1 (+ (x 398 (hilite (+ x 398))) (hilite (x 398 (+ x 398)))) (hilite #f)))
                        #t))
-
-;; test out scroll bars
-#;(stepper-text-test (build-stx-with-highlight `(1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8))
+  
+  ;; test out scroll bars
+  #;(stepper-text-test (build-stx-with-highlight `(1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8))
                      (build-stx-with-highlight `(free!))
                      #t)
 
-#;(stepper-text-test  `() "This is an error message" #t)
+  ;; error message on the right
+  (stepper-text-test  `() "This is an error message" #t #t)
 
-#;(stepper-text-test  "This is another error message" `(poomp) #t)
+  ;; error message on the left
+  (stepper-text-test  "This is another error message" `(poomp) #t #t))
   
 

@@ -422,7 +422,6 @@
          (set! disable-runaway-counter #t)
          #t]))
   
-  
 
   ;; translates a result into a step
   ;; format-result : step-result -> step?
@@ -433,7 +432,9 @@
                        [left-side pre-exps]
                        [right-side post-exps]
                        [show-inexactness? 
-                        (send language-level stepper:show-inexactness?)])
+                        (send language-level stepper:show-inexactness?)]
+                       [print-boolean-long-form? 
+                        (send language-level stepper:print-boolean-long-form?)])
                   kind 
                   (list pre-src post-src))]
       [(struct before-error-result (pre-exps err-msg pre-src))
@@ -441,7 +442,9 @@
                        [left-side pre-exps] 
                        [right-side err-msg]
                        [show-inexactness?
-                        (send language-level stepper:show-inexactness?)])
+                        (send language-level stepper:show-inexactness?)]
+                       [print-boolean-long-form? 
+                        (send language-level stepper:print-boolean-long-form?)])
                   'finished-or-error 
                   (list pre-src))]
       [(struct error-result (err-msg))
@@ -449,7 +452,9 @@
                        [left-side null]
                        [right-side err-msg]
                        [show-inexactness?
-                        (send language-level stepper:show-inexactness?)]) 
+                        (send language-level stepper:show-inexactness?)]
+                       [print-boolean-long-form? 
+                        (send language-level stepper:print-boolean-long-form?)]) 
                   'finished-or-error 
                   (list))]
       [(struct finished-stepping ())

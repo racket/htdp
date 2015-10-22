@@ -33,49 +33,63 @@
        (public stepper:enable-let-lifting?)
        (define (stepper:enable-let-lifting?) #f)
 
+       ;; these next three parameters should be overridden by
+       ;; the language definition to match the way that the language
+       ;; wants these values printed.
        (public stepper:show-lambdas-as-lambdas?)
        (define (stepper:show-lambdas-as-lambdas?) #t)
 
        (public stepper:show-inexactness?)
        (define (stepper:show-inexactness?) #t)
 
+       (public stepper:print-boolean-long-form?)
+       (define (stepper:print-boolean-long-form?) #t)
+
        (public stepper:show-consumed-and/or-clauses?)
        (define (stepper:show-consumed-and/or-clauses?) #t)
 
        (public stepper:render-to-sexp)
        (define (stepper:render-to-sexp val settings language-level)
+         (when (boolean? val)
+           (log-stepper-debug "render-to-sexp got a boolean: ~v\n" val))
          (or (and (procedure? val)
                   (object-name val))
-         (parameterize ([pretty-print-show-inexactness (stepper:show-inexactness?)]
-                        [current-print-convert-hook stepper-print-convert-hook])
-           (call-with-values
-            (lambda ()
-              ;; I'm not sure that these print settings actually need to be set...
-              (call-with-print-settings
-               language-level
-               settings
-               (lambda ()
-                 (drracket:language:simple-module-based-language-convert-value
-                  val
-                  settings))))
-            (lambda args
-              (match args
-                [(list value should-be-written?)
-                 (cond [should-be-written?
-                        ;; warning, don't know if this happens in the stepper:
-                        (log-stepper-debug "print-convert returned writable: ~v\n" value)
-                        value]
-                       [else
-                        (let ([ans (let ([os-port (open-output-string)])
-                                     (print value os-port)
-                                     ;; this 'read' is somewhat scary. I'd like to
-                                     ;; get rid of this:
-                                     (read (open-input-string (get-output-string os-port))))])
-                          (log-stepper-debug "print-convert returned string that read mapped to: ~s\n" ans)
-                          ans)])]
-                [(list value)
-                 (log-stepper-debug "render-to-sexp: value returned from convert-value: ~v\n" value)
-                 value]))))))
+             (parameterize ([pretty-print-show-inexactness (stepper:show-inexactness?)]
+                            [current-print-convert-hook stepper-print-convert-hook])
+               (call-with-values
+                (lambda ()
+                  ;; I'm not sure that these print settings actually need to be set...
+                  ;; or... that they need to be set *here*. They might need to be set
+                  ;; when the pretty-print to the actual width occurs. That is, when
+                  ;; they get converted to strings...
+                  ;; try removing this wrapper when things are working. (2015-10-22)
+                  (call-with-print-settings
+                   language-level
+                   settings
+                   (lambda ()
+                     (drracket:language:simple-module-based-language-convert-value
+                      val
+                      settings))))
+                (lambda args
+                  (match args
+                    [(list value should-be-written?)
+                     (cond [should-be-written?
+                            ;; warning, don't know if this happens in the stepper:
+                            (log-stepper-debug "print-convert returned writable: ~v\n" value)
+                            value]
+                           [else
+                            (let ([ans (let ([os-port (open-output-string)])
+                                         (print value os-port)
+                                         (when (boolean? val)
+                                           (log-stepper-debug "string printed by print: ~v\n" (get-output-string os-port)))
+                                         ;; this 'read' is somewhat scary. I'd like to
+                                         ;; get rid of this:
+                                         (read (open-input-string (get-output-string os-port))))])
+                              (log-stepper-debug "print-convert returned string that read mapped to: ~s\n" ans)
+                              ans)])]
+                    [(list value)
+                     (log-stepper-debug "render-to-sexp: value returned from convert-value: ~v\n" value)
+                     value]))))))
 
        (super-instantiate ())))))
 
@@ -412,16 +426,16 @@
 (define (call-with-print-settings language simple-settings thunk)
   ;; I have to say, I'm somewhat alarmed by the presence of the pretty-print
   ;; width here. I'm hoping it doesn't affect the thunks that we're using here...
-  ((drracket:language:make-setup-printing-parameters) thunk simple-settings 'infinity)
+  #;((drracket:language:make-setup-printing-parameters) thunk simple-settings 'infinity)
   ;; okay, this is getting interesting. I'm updating this code for 2015, and ...
   ;; things are a little scary. In particular, it looks like 'set-printing-parameters
   ;; is no longer the name of this method... this kind of dynamic dispatch is frightening.
-  #;(if (method-in-interface? 'set-printing-parameters (object-interface language))
+  (if (method-in-interface? 'set-printing-parameters (object-interface language))
       (send language set-printing-parameters simple-settings thunk)
       ;; assume that the current print-convert context is fine
-      ;; (error 'stepper-tool "language object does not contain set-printing-parameters method")
+      (error 'stepper-tool "language object does not contain set-printing-parameters method")
       ;; 2009-09-11, JBC : Gee Whiz, why the heck is it okay to assume that !?
-      (thunk)))
+      #;(thunk)))
 
 ;; WE REALLY WANT TO GET RID OF THIS STUFF (2005-07-01, JBC)
 
