@@ -97,6 +97,9 @@ stepper-hint :
  [ 'comes-from-check-within ] : ... from a 'check-within'
  [ 'comes-from-check-error ] : ... from a 'check-error'
 
+ [ 'comes-from-true/false ] : this expression was expanded from a use
+    of 'true' or 'false'
+
 stepper-define-type:
  this is attached to the right-hand sides of defines to indicate what
  kind of define they came from.
