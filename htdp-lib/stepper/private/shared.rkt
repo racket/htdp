@@ -83,7 +83,6 @@
  ; expr-read
  ; set-expr-read!
  values-map
- a...b ; a list of numbers from a to b
  reset-profiling-table ; profiling info
  get-set-pair-union-stats ; profiling info
  re-intern-identifier
@@ -103,141 +102,112 @@
                                            any)]) ; sexp
 
   
-  ; A step-result is either:
-  ; (make-before-after-result finished-exps exp redex reduct)
-  ; or (make-before-error-result finished-exps exp redex err-msg)
-  ; or (make-error-result finished-exps err-msg)
-  ; or (make-finished-result finished-exps)
-  
-  (struct before-after-result (pre-exps post-exps kind pre-src post-src) #:prefab)
-  (struct before-error-result (pre-exps err-msg pre-src) #:prefab)
-  (struct error-result (err-msg) #:prefab)
-  (struct finished-stepping () #:prefab)
-  (struct runaway-process (sema) #:prefab)
-  
-  (define step-result? (or/c before-after-result? before-error-result? 
-                             error-result? finished-stepping?))
-  (define step-maybe-result? (or/c step-result? runaway-process?))
-  
-  ; the closure record is placed in the closure table
+; A step-result is either:
+; (make-before-after-result finished-exps exp redex reduct)
+; or (make-before-error-result finished-exps exp redex err-msg)
+; or (make-error-result finished-exps err-msg)
+; or (make-finished-result finished-exps)
 
-  (define-struct closure-record (name mark constructor? lifted-index))
+(struct before-after-result (pre-exps post-exps kind pre-src post-src) #:prefab)
+(struct before-error-result (pre-exps err-msg pre-src) #:prefab)
+(struct error-result (err-msg) #:prefab)
+(struct finished-stepping () #:prefab)
+(struct runaway-process (sema) #:prefab)
 
-  ; bogus-binding is used so that we can create legal bindings for temporary variables
-  
-  (define (create-bogus-binding name)
-    (let* ([gensymed-name (gensym name)]
-           [binding (datum->syntax #'here gensymed-name)])
-      binding))
-  
-  ; make-binding-source creates a pool of bindings, indexed by arbitrary keys. These bindings
-  ; not eq? to any other bindings[*], but a client can always get the same binding by
-  ; invoking the resulting procedure with the same key (numbers work well). make-binding-source
-  ; also takes a string which will be part of the printed representation of the binding's
-  ; name; this makes debugging easier.
-  ; [*] actually, this is not true if you don't use a one-to-one function as the binding-maker
-  ; make-gensym-source : (string -> (key -> binding))
-  
-  (define (make-binding-source id-string binding-maker key-displayer)
-    (let ([assoc-table (make-weak-hash)])
-      (lambda (key)
-        (let ([maybe-fetch (hash-ref assoc-table key (lambda () #f))])
-          (or maybe-fetch
-              (begin
-                (let* ([new-binding (binding-maker 
-                                     (string-append id-string (key-displayer key) "-"))])
-                  (hash-set! assoc-table key new-binding)
-                  new-binding)))))))
-  
-  
-  ; get-arg-var maintains a list of bindings associated with the non-negative
-  ; integers.  These symbols are used in the elaboration of applications; the nth
-  ; in the application is evaluated and stored in a variable whose name is the nth
-  ; gensym supplied by get-arg-var.
-  
-  (define get-arg-var
-    (make-binding-source "arg" create-bogus-binding number->string))
-  
-  ; test cases: (returns #t on success)
-;  (printf "test of get-arg-binding: ~a\n"
-;          (let* ([arg3 (get-arg-var 3)]
-;                 [arg2 (get-arg-var 2)]
-;                 [arg1 (get-arg-var 1)]
-;                 [arg2p (get-arg-var 2)])
-;            (and (not (eq? arg3 arg2))
-;                 (not (eq? arg3 arg1))
-;                 (not (eq? arg3 arg2p))
-;                 (not (eq? arg2 arg1))
-;                 (eq? arg2 arg2p)
-;                 (not (eq? arg1 arg2p)))))
+(define step-result? (or/c before-after-result? before-error-result? 
+                           error-result? finished-stepping?))
+(define step-maybe-result? (or/c step-result? runaway-process?))
 
-  (define begin0-temp (create-bogus-binding "begin0-temp"))
-  
-  ; get-lifted-var maintains the mapping between let-bindings and the syntax object
-  ; which is used to capture its index at runtime.
-  ; unfortunately, it can't use "make-binding-source" because you need to compare the items 
-  ; with module-variable=?, which means that hash tables won't work.
-  
-  ; my weak-assoc lists are lists of two-element lists, where the first one is in a weak box.
-  ; furthermore, the whole thing is in a box, to allow it to be banged when needed.
-  
-  (define (weak-assoc-add boxed-lst key value)
-       (set-box! boxed-lst (cons (list (make-weak-box key) value) (unbox boxed-lst))))
-  
-  (define (weak-assoc-search boxed-lst key eq-fun)
-    (let* ([lst (unbox boxed-lst)]
-           [found-val #f]
-           [stripped (let loop ([remaining lst])
-                       (if (null? remaining)
-                           null
-                           (let* ([first (car remaining)]
-                                  [first-key (weak-box-value (car first))])
-                             (if first-key
-                                 (if (eq-fun key first-key)
-                                     (begin 
-                                       (set! found-val (cadr first))
-                                       remaining)
-                                     (cons first
-                                           (loop (cdr remaining))))
-                                 (loop (cdr remaining))))))])
-      (set-box! boxed-lst stripped)
-      found-val))
-  
-  ; test cases:
-  ;  (define wa (box null))
-  ;  (define-struct test ())
-  ;  (weak-assoc-add wa 3 4)
-  ;  (weak-assoc-add wa 9 10)
-  ;  (= (weak-assoc-search wa 3 =) 4)
-  ;  (= (weak-assoc-search wa 9 =) 10)
-  ;  (= (weak-assoc-search wa 3 =) 4)
-  ;  (= (length (unbox wa)) 2)
-  ;  (define my-struct (make-test))
-  ;  (weak-assoc-add wa my-struct 14)
-  ;  (= (length (unbox wa)) 3)
-  ;  (= (weak-assoc-search wa my-struct eq?) 14)
-  ;  (set! my-struct #f)
-  ;  (collect-garbage)
-  ;  (= (length (unbox wa)) 3)
-  ;  (= (weak-assoc-search wa 3 =) 4)
-  ;  (= (length (unbox wa)) 2)
-  
-  (define lifted-index 0)
-  (define (next-lifted-symbol str)
-    (let ([index lifted-index]) 
-      (set! lifted-index (+ lifted-index 1))
-      (datum->syntax #'here (string->symbol (string-append str (number->string index))))))
- 
-  (define get-lifted-var
-   (let ([assoc-table (box null)])
-      (lambda (stx)
-        (let ([maybe-fetch (weak-assoc-search assoc-table stx free-identifier=?)])
-          (or maybe-fetch
-              (begin
-                (let* ([new-binding (next-lifted-symbol
-                                     (string-append "lifter-" (format "~a" (syntax->datum stx)) "-"))])
-                  (weak-assoc-add assoc-table stx new-binding)
-                  new-binding)))))))
+; the closure record is placed in the closure table
+
+(define-struct closure-record (name mark constructor? lifted-index))
+
+; bogus-binding is used so that we can create legal bindings for temporary variables
+
+(define (create-bogus-binding name)
+  (let* ([gensymed-name (gensym name)]
+         [binding (datum->syntax #'here gensymed-name)])
+    binding))
+
+; make-binding-source creates a pool of bindings, indexed by arbitrary keys. These bindings
+; not eq? to any other bindings[*], but a client can always get the same binding by
+; invoking the resulting procedure with the same key (numbers work well). make-binding-source
+; also takes a string which will be part of the printed representation of the binding's
+; name; this makes debugging easier.
+; [*] actually, this is not true if you don't use a one-to-one function as the binding-maker
+; make-gensym-source : (string -> (key -> binding))
+
+(define (make-binding-source id-string binding-maker key-displayer)
+  (let ([assoc-table (make-weak-hash)])
+    (lambda (key)
+      (let ([maybe-fetch (hash-ref assoc-table key (lambda () #f))])
+        (or maybe-fetch
+            (begin
+              (let* ([new-binding (binding-maker 
+                                   (string-append id-string (key-displayer key) "-"))])
+                (hash-set! assoc-table key new-binding)
+                new-binding)))))))
+
+
+; get-arg-var maintains a list of bindings associated with the non-negative
+; integers.  These symbols are used in the elaboration of applications; the nth
+; in the application is evaluated and stored in a variable whose name is the nth
+; gensym supplied by get-arg-var.
+
+(define get-arg-var
+  (make-binding-source "arg" create-bogus-binding number->string))
+
+
+
+(define begin0-temp (create-bogus-binding "begin0-temp"))
+
+; get-lifted-var maintains the mapping between let-bindings and the syntax object
+; which is used to capture its index at runtime.
+; unfortunately, it can't use "make-binding-source" because you need to compare the items 
+; with module-variable=?, which means that hash tables won't work.
+
+; my weak-assoc lists are lists of two-element lists, where the first one is in a weak box.
+; furthermore, the whole thing is in a box, to allow it to be banged when needed.
+
+(define (weak-assoc-add boxed-lst key value)
+  (set-box! boxed-lst (cons (list (make-weak-box key) value)
+                            (unbox boxed-lst))))
+
+(define (weak-assoc-search boxed-lst key eq-fun)
+  (let* ([lst (unbox boxed-lst)]
+         [found-val #f]
+         [stripped (let loop ([remaining lst])
+                     (if (null? remaining)
+                         null
+                         (let* ([first (car remaining)]
+                                [first-key (weak-box-value (car first))])
+                           (if first-key
+                               (if (eq-fun key first-key)
+                                   (begin 
+                                     (set! found-val (cadr first))
+                                     remaining)
+                                   (cons first
+                                         (loop (cdr remaining))))
+                               (loop (cdr remaining))))))])
+    (set-box! boxed-lst stripped)
+    found-val))
+
+(define lifted-index 0)
+(define (next-lifted-symbol str)
+  (let ([index lifted-index]) 
+    (set! lifted-index (+ lifted-index 1))
+    (datum->syntax #'here (string->symbol (string-append str (number->string index))))))
+
+(define get-lifted-var
+  (let ([assoc-table (box null)])
+    (lambda (stx)
+      (let ([maybe-fetch (weak-assoc-search assoc-table stx free-identifier=?)])
+        (or maybe-fetch
+            (begin
+              (let* ([new-binding (next-lifted-symbol
+                                   (string-append "lifter-" (format "~a" (syntax->datum stx)) "-"))])
+                (weak-assoc-add assoc-table stx new-binding)
+                new-binding)))))))
   
   ; gensyms needed by many modules:
 
@@ -470,16 +440,7 @@
                                traversal))]
           [else (transformer stx)]))
 
-  ;  small test case:
-  #;(display (equal? (syntax->datum
-                    (skipto/auto (stepper-syntax-property #`(a #,(stepper-syntax-property #`(b c)
-                                                                          'stepper-skipto
-                                                                          '(syntax-e cdr car)))
-                                                  'stepper-skipto
-                                                  '(syntax-e cdr car))
-                                 'discard
-                                 (lambda (x) x)))
-                   'c))
+
   
 
   ; BINDING-/VARREF-SET FUNCTIONS
@@ -597,12 +558,6 @@
                                    list))
                          lsts))))
   
-  ; produces the list of numbers from a to b (inclusive)
-  (define (a...b a b)
-    (if (= a b)
-        (list a)
-        (cons a (a...b (+ a 1) b))))
-  
   ;; re-intern-identifier : (identifier? -> identifier?)
   ;; re-intern-identifier : some identifiers are uninterned, which breaks
   ;; test cases.  re-intern-identifier takes an identifier to a string
@@ -703,21 +658,68 @@
             [`(xml-box ,@(xmlspec ...)) (send scheme-editor insert (construct-xml-box xmlspec))]
             [(? string? text) (send scheme-editor insert text)])
            spec)))))
+    
+(define (language-level->name language)
+  (car (last-pair (send language get-language-position))))
+
+;; per Robby's suggestion: rather than using a hash table for 
+;; lambdas, just use an applicable structure instead.
+
+;; An annotated procedure is represented at runtime by
+;; an applicable structure that stores stepper information.
+(struct annotated-proc (base info)
+  #:property prop:procedure
+  (struct-field-index base))
+
+
+(define-signature view-controller^ (vc-go))
+(define-signature stepper-frame^ (stepper-frame%))
+
+
+(module+ test
+  (require rackunit)
+
+  (test-case
+   "weak-assoc"
+   (define wa (box null))
+   (define-struct test ())
+   (weak-assoc-add wa 3 4)
+   (weak-assoc-add wa 9 10)
+   (check-eq? (weak-assoc-search wa 3 =) 4)
+   (check-eq? (weak-assoc-search wa 9 =) 10)
+   (check-eq? (weak-assoc-search wa 3 =) 4)
+   (check-eq? (length (unbox wa)) 2)
+   (define my-struct (make-test))
+   (weak-assoc-add wa my-struct 14)
+   (check-eq? (length (unbox wa)) 3)
+   (check-eq? (weak-assoc-search wa my-struct eq?) 14)
+   (set! my-struct #f)
+   (collect-garbage)
+   (check-eq? (length (unbox wa)) 3)
+   (check-eq? (weak-assoc-search wa 3 =) 4)
+   (check-eq? (length (unbox wa)) 2))
+
+  (test-true
+   "get-arg-binding"
+   (let* ([arg3 (get-arg-var 3)]
+          [arg2 (get-arg-var 2)]
+          [arg1 (get-arg-var 1)]
+          [arg2p (get-arg-var 2)])
+     (and (not (eq? arg3 arg2))
+          (not (eq? arg3 arg1))
+          (not (eq? arg3 arg2p))
+          (not (eq? arg2 arg1))
+          (eq? arg2 arg2p)
+          (not (eq? arg1 arg2p)))))
   
-  
-  (define (language-level->name language)
-    (car (last-pair (send language get-language-position))))
-  
-  
-  ;; per Robby's suggestion: rather than using a hash table for 
-  ;; lambdas, just use an applicable structure instead.
-  
-  ;; An annotated procedure is represented at runtime by
-  ;; an applicable structure that stores stepper information.
-  (struct annotated-proc (base info)
-    #:property prop:procedure
-    (struct-field-index base))
-  
-  
-  (define-signature view-controller^ (vc-go))
-  (define-signature stepper-frame^ (stepper-frame%))
+  (check-equal?
+   (syntax->datum
+    (skipto/auto (stepper-syntax-property
+                  #`(a #,(stepper-syntax-property #`(b c)
+                                                  'stepper-skipto
+                                                  '(syntax-e cdr car)))
+                  'stepper-skipto
+                  '(syntax-e cdr car))
+                 'discard
+                 (lambda (x) x)))
+   'c))
