@@ -1,5 +1,9 @@
 #lang racket
 
+;; this used to be the interactive test runner, but now it's just a few
+;; utility functions. I could probably merge this with ... test-engine?
+;; not today, though.
+
 (require "test-engine.rkt"
          "test-cases.rkt"
          

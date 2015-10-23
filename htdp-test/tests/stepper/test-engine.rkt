@@ -82,7 +82,7 @@
 (define disable-stepper-error-handling (make-parameter #f))
 
 ;; if a test takes more than this many seconds, it's a failure:
-(define MAX-TEST-WAIT 3)
+(define MAX-TEST-WAIT 2)
 
 ;; this parameter causes all tests of old non-#lang-style programs
 ;; to trivially succeed
