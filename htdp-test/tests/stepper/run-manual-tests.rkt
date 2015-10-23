@@ -22,7 +22,6 @@
                  #;[show-all-steps #t]
                  #;[ignore-non-lang-tests? #t])
     #;(run-test 'simple-if)
-    #;(run-test 'simple-if)
     (run-all-tests)
     
     

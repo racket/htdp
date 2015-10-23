@@ -35,15 +35,15 @@
  #;[top-level-rewrite (-> syntax? syntax?)])
 
 
-;                                               
-; ;                         ;          ;         
-; ;    ; ;;   ; ;;    ;;;  ;;;;  ;;;  ;;;;  ;;;  
-; ;    ;;  ;  ;;  ;  ;   ;  ;   ;   ;  ;   ;   ; 
-;   ;   ;   ;  ;   ;  ;   ;  ;       ;  ;   ;   ; 
-;;;;;   ;   ;  ;   ;  ;   ;  ;    ;;;;  ;   ;;;;; 
-;   ;   ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;     
-;     ;  ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;     
-;     ;  ;   ;  ;   ;   ;;;    ;;  ;;;;;  ;;  ;;;; 
+;    ;                                               
+;   ; ;                         ;          ;         
+;   ; ;    ; ;;   ; ;;    ;;;  ;;;;  ;;;  ;;;;  ;;;  
+;   ; ;    ;;  ;  ;;  ;  ;   ;  ;   ;   ;  ;   ;   ; 
+;  ;   ;   ;   ;  ;   ;  ;   ;  ;       ;  ;   ;   ; 
+;  ;;;;;   ;   ;  ;   ;  ;   ;  ;    ;;;;  ;   ;;;;; 
+;  ;   ;   ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;     
+; ;     ;  ;   ;  ;   ;  ;   ;  ;   ;   ;  ;   ;     
+; ;     ;  ;   ;  ;   ;   ;;;    ;;  ;;;;;  ;;  ;;;; 
 
 
 
@@ -80,8 +80,6 @@
 ;; when a breakpoint occurs, and a boolean indicating whether
 ;; lambdas are to be displayed as lambdas, return an annotated expression.
 (define (annotate main-exp break show-lambdas-as-lambdas?)
-  
-  #;(define _ (>>> main-exp #;(syntax->datum main-exp)))
   
   (define binding-indexer
     (let ([binding-index 0])
@@ -450,7 +448,7 @@
                [(vector annotated-body free-varrefs-body)
                 (if (= (length bodies-list) 1)
                     (let-body-recur/single (car bodies-list) binding-list)
-                    ;; oh dear lord, we have to unfold these like an application:
+                    ;; oh dear Lord, we have to unfold these like an application:
                     (let unroll-loop ([bodies-list bodies-list] [outermost? #t])
                       (cond [(null? bodies-list)
                              (error 'annotate "no bodies in let")]
