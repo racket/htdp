@@ -508,7 +508,10 @@
            #'id 
            "expected a function after the open parenthesis, but found ~a"
            (syntax-e #'id))]
-         [_ (datum->syntax stx val stx)]))))
+         [_ (stepper-syntax-property
+             (datum->syntax stx val stx)
+             'stepper-hint
+             'comes-from-true/false)]))))
   
   (define beginner-true/proc (make-constant-expander #t))
   (define beginner-false/proc (make-constant-expander #f))

@@ -9,14 +9,20 @@
 
 (provide/contract [unwind (syntax? render-settings? . -> . syntax?)])
 ;
-; ;;; ;;    ;;;    ;;;  ; ;;  ;;;       ;   ;  ; ;;  ;   ;   ; ;  ; ;;    ;;; ;  ;  ; ;;    ;; ;
-;;  ;;  ;  ;   ;  ;     ;;   ;   ;      ;   ;  ;;  ; ;   ;   ; ;  ;;  ;  ;   ;;  ;  ;;  ;  ;  ;;
-;   ;   ;      ;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ;
-;   ;   ;   ;;;;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ;
-;   ;   ;  ;   ;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ;
-;   ;   ;  ;   ;  ;     ;    ;   ;      ;  ;;  ;   ;  ; ; ; ;  ;  ;   ;  ;   ;;  ;  ;   ;  ;  ;;
-;   ;   ;   ;;;;;  ;;;  ;     ;;;        ;; ;  ;   ;   ;   ;   ;  ;   ;   ;;; ;  ;  ;   ;   ;; ;
-;
+; ; ;;; ;;    ;;;    ;;;  ; ;;  ;;;       ;   ;  ; ;;  ;   ;   ; ;  ; ;;    ;;; ;  ;  ; ;;    ;; ;
+; ;;  ;;  ;  ;   ;  ;     ;;   ;   ;      ;   ;  ;;  ; ;   ;   ; ;  ;;  ;  ;   ;;  ;  ;;  ;  ;  ;;
+; ;   ;   ;      ;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ;
+; ;   ;   ;   ;;;;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ;
+; ;   ;   ;  ;   ;  ;     ;    ;   ;      ;   ;  ;   ;  ; ; ; ;  ;  ;   ;  ;    ;  ;  ;   ;  ;   ;
+; ;   ;   ;  ;   ;  ;     ;    ;   ;      ;  ;;  ;   ;  ; ; ; ;  ;  ;   ;  ;   ;;  ;  ;   ;  ;  ;;
+; ;   ;   ;   ;;;;;  ;;;  ;     ;;;        ;; ;  ;   ;   ;   ;   ;  ;   ;   ;;; ;  ;  ;   ;   ;; ;
+;                                                                                                ;
+;                                                                                   ;;;;;;;;;;;  ;
+;                                                                                  ;             ;
+;                                                                                 ;              ;
+;                                                                                  ;            ;
+;                                                                                   ;;;;;;;;;;;;
+
 
 
 ; unwind takes a syntax object with a single highlight,
@@ -112,6 +118,8 @@
                           [(comes-from-check-expect) unwind-check-expect]
                           [(comes-from-check-within) unwind-check-within]
                           [(comes-from-check-error) unwind-check-error]
+                          ;; holding off on this pending discussion (2015-10-20)
+                          ;[(comes-from-true/false) unwind-true/false]
                           ;; unused: the fake-exp begin takes care of this for us...
                           ;;[(comes-from-begin) unwind-begin]
                           [else fall-through])])
@@ -355,6 +363,11 @@
        (with-syntax ([expected (unwind (third args-of-call) settings)])
          #`(check-error actual expected)))]
     [any #`(c-e any) #;#`(check-expect )]))
+
+(define (unwind-true/false stx settings)
+  (kernel-syntax-case stx #f
+    [(quote #false) #`false]
+    [(quote #true) #`true]))
 
 (define (same-source? stx1 stx2)
   (and (equal? (syntax-property stx1 'user-source)
