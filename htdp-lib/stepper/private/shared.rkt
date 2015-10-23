@@ -421,24 +421,26 @@
                    `(a . (b ((2) c . 3) d))))
   
   
-  ;; skipto/auto : syntax?
-  ;;               (symbols 'rebuild 'discard)
-  ;;               (syntax? . -> . syntax?)
-  ;; "skips over" part of a tree to find a subtree indicated by the
-  ;; stepper-skipto property, and applies the transformer to it.  
-  ;; If the traversal argument is 'rebuild, the
-  ;; result of transformation is embedded again in the same tree.  if the
-  ;; traversal argument is 'discard, the result of the transformation is the
-  ;; result of this function
-  (define (skipto/auto stx traversal transformer)
-    (cond [(or (stepper-syntax-property stx 'stepper-skipto)
-	       (stepper-syntax-property stx 'stepper-skipto/discard))
-           =>
-           (lambda (x) (update x stx 
-                               (lambda (y) 
-                                 (skipto/auto y traversal transformer)) 
-                               traversal))]
-          [else (transformer stx)]))
+;; skipto/auto : syntax?
+;;               (symbols 'rebuild 'discard)
+;;               (syntax? . -> . syntax?)
+;; "skips over" part of a tree to find a subtree indicated by the
+;; stepper-skipto property at the root of the tree, and applies
+;; the transformer to it. If no stepper-skipto or stepper-skipto/discard
+;; property is present, apply the transformer to the whole tree.
+;; If the traversal argument is 'rebuild, the
+;; result of transformation is embedded again in the same tree.  if the
+;; traversal argument is 'discard, the result of the transformation is the
+;; result of this function
+(define (skipto/auto stx traversal transformer)
+  (cond [(or (stepper-syntax-property stx 'stepper-skipto)
+             (stepper-syntax-property stx 'stepper-skipto/discard))
+         =>
+         (lambda (x) (update x stx 
+                             (lambda (y) 
+                               (skipto/auto y traversal transformer)) 
+                             traversal))]
+        [else (transformer stx)]))
 
 
   
