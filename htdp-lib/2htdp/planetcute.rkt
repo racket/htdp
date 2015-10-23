@@ -1,7 +1,7 @@
 #lang racket/base
 (require 2htdp/image
          racket/runtime-path
-         (for-syntax "private/planetcute-image-list.rkt")
+         (for-syntax racket/syntax "private/planetcute-image-list.rkt")
          (for-syntax racket/base))
 
 (define-syntax (definitions stx)
@@ -19,7 +19,7 @@
        (if (eq? 'expression (syntax-local-context))
            ;; In an expression context:
            (let* ([key (syntax-local-lift-context)]
-                  [id (gensym img)]
+                  [id (generate-temporary)]
                   ;; Already lifted in this lifting context?
                   [lifted-id
                    (or (hash-ref saved-id-table key #f)
