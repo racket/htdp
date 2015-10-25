@@ -588,19 +588,19 @@
     m:intermediate/both "(define (f g) (let ([gp (lambda (x) (/
 (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
     (let ([defs `((define (f g) 
-                    (let ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))])
+                    (let ([gp (lambda (x) (/ (- (g (+ x #e0.1)) (g x)) #e0.001))])
                       gp)))])
       `((before-after (,@defs (define gprime
                                 (hilite (f cos))))
                       (,@defs (define gprime 
                                 (hilite (let ([gp (lambda (x) 
-                                                    (/ (- (cos (+ x 0.1)) (cos x))
-                                                       0.001))]) 
+                                                    (/ (- (cos (+ x #e0.1)) (cos x))
+                                                       #e0.001))])
                                           gp)))))
         (before-after (,@defs (define gprime
-                                (hilite (let ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))])
+                                (hilite (let ([gp (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.001))])
                                           gp))))
-                      (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))))
+                      (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.001))))
                               (define gprime (hilite gp_0))))
         (finished-stepping))))
 
@@ -660,11 +660,11 @@
 
 (t1 'let*-deriv
     m:intermediate/both "(define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
-    (let ([defs `((define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))])
+    (let ([defs `((define (f g) (let* ([gp (lambda (x) (/ (- (g (+ x #e0.1)) (g x)) #e0.001))]) gp)))])
       `((before-after (,@defs (define gprime (hilite (f cos))))
-                      (,@defs (define gprime (hilite (let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))))
-        (before-after (,@defs (define gprime (hilite (let* ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))))
-                      (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001)))) (define gprime (hilite gp_0))))
+                      (,@defs (define gprime (hilite (let* ([gp (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.001))]) gp)))))
+        (before-after (,@defs (define gprime (hilite (let* ([gp (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.001))]) gp))))
+                      (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.001)))) (define gprime (hilite gp_0))))
         (finished-stepping))))
 
 (t1 'let/let*
@@ -726,11 +726,11 @@
 
   (t1 'letrec3
       m:intermediate/both "(define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)) (define gprime (f cos))"
-      (let ([defs `((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x 0.1)) (g x)) 0.001))]) gp)))])
+      (let ([defs `((define (f g) (letrec ([gp (lambda (x) (/ (- (g (+ x #e0.1)) (g x)) #e0.001))]) gp)))])
         `((before-after (,@defs (define gprime (hilite (f cos))))
-                        (,@defs (define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp)))))
-          (before-after (,@defs (define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001))]) gp))))
-                        (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.001)))) (define gprime (hilite gp_0))))
+                        (,@defs (define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.001))]) gp)))))
+          (before-after (,@defs (define gprime (hilite (letrec ([gp (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.001))]) gp))))
+                        (,@defs (hilite (define gp_0 (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.001)))) (define gprime (hilite gp_0))))
           (finished-stepping))))
   
       ;;;;;;;;;;;;;
@@ -878,26 +878,26 @@
 
   (t1 'local-gprime
       m:intermediate/both "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
-      (let ([defs `((define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)))])
+      (let ([defs `((define (f12 g) (local ([define (gp x) (/ (- (g (+ x #e0.1)) (g x)) #e0.1)]) gp)))])
         `((before-after (,@defs (define gprime (hilite (f12 cos))))
-                        (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp)))))
-          (before-after (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp))))
-                        (,@defs (hilite (define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1))) (define gprime (hilite gp_0))))
+                        (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1)]) gp)))))
+          (before-after (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1)]) gp))))
+                        (,@defs (hilite (define (gp_0 x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1))) (define gprime (hilite gp_0))))
           (finished-stepping))))
 
   (t1 'local-gprime/lambda
       m:intermediate-lambda/both "(define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) (define gprime (f12 cos))"
-      (let ([defs `((define (f12 g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)))])
+      (let ([defs `((define (f12 g) (local ([define (gp x) (/ (- (g (+ x #e0.1)) (g x)) #e0.1)]) gp)))])
         `((before-after (,@defs (define gprime ((hilite f12) cos)))
-                        (,@defs (define gprime ((hilite (lambda (g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp))) cos))))
-          (before-after (,@defs (define gprime (hilite ((lambda (g) (local ([define (gp x) (/ (- (g (+ x 0.1)) (g x)) 0.1)]) gp)) cos))))
-                        (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp)))))
-          (before-after (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)]) gp))))
-                        (,@defs (hilite (define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1))) (define gprime (hilite gp_0))))
-          (before-after (,@defs (define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1)) (define gprime (hilite gp_0)))
+                        (,@defs (define gprime ((hilite (lambda (g) (local ([define (gp x) (/ (- (g (+ x #e0.1)) (g x)) #e0.1)]) gp))) cos))))
+          (before-after (,@defs (define gprime (hilite ((lambda (g) (local ([define (gp x) (/ (- (g (+ x #e0.1)) (g x)) #e0.1)]) gp)) cos))))
+                        (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1)]) gp)))))
+          (before-after (,@defs (define gprime (hilite (local ([define (gp x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1)]) gp))))
+                        (,@defs (hilite (define (gp_0 x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1))) (define gprime (hilite gp_0))))
+          (before-after (,@defs (define (gp_0 x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1)) (define gprime (hilite gp_0)))
                         (,@defs
-                         (define (gp_0 x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1))
-                         (define gprime (hilite (lambda (x) (/ (- (cos (+ x 0.1)) (cos x)) 0.1))))))
+                         (define (gp_0 x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1))
+                         (define gprime (hilite (lambda (x) (/ (- (cos (+ x #e0.1)) (cos x)) #e0.1))))))
           (finished-stepping))))
 
   ; test generativity... that is, multiple evaluations of a local should get different lifted names:
@@ -1125,10 +1125,10 @@
       "(check-within (+ 3 4) (+ 8 10) 0.01) (+ 4 5) (check-expect (+ 1 1) 2)"
       `((before-after ((hilite (+ 4 5)))
                       ((hilite 9)))
-        (before-after (9 (check-within (+ 3 4) (hilite (+ 8 10)) 0.01))
-                      (9 (check-within (+ 3 4) (hilite 18) 0.01)))
-        (before-after (9 (check-within (hilite (+ 3 4)) 18 0.01))
-                      (9 (check-within (hilite 7) 18 0.01)))
+        (before-after (9 (check-within (+ 3 4) (hilite (+ 8 10)) #e0.01))
+                      (9 (check-within (+ 3 4) (hilite 18) #e0.01)))
+        (before-after (9 (check-within (hilite (+ 3 4)) 18 #e0.01))
+                      (9 (check-within (hilite 7) 18 #e0.01)))
         (before-after (9 false (check-expect (hilite (+ 1 1)) 2))
                       (9 false (check-expect (hilite 2) 2)))
         (finished-stepping)))
