@@ -10,6 +10,7 @@
          racket/contract
          racket/file
          racket/class
+         mzlib/pconvert-prop ;; so it can be attached.
          "language-level-model.rkt"
          (only-in test-engine/racket-tests
                   reset-tests))
@@ -182,7 +183,9 @@
   (parameterize ([current-directory test-directory])
     (unless (display-only-errors)
       (printf "testing string: ~v\n" exp-str))
+    (define orig-namespace (current-namespace))
     (parameterize ([current-namespace (make-base-namespace)])
+      (namespace-attach-module orig-namespace 'mzlib/pconvert-prop)
       (match the-ll-model
         [(struct ll-ll-model (namespace-spec render-settings enable-testing?))
          (cond [(not (ignore-non-lang-tests?))
