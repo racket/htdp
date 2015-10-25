@@ -268,7 +268,10 @@
   ;; thunk this so that syntax errors happen within the error handlers:
   (lambda ()
     (let ([module-id (gensym "stepper-module-name-")])
-      (expand-teaching-program input-port read-syntax
+      (expand-teaching-program input-port
+                               (λ (name port)
+                                 (parameterize ([read-decimal-as-inexact #f])
+                                   (read-syntax name port)))
                                namespace-spec '()
                                module-id enable-testing?))))
 
