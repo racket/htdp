@@ -1,5 +1,5 @@
-#lang scheme
-
+#lang racket
+(require (only-in test-engine/racket-tests)) ;; only for effect to attach (below)
 
 ;; run shared.rkt unit tests:
 (require "shared-unit-tests.rkt")
@@ -33,6 +33,8 @@
 		 [current-namespace (make-base-namespace)])
     ;; make sure the tests' print-convert sees the teaching languages' properties
     (namespace-attach-module outer-namespace 'mzlib/pconvert-prop (current-namespace))
+    (namespace-attach-module outer-namespace 'racket/class)
+    (namespace-attach-module outer-namespace 'test-engine/racket-tests)
     (namespace-require 'test-engine/racket-tests)
     (if (run-all-tests-except 
          '(bad-and
