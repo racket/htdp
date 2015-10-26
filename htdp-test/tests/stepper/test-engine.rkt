@@ -246,6 +246,7 @@
                    temp-file
                    #:exists 'truncate)
   (define input-port (open-input-file temp-file))
+  (port-count-lines! input-port)
   (list input-port
         (path->string temp-file-name)
         (lambda ()
