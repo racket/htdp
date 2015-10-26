@@ -11,6 +11,7 @@
          racket/file
          racket/class
          mzlib/pconvert-prop ;; so it can be attached.
+         test-engine/racket-tests
          "language-level-model.rkt"
          (only-in test-engine/racket-tests
                   reset-tests))
@@ -186,14 +187,16 @@
     (define orig-namespace (current-namespace))
     (parameterize ([current-namespace (make-base-namespace)])
       (namespace-attach-module orig-namespace 'mzlib/pconvert-prop)
+      (namespace-attach-module orig-namespace 'racket/class)
+      (namespace-attach-module orig-namespace 'test-engine/racket-tests)
       (match the-ll-model
         [(struct ll-ll-model (namespace-spec render-settings enable-testing?))
          (cond [(not (ignore-non-lang-tests?))
                 (unless (display-only-errors)
                   (printf "  using language level ~v\n" namespace-spec))
                 (namespace-require 'test-engine/racket-tests)
-                ;; make the test engine happy by adding a binding for test~object:
-                (namespace-set-variable-value! 'test~object #f)
+                ;; this triggers the creation of a test~object (so tests actually run)
+                (get-test-engine)
                 (match-define (list input-port filename done-thunk)
                   (prepare-filesystem exp-str extra-files))
                 (define provider-thunk
@@ -372,10 +375,17 @@
 (namespace-attach-module (namespace-anchor->empty-namespace n-anchor)
                          'racket/private/promise
                          test-namespace)
+(namespace-attach-module (namespace-anchor->empty-namespace n-anchor)
+                         'racket/class
+                         test-namespace)
+(namespace-attach-module (namespace-anchor->empty-namespace n-anchor)
+                         'test-engine/racket-tests
+                         test-namespace)
 (parameterize ([current-namespace test-namespace])
   (namespace-require 'test-engine/racket-tests)
   ;; make the test engine happy by adding a binding for test~object:
-  (namespace-set-variable-value! 'test~object #f))
+  (get-test-engine)
+  (void))
 
 ;; call-iter-on-each : (-> syntax?) (syntax? (-> 'a) -> 'a) -> void/c
 ;; call the given iter on each syntax in turn (iter bounces control
