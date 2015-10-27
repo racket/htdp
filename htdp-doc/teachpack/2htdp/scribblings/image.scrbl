@@ -1838,6 +1838,16 @@ See also @racket[image-baseline] for more discussion of baselines.
       Using @racket[0] as a width is special; it means to always draw the 
       smallest possible, but visible, pen. This means that the pen will always
       be one pixel in size, no matter how the image is scaled.
+      
+      The @racket[cap] determines how the ends of a curve is drawn.
+      
+      The @racket[join] determines how two lines are joined.
+      
+        @image-examples[(line 400 100 (pen "red" 10 "long-dash" "round" "bevel"))
+                        (line 400 100 (pen "red" 10 "short-dash" "round" "bevel"))
+                        (line 400 100 (pen "red" 10 "long-dash" "butt" "bevel"))
+                        (line 400 100 (pen "red" 10 "dot-dash" "butt" "bevel"))
+                        (line 400 100 (pen "red" 30 "dot-dash" "butt" "bevel"))]
 }
 
 @defproc[(pen-style? [x any/c]) boolean?]{
