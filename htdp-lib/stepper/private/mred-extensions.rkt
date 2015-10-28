@@ -522,7 +522,9 @@
 
 ;; testing code
 
-(module+ test
+;; these tests must be manually inspected, so I'm making this a `main`
+;; module rather than a `test` module.
+(module+ main
   
   
   (define (stepper-text-test . args)
