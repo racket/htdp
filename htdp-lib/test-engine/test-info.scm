@@ -198,7 +198,7 @@
        lines)
      
      (define (send-loss loss)
-       (for ([ele (in-list loss)])
+       (for ([ele (in-list (reverse loss))])
          (cond
            [(char? ele) (display ele)]
            [(port-writes-special? (current-output-port))
