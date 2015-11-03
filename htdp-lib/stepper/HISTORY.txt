@@ -1,5 +1,11 @@
 Stepper
 -------
+Changes for 6.3:
+
+Many many bugfixes, lots of preparation for #lang-based htdp languages.
+Things look pretty good. lots of code cleanup, rackety, logging using
+define-logger, etc.
+
 Changes for 6.2:
 
 None.
