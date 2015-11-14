@@ -486,11 +486,16 @@
 
     (super-instantiate ())))
 
-(define test-window%
-  (class* frame:standard-menus% ()
+(frame:setup-size-pref 'htdp:test-engine-window-size 400 350
+                       #:position-preferences 'htdp:test-engine-window-position)
 
-    (super-instantiate
-     ((string-constant test-engine-window-title) #f 400 350))
+(define test-window%
+  (class* (frame:size-pref-mixin frame:standard-menus%) ()
+
+    (super-new
+     [label (string-constant test-engine-window-title)]
+     [size-preferences-key 'htdp:test-engine-window-size]
+     [position-preferences-key 'htdp:test-engine-window-position])
 
     (define switch-func void)
     (define disable-func void)
