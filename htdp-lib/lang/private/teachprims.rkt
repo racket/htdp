@@ -312,7 +312,7 @@ namespace.
          (fail "first argument of equality cannot be an inexact number, given ~e" a)]
         [(and (number? b)
               (inexact? b))
-         (fail "first argument of equality cannot be an inexact number, given ~e" b)]
+         (fail "second argument of equality cannot be an inexact number, given ~e" b)]
         [(union-equal!? a b) #t]
         [else
          (equal?/recur a b recur)]))))
