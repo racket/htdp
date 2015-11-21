@@ -637,6 +637,13 @@
      otherwise it produces @racket[#false].
     @interaction[#:eval (bsl) (assoc "hello" '(("world" 2) ("hello" 3) ("good" 0)))]
     }
+ 
+ @defproc[((beginner-list? list?) [x any]) boolean?]{
+    Checks whether the given value is a list.
+    @interaction[#:eval (bsl)
+		  (list? 42)
+                  (list? '())
+		  (list? (cons 1 (cons 2 '())))]}
  )
  
  ("Posns"

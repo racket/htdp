@@ -26,7 +26,8 @@
       *bsl))
 
   (all-from-except beginner:
-                   (submod lang/private/beginner-funs without-wrapper) procedures + * / append) 
+                   (submod lang/private/beginner-funs without-wrapper)
+                   procedures + * / append) 
  
   ("Numbers (relaxed conditions)"
     @defproc[(+ [x number] ...) number]{
@@ -41,7 +42,7 @@
     }
     @defproc[(/ [x number] [y number] ...) number]{
     Divides the first by all remaining numbers.
-    In ISL and up: @racket[/] computes the inverse when applied to only one number. 
+    In ISL and up: @racket[/] computes the inverse when applied to one number. 
     @interaction[#:eval (isl) (/ 12 2) (/ 12 2 3) (/ 3)]
     }
     )
@@ -56,16 +57,12 @@
     @interaction[#:eval (isl)
 		  (append (cons 1 (cons 2 '())) (cons "a" (cons "b" '())))
 		  (append)]}
-    @defproc[((beginner-list? list?) [x any]) boolean?]{
-    Checks whether the given value is a list.
-    @interaction[#:eval (isl)
-		  (list? 42)
-		  (list? (cons 1 (cons 2 '())))]}
 )
  
   ("Higher-Order Functions"
     @defproc[(map [f (X ... -> Z)] [l (listof X)] ...) (listof Z)]{
-    Constructs a new list by applying a function to each item on one or more existing lists:
+    Constructs a new list by applying a function to each item on one or
+    more existing lists:
     @codeblock{(map f (list x-1 ... x-n)) = (list (f x-1) ... (f x-n))}
     @codeblock{(map f (list x-1 ... x-n) (list y-1 ... y-n)) = (list (f x-1 y-1) ... (f x-n y-n))}
     @interaction[#:eval (isl) 
