@@ -60,3 +60,7 @@
  procedures
  (begin)
  (all-from beginner: (submod lang/private/beginner-funs with-wrapper) procedures))
+
+;; special case, as suggested by Ryan
+(require (only-in lang/posn beginner-posn*))
+(provide (rename-out (beginner-posn* posn)))
