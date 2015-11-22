@@ -183,7 +183,7 @@ The design of a world program demands that you come up with a data
 @defform/subs[#:id big-bang
               #:literals
               (on-tick to-draw on-draw on-key on-pad on-release on-mouse on-receive stop-when
-              check-with register record? display-mode state name port)
+              check-with register record? close-on-stop display-mode state name port)
               (big-bang state-expr clause ...)
               ([clause
                  (on-tick tick-expr)
@@ -198,6 +198,7 @@ The design of a world program demands that you come up with a data
                  (stop-when stop-expr) (stop-when stop-expr last-scene-expr)
                  (check-with world?-expr)
                  (record? r-expr)
+                 (close-on-stop cos-expr)
                  (display-mode d-expr)
                  (state expr)
                  (on-receive rec-expr)
@@ -734,6 +735,20 @@ and @racket[big-bang] will close down all event handling.}
  choice.  If @racket[r-expr] evaluates to the name of an existing
  directory/folder (in the local directory/folder), the directory is used to
  deposit the images.
+}}
+
+@item{
+
+@defform[#:literals (close-on-stop)
+         (close-on-stop cos-expr)
+         #:contracts
+         ([cos-expr (or/c boolean? natural-number/c)])]{
+ tells DrRacket whether to close the @racket[big-bang] window 
+ @emph{after} the expression is evaluated. If @racket[cos-expr] is
+ @racket[#false], which is the default, the window remains open. 
+ If @racket[cos-expr] is @racket[#true], the window closes immediately. 
+ Finally, if @racket[cos-expr] is a natural number, the window closes
+ @racket[cos-expr] seconds after the end of the evaluation.
 }}
 
 @item{
