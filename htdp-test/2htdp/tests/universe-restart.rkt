@@ -1,5 +1,14 @@
 #lang racket
 
+;; *** This test fails on an intermittent basis. ***
+
+;; test whether removing worlds work
+
+;; every time a world sends a message it is removed from the internal state of the universe
+;; that is, universe itself does not know about world anymore and won't consider it for messaging
+;; NOTE: this test is weird. I fail to see what it actually tests. The name suggests it tests
+;; the universe restart capability but that doesn't sound right. 
+
 (module drop-on-message racket
   (require 2htdp/universe 2htdp/image)
 
