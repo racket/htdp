@@ -120,7 +120,15 @@
   ;; -- should the session be recorded and turned into PNGs and an animated GIF
   ;; -- if the value is a string and is the name of a local directory, use it! 
   [record? DEFAULT #'#f (expr-with-check any> "")]
-
+  ;; Boolean
+  ;; -- close-on-stop: close the window when the program shuts down
+  ;; in principle, a big-bang that specifies both
+  ;;   [record? #true]
+  ;; and
+  ;;   [close-on-stop #true]
+  ;; is self-contradictory; I will wait until someone complaints -- MF, 22 Nov 2015
+  [close-on-stop DEFAULT #'#f (expr-with-check opt-nat> "expected a boolean or a natural number")]
+  
   [display-mode DEFAULT #''normal
                 (expr-with-check display-mode> "expected a display mode ('normal, 'fullscreen)")]
   ;; (U #f String)
@@ -269,11 +277,11 @@
          [(and (not (contains-clause? #'to-draw dom)) (not (contains-clause? #'on-draw dom)))
           (raise-syntax-error #f "missing [to-draw renderer] or [on-draw renderer] clause" stx)]
          [else
-	   (syntax-property 
-	     (stepper-syntax-property
-	       #`(run-it ((new-world (if #,rec? aworld% world%)) w #,@args))
-	       'stepper-skip-completely #t)
-	     'disappeared-use (map (lambda (x) (car (syntax->list x))) dom))]))]))
+          (syntax-property 
+           (stepper-syntax-property
+            #`(run-it ((new-world (if #,rec? aworld% world%)) w #,@args))
+            'stepper-skip-completely #t)
+           'disappeared-use (map (lambda (x) (car (syntax->list x))) dom))]))]))
 
 (define-keywords Pad1Specs '() _init-not-needed
   [up    DEFAULT #'#f (function-with-arity 1)]
@@ -332,10 +340,10 @@
          [wdt (image-width fst)]
          [hgt (image-height fst)])
     (big-bang 
-     m* 
-     (on-tick rest r)
-     (on-draw (lambda (m) (if (empty? m) (text "The End" 22 'red) (first m))))
-     (stop-when empty?))))
+      m* 
+      (on-tick rest r)
+      (on-draw (lambda (m) (if (empty? m) (text "The End" 22 'red) (first m))))
+      (stop-when empty?))))
 
 (define (mouse-event? a) (and (string? a) (pair? (member a MOUSE-EVTS))))
 

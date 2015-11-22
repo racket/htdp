@@ -4,7 +4,7 @@
 ;; provides constants and functions for specifying the shape of clauses in big-bang and universe 
 
 (provide
- port> nat> nat? proc> bool> num> ip> string> symbol> display-mode> string-or-symbol> any>
+ port> nat> opt-nat> nat? proc> bool> num> ip> string> symbol> display-mode> string-or-symbol> any>
  K False True)
 
 (require racket/format racket/string htdp/error "check-aux.rkt")
@@ -61,6 +61,11 @@
 ;; Symbol X String -> X
 (define (nat> tag x spec)
   (check-arg tag (nat? x) "natural number" spec x)
+  x)
+
+;; Symbol X String -> X
+(define (opt-nat> tag x)
+  (check-arg tag (or (boolean? x) (nat? x)) "boolean or natural number" "first" x)
   x)
 
 ;; Symbol X String -> X
