@@ -320,6 +320,7 @@
              (define (name arg ...) 
                (queue-callback 
                 (lambda ()
+                  (collect-garbage 'incremental)
                   (define H (handler #t))
                   (with-handlers ([exn? H])
                     ; (define tag (object-name transform))
@@ -439,6 +440,10 @@
           (stop! (if re-raise e (send world get)))))
       
       (define/public (start!)
+        ;; To avoid pauses, GC now and request
+        ;; incremental mode:
+        (collect-garbage)
+        (collect-garbage 'incremental)
         (with-handlers ([exn? (handler #t)])
           (when width ;; and height
             (check-scene-dimensions "your to-draw clause" width height))
