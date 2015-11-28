@@ -13,7 +13,8 @@
     "on-release-no-key.rkt"
     "pad1.rkt"
     "universe-receive.rkt"
-    "batch-io-xexpr.rkt"))
+    "batch-io-xexpr.rkt"
+    "close-on-stop.rkt"))
 
 (define test-responsibles '(("test-image.rkt" robby)
                             ("image-equality-performance.rkt" robby)
