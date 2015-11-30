@@ -106,6 +106,17 @@
      (if 3 4)
      :: {(if 3 4)} -> {4})
 
+;; this is just a sketch...
+(t 'call/cc m:mz
+   (+ 3 (call/cc (λ (k) (+ 1 (k 2)))))
+   :: (+ 3 {(call/cc (λ (k) (+ 1 (k 2))))})
+   ;; not sure what KONT-REP should be...
+   -> (+ 3 (+ 1 ({KONT-REP} 2)))
+   ;; interesting how the highlight falls apart... what should be highlighted?
+   :: {(+ 1 (KONT-REP 2))}
+   -> {(+ 3 2)}
+   -> 5)
+
 ;(m:mz "((call-with-current-continuation call-with-current-continuation)
 ; (call-with-current-continuation call-with-current-continuation))"
 ;                  `((before-after (((hilite ,h-p)
@@ -2221,3 +2232,15 @@ given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
    
    ))
 
+(module+ test
+  (require rackunit)
+
+  ;; ensure that all names are unique:
+  
+  (define test-case-names
+    (map first the-test-cases))
+  
+  (test-equal?
+   "no duplicated test names"
+   (length test-case-names)
+   (length (remove-duplicates test-case-names))))

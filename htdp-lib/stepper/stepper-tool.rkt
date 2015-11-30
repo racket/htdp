@@ -424,18 +424,17 @@
 
 ;; set-print-settings ; settings ( -> TST) -> TST
 (define (call-with-print-settings language simple-settings thunk)
-  ;; I have to say, I'm somewhat alarmed by the presence of the pretty-print
-  ;; width here. I'm hoping it doesn't affect the thunks that we're using here...
-  #;((drracket:language:make-setup-printing-parameters) thunk simple-settings 'infinity)
-  ;; okay, this is getting interesting. I'm updating this code for 2015, and ...
-  ;; things are a little scary. In particular, it looks like 'set-printing-parameters
-  ;; is no longer the name of this method... this kind of dynamic dispatch is frightening.
+  ;; this should succeed for the teaching languges, and fail otherwise.
+  ;; if there's a way to directly check this, I should do it. As an approximation,
+  ;; the else clause will be guarded by a check for PLTSTEPPERUNSAFE
   (if (method-in-interface? 'set-printing-parameters (object-interface language))
       (send language set-printing-parameters simple-settings thunk)
-      ;; assume that the current print-convert context is fine
-      (error 'stepper-tool "language object does not contain set-printing-parameters method")
-      ;; 2009-09-11, JBC : Gee Whiz, why the heck is it okay to assume that !?
-      #;(thunk)))
+      ;; should only wind up here for non-teaching-languages:
+      (cond [(getenv "PLTSTEPPERUNSAFE") (thunk)]
+            [else
+             (error
+              'stepper-tool
+              "language object does not contain set-printing-parameters method")])))
 
 ;; WE REALLY WANT TO GET RID OF THIS STUFF (2005-07-01, JBC)
 
