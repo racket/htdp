@@ -55,10 +55,13 @@
    
    ("Numbers: Integers, Rationals, Reals, Complex, Exacts, Inexacts"
     @defproc[(random [x natural]) natural]{
-    Generates a random natural number less than some given natural number
-    In ASL: @racket[random] generate a random inexact number between 0.0
-    and 1.0 exclusive when applied to no argument.
+    Generates a random number. If given one argument @racket[random] returns a natural number less than the given natural.
+    In ASL, if given no arguments, @racket[random] generates a random inexact number between 0.0
+    and 1.0 exclusive.
     @interaction[#:eval (asl) (random)]
+    @interaction[#:eval (asl) (random)]
+    @interaction[#:eval (asl) (random 42)]
+    @interaction[#:eval (asl) (random 42)]
     } 
     )
 
