@@ -12,3 +12,7 @@
 (htdp-syntax-test #'(recur empty-f () 10) "recur: this function is not defined")
 
 (htdp-syntax-test #'((unquote-splicing (list 10))) "function call: expected a function after the open parenthesis, but found a part")
+
+(htdp-top (require 2htdp/abstraction))
+(htdp-test 3 'posn-as-match-pattern (match (make-posn 1 2) [(posn x y) (+ x y)]))
+(htdp-top-pop 1)
