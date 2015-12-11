@@ -301,8 +301,8 @@
    -> {(cond (else 3))}
    -> {3})
 
-;;  reconstruct can't handle 'begin'
-(t1 'implicit-begin m:mz
+;; this could be fixed fairly easily with some let macro unwinding:
+(t1 'implicit-let m:mz
    "(cond [#f 3 4] [#t (+ 3 4) (+ 4 9)])"
    `((before-after ((hilite (cond (#f 3 4) (#t (+ 3 4) (+ 4 9)))))
                    ((hilite (cond (#t (+ 3 4) (+ 4 9))))))
@@ -1144,18 +1144,18 @@
                       (9 false (check-expect (hilite 2) 2)))
         (finished-stepping)))
 
-  (let ([errmsg "rest: expected argument of type <non-empty list>; given ()"])
+  (let ([errmsg "rest: expects a non-empty list; given: '()"])
     (t1 'check-error
         m:upto-int/lam
         "(check-error (+ (+ 3 4) (rest empty)) \
-(string-append \"rest: \" \"expected argument of type <non-empty list>; \
-given ()\")) (check-expect (+ 3 1) 4) (+ 4 5)"
+(string-append \"rest: \" \"expects a non-empty list; given: '()\" \
+)) (check-expect (+ 3 1) 4) (+ 4 5)"
         `((before-after ((hilite (+ 4 5)))
                         ((hilite 9)))
           (before-after (9 (check-error (+ (+ 3 4) (rest empty))
                                         (hilite
                                          (string-append
-                                          "rest: " "expected argument of type <non-empty list>; given ()"))))
+                                          "rest: " "expects a non-empty list; given: '()"))))
                         (9 (check-error (+ (+ 3 4) (rest empty)) (hilite ,errmsg))))
           (before-after (9 (check-error (+ (hilite (+ 3 4)) (rest empty)) ,errmsg))
                         (9 (check-error (+ (hilite 7) (rest empty)) ,errmsg)))

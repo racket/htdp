@@ -25,6 +25,20 @@
     lazy-member lazy-memq lazy-memv lazy-filter1 lazy-filter2 lazy-fold
     lazy-cyclic1 lazy-fn-app))
 
+;; these are tests of forms that don't appear below
+;; "advanced". These tests are essentially test-driven-development
+;; for a stepper for advanced. Some of them don't apply even to advanced....
+(define advanced-language-feature-tests
+  '(implicit-let set! local-set! 
+    call/cc))
+
+;; these are tests of known bugs. These should be fixed. 
+(define known-bug-tests
+  '(local-struct/ilam
+    local-struct/i
+    begin-let-bug
+    qq-splice))
+
 (let ((outer-namespace (current-namespace)))
   (parameterize ([display-only-errors #t]
                  ;; display-only-errors is insufficient, because the evals
@@ -36,10 +50,8 @@
     (namespace-attach-module outer-namespace 'racket/class)
     (namespace-attach-module outer-namespace 'test-engine/racket-tests)
     (namespace-require 'test-engine/racket-tests)
-    (if (run-all-tests-except 
-         '(bad-and
-           implicit-begin
-           check-error begin-let-bug prims qq-splice time 
-           set! local-set! local-struct/i local-struct/ilam))
+    (if (run-all-tests-except
+         (append advanced-language-feature-tests
+                 known-bug-tests))
 	(exit 0)
 	(exit 1))))
