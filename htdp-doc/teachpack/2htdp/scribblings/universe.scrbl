@@ -677,8 +677,9 @@ All @tech{MouseEvent}s are represented via strings:
 @defform[(stop-when last-world?)
          #:contracts
          ([last-world? (-> (unsyntax @tech{WorldState}) boolean?)])]{
- tells DrRacket to call the @racket[last-world?] function whenever the canvas is
- drawn. If this call produces @racket[#true], the world program is shut
+ tells DrRacket to call the @racket[last-world?] function at the start of
+ the world program and after any other world-producing callback.
+ If this call produces @racket[#true], the world program is shut
  down. Specifically, the  clock is stopped; no more
  tick events, @tech{KeyEvent}s, or @tech{MouseEvent}s are forwarded to
  the respective handlers. The @racket[big-bang] expression returns this
@@ -691,8 +692,9 @@ All @tech{MouseEvent}s are represented via strings:
          ([last-world? (-> (unsyntax @tech{WorldState}) boolean?)]
           [last-picture (-> (unsyntax @tech{WorldState}) scene?)])]{
 @note-scene
- tells DrRacket to call the @racket[last-world?] function whenever the canvas is
- drawn. If this call produces @racket[#true], the world program is shut
+ tells DrRacket to call the @racket[last-world?] function at the start of
+ the world program and after any other world-producing callback.
+ If this call produces @racket[#true], the world program is shut
  down after displaying the world one last time, this time using the image
  rendered with @racket[last-picture]. Specifically, the  clock is stopped; no more
  tick events, @tech{KeyEvent}s, or @tech{MouseEvent}s are forwarded to
@@ -707,7 +709,9 @@ All @tech{MouseEvent}s are represented via strings:
 DrRacket that the world program should shut down. That is, any
 handler may return @racket[(stop-with w)] provided @racket[w] is a
 @tech[#:tag-prefixes '("world")]{HandlerResult}. If it does, the state of the world becomes @racket[w]
-and @racket[big-bang] will close down all event handling.}
+and @racket[big-bang] will close down all event handling. Similarly,
+if the initial state of the world is @racket[(stop-with w)], event handling
+is immediately closed down.}
 
 }
 
