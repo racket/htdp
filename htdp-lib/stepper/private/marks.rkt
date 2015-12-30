@@ -1,7 +1,7 @@
 #lang scheme/base
 
 (require mzlib/list
-         mzlib/contract
+         racket/contract
          "my-macros.rkt"
          "shared.rkt"
          "syntax-property.rkt"

@@ -1,5 +1,5 @@
 (module xml-box scheme/base
-  (require mzlib/contract
+  (require racket/contract
            "shared.rkt"
            "syntax-property.rkt"
            (prefix-in kernel: syntax/kerncase))

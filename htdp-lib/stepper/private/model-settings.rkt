@@ -1,5 +1,5 @@
 (module model-settings mzscheme
-  (require mzlib/contract
+  (require racket/contract
            mzlib/pconvert)
   
   ; there are two separate reasons to use units here, but it's just too painful.
