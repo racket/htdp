@@ -432,7 +432,9 @@
       ;; should only wind up here for non-teaching-languages:
       (cond [(getenv "PLTSTEPPERUNSAFE") (thunk)]
             [else
-             (error
+             (thunk)
+             ;; this error occurs in htdp/bsl etc.
+             #;(error
               'stepper-tool
               "language object does not contain set-printing-parameters method")])))
 
