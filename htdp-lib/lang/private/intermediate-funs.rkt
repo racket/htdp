@@ -96,7 +96,7 @@
                  (foldr (lambda (x y r) (+ x y r)) 0 '(1 2 3) '(10 11 12))
                  ]
     }
-    @defproc[((intermediate-foldl foldl) [f (X Y -> Y)] [base Y] [l (listof X)]) Y]{
+    @defproc[((intermediate-foldl foldl) [f (X ... Y -> Y)] [base Y] [l (listof X)] ...) Y]{
     @codeblock{(foldl f base (list x-1 ... x-n)) = (f x-n ... (f x-1 base))}
     @codeblock{(foldl f base (list x-1 ... x-n) (list x-1 ... x-n))
                 = (f x-n y-n ... (f x-1 y-1 base))}
