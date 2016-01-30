@@ -1,5 +1,10 @@
 Stepper
 -------
+
+Changes for 6.4:
+
+Enable stepper for #lang-based languages.
+
 Changes for 6.3:
 
 Many many bugfixes, lots of preparation for #lang-based htdp languages.
