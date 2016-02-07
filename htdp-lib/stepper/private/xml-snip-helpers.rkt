@@ -56,11 +56,10 @@
                                (eliminate-whitespace-in-empty-tags xexpr)
                                xexpr)]
               [expd-xexpr (expand-embedded clean-xexpr)]
-              [qq-body (datum->syntax #'here expd-xexpr (list editor #f #f #f #f))])
-         (with-syntax ([qq-body qq-body])
-           (stepper-syntax-property (syntax (quasiquote qq-body))
-                                    'stepper-xml-hint
-                                    'from-xml-box))))
+              [qq-body (datum->syntax #f expd-xexpr (list editor #f #f #f #f))])
+         (stepper-syntax-property (datum->syntax #f (list 'quasiquote qq-body))
+                                  'stepper-xml-hint
+                                  'from-xml-box)))
      (lambda () (send editor lock old-locked)))))
 
 (define ((xml-snip-filter text) s)
