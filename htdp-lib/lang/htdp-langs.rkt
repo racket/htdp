@@ -525,10 +525,15 @@
           (define/private (tp-require->str tp)
             (match tp
               [`(lib ,x) 
-               (define m (regexp-match #rx"teachpack/2?htdp/(.*)$" x))
-               (if m
-                   (list-ref m 1)
-                   (format "~s" tp))]
+               (define m (regexp-match #rx"teachpack/(2?htdp/(.*))$" x))
+               (cond
+                 [m
+                  (define long-name (list-ref m 1))
+                  (define short-name (list-ref m 2))
+                  (if (regexp-match #rx"htdp/image[.]" long-name)
+                      long-name
+                      short-name)]
+                 [else (format "~s" tp)])]
               [_ (format "~s" tp)]))
           
           (inherit get-module get-transformer-module get-init-code
