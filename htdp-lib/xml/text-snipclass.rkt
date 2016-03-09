@@ -134,14 +134,16 @@
                       ((eof-object? next) null)
                       ((char? next)
                        (cons next (loop (get-next port))))
-                      (else (cons #`(marshall #,next) (loop (get-next port))))))))
-        #`(let ((marshall
+                      (else (cons `(marshall ,next) (loop (get-next port))))))))
+        (datum->syntax
+         #f
+         `(let ((marshall
                  (lambda (s)
                    (let ((os (open-output-string)))
                      (with-handlers ((exn:fail? (lambda (x) "")))
                        (display s os)
                        (get-output-string os))))))
-            (string-append #,@(chunk-string str null)))))
+            (string-append ,@(chunk-string str null))))))
 
     (super-instantiate ())
     (inherit set-snipclass)
