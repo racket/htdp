@@ -156,6 +156,11 @@
       (set-box/f space 0)
       (set-box/f lspace 0)
       (set-box/f rspace 0))
+
+    (define scroll-step 16)
+    (define/override (get-num-scroll-steps) (max 1 (inexact->exact (ceiling (/ height scroll-step)))))
+    (define/override (find-scroll-step y) (inexact->exact (round (/ y scroll-step))))
+    (define/override (get-scroll-step-offset offset) (* offset scroll-step))
     
     (define/override (copy)
       (make-object turtle-snip% width height turtles cache lines))
