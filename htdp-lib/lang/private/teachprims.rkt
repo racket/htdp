@@ -1,6 +1,6 @@
 #lang scheme 
 
-#| tests are at plt/collects/tests/mzscheme/
+#| tests are at htdp/htdp-test/tests/htdp-lang:
 collects/tests/mzscheme/beginner.rkt
                     .../beginner-abbr.rkt
                     .../intermediate.rkt
@@ -221,9 +221,9 @@ namespace.
             string-append
             (if f (format "~a: " f) "")
             (for/list ([ele (in-list stuff1)])
-                      (if (string? ele)
-                          ele
-                          (format "~e" ele)))))))
+              (if (string? ele)
+                  ele
+                  (format "~e" ele)))))))
 
 (define-teach beginner struct?
   (lambda (x)
@@ -331,6 +331,9 @@ namespace.
     (check-three a b c 'equal~? values 'any values 'any positive-real? 'non-negative-real)
     (tequal? a b c)))
 
+;; ---------------------------------------------------------------------------------------------------
+;; intermediate higher-order functions
+
 (define (hocheck name fmt-str . x)
   (raise
    (make-exn:fail:contract
@@ -342,25 +345,61 @@ namespace.
 ;; to give the generated function a name and to use tag as both a function and a name 
 (define-syntax-rule
   (make-teachable-fold tag)
-  (let* ([FMT "first argument must be a function that expects ~a arguments, given ~e"]
-         [tag
-          (lambda (f e . l)
-            (define LE (length l))
-            (unless (> LE 0)
-              (error 'tag "expects (at least) 2 arguments, given 1"))
-            (unless (and (procedure? f) (procedure-arity-includes? f (+ LE 1)))
-              (define name (object-name f))
-              (define numb
-                (case (+ LE 1)
-                  [(2) "two"]
-                  [(3) "three"]
-                  [else (+ LE 1)]))
-              (hocheck 'tag FMT numb name))
-            (for ([l l] [i (in-naturals)])
-                 (unless (beginner-list? l) 
-                   (hocheck 'tag"~ath argument must be a list, given ~e" (+ i 2) l)))
-            (apply tag f e l))])
+  (let* ([tag (lambda (f e . l)
+                (check-arity 'tag f l 1)
+                (check-lists 'tag l f e )
+                (apply tag f e l))])
     tag))
+
+(define-teach intermediate map
+  (lambda (f . l)
+    (check-arity 'map f l 0)
+    (check-lists 'map l f)
+    (apply map f l)))
+  
+;; Symbol [Any *-> Any] [Listof X] N -> Void
+;; check that the arity of f and the given number of 'lists' are in sync 
+(define (check-arity tag f l n)
+  [define FMT "first argument must be a function that expects ~a,"]
+  (define EFT " given ~e")
+  (define AFT " given ~a")
+  (define LE (length l))
+  (unless (> LE 0)
+    (error tag "expects (at least) one list argument, given none"))
+  (unless (and (procedure? f) (procedure-arity-includes? f (+ LE n)))
+    (define name (name-of-object f))
+    (define numb
+      (case (+ LE n)
+        [(1) "one argument"]
+        [(2) "two arguments"]
+        [(3) "three arguments"]
+        [else (format "~a arguments" (+ LE n))]))
+    (hocheck tag (string-append FMT (if (symbol? name) AFT EFT)) numb name)))
+
+;; X -> [U X Symbol]
+(define (name-of-object f)
+  (define name (object-name f))
+  (define lam? (and name (regexp-match "Source" (symbol->string name))))
+  (if lam? f name))
+
+;; Symbol [Listof X] Any *-> Void
+;; check that the given arguments are beginner-lists
+(define (check-lists tag l . f+e)
+  (for ([l l] [i (in-naturals)])
+    (define pos (+ i (K (length f+e) f+e) 1))
+    (unless (beginner-list? l) 
+      (hocheck tag "~a~a argument must be a list, given ~e" pos (st pos) l))))
+
+;; for readability 
+(define (K x _) x)
+
+;; to format the error message
+(define (st i)
+  (case i
+    [(1) "st"]
+    [(2) "nd"]
+    [(3) "rd"]
+    [else "th"]))
 
 (define-teach intermediate foldr (make-teachable-fold foldr))
 
@@ -454,6 +493,7 @@ namespace.
  beginner-=~
  intermediate-foldr
  intermediate-foldl
+ intermediate-map
  intermediate-build-string
  advanced-cons
  advanced-list*

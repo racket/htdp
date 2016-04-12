@@ -60,7 +60,7 @@
 )
  
   ("Higher-Order Functions"
-    @defproc[(map [f (X ... -> Z)] [l (listof X)] ...) (listof Z)]{
+    @defproc[((intermediate-map map) [f (X ... -> Z)] [l (listof X)] ...) (listof Z)]{
     Constructs a new list by applying a function to each item on one or
     more existing lists:
     @codeblock{(map f (list x-1 ... x-n)) = (list (f x-1) ... (f x-n))}
