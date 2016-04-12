@@ -43,5 +43,6 @@
 (load-relative "bega-adv.rktl")
 (load-relative "intm-intml.rktl")
 (load-relative "intm-adv.rktl")
+(load-relative "intm-lam.rktl")
 
 (report-errs)
