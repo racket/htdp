@@ -85,7 +85,11 @@ including spaces and newlines.}
 ]
 when @racket["data.txt"] is the name of the same file as in the preceding
 item. And again, the leading space of the second line shows up in the
-second string in the list.}
+second string in the list. 
+
+If the last line is not terminated by a newline, the functions acts as if
+there were one. 
+}
 
 @item{@reading[read-words (listof string?)]{a list of strings, one per white-space separated token in the file}
 
@@ -104,7 +108,11 @@ a part of the separator that surrounds the word @racket["good"].
 ]
 The results is similar to the one that @racket[read-words] produces,
 except that the organization of the file into lines is preserved.
-In particular, the empty third line is represented as an empty list of words.
+In particular, the empty third line is represented as an empty list of
+words. 
+
+If the last line is not terminated by a newline, the functions acts as if
+there were one. 
 }
 
 @item{@reading[read-words-and-numbers/line (listof (or number? string?))]{a list of lists, one per line; each line is represented as a list of strings and numbers}
@@ -113,7 +121,10 @@ In particular, the empty third line is represented as an empty list of words.
 (read-words-and-numbers/line "data.txt")
 ]
 The results is like the one that @racket[read-words/line] produces,
-except strings that can be parsed as numbers are represented as numbers.}
+except strings that can be parsed as numbers are represented as numbers.
+
+If the last line is not terminated by a newline, the functions acts as if
+there were one.}
 
 @item{@reading[read-csv-file (listof (listof any/c))]{a list of lists of comma-separated values}
 
