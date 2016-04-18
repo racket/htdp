@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 6.5:
+
+None.
+
 Changes for 6.4:
 
 Enable stepper for #lang-based languages.
