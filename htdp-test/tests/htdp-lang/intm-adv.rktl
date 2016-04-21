@@ -113,8 +113,8 @@
 (htdp-err/rt-test (foldl car 2 '(1 2 3))
   "foldl : first argument must be a function that expects two arguments, given car")
 
-(htdp-err/rt-test (foldr (local ((define (f x y) (+ x y))) f) 2 '(1 2 3))
-  "foldr : first argument must be a function that expects two arguments, given f")
+(htdp-err/rt-test (foldr (local ((define (f x y) (+ x y))) f) 2 '(1 2 3) '(1 2 3))
+  "foldr : first argument must be a function that expects three arguments, given f")
 
 (htdp-err/rt-test (foldl + (list 2 3 4) 0) "foldl : 3rd argument must be a list, given 0")
 (htdp-err/rt-test (foldr + (list 2 3 4) 0) "foldr : 3rd argument must be a list, given 0")
