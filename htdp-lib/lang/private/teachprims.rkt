@@ -366,21 +366,25 @@ namespace.
   (define LE (length l))
   (unless (> LE 0)
     (error tag "expects (at least) one list argument, given none"))
-  (unless (and (procedure? f) (procedure-arity-includes? f (+ LE n)))
+  (define LEn (+ LE n))
+  (unless (and (procedure? f) (procedure-arity-includes? f LEn))
     (define name (name-of-object f))
     (define numb
-      (case (+ LE n)
+      (case LEn
         [(1) "one argument"]
         [(2) "two arguments"]
         [(3) "three arguments"]
-        [else (format "~a arguments" (+ LE n))]))
+        [else (format "~a arguments" LEn)]))
     (hocheck tag (string-append FMT (if (symbol? name) AFT EFT)) numb name)))
 
 ;; X -> [U X Symbol]
 (define (name-of-object f)
   (define name (object-name f))
   (define lam? (and name (regexp-match "Source" (symbol->string name))))
-  (if lam? f name))
+  (cond
+    [lam? name]
+    [name name]
+    [else f]))
 
 ;; Symbol [Listof X] Any *-> Void
 ;; check that the given arguments are beginner-lists
