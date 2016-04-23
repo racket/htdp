@@ -108,19 +108,19 @@
 (htdp-syntax-test #'(time (define x 5)) "define: found a definition that is not at the top level")
 
 (htdp-err/rt-test (foldr car 2 '(1 2 3))
-  "foldr : first argument must be a function that expects two arguments, given car")
+  "foldr: first argument must be a function that expects two arguments, given car")
 
 (htdp-err/rt-test (foldl car 2 '(1 2 3))
-  "foldl : first argument must be a function that expects two arguments, given car")
+  "foldl: first argument must be a function that expects two arguments, given car")
 
 (htdp-err/rt-test (foldr (local ((define (f x y) (+ x y))) f) 2 '(1 2 3) '(1 2 3))
-  "foldr : first argument must be a function that expects three arguments, given f")
+  "foldr: first argument must be a function that expects three arguments, given f")
 
-(htdp-err/rt-test (foldl + (list 2 3 4) 0) "foldl : 3rd argument must be a list, given 0")
-(htdp-err/rt-test (foldr + (list 2 3 4) 0) "foldr : 3rd argument must be a list, given 0")
+(htdp-err/rt-test (foldl + (list 2 3 4) 0) "foldl: 3rd argument must be a list, given 0")
+(htdp-err/rt-test (foldr + (list 2 3 4) 0) "foldr: 3rd argument must be a list, given 0")
 
 (htdp-err/rt-test (build-string 2 add1)
-  "build-string : the second argument must be a function that produces a character, given #<procedure:add1>, which produced 1 when given 0")
+  "build-string: the second argument must be a function that produces a character, given #<procedure:add1>, which produced 1 when given 0")
 
 (htdp-test 0 '+ (+))
 (htdp-test 1 '+ (+ 1))

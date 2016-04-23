@@ -337,7 +337,7 @@ namespace.
 (define (hocheck name fmt-str . x)
   (raise
    (make-exn:fail:contract
-    (string-append (format "~a : " name) (apply format fmt-str x))
+    (string-append (format "~a: " name) (apply format fmt-str x))
     (current-continuation-marks))))
 
 (provide hocheck)
