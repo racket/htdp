@@ -78,15 +78,29 @@
                             (log-stepper-debug "print-convert returned writable: ~v\n" value)
                             value]
                            [else
-                            (let ([ans (let ([os-port (open-output-string)])
-                                         (print value os-port)
-                                         (when (boolean? val)
-                                           (log-stepper-debug "string printed by print: ~v\n" (get-output-string os-port)))
-                                         ;; this 'read' is somewhat scary. I'd like to
-                                         ;; get rid of this:
-                                         (read (open-input-string (get-output-string os-port))))])
-                              (log-stepper-debug "print-convert returned string that read mapped to: ~s\n" ans)
-                              ans)])]
+                            ;; apparently some values should be written and some should be printed.
+                            ;; Since we formulate a single value to send to the output, this is hard
+                            ;; for us.
+                            ;; A cheap hack is to print the value and then read it again.
+                            ;; Unfortunately, this fails on images. To layer a second hack on
+                            ;; the first one, we intercept this failure and just return the
+                            ;; value.
+                            (with-handlers ([exn:fail:read?
+                                             (λ (exn)
+                                               (log-stepper-debug
+                                                "read fail, print convert returning: ~s\n"
+                                                value)
+                                               value)])
+                              (define result-value
+                                (let ([os-port (open-output-string)])
+                                  (print value os-port)
+                                  (when (boolean? val)
+                                    (log-stepper-debug "string printed by print: ~v\n" (get-output-string os-port)))
+                                  ;; this 'read' is somewhat scary. I'd like to
+                                  ;; get rid of this:
+                                  (read (open-input-string (get-output-string os-port)))))
+                              (log-stepper-debug "print-convert returned string that read mapped to: ~s\n" result-value)
+                              result-value)])]
                     [(list value)
                      (log-stepper-debug "render-to-sexp: value returned from convert-value: ~v\n" value)
                      value]))))))
