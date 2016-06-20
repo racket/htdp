@@ -2,6 +2,8 @@
 
 (require syntax/modread
          stepper/private/shared
+         stepper/private/shared-typed
+         stepper/private/syntax-hider
          stepper/private/model
          tests/utils/sexp-diff
          lang/run-teaching-program
@@ -9,7 +11,6 @@
          racket/match
          racket/contract
          racket/file
-         racket/class
          mzlib/pconvert-prop ;; so it can be attached.
          test-engine/racket-tests
          "language-level-model.rkt"
@@ -409,33 +410,33 @@
 (define (compare-steps actual expected error-box)
   (match expected
     [`(before-after ,before ,after)
-     (and (before-after-result? actual)
-          (andmap (lambda (fn expected name)
-                    (unless (list? (fn actual))
+     (and (Before-After-Result? actual)
+          (andmap (lambda (exps expected name)
+                    (unless (list? exps)
                       (warn error-box
                             'compare-steps "not a list: ~v"
-                            (syntax->hilite-datum (fn actual))))
+                            (syntax->hilite-datum exps)))
                     (noisy-equal? (map syntax->hilite-datum
-                                       (fn actual))
+                                       exps)
                                   expected
                                   name
                                   error-box))
-                  (list before-after-result-pre-exps
-                        before-after-result-post-exps)
+                  (list (map sstx-s (Before-After-Result-pre-exps actual))
+                        (map sstx-s (Before-After-Result-post-exps actual)))
                   (list before after)
                   (list 'before 'after)))]
     [`(error ,err-msg)
-     (and (error-result? actual)
-          (string-contains (error-result-err-msg actual) err-msg))]
+     (and (Error-Result? actual)
+          (string-contains (Error-Result-err-msg actual) err-msg))]
     [`(before-error ,before ,err-msg)
-     (and (before-error-result? actual)
+     (and (Before-Error-Result? actual)
           (and (noisy-equal? (map syntax->hilite-datum
-                                  (before-error-result-pre-exps actual))
+                                  (Before-Error-Result-pre-exps actual))
                              before
                              'before
                              error-box)
-               (equal? err-msg (before-error-result-err-msg actual))))]
-    [`(finished-stepping) (finished-stepping? actual)]
+               (equal? err-msg (Before-Error-Result-err-msg actual))))]
+    [`(finished-stepping) (eq? 'finished-stepping actual)]
     [`(ignore) (warn error-box 
                      'compare-steps "ignoring one step") #t]
     [else (begin (warn error-box 
@@ -447,17 +448,17 @@
 
 ;; used to display results in an error message
 (define (show-result r error-box)
-  (if (before-after-result? r)
+  (if (Before-After-Result? r)
       (list 'before-after-result
-            (map (lambda (fn)
-                   (unless (list? (fn r))
+            (map (lambda (exps)
+                   (unless (list? exps)
                      (warn error-box 
                            'show-result "not a list: ~v"
-                           (syntax->hilite-datum (fn r))))
+                           (syntax->hilite-datum exps)))
                    (map syntax->hilite-datum
-                        (fn r)))
-                 (list before-after-result-pre-exps
-                       before-after-result-post-exps)))
+                        exps))
+                 (list (map sstx-s (Before-After-Result-pre-exps r))
+                       (map sstx-s (Before-After-Result-post-exps r)))))
       r))
 
 ;; noisy-equal? : (any any . -> . boolean)

@@ -44,6 +44,8 @@
          (prefix-in a: "annotate.rkt")
          (prefix-in r: "reconstruct.rkt")
          "shared.rkt"
+         "shared-typed.rkt"
+         "syntax-hider.rkt"
          "syntax-property.rkt"
          "marks.rkt"
          "model-settings.rkt"
@@ -66,8 +68,7 @@
        (#:raw-step-receiver
         (-> continuation-mark-set? symbol? void?)
         #:disable-error-handling? boolean?)
-       void?)])
- (struct-out posn-info))
+       void?)]))
 
 (define-logger stepper)
 
@@ -77,8 +78,6 @@
                                                       . -> . void?) ; iter
    . -> .
    void?))
-
-(define-struct posn-info (posn span))
 
 ; go starts a stepper instance
 ; see provide stmt for contract
@@ -240,9 +239,6 @@
                     [(vector exp #t) exp])))])
          finished-exps))
 
-      (define (compute-posn-info)
-        (mark-list->posn-info mark-list))
-
       (define (compute-step-was-app?)
         (r:step-was-app? mark-list))
 
@@ -253,7 +249,7 @@
             'normal))
 
       (define (create-held exps)
-        (make-held exps (compute-step-was-app?) (compute-posn-info)))
+        (make-held exps (compute-step-was-app?) (mark-list->posn-info mark-list)))
 
       ; sends a step to the stepper, except if
       ;  - lhs = rhs
@@ -323,9 +319,9 @@
 
         (when send?
           (receive-result
-           (before-after-result
-            (append lhs-finished-exps lhs-exps)
-            (append rhs-finished-exps rhs-exps)
+           (Before-After-Result
+            (map sstx (append lhs-finished-exps lhs-exps))
+            (map sstx (append rhs-finished-exps rhs-exps))
             step-kind
             lhs-posn-info rhs-posn-info))
           (log-stepper-debug "step sent:\n")
@@ -424,7 +420,7 @@
                   (send-step held-exps held-finished-list
                              (reconstruct) (reconstruct-all-completed)
                              (compute-step-kind held-step-was-app?)
-                             held-posn-info (compute-posn-info))
+                             held-posn-info (mark-list->posn-info mark-list))
                   (reset-held-exp-list)])]
 
               ; CASE: double-break ------------------------------------------
@@ -457,7 +453,7 @@
                (send-step lhs-unwound new-finished-list
                           rhs-unwound new-finished-list
                           'normal
-                          (compute-posn-info) (compute-posn-info))]
+                          (mark-list->posn-info mark-list) (mark-list->posn-info mark-list))]
 
               ; CASE: expr-finished-break -----------------------------------
               [(expr-finished-break)
@@ -504,13 +500,13 @@
   (define (err-display-handler message exn)
     (match held-exp-list
       [(struct no-sexp ())
-        (receive-result (error-result message))]
+        (receive-result (Error-Result message))]
       [(struct held (exps dc posn-info))
        (begin
          (receive-result
-          (before-error-result (append held-finished-list exps)
-                                    message
-                                    posn-info))
+          (Before-Error-Result (map sstx (append held-finished-list exps))
+                               message
+                               posn-info))
          (set! held-exp-list the-no-sexp))]))
 
   (program-expander
@@ -524,7 +520,7 @@
      (if (eof-object? expanded)
          (begin
            (dynamic-requirer)
-           (receive-result (finished-stepping)))
+           (receive-result 'finished-stepping))
          (begin (r:reset-lazy-tables)
                 (step-through-expression expanded)
                 (continue-thunk))))))
@@ -546,5 +542,5 @@
          [posn (syntax-position first-mark-source)]
          [span (syntax-span first-mark-source)])
     (if posn
-        (make-posn-info posn span)
+        (Posn-Info posn span)
         #f)))

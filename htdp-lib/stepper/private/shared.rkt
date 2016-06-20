@@ -5,20 +5,9 @@
          racket/contract
          racket/class
          racket/unit
-         "syntax-property.rkt")
-
-; CONTRACTS
-
-(define varref-set? (listof identifier?))
-(define binding-set? (or/c varref-set? (symbols 'all)))
-(define (arglist? v)
-  (or (null? v)
-      (identifier? v)
-      (and (pair? v)
-           ((flat-contract-predicate (cons/c identifier? arglist?)) v))        
-      (and (syntax? v) (null? (syntax-e v)))
-      (and (syntax? v)
-           ((flat-contract-predicate (cons/c identifier? arglist?)) (syntax-e v)))))
+         "syntax-property.rkt"
+         ;; remove when no longer needed:
+         "shared-typed.rkt")
 
 #;(provide/contract
    [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
@@ -49,13 +38,6 @@
  varref-set-pair-union
  varref-set-remove-bindings
  binding-set-varref-set-intersect
- step-result?
- step-maybe-result?
- (struct-out before-after-result)
- (struct-out before-error-result)
- (struct-out error-result)
- (struct-out finished-stepping)
- (struct-out runaway-process)
  list-take
  list-partition
  (struct-out closure-record)
@@ -102,21 +84,6 @@
                                            any)]) ; sexp
 
   
-; A step-result is either:
-; (make-before-after-result finished-exps exp redex reduct)
-; or (make-before-error-result finished-exps exp redex err-msg)
-; or (make-error-result finished-exps err-msg)
-; or (make-finished-result finished-exps)
-
-(struct before-after-result (pre-exps post-exps kind pre-src post-src) #:prefab)
-(struct before-error-result (pre-exps err-msg pre-src) #:prefab)
-(struct error-result (err-msg) #:prefab)
-(struct finished-stepping () #:prefab)
-(struct runaway-process (sema) #:prefab)
-
-(define step-result? (or/c before-after-result? before-error-result? 
-                           error-result? finished-stepping?))
-(define step-maybe-result? (or/c step-result? runaway-process?))
 
 ; the closure record is placed in the closure table
 

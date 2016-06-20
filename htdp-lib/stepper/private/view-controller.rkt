@@ -20,8 +20,11 @@
          (prefix-in model: "model.rkt")
          (prefix-in x: "mred-extensions.rkt")
          "shared.rkt"
+         "shared-typed.rkt"
+         "syntax-hider.rkt"
          "model-settings.rkt"
          "xml-sig.rkt"
+         "view-controller-typed.rkt"
          images/compile-time
          images/gui
          (for-syntax racket/base images/icons/control images/icons/style images/logos))
@@ -35,9 +38,6 @@
 (define (definitions-text->settings definitions-text)
   (send definitions-text get-next-settings))
   
-;; the stored representation of a step
-(define-struct step (text kind posns) #:transparent)
-
 (define (show-about-dialog parent)
   (define dlg
     (new logo-about-dialog%
@@ -52,7 +52,8 @@
   (send dlg show #t))
 
 ;; create a new view-controller, start the model
-(define (vc-go drracket-tab program-expander dynamic-requirer selection-start selection-end)
+(define (vc-go drracket-tab program-expander dynamic-requirer selection-start
+               selection-end)
   
   ;; get the language-level:
   (define language-settings 
@@ -94,6 +95,7 @@
   (define num-steps-available 0)
   
   ;; the view in the stepper window
+  #;(: view (U False Natural))
   (define view #f)
   
   ;; wait for steps to show up on the channel.  
@@ -112,12 +114,12 @@
   ;; handles an incoming result. Either adds it to the list of 
   ;; steps, or prompts user to see whether to continue running.
   (define (receive-result-from-target result)
-    (cond [(runaway-process? result)
+    (cond [(Runaway-Process? result)
            (parameterize ([current-eventspace stepper-frame-eventspace])
              (queue-callback
               (lambda ()
                 (when (confirm-running)
-                  (semaphore-post (runaway-process-sema result)))
+                  (semaphore-post (Runaway-Process-sema result)))
                 (void))))]
           [else
            (define new-step (format-result result))
@@ -136,6 +138,9 @@
   ;; number is greater than n (or -1 if n is #f), return # of step on success,
   ;; on failure return (list 'nomatch last-step) or (list 'nomatch/seen-final
   ;; last-step) if we went past the final step
+  #;(: find-later-step ((step -> Boolean) (U Number False) (U Natural
+                                                            (List 'nomatch Natural)
+                                                            (List 'nomatch/seen-final Natural))))
   (define (find-later-step p n)
     (let* ([n-as-num (or n -1)])
       (let loop ([step 0] 
@@ -168,18 +173,18 @@
   ;; is this an application step?
   (define (application-step? history-entry)
     (match history-entry
-      [(struct step (text (or 'user-application 'finished-or-error) posns)) #t]
+      [(Step _ (or 'user-application 'finished-or-error) posns) #t]
       [else #f]))
   
   ;; is this the finished-stepping step?
   (define (finished-stepping-step? history-entry)
-    (match (step-kind history-entry)
+    (match (Step-kind history-entry)
       ['finished-or-error #t]
       [else #f]))
   
   ;; is this step on the selected expression?
   (define (selected-exp-step? history-entry)
-    (ormap (span-overlap selection-start selection-end) (step-posns history-entry)))
+    (ormap (span-overlap selection-start selection-end) (Step-posns history-entry)))
     
   ;; build gui object:
   
@@ -341,7 +346,7 @@
   ;; frame
   (define (update-view/existing new-view)
     (set! view new-view)
-    (let ([e (step-text (list-ref view-history view))])
+    (let ([e (Step-text (list-ref view-history view))])
       (send e begin-edit-sequence)
       (send canvas set-editor e)
       (send e reset-width canvas)
@@ -389,7 +394,7 @@
     (when (= runaway-counter runaway-counter-limit)
       (define runaway-semaphore (make-semaphore 0))
       (async-channel-put view-channel 
-                         (runaway-process runaway-semaphore))
+                         (Runaway-Process runaway-semaphore))
       ;; wait for a signal to continue running:
       (semaphore-wait runaway-semaphore))
     (async-channel-put view-channel result))
@@ -427,38 +432,38 @@
   ;; format-result : step-result -> step?
   (define (format-result result)
     (match result
-      [(struct before-after-result (pre-exps post-exps kind pre-src post-src))
-       (make-step (new x:stepper-text% 
-                       [left-side pre-exps]
-                       [right-side post-exps]
-                       [show-inexactness? 
-                        (send language-level stepper:show-inexactness?)]
-                       [print-boolean-long-form? 
-                        (send language-level stepper:print-boolean-long-form?)])
-                  kind 
-                  (list pre-src post-src))]
-      [(struct before-error-result (pre-exps err-msg pre-src))
-       (make-step (new x:stepper-text%
-                       [left-side pre-exps] 
-                       [right-side err-msg]
-                       [show-inexactness?
-                        (send language-level stepper:show-inexactness?)]
-                       [print-boolean-long-form? 
-                        (send language-level stepper:print-boolean-long-form?)])
-                  'finished-or-error 
-                  (list pre-src))]
-      [(struct error-result (err-msg))
-       (make-step (new x:stepper-text% 
-                       [left-side null]
-                       [right-side err-msg]
-                       [show-inexactness?
-                        (send language-level stepper:show-inexactness?)]
-                       [print-boolean-long-form? 
-                        (send language-level stepper:print-boolean-long-form?)]) 
-                  'finished-or-error 
-                  (list))]
-      [(struct finished-stepping ())
-       (make-step x:finished-text 'finished-or-error (list))]))
+      [(Before-After-Result pre-exps post-exps kind pre-src post-src)
+       (Step (new x:stepper-text% 
+                  [left-side (map sstx-s pre-exps)]
+                  [right-side (map sstx-s post-exps)]
+                  [show-inexactness? 
+                   (send language-level stepper:show-inexactness?)]
+                  [print-boolean-long-form? 
+                   (send language-level stepper:print-boolean-long-form?)])
+             kind 
+             (list pre-src post-src))]
+      [(Before-Error-Result pre-exps err-msg pre-src)
+       (Step (new x:stepper-text%
+                  [left-side (map sstx-s pre-exps)] 
+                  [right-side err-msg]
+                  [show-inexactness?
+                   (send language-level stepper:show-inexactness?)]
+                  [print-boolean-long-form? 
+                   (send language-level stepper:print-boolean-long-form?)])
+             'finished-or-error 
+             (list pre-src))]
+      [(Error-Result err-msg)
+       (Step (new x:stepper-text% 
+                  [left-side null]
+                  [right-side err-msg]
+                  [show-inexactness?
+                   (send language-level stepper:show-inexactness?)]
+                  [print-boolean-long-form? 
+                   (send language-level stepper:print-boolean-long-form?)]) 
+             'finished-or-error 
+             (list))]
+      ['finished-stepping
+       (Step x:finished-text 'finished-or-error (list))]))
   
   ;; program-expander-prime : wrap the program-expander for a couple of reasons:
   ;; 1) we need to capture the custodian as the thread starts up:
@@ -517,7 +522,7 @@
 (define ((span-overlap selection-start selection-end) source-posn-info)
   (match source-posn-info
     [#f #f]
-    [(struct model:posn-info (posn span))
+    [(Posn-Info posn span)
      (let ([end (+ posn span)])
        (and posn
             ;; you can *almost* combine these two, but not quite.

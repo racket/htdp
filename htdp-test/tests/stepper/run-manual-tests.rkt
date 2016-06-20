@@ -3,7 +3,7 @@
 
 (require "through-tests.rkt"
          #;(prefix-in m: "language-level-model.rkt")
-         #;"test-engine.rkt")
+         "test-engine.rkt")
 
 ;; this file is for manual checking of individual normally-automated tests.
 
