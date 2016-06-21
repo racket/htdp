@@ -115,15 +115,15 @@
      (stepper-syntax-property #`(quote #,val) 'stepper-xml-value-hint 'from-xml-box)]
     [else
      (define extracted-proc (unwrap-proc val))
-     (define closure-record? (and (annotated-proc? extracted-proc)
+     (define maybe-closure-record (and (annotated-proc? extracted-proc)
                                   (annotated-proc-info extracted-proc)))
      (cond
-       [closure-record?
-        (let* ([mark (closure-record-mark closure-record?)]
-               [base-name (closure-record-name closure-record?)])
+       [maybe-closure-record
+        (let* ([mark (closure-record-mark maybe-closure-record)]
+               [base-name (closure-record-name maybe-closure-record)])
           (if base-name
               (let* ([lifted-index
-                      (closure-record-lifted-index closure-record?)]
+                      (closure-record-lifted-index maybe-closure-record)]
                      [name
                       (if lifted-index
                           (construct-lifted-name base-name lifted-index)
