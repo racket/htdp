@@ -431,7 +431,7 @@
     [`(before-error ,before ,err-msg)
      (and (Before-Error-Result? actual)
           (and (noisy-equal? (map syntax->hilite-datum
-                                  (Before-Error-Result-pre-exps actual))
+                                  (map sstx-s (Before-Error-Result-pre-exps actual)))
                              before
                              'before
                              error-box)
