@@ -57,8 +57,6 @@
  queue-length ; queue -> num
  rebuild-stx ; datum syntax -> syntax
  break-kind? ; predicate
- varref-set? ; predicate
- binding-set? ; predicate
  ; get-binding-name
  ; bogus-binding?
  ; get-lifted-gensym

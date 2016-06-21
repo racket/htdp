@@ -6,10 +6,7 @@
 (provide Varref-Set
          Binding-Set
          Arglist
-         varref-set?
-         binding-set?
          step-result?
-         step-maybe-result?
          (struct-out Before-After-Result)
          (struct-out Before-Error-Result)
          (struct-out Error-Result)
@@ -67,8 +64,4 @@
   (U 'normal
      'user-application))
 
-;; not sure these are needed...
-(define-predicate varref-set? Varref-Set)
-(define-predicate binding-set? Binding-Set)
 (define-predicate step-result? Step-Result)
-(define-predicate step-maybe-result? Step-Maybe-Result)
