@@ -11,7 +11,6 @@
 
 #;(provide/contract
    [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
-   [binding-set-varref-set-intersect (-> binding-set? varref-set? binding-set?)]
    [skipto/auto (syntax? (symbols 'rebuild 'discard) 
                          (syntax? . -> . syntax?)
                          . -> . 
@@ -19,7 +18,6 @@
    [in-closure-table (-> any/c boolean?)]
    [attach-info (-> syntax? syntax? syntax?)]
    [transfer-info (-> syntax? syntax? syntax?)]
-   [arglist->ilist (-> arglist? any)]
    [arglist-flatten (-> arglist? (listof identifier?))])
 
 (provide
@@ -29,10 +27,8 @@
  skipto/auto
  attach-info
  transfer-info
- arglist->ilist
  arglist-flatten
  varref-set-remove-bindings
- binding-set-varref-set-intersect
  *unevaluated* 
  struct-flag
  multiple-highlight
@@ -45,20 +41,12 @@
  syntax-pair-map
  rebuild-stx ; datum syntax -> syntax
  break-kind? ; predicate
- ; get-binding-name
- ; bogus-binding?
- ; get-lifted-gensym
- ; expr-read
- ; set-expr-read!
  reset-profiling-table ; profiling info
  get-set-pair-union-stats ; profiling info
  re-intern-identifier
  finished-xml-box-table
- saved-code-inspector
- 
- 
- (struct-out annotated-proc)
- 
+ saved-code-inspector 
+ (struct-out annotated-proc) 
  view-controller^
  stepper-frame^
  )
@@ -188,38 +176,6 @@
   ;(begin (closure-table-put! 'foo 'bar)
   ;       (and (eq? (in-closure-table 'blatz) #f)
   ;            (eq? (in-closure-table 'foo) #t)))
- 
-  
-  ;; arglist : for our puposes, an ilist is defined like this:
-  ;; arglist : (or/c identifier? null? (cons identifier? arglist?) (syntax (cons identifier? arglist?))
-  ;; ... where an ilist val can be anything _except_ a pair or null
-
-  ;; arglist->ilist : turns an (possibly improper) arglist into a (possibly improper) list of syntax objects
-
-  (define (arglist->ilist arglist)
-    (let loop ([ilist arglist])
-      (cond [(identifier? ilist)
-             ilist]
-            [(pair? ilist)
-             (cons (car ilist)
-                   (loop (cdr ilist)))]
-            [(and (syntax? ilist) (pair? (syntax-e ilist)))
-             (loop (syntax-e ilist))]
-            [(null? ilist) null])))
-
-  ;; arglist-flatten : produces a list containing the elements of the ilist
-
-  (define (arglist-flatten arglist)
-    (let loop ([ilist arglist])
-      (cond [(identifier? ilist)
-             (cons ilist null)]
-            [(or (null? ilist) (and (syntax? ilist) (null? (syntax-e ilist))))
-             null]
-            [(pair? ilist)
-             (cons (car ilist) (loop (cdr ilist)))]
-            [(and (syntax? ilist)
-                  (pair? (syntax-e ilist)))
-             (loop (syntax-e ilist))])))
 
   ;; zip : (listof 'a) (listof 'b) (listof 'c) ...
   ;;       -> (listof (list 'a 'b 'c ...))
@@ -399,28 +355,6 @@
 ;         `(((2 . 3) 1) ((2 . 1) 2) ((1 . 2) 2)))
 
 
-
-
-  ; binding-set-varref-set-intersect : BINDING-SET VARREF-SET -> BINDING-SET
-  ; return the subset of varrefs that appear in the bindings
-
-  (define (binding-set-varref-set-intersect bindings varrefs)
-    (cond [(eq? bindings 'all) varrefs]
-          [else (filter (lambda (varref)
-                          (ormap (lambda (binding)
-                                   (bound-identifier=? binding varref))
-                                 bindings))
-                        varrefs)]))
-
-  ; varref-set-remove-bindings : VARREF-SET (BINDING-SET - 'all) -> VARREF-SET
-  ; remove bindings from varrefs
-
-  (define (varref-set-remove-bindings varrefs bindings)
-    (cond [(eq? bindings 'all)
-           (error 'varref-set-remove-bindings
-                  "binding-set 'all passed as second argument, first argument was: ~s"
-                  varrefs)]
-          [else (remove* bindings varrefs bound-identifier=?)]))
 
   ;; take info from source expressions to reconstructed expressions
 
@@ -627,18 +561,6 @@
 (check-equal? (lifted-name cd-stx) 'lifter-cd-1)
 (check-equal? (lifted-name (datum->syntax #f 'ef)) 'lifter-ef-2)
 (check-equal? (lifted-name cd-stx) 'lifter-cd-1)
-
-(check-equal? (map syntax-e (arglist->ilist #'(a b c))) '(a b c))
-(check-equal? (map syntax-e (arglist->ilist #'(a . (b c)))) '(a b c))
-(check-equal? (syntax-e (arglist->ilist #'a)) 'a)
-(let ([result (arglist->ilist #' (a b . c))])
-  (check-equal? (syntax-e (car result)) 'a)
-  (check-equal? (syntax-e (cadr result)) 'b)
-  (check-equal? (syntax-e (cddr result)) 'c))
-(check-equal? (map syntax-e (arglist-flatten #'(a b c))) '(a b c))
-(check-equal? (map syntax-e (arglist-flatten #'(a . (b c)))) '(a b c))
-(check-equal? (map syntax-e (arglist-flatten #'(a b . c))) '(a b c))
-(check-equal? (map syntax-e (arglist-flatten #'a)) '(a))
 
 (check-exn exn:fail? (lambda () (stepper-syntax-property #`13 'boozle)))
 (check-exn exn:fail? (lambda () (stepper-syntax-property #`13 'boozle #t)))

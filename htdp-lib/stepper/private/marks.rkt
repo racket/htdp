@@ -4,6 +4,7 @@
          racket/contract
          "my-macros.rkt"
          "shared.rkt"
+         "shared-typed.rkt"
          "syntax-property.rkt")
 
 (define-struct full-mark-struct (source label bindings values))

@@ -14,7 +14,10 @@
          (struct-out Posn-Info)
          (struct-out Closure-Record)
          varref-set-union
-         binding-set-union)
+         binding-set-union
+         binding-set-varref-set-intersect
+         varref-set-remove-bindings
+         arglist-flatten)
 
 (require/typed "syntax-hider.rkt"
                [#:opaque SStx sstx?]
@@ -109,4 +112,54 @@
         [(null? a-set) b-set]
         [else (append (remove* a-set b-set comparator) a-set)]))
 
+; return the subset of varrefs that appear in the bindings
+(: binding-set-varref-set-intersect
+   (Binding-Set Varref-Set -> Binding-Set))
+(define (binding-set-varref-set-intersect bindings varrefs)
+  (cond [(eq? bindings 'all) varrefs]
+        [else (filter (lambda ([varref : Identifier])
+                        (ormap (lambda ([binding : Identifier])
+                                 (bound-identifier=? binding varref))
+                               bindings))
+                      varrefs)]))
 
+; varref-set-remove-bindings : VARREF-SET (BINDING-SET - 'all) -> VARREF-SET
+; remove bindings from varrefs
+(: varref-set-remove-bindings (Varref-Set Binding-Set -> Varref-Set))
+(define (varref-set-remove-bindings varrefs bindings)
+  (cond [(eq? bindings 'all)
+         (error 'varref-set-remove-bindings
+                "binding-set 'all passed as second argument, first argument was: ~s"
+                varrefs)]
+        [else (remove* bindings varrefs bound-identifier=?)]))
+
+;; arglist : for our puposes, an ilist is defined like this:
+;; arglist : (or/c identifier? null? (cons identifier? arglist?) (syntax (cons identifier? arglist?))
+;; ... where an ilist val can be anything _except_ a pair or null
+
+;; arglist-flatten : produces a list containing the elements of the ilist
+
+(: arglist-flatten (Arglist -> (Listof Identifier)))
+(define (arglist-flatten arglist)
+  (let loop ([ilist : Arglist arglist])
+    (cond [(identifier? ilist)
+           (cons ilist null)]
+          [(or (null? ilist) (syntax-null? ilist))
+           null]
+          [(pair? ilist)
+           (cons (car ilist) (loop (cdr ilist)))]
+          [(and (syntax? ilist)
+                (pair? (syntax-e ilist)))
+           (loop (syntax-e ilist))])))
+
+(define-predicate syntax-null? (Syntaxof Null))
+
+
+(module+ test
+  (require typed/rackunit)
+  
+  
+  (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'(a b c))) '(a b c))
+  (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'(a . (b c)))) '(a b c))
+  (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'(a b . c))) '(a b c))
+  (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'a)) '(a)))
