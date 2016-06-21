@@ -445,32 +445,46 @@
 
   (define (varref-set-remove-bindings varrefs bindings)
     (cond [(eq? bindings 'all)
-           (error 'varref-set-remove-bindings "binding-set 'all passed as second argument, first argument was: ~s" varrefs)]
+           (error 'varref-set-remove-bindings
+                  "binding-set 'all passed as second argument, first argument was: ~s"
+                  varrefs)]
           [else (remove* bindings varrefs bound-identifier=?)]))
 
   ;; take info from source expressions to reconstructed expressions
 
   (define (attach-info to-exp from-exp)
-    (let* ([attached (syntax-property to-exp 'stepper-properties (append (or (syntax-property from-exp 'stepper-properties)
-                                                                             null)
-                                                                         (or (syntax-property to-exp 'stepper-properties)
-                                                                             null)))]
-           [attached (syntax-property attached 'user-source (syntax-source from-exp))]
-           [attached (syntax-property attached 'user-position (syntax-position from-exp))]
-           [attached (syntax-property attached 'user-origin (syntax-property from-exp 'origin))])
+    (let* ([attached
+            (syntax-property
+             to-exp 'stepper-properties
+             (append (or (syntax-property from-exp 'stepper-properties)
+                         null)
+                     (or (syntax-property to-exp 'stepper-properties)
+                         null)))]
+           [attached
+            (syntax-property attached 'user-source (syntax-source from-exp))]
+           [attached
+            (syntax-property attached 'user-position (syntax-position from-exp))]
+           [attached
+            (syntax-property attached 'user-origin (syntax-property from-exp 'origin))])
       attached))
 
   ;; transfer info from reconstructed expressions to other reconstructed
   ;; expressions
 
   (define (transfer-info to-exp from-exp)
-    (let* ([attached (syntax-property to-exp 'stepper-properties (append (or (syntax-property from-exp 'stepper-properties)
-                                                                             null)
-                                                                         (or (syntax-property to-exp 'stepper-properties)
-                                                                             null)))]
-           [attached (syntax-property attached 'user-source (syntax-property from-exp 'user-source))]
-           [attached (syntax-property attached 'user-position (syntax-property from-exp 'user-position))]
-           [attached (syntax-property attached 'user-origin (syntax-property from-exp 'user-origin))])
+    (let* ([attached
+            (syntax-property
+             to-exp 'stepper-properties
+             (append (or (syntax-property from-exp 'stepper-properties)
+                         null)
+                     (or (syntax-property to-exp 'stepper-properties)
+                         null)))]
+           [attached
+            (syntax-property attached 'user-source (syntax-property from-exp 'user-source))]
+           [attached
+            (syntax-property attached 'user-position (syntax-property from-exp 'user-position))]
+           [attached
+            (syntax-property attached 'user-origin (syntax-property from-exp 'user-origin))])
       attached))
   
   ;; re-intern-identifier : (identifier? -> identifier?)
