@@ -25,6 +25,9 @@
    [arglist-flatten (-> arglist? (listof identifier?))])
 
 (provide
+ (contract-out [syntax->hilite-datum 
+                ((syntax?) (#:ignore-highlight? boolean?) . ->* . any)] ; sexp with explicit tags
+               [syntax->interned-datum (-> syntax? any)])
  skipto/auto
  attach-info
  transfer-info
@@ -46,10 +49,6 @@
  zip
  let-counter
  syntax-pair-map
- make-queue ; -> queue
- queue-push ; queue val -> 
- queue-pop ; queue -> val
- queue-length ; queue -> num
  rebuild-stx ; datum syntax -> syntax
  break-kind? ; predicate
  ; get-binding-name
@@ -57,7 +56,6 @@
  ; get-lifted-gensym
  ; expr-read
  ; set-expr-read!
- values-map
  reset-profiling-table ; profiling info
  get-set-pair-union-stats ; profiling info
  re-intern-identifier
@@ -71,9 +69,7 @@
  stepper-frame^
  )
 
-(provide/contract [syntax->interned-datum (syntax? ; input
-                                           . -> .
-                                           any)]) ; sexp
+
 
 ; bogus-binding is used so that we can create legal bindings for temporary variables
 
@@ -476,14 +472,6 @@
            [attached (syntax-property attached 'user-position (syntax-property from-exp 'user-position))]
            [attached (syntax-property attached 'user-origin (syntax-property from-exp 'user-origin))])
       attached))
-
-  (define (values-map fn . lsts)
-    (apply values
-           (apply map list
-                  (apply map (lambda args
-                               (call-with-values (lambda () (apply fn args))
-                                   list))
-                         lsts))))
   
   ;; re-intern-identifier : (identifier? -> identifier?)
   ;; re-intern-identifier : some identifiers are uninterned, which breaks
@@ -491,10 +479,6 @@
   ;; and back again to make in into an interned identifier.
   (define (re-intern-identifier identifier)
     #`#,(string->symbol (symbol->string (syntax-e identifier))))
-  
-  
-  (provide/contract [syntax->hilite-datum 
-                     ((syntax?) (#:ignore-highlight? boolean?) . ->* . any)]) ; sexp with explicit tags
   
   ;; syntax->hilite-datum : takes a syntax object with zero or more
   ;; subexpressions tagged with the 'stepper-highlight', 'stepper-xml-hint', and 'stepper-xml-value-hint' syntax-properties
@@ -646,4 +630,42 @@
                   '(syntax-e cdr car))
                  'discard
                  (lambda (x) x)))
-   'c))
+   'c)
+
+  (define (lifted-name sym) 
+  (syntax->datum (get-lifted-var sym)))
+(define cd-stx 
+  (datum->syntax #f 'cd))
+
+(check-equal? (lifted-name (datum->syntax #f 'ab)) 'lifter-ab-0)
+(check-equal? (lifted-name cd-stx) 'lifter-cd-1)
+(check-equal? (lifted-name (datum->syntax #f 'ef)) 'lifter-ef-2)
+(check-equal? (lifted-name cd-stx) 'lifter-cd-1)
+
+(check-equal? (map syntax-e (arglist->ilist #'(a b c))) '(a b c))
+(check-equal? (map syntax-e (arglist->ilist #'(a . (b c)))) '(a b c))
+(check-equal? (syntax-e (arglist->ilist #'a)) 'a)
+(let ([result (arglist->ilist #' (a b . c))])
+  (check-equal? (syntax-e (car result)) 'a)
+  (check-equal? (syntax-e (cadr result)) 'b)
+  (check-equal? (syntax-e (cddr result)) 'c))
+(check-equal? (map syntax-e (arglist-flatten #'(a b c))) '(a b c))
+(check-equal? (map syntax-e (arglist-flatten #'(a . (b c)))) '(a b c))
+(check-equal? (map syntax-e (arglist-flatten #'(a b . c))) '(a b c))
+(check-equal? (map syntax-e (arglist-flatten #'a)) '(a))
+
+(check-exn exn:fail? (lambda () (stepper-syntax-property #`13 'boozle)))
+(check-exn exn:fail? (lambda () (stepper-syntax-property #`13 'boozle #t)))
+(check-equal? (stepper-syntax-property #`13 'stepper-hint) #f)
+(check-equal? (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes)
+                                       'stepper-hint) 'yes)
+(check-equal? 
+ (stepper-syntax-property (stepper-syntax-property (stepper-syntax-property #`13 
+                                                                            'stepper-hint
+                                                                            'no)
+                                                   'stepper-hint 'yes)
+                          'stepper-hint)
+ 'yes)
+(check-equal? (stepper-syntax-property (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes) 'stepper-black-box-expr 'arg) 'stepper-hint) 'yes)
+(check-equal? (syntax->datum (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes) 'stepper-black-box-expr 'arg)) 13)
+)
