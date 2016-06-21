@@ -12,7 +12,9 @@
          (struct-out Error-Result)
          (struct-out Runaway-Process)
          (struct-out Posn-Info)
-         (struct-out Closure-Record))
+         (struct-out Closure-Record)
+         varref-set-union
+         binding-set-union)
 
 (require/typed "syntax-hider.rkt"
                [#:opaque SStx sstx?]
@@ -75,3 +77,36 @@
                         [mark : SMrk]
                         [lifted-index : (U False SStx)])
   #:transparent)
+
+;; combine a list of binding sets
+(: binding-set-union ((Listof Binding-Set) -> Binding-Set))
+(define (binding-set-union args)
+  (foldl binding-set-pair-union null args))
+
+;; combine a list of varref sets
+(: varref-set-union ((Listof Varref-Set) -> Varref-Set))
+(define (varref-set-union args)
+  (foldl varref-set-pair-union null args))
+
+;; the union of two varref-sets
+(: varref-set-pair-union (Varref-Set Varref-Set -> Varref-Set))
+(define (varref-set-pair-union a-set b-set)
+  (set-pair-union a-set b-set free-identifier=?))
+
+;; the union of two binding sets
+(: binding-set-pair-union (Binding-Set Binding-Set -> Binding-Set))
+(define (binding-set-pair-union a-set b-set)
+  (cond [(eq? a-set 'all) 'all]
+        [(eq? b-set 'all) 'all]
+        [else (set-pair-union a-set b-set eq?)]))
+
+;; the union of two lists using a specified equality function
+(: set-pair-union (All (T)
+                       ((Listof T) (Listof T) (T T -> Boolean)
+                                   -> (Listof T))))
+(define (set-pair-union a-set b-set comparator)
+  (cond [(null? b-set) a-set]
+        [(null? a-set) b-set]
+        [else (append (remove* a-set b-set comparator) a-set)]))
+
+

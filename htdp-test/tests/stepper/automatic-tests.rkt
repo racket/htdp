@@ -1,9 +1,6 @@
 #lang racket
 (require (only-in test-engine/racket-tests)) ;; only for effect to attach (below)
 
-;; run shared.rkt unit tests:
-(require "shared-unit-tests.rkt")
-
 ;; now, the rest:
 (require "through-tests.rkt" 
          "test-engine.rkt")

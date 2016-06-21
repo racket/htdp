@@ -12,8 +12,6 @@
 #;(provide/contract
    [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
    [binding-set-varref-set-intersect (-> binding-set? varref-set? binding-set?)]
-   [binding-set-union (-> (listof binding-set?) binding-set?)]
-   [varref-set-union (-> (listof varref-set?) varref-set?)]
    [skipto/auto (syntax? (symbols 'rebuild 'discard) 
                          (syntax? . -> . syntax?)
                          . -> . 
@@ -33,10 +31,6 @@
  transfer-info
  arglist->ilist
  arglist-flatten
- binding-set-union
- binding-set-pair-union
- varref-set-union
- varref-set-pair-union
  varref-set-remove-bindings
  binding-set-varref-set-intersect
  *unevaluated* 
@@ -394,40 +388,18 @@
   (define (get-set-pair-union-stats)
     (hash-map profiling-table (lambda (k v) (list k (unbox v)))))
 
-  ;; test cases :
-  ;; (profiling-table-incr 1 2)
-  ;; (profiling-table-incr 2 3)
-  ;; (profiling-table-incr 2 1)
-  ;; (profiling-table-incr 1 2)
-  ;; (profiling-table-incr 2 1)
-  ;;
-  ;; (equal? (get-set-pair-union-stats)
-  ;         `(((2 . 3) 1) ((2 . 1) 2) ((1 . 2) 2)))
+;; test cases :
+;; (profiling-table-incr 1 2)
+;; (profiling-table-incr 2 3)
+;; (profiling-table-incr 2 1)
+;; (profiling-table-incr 1 2)
+;; (profiling-table-incr 2 1)
+;;
+;; (equal? (get-set-pair-union-stats)
+;         `(((2 . 3) 1) ((2 . 1) 2) ((1 . 2) 2)))
 
-  ;; until this remove* goes into list.rkt?
 
-  (define (set-pair-union a-set b-set comparator)
-    (cond [(null? b-set) a-set]
-          [(null? a-set) b-set]
-          [else (append (remove* a-set b-set comparator) a-set)]))
 
-  (define (varref-set-pair-union a-set b-set)
-    (set-pair-union a-set b-set free-identifier=?))
-
-  (define (binding-set-pair-union a-set b-set)
-    (cond [(eq? a-set 'all) 'all]
-          [(eq? b-set 'all) 'all]
-          [else (set-pair-union a-set b-set eq?)]))
-
-  (define (pair-union->many-union fn)
-    (lambda (args)
-      (foldl fn null args)))
-
-  (define binding-set-union
-    (pair-union->many-union binding-set-pair-union))
-
-  (define varref-set-union
-    (pair-union->many-union varref-set-pair-union))
 
   ; binding-set-varref-set-intersect : BINDING-SET VARREF-SET -> BINDING-SET
   ; return the subset of varrefs that appear in the bindings
