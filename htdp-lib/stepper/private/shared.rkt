@@ -29,9 +29,7 @@
  struct-flag
  multiple-highlight
  flatten-take
- get-lifted-var
  zip
- let-counter
  syntax-pair-map
  rebuild-stx ; datum syntax -> syntax
  break-kind? ; predicate
@@ -41,55 +39,12 @@
  (struct-out annotated-proc) 
  view-controller^
  stepper-frame^
- )
+ let-counter)
 
 
 
 
-; get-lifted-var maintains the mapping between let-bindings and the syntax object
-; which is used to capture its index at runtime.
-; unfortunately, it can't use "make-binding-source" because you need to compare the items 
-; with module-variable=?, which means that hash tables won't work.
-
-; my weak-assoc lists are lists of two-element lists, where the first one is in a weak box.
-; furthermore, the whole thing is in a box, to allow it to be banged when needed.
-
-(define (weak-assoc-add boxed-lst key value)
-  (set-box! boxed-lst (cons (list (make-weak-box key) value)
-                            (unbox boxed-lst))))
-
-(define (weak-assoc-search boxed-lst key eq-fun)
-  (let* ([lst (unbox boxed-lst)]
-         [found-val #f]
-         [stripped (let loop ([remaining lst])
-                     (if (null? remaining)
-                         null
-                         (let* ([first (car remaining)]
-                                [first-key (weak-box-value (car first))])
-                           (if first-key
-                               (if (eq-fun key first-key)
-                                   (begin 
-                                     (set! found-val (cadr first))
-                                     remaining)
-                                   (cons first
-                                         (loop (cdr remaining))))
-                               (loop (cdr remaining))))))])
-    (set-box! boxed-lst stripped)
-    found-val))
-
-(define get-lifted-var
-  (let ([assoc-table (box null)])
-    (lambda (stx)
-      (let ([maybe-fetch (weak-assoc-search assoc-table stx free-identifier=?)])
-        (or maybe-fetch
-            (begin
-              (let* ([new-binding (next-lifted-symbol
-                                   (string-append "lifter-" (format "~a" (syntax->datum stx)) "-"))])
-                (weak-assoc-add assoc-table stx new-binding)
-                new-binding)))))))
   
-; gensyms needed by many modules:
-
 
 ; multiple-highlight is used to indicate multiple highlighted expressions
 (define multiple-highlight (gensym "multiple-highlight-"))
@@ -410,25 +365,6 @@
 (module+ test
   (require rackunit)
 
-  (test-case
-   "weak-assoc"
-   (define wa (box null))
-   (define-struct test ())
-   (weak-assoc-add wa 3 4)
-   (weak-assoc-add wa 9 10)
-   (check-eq? (weak-assoc-search wa 3 =) 4)
-   (check-eq? (weak-assoc-search wa 9 =) 10)
-   (check-eq? (weak-assoc-search wa 3 =) 4)
-   (check-eq? (length (unbox wa)) 2)
-   (define my-struct (make-test))
-   (weak-assoc-add wa my-struct 14)
-   (check-eq? (length (unbox wa)) 3)
-   (check-eq? (weak-assoc-search wa my-struct eq?) 14)
-   (set! my-struct #f)
-   (collect-garbage)
-   (check-eq? (length (unbox wa)) 3)
-   (check-eq? (weak-assoc-search wa 3 =) 4)
-   (check-eq? (length (unbox wa)) 2))
 
   
   
