@@ -17,7 +17,11 @@
          binding-set-union
          binding-set-varref-set-intersect
          varref-set-remove-bindings
-         arglist-flatten)
+         arglist-flatten
+         get-arg-var
+         begin0-temp
+         ;; temporary:
+         next-lifted-symbol)
 
 (require/typed "syntax-hider.rkt"
                [#:opaque SStx sstx?]
@@ -163,6 +167,59 @@
 (define-predicate syntax-null? (Syntaxof Null))
 
 
+; bogus-binding is used so that we can create legal bindings for temporary variables
+(: create-bogus-binding (String -> Identifier))
+(define (create-bogus-binding name)
+  (let* ([gensymed-name (gensym name)]
+         [binding (datum->syntax #'here gensymed-name)])
+    binding))
+
+
+; make-binding-source creates a pool of bindings, indexed by arbitrary keys. These bindings
+; not eq? to any other bindings[*], but a client can always get the same binding by
+; invoking the resulting procedure with the same key (numbers work well). make-binding-source
+; also takes a string which will be part of the printed representation of the binding's
+; name; this makes debugging easier.
+; [*] actually, this is not true if you don't use a one-to-one function as the binding-maker
+; make-gensym-source : (string -> (key -> binding))
+(: make-binding-source (All (K) (String (String -> Identifier) (K -> String)
+                                        -> (K -> Identifier))))
+(define (make-binding-source id-string binding-maker key-displayer)
+  (let ([assoc-table ((inst make-weak-hash K Identifier))])
+    (lambda ([key : K])
+      (let ([maybe-fetch (hash-ref assoc-table key (lambda () #f))])
+        (or maybe-fetch
+            (begin
+              (let* ([new-binding (binding-maker 
+                                   (string-append id-string
+                                                  (key-displayer key)
+                                                  "-"))])
+                (hash-set! assoc-table key new-binding)
+                new-binding)))))))
+
+
+; get-arg-var maintains a list of bindings associated with the non-negative
+; integers.  These symbols are used in the elaboration of applications; the nth
+; in the application is evaluated and stored in a variable whose name is the nth
+; gensym supplied by get-arg-var.
+
+(define get-arg-var
+  (make-binding-source "arg" create-bogus-binding number->string))
+
+(define begin0-temp (create-bogus-binding "begin0-temp"))
+
+
+(: lifted-index Natural)
+(define lifted-index 0)
+
+(: next-lifted-symbol (String -> Identifier))
+(define (next-lifted-symbol str)
+  (let ([index lifted-index]) 
+    (set! lifted-index (+ lifted-index 1))
+    (datum->syntax #'here (string->symbol (string-append str (number->string index))))))
+
+
+
 (module+ test
   (require typed/rackunit)
   
@@ -170,4 +227,18 @@
   (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'(a b c))) '(a b c))
   (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'(a . (b c)))) '(a b c))
   (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'(a b . c))) '(a b c))
-  (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'a)) '(a)))
+  (check-equal? (map (inst syntax-e Symbol) (arglist-flatten #'a)) '(a))
+
+
+  (test-true
+   "get-arg-binding"
+   (let* ([arg3 (get-arg-var 3)]
+          [arg2 (get-arg-var 2)]
+          [arg1 (get-arg-var 1)]
+          [arg2p (get-arg-var 2)])
+     (and (not (eq? arg3 arg2))
+          (not (eq? arg3 arg1))
+          (not (eq? arg3 arg2p))
+          (not (eq? arg2 arg1))
+          (eq? arg2 arg2p)
+          (not (eq? arg1 arg2p))))))
