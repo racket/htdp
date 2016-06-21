@@ -10,15 +10,13 @@
          "shared-typed.rkt")
 
 #;(provide/contract
-   [varref-set-remove-bindings (-> varref-set? varref-set? varref-set?)]
    [skipto/auto (syntax? (symbols 'rebuild 'discard) 
                          (syntax? . -> . syntax?)
                          . -> . 
                          syntax?)]
    [in-closure-table (-> any/c boolean?)]
    [attach-info (-> syntax? syntax? syntax?)]
-   [transfer-info (-> syntax? syntax? syntax?)]
-   [arglist-flatten (-> arglist? (listof identifier?))])
+   [transfer-info (-> syntax? syntax? syntax?)])
 
 (provide
  (contract-out [syntax->hilite-datum 
@@ -27,8 +25,6 @@
  skipto/auto
  attach-info
  transfer-info
- arglist-flatten
- varref-set-remove-bindings
  *unevaluated* 
  struct-flag
  multiple-highlight
@@ -41,8 +37,6 @@
  syntax-pair-map
  rebuild-stx ; datum syntax -> syntax
  break-kind? ; predicate
- reset-profiling-table ; profiling info
- get-set-pair-union-stats ; profiling info
  re-intern-identifier
  finished-xml-box-table
  saved-code-inspector 
@@ -140,127 +134,113 @@
                 (weak-assoc-add assoc-table stx new-binding)
                 new-binding)))))))
   
-  ; gensyms needed by many modules:
+; gensyms needed by many modules:
 
 
-  ; multiple-highlight is used to indicate multiple highlighted expressions
-  (define multiple-highlight (gensym "multiple-highlight-"))
-  
-  ; *unevaluated* is the value assigned to temps before they are evaluated. It's not a symbol so
-  ; it won't need quoting in the source.  Bit of a hack, I know.
-  (define-struct *unevaluated-struct* ())
-  (define *unevaluated* (make-*unevaluated-struct*))
- 
-  ; struct-flag : uninterned symbol
-  (define struct-flag (gensym "struct-flag-"))
-  
+; multiple-highlight is used to indicate multiple highlighted expressions
+(define multiple-highlight (gensym "multiple-highlight-"))
+
+; *unevaluated* is the value assigned to temps before they are evaluated. It's not a symbol so
+; it won't need quoting in the source.  Bit of a hack, I know.
+(define-struct *unevaluated-struct* ())
+(define *unevaluated* (make-*unevaluated-struct*))
+
+; struct-flag : uninterned symbol
+(define struct-flag (gensym "struct-flag-"))
+
 ;  (define expr-read read-getter)
 ;  (define set-expr-read! read-setter)
-  
-  (define (flatten-take n a-list)
-    (apply append (take a-list n)))
-  
-  (define-values (closure-table-put! closure-table-lookup in-closure-table)
-    (let ([closure-table (make-weak-hash)])
-      (values
-       (lambda (key value)
-	 (hash-set! closure-table key value)
-	 key)                                  ; this return allows a run-time-optimization
-       (lambda args ; key or key & failure-thunk
-         (apply hash-ref closure-table args))
-       (lambda (key)
-         (let/ec k
-           (hash-ref closure-table key (lambda () (k #f)))
-           #t)))))
-  
-  ;(begin (closure-table-put! 'foo 'bar)
-  ;       (and (eq? (in-closure-table 'blatz) #f)
-  ;            (eq? (in-closure-table 'foo) #t)))
 
-  ;; zip : (listof 'a) (listof 'b) (listof 'c) ...
-  ;;       -> (listof (list 'a 'b 'c ...))
-  ;; zip reshuffles lists of items into a list of item-lists.  Look at the
-  ;; contract, okay?
+(define (flatten-take n a-list)
+  (apply append (take a-list n)))
 
-  (define zip
-    (lambda args
-      (apply map list args)))
+(define-values (closure-table-put! closure-table-lookup in-closure-table)
+  (let ([closure-table (make-weak-hash)])
+    (values
+     (lambda (key value)
+       (hash-set! closure-table key value)
+       key)                                  ; this return allows a run-time-optimization
+     (lambda args ; key or key & failure-thunk
+       (apply hash-ref closure-table args))
+     (lambda (key)
+       (let/ec k
+         (hash-ref closure-table key (lambda () (k #f)))
+         #t)))))
 
-  (define let-counter
-    (stepper-syntax-property #'let-counter 'stepper-binding-type 'stepper-temp))
+;(begin (closure-table-put! 'foo 'bar)
+;       (and (eq? (in-closure-table 'blatz) #f)
+;            (eq? (in-closure-table 'foo) #t)))
+
+;; zip : (listof 'a) (listof 'b) (listof 'c) ...
+;;       -> (listof (list 'a 'b 'c ...))
+;; zip reshuffles lists of items into a list of item-lists.  Look at the
+;; contract, okay?
+
+(define zip
+  (lambda args
+    (apply map list args)))
+
+(define let-counter
+  (stepper-syntax-property #'let-counter 'stepper-binding-type 'stepper-temp))
 
 
-  ; syntax-pair-map (using the def'ns of the Racket docs):
+; syntax-pair-map (using the def'ns of the Racket docs):
 
-  (define (syntax-pair-map pair fn)
-    (cons (fn (car pair))
-          (cond [(syntax? (cdr pair))
-                 (fn (cdr pair))]
-                [(pair? (cdr pair))
-                 (syntax-pair-map (cdr pair) fn)]
-                [(null? (cdr pair))
-                 null])))
+(define (syntax-pair-map pair fn)
+  (cons (fn (car pair))
+        (cond [(syntax? (cdr pair))
+               (fn (cdr pair))]
+              [(pair? (cdr pair))
+               (syntax-pair-map (cdr pair) fn)]
+              [(null? (cdr pair))
+               null])))
 
-  (define (make-queue)
-    (box null))
 
-  (define (queue-push queue new)
-    (set-box! queue (append (unbox queue) (list new))))
 
-  (define (queue-pop queue)
-    (if (null? (unbox queue))
-      (error 'queue-pop "no elements in queue")
-      (let ([first (car (unbox queue))])
-        (set-box! queue (cdr (unbox queue)))
-        first)))
+(define saved-code-inspector (variable-reference->module-declaration-inspector
+                              (#%variable-reference)))
 
-  (define (queue-length queue)
-    (length (unbox queue)))
+(define (rebuild-stx new old)
+  (datum->syntax old new old old))
 
-  (define saved-code-inspector (variable-reference->module-declaration-inspector
-                                (#%variable-reference)))
-  
-  (define (rebuild-stx new old)
-    (datum->syntax old new old old))
+(define break-kind?
+  (symbols 'normal-break 'normal-break/values 'result-exp-break
+           'result-value-break 'double-break 'late-let-break
+           'expr-finished-break 'define-struct-break))
 
-  (define break-kind?
-    (symbols 'normal-break 'normal-break/values 'result-exp-break
-             'result-value-break 'double-break 'late-let-break
-             'expr-finished-break 'define-struct-break))
+; functional update package
 
-  ; functional update package
+;; a trace is one of
+;; (cons 'car trace)
+;; (cons 'cdr trace)
+;; (cons 'syntax-e trace)
+;; (cons 'both (list trace trace))
+;; null
 
-  ;; a trace is one of
-  ;; (cons 'car trace)
-  ;; (cons 'cdr trace)
-  ;; (cons 'syntax-e trace)
-  ;; (cons 'both (list trace trace))
-  ;; null
-  
-  (define (swap-args 2-arg-fun)
-    (lambda (x y)
-      (2-arg-fun y x)))
+(define (swap-args 2-arg-fun)
+  (lambda (x y)
+    (2-arg-fun y x)))
 
-  (define second-arg (lambda (dc y) y))
-  
-  (define (up-mapping traversal fn)
-    (unless (symbol? fn)
-      (error 'up-mapping "expected symbol for stepper traversal, given: ~v" fn))
-    (case traversal
-      [(rebuild) (case fn 
-                   [(car) (lambda (stx new) (cons new (cdr stx)))]
-                   [(cdr) (lambda (stx new) (cons (car stx) new))]
-                   [(syntax-e) (swap-args rebuild-stx)]
-                   [(both-l both-r) (lambda (stx a b) (cons a b))]
-                   [else (error 'up-mapping "unexpected symbol in up-mapping (1): ~v" fn)])]
-      [(discard) (case fn
-                   [(car) second-arg]
-                   [(cdr) second-arg]
-                   [(syntax-e) second-arg]
-                   [(both-l) (lambda (stx a b) a)]
-                   [(both-r) (lambda (stx a b) b)]
-                   [else (error 'up-mapping "unexpected symbol in up-mapping (2): ~v" fn)])]))
-  
+(define second-arg (lambda (dc y) y))
+
+(define (up-mapping traversal fn)
+  (unless (symbol? fn)
+    (error 'up-mapping "expected symbol for stepper traversal, given: ~v" fn))
+  (case traversal
+    [(rebuild) (case fn 
+                 [(car) (lambda (stx new) (cons new (cdr stx)))]
+                 [(cdr) (lambda (stx new) (cons (car stx) new))]
+                 [(syntax-e) (swap-args rebuild-stx)]
+                 [(both-l both-r) (lambda (stx a b) (cons a b))]
+                 [else (error 'up-mapping "unexpected symbol in up-mapping (1): ~v" fn)])]
+    [(discard) (case fn
+                 [(car) second-arg]
+                 [(cdr) second-arg]
+                 [(syntax-e) second-arg]
+                 [(both-l) (lambda (stx a b) a)]
+                 [(both-r) (lambda (stx a b) b)]
+                 [else (error 'up-mapping "unexpected symbol in up-mapping (2): ~v" fn)])]))
+
 ;; like car, but provide a useful error message if given a non-pair
 (define (noisy-car arg)
   (cond [(pair? arg) (car arg)]
@@ -325,119 +305,88 @@
         [else (transformer stx)]))
 
 
-  
+;; take info from source expressions to reconstructed expressions
 
-  ; BINDING-/VARREF-SET FUNCTIONS
+(define (attach-info to-exp from-exp)
+  (let* ([attached
+          (syntax-property
+           to-exp 'stepper-properties
+           (append (or (syntax-property from-exp 'stepper-properties)
+                       null)
+                   (or (syntax-property to-exp 'stepper-properties)
+                       null)))]
+         [attached
+          (syntax-property attached 'user-source (syntax-source from-exp))]
+         [attached
+          (syntax-property attached 'user-position (syntax-position from-exp))]
+         [attached
+          (syntax-property attached 'user-origin (syntax-property from-exp 'origin))])
+    attached))
 
-  ; note: a BINDING-SET which is not 'all may be used as a VARREF-SET.
-  ; this is because they both consist of syntax objects, and a binding
-  ; answers true to bound-identifier=? with itself, just like a varref
-  ; in the scope of that binding would.
+;; transfer info from reconstructed expressions to other reconstructed
+;; expressions
 
-  ; binding-set-union: (listof BINDING-SET) -> BINDING-SET
-  ; varref-set-union: (listof VARREF-SET) -> VARREF-SET
+(define (transfer-info to-exp from-exp)
+  (let* ([attached
+          (syntax-property
+           to-exp 'stepper-properties
+           (append (or (syntax-property from-exp 'stepper-properties)
+                       null)
+                   (or (syntax-property to-exp 'stepper-properties)
+                       null)))]
+         [attached
+          (syntax-property attached 'user-source (syntax-property from-exp 'user-source))]
+         [attached
+          (syntax-property attached 'user-position (syntax-property from-exp 'user-position))]
+         [attached
+          (syntax-property attached 'user-origin (syntax-property from-exp 'user-origin))])
+    attached))
 
-  (define profiling-table (make-hash))
-  (define (reset-profiling-table)
-    (set! profiling-table (make-hash)))
+;; re-intern-identifier : (identifier? -> identifier?)
+;; re-intern-identifier : some identifiers are uninterned, which breaks
+;; test cases.  re-intern-identifier takes an identifier to a string
+;; and back again to make in into an interned identifier.
+(define (re-intern-identifier identifier)
+  #`#,(string->symbol (symbol->string (syntax-e identifier))))
 
-  (define (get-set-pair-union-stats)
-    (hash-map profiling-table (lambda (k v) (list k (unbox v)))))
+;; syntax->hilite-datum : takes a syntax object with zero or more
+;; subexpressions tagged with the 'stepper-highlight', 'stepper-xml-hint', and 'stepper-xml-value-hint' syntax-properties
+;; and turns it into a datum, where expressions with the named
+;; properties result in (hilite <datum>), (xml-box <datum>), (scheme-box <datum>) and (splice-box <datum>) rather than <datum>. It also
+;; re-interns all identifiers.  In cases where a given expression has more than one of these, they appear in the order
+;; listed.  That is, an expression with both highlight and xml-box annotations will result it (hilite (xml-box <datum>))
+;; 
+;; this procedure is useful in checking the output of the stepper.
 
-;; test cases :
-;; (profiling-table-incr 1 2)
-;; (profiling-table-incr 2 3)
-;; (profiling-table-incr 2 1)
-;; (profiling-table-incr 1 2)
-;; (profiling-table-incr 2 1)
-;;
-;; (equal? (get-set-pair-union-stats)
-;         `(((2 . 3) 1) ((2 . 1) 2) ((1 . 2) 2)))
+(define (syntax->hilite-datum stx #:ignore-highlight? [ignore-highlight? #f])
+  (let ([datum (syntax-case stx ()
+                 [(a . rest) (cons (syntax->hilite-datum #`a) (syntax->hilite-datum #`rest))]
+                 [id
+                  (identifier? stx)
+                  (string->symbol (symbol->string (syntax-e stx)))]
+                 [else (if (syntax? stx)
+                           (syntax->datum stx)
+                           stx)])])
+    (let* ([it (case (stepper-syntax-property stx 'stepper-xml-hint)
+                 [(from-xml-box) `(xml-box ,datum)]
+                 [(from-scheme-box) `(scheme-box ,datum)]
+                 [(from-splice-box) `(splice-box ,datum)]
+                 [else datum])]
+           [it (case (stepper-syntax-property stx 'stepper-xml-value-hint)
+                 [(from-xml-box) `(xml-box-value ,it)]
+                 [else it])]
+           [it (if (and (not ignore-highlight?)
+                        (stepper-syntax-property stx 'stepper-highlight))
+                   `(hilite ,it)
+                   it)])
+      it)))
 
+;; finished-xml-box-table : this table tracks values that are the result
+;; of evaluating xml boxes.  These values should be rendered as xml boxes,
+;; and not as simple lists.
 
+(define finished-xml-box-table (make-weak-hash))
 
-  ;; take info from source expressions to reconstructed expressions
-
-  (define (attach-info to-exp from-exp)
-    (let* ([attached
-            (syntax-property
-             to-exp 'stepper-properties
-             (append (or (syntax-property from-exp 'stepper-properties)
-                         null)
-                     (or (syntax-property to-exp 'stepper-properties)
-                         null)))]
-           [attached
-            (syntax-property attached 'user-source (syntax-source from-exp))]
-           [attached
-            (syntax-property attached 'user-position (syntax-position from-exp))]
-           [attached
-            (syntax-property attached 'user-origin (syntax-property from-exp 'origin))])
-      attached))
-
-  ;; transfer info from reconstructed expressions to other reconstructed
-  ;; expressions
-
-  (define (transfer-info to-exp from-exp)
-    (let* ([attached
-            (syntax-property
-             to-exp 'stepper-properties
-             (append (or (syntax-property from-exp 'stepper-properties)
-                         null)
-                     (or (syntax-property to-exp 'stepper-properties)
-                         null)))]
-           [attached
-            (syntax-property attached 'user-source (syntax-property from-exp 'user-source))]
-           [attached
-            (syntax-property attached 'user-position (syntax-property from-exp 'user-position))]
-           [attached
-            (syntax-property attached 'user-origin (syntax-property from-exp 'user-origin))])
-      attached))
-  
-  ;; re-intern-identifier : (identifier? -> identifier?)
-  ;; re-intern-identifier : some identifiers are uninterned, which breaks
-  ;; test cases.  re-intern-identifier takes an identifier to a string
-  ;; and back again to make in into an interned identifier.
-  (define (re-intern-identifier identifier)
-    #`#,(string->symbol (symbol->string (syntax-e identifier))))
-  
-  ;; syntax->hilite-datum : takes a syntax object with zero or more
-  ;; subexpressions tagged with the 'stepper-highlight', 'stepper-xml-hint', and 'stepper-xml-value-hint' syntax-properties
-  ;; and turns it into a datum, where expressions with the named
-  ;; properties result in (hilite <datum>), (xml-box <datum>), (scheme-box <datum>) and (splice-box <datum>) rather than <datum>. It also
-  ;; re-interns all identifiers.  In cases where a given expression has more than one of these, they appear in the order
-  ;; listed.  That is, an expression with both highlight and xml-box annotations will result it (hilite (xml-box <datum>))
-  ;; 
-  ;; this procedure is useful in checking the output of the stepper.
-  
-  (define (syntax->hilite-datum stx #:ignore-highlight? [ignore-highlight? #f])
-    (let ([datum (syntax-case stx ()
-                   [(a . rest) (cons (syntax->hilite-datum #`a) (syntax->hilite-datum #`rest))]
-                   [id
-                    (identifier? stx)
-                    (string->symbol (symbol->string (syntax-e stx)))]
-                   [else (if (syntax? stx)
-                             (syntax->datum stx)
-                             stx)])])
-      (let* ([it (case (stepper-syntax-property stx 'stepper-xml-hint)
-                   [(from-xml-box) `(xml-box ,datum)]
-                   [(from-scheme-box) `(scheme-box ,datum)]
-                   [(from-splice-box) `(splice-box ,datum)]
-                   [else datum])]
-             [it (case (stepper-syntax-property stx 'stepper-xml-value-hint)
-                   [(from-xml-box) `(xml-box-value ,it)]
-                   [else it])]
-             [it (if (and (not ignore-highlight?)
-                          (stepper-syntax-property stx 'stepper-highlight))
-                     `(hilite ,it)
-                     it)])
-        it)))
-  
-  ;; finished-xml-box-table : this table tracks values that are the result
-  ;; of evaluating xml boxes.  These values should be rendered as xml boxes,
-  ;; and not as simple lists.
-  
-  (define finished-xml-box-table (make-weak-hash))
-  
 ;; syntax->interned-datum : like syntax->datum, except
 ;; that it re-interns all identifiers.  Useful in checking whether
 ;; two sexps will have the same printed representation.
@@ -451,21 +400,21 @@
     [else (if (syntax? stx)
               (syntax->datum stx)
               stx)]))
-  
-  
-  ;; the xml-snip-creation@ unit accepts the xml-snip% and scheme-snip% classes and
-  ;; provides functions which map a "spec" to an xml-snip.
-  ;; An xml-spec is (listof xml-spec-elt)
-  ;; An xml-spec-elt is either
-  ;;  - a string,
-  ;;  - (cons/c 'scheme-box scheme-spec), or
-  ;;  - (cons/c 'splice-box scheme-spec)
-  ;;
-  ;; A scheme-spec is (listof scheme-spec-elt)
-  ;; A scheme-spec-elt is either
-  ;;  - a string, or
-  ;;  - (cons ... oh crud.
-  #;(define xml-snip-creation@
+
+
+;; the xml-snip-creation@ unit accepts the xml-snip% and scheme-snip% classes and
+;; provides functions which map a "spec" to an xml-snip.
+;; An xml-spec is (listof xml-spec-elt)
+;; An xml-spec-elt is either
+;;  - a string,
+;;  - (cons/c 'scheme-box scheme-spec), or
+;;  - (cons/c 'splice-box scheme-spec)
+;;
+;; A scheme-spec is (listof scheme-spec-elt)
+;; A scheme-spec-elt is either
+;;  - a string, or
+;;  - (cons ... oh crud.
+#;(define xml-snip-creation@
     (unit/sig (create-xml-snip create-scheme-snip create-splice-snip)
       (import (xml-snip% scheme-snip%))
       
@@ -475,9 +424,9 @@
                [xml-editor (send new-xml-box get-editor)])
           (for-each
            (match-lambda
-            [`(scheme-box ,@(schemeboxspec ...)) (send new-xml-box insert (construct-scheme-box #f schemeboxspec))]
-            [`(splice-box ,@(spliceboxspec ...)) (send new-xml-box insert (construct-scheme-box #f spliceboxspec))]
-            [(? string? text) (send xml-editor insert text)])
+             [`(scheme-box ,@(schemeboxspec ...)) (send new-xml-box insert (construct-scheme-box #f schemeboxspec))]
+             [`(splice-box ,@(spliceboxspec ...)) (send new-xml-box insert (construct-scheme-box #f spliceboxspec))]
+             [(? string? text) (send xml-editor insert text)])
            spec)
           new-xml-box))
       
@@ -486,8 +435,8 @@
                [scheme-editor (send new-scheme-box get-editor)])
           (for-each 
            (match-lambda
-            [`(xml-box ,@(xmlspec ...)) (send scheme-editor insert (construct-xml-box xmlspec))]
-            [(? string? text) (send scheme-editor insert text)])
+             [`(xml-box ,@(xmlspec ...)) (send scheme-editor insert (construct-xml-box xmlspec))]
+             [(? string? text) (send scheme-editor insert text)])
            spec)))))
 
 ;; per Robby's suggestion: rather than using a hash table for 

@@ -81,6 +81,14 @@
                         [lifted-index : (U False SStx)])
   #:transparent)
 
+; BINDING-/VARREF-SET FUNCTIONS
+
+; note: a BINDING-SET which is not 'all may be used as a VARREF-SET.
+; this is because they both consist of syntax objects, and a binding
+; answers true to bound-identifier=? with itself, just like a varref
+; in the scope of that binding would.
+
+
 ;; combine a list of binding sets
 (: binding-set-union ((Listof Binding-Set) -> Binding-Set))
 (define (binding-set-union args)
