@@ -242,13 +242,13 @@
                   
       ;; different flavors of make-debug-info allow users to provide only the needed fields:
                   
-      (define (make-debug-info-normal free-bindings)
+      (define (make-debug-info/normal free-bindings)
         (make-debug-info exp tail-bound free-bindings 'none #t))
       
-      (define (make-debug-info-app tail-bound free-bindings label)
+      (define (make-debug-info/app tail-bound free-bindings label)
         (make-debug-info exp tail-bound free-bindings label #t))
       
-      (define (make-debug-info-let free-bindings binding-list let-counter)
+      (define (make-debug-info/let free-bindings binding-list let-counter)
         (make-debug-info 
          exp 
          (binding-set-union (list tail-bound 
@@ -259,11 +259,11 @@
                                  (list let-counter))) ; NB using bindings as varrefs
          'let-body
          #t))
-      (define (make-debug-info-fake-exp exp free-bindings)
+      (define (make-debug-info/fake-exp exp free-bindings)
         (make-debug-info (stepper-syntax-property exp 'stepper-fake-exp #t) 
                          tail-bound free-bindings 'none #t))
       
-      (define (make-debug-info-fake-exp/tail-bound exp tail-bound free-bindings)
+      (define (make-debug-info/fake-exp/tail-bound exp tail-bound free-bindings)
         (make-debug-info (stepper-syntax-property exp 'stepper-fake-exp #t) 
                          tail-bound free-bindings 'none #t))
                   
@@ -275,7 +275,7 @@
                   
       ;; used for things that are values:
       (define (normal-bundle free-vars annotated)
-        (vector (outer-wcm-wrap (make-debug-info-normal free-vars)
+        (vector (outer-wcm-wrap (make-debug-info/normal free-vars)
                                 annotated)
                 free-vars))
       
@@ -322,7 +322,7 @@
       
       (define (outer-lambda-abstraction annotated-lambda free-varrefs)
         (let*
-            ([closure-info (make-debug-info-app 'all free-varrefs 'none)]
+            ([closure-info (make-debug-info/app 'all free-varrefs 'none)]
              ;; if we manually disable the storage of names, 
              ;; lambdas get rendered as lambdas.
              ;; Yikes, this seems like a pretty gross hack... JBC 2010-12
@@ -463,7 +463,7 @@
                                [free-vars-all
                                 (varref-set-union (list free-vars-rest
                                                         free-vars-this))]
-                               [debug-info (make-debug-info-fake-exp 
+                               [debug-info (make-debug-info/fake-exp 
                                             #`(begin #,@bodies-list)
                                             free-vars-all)]
                                [begin-form 
@@ -520,7 +520,7 @@
                       (#%plain-lambda () (#%plain-app list var ...))) ...)))]
              ; time to work from the inside out again
              ; without renaming, this would all be much much simpler.
-             [wrapped-begin (outer-wcm-wrap (make-debug-info-let free-varrefs
+             [wrapped-begin (outer-wcm-wrap (make-debug-info/let free-varrefs
                                                                  binding-list
                                                                  let-counter) 
                                             (double-break-wrap
@@ -568,7 +568,7 @@
                   (quasisyntax/loc exp 
                     (if #,test-with-break #,annotated-then)))])
           (vector
-           (outer-wcm-wrap (make-debug-info-normal free-varrefs) annotated-if)
+           (outer-wcm-wrap (make-debug-info/normal free-varrefs) annotated-if)
            free-varrefs)))
       
       
@@ -596,11 +596,11 @@
             ([free-varrefs (list var)]
              [varref-break-wrap
               (lambda ()
-                (wcm-break-wrap (make-debug-info-normal free-varrefs)
+                (wcm-break-wrap (make-debug-info/normal free-varrefs)
                                 (return-value-wrap var)))]
              [varref-no-break-wrap
               (lambda ()
-                (outer-wcm-wrap (make-debug-info-normal free-varrefs) var))]
+                (outer-wcm-wrap (make-debug-info/normal free-varrefs) var))]
              ;; JBC: shouldn't this be the namespace of the user's code... ?
              [base-namespace-symbols (namespace-mapped-symbols (make-base-namespace))]
              [module-bound-varref-break-wrap
@@ -752,7 +752,7 @@
                 [(begin0 body)
                  (match-let* ([(vector annotated-body free-vars-body) 
                                (tail-recur #'body)])
-                   (vector (wcm-break-wrap (make-debug-info-normal free-vars-body)
+                   (vector (wcm-break-wrap (make-debug-info/normal free-vars-body)
                                            (quasisyntax/loc exp (begin0 #,annotated-body)))
                            free-vars-body))]
                 
@@ -763,11 +763,11 @@
                       [(vector annotated-rest free-vars-rest) (2vals-map non-tail-recur (syntax->list #`bodies-stx))]
                       [wrapped-rest (map normal-break/values-wrap annotated-rest)]
                       [all-free-vars (varref-set-union (cons free-vars-first free-vars-rest))]
-                      [early-debug-info (make-debug-info-normal all-free-vars)]
+                      [early-debug-info (make-debug-info/normal all-free-vars)]
                       [tagged-temp (stepper-syntax-property begin0-temp 'stepper-binding-type 'stepper-temp)]
                       [debug-info-maker
                        (lambda (rest-exps)
-                         (make-debug-info-fake-exp/tail-bound                                               
+                         (make-debug-info/fake-exp/tail-bound
                           #`(begin0 #,@rest-exps)
                           (binding-set-union (list (list tagged-temp) tail-bound))
                           (varref-set-union (list (list tagged-temp) all-free-vars))))]
@@ -813,7 +813,7 @@
                        (return-value-wrap
                         (quasisyntax/loc exp (set! var #,(normal-break/values-wrap annotated-val))))])
                    (vector
-                    (outer-wcm-wrap (make-debug-info-normal free-varrefs) annotated-set!)
+                    (outer-wcm-wrap (make-debug-info/normal free-varrefs) annotated-set!)
                     free-varrefs))]
                 
                 
@@ -925,9 +925,9 @@
                                              #`(set! #,arg-symbol #,annotated-sub-exp))
                                            tagged-arg-temps annotated-terms)]
                            [new-tail-bound (binding-set-union (list tail-bound tagged-arg-temps))]
-                           [app-debug-info (make-debug-info-app new-tail-bound tagged-arg-temps 'called)]
+                           [app-debug-info (make-debug-info/app new-tail-bound tagged-arg-temps 'called)]
                            [app-term (quasisyntax/loc exp (#%plain-app #,@tagged-arg-temps))]
-                           [debug-info (make-debug-info-app new-tail-bound
+                           [debug-info (make-debug-info/app new-tail-bound
                                                             (varref-set-union (list free-varrefs tagged-arg-temps)) ; NB using bindings as vars
                                                             'not-yet-called)]
                            [let-body (outer-wcm-wrap debug-info #`(begin #,@set!-list
