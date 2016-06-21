@@ -342,7 +342,8 @@
                  (Closure-Record
                   ;; FIXME WHEN TR HAS SYNTAX CHAPERONES
                   (if closure-name (sstx closure-name) #f)
-                  debug-info
+                  ;; FIXME WHEN MARKS ENTER THE TYPED SIDE
+                  (smrk debug-info)
                   ;; FIXME WHEN TR HAS SYNTAX CHAPERONES
                   (if maybe-index (sstx maybe-index) #f))))]
              

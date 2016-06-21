@@ -117,94 +117,92 @@
      (stepper-syntax-property #`(quote #,val) 'stepper-xml-value-hint 'from-xml-box)]
     [else
      (define extracted-proc (unwrap-proc val))
-     (define maybe-closure-record (and (annotated-proc? extracted-proc)
-                                  (annotated-proc-info extracted-proc)))
-     (cond
-       [maybe-closure-record
-        (let* ([mark (closure-record-mark maybe-closure-record)]
-               [base-name (closure-record-name maybe-closure-record)])
-          (if base-name
-              (let* ([lifted-index
-                      (closure-record-lifted-index maybe-closure-record)]
-                     [name
-                      (if lifted-index
-                          (construct-lifted-name (sstx-s base-name) (sstx-s lifted-index))
-                          (sstx-s base-name))])
-                (if (and assigned-name
-                         (free-identifier=? base-name assigned-name))
-                    (recon-source-expr
-                     (mark-source mark) (list mark) null null render-settings)
-                    #`#,name))
-              (recon-source-expr
-               (mark-source mark) (list mark) null null render-settings)))]
-       ; promise does not have annotation info,
-       ; must be from library code, or it's a running promise
-       ; or it's a nested promise?
-       [(promise? val)
+     (match (and (annotated-proc? extracted-proc)
+                 (annotated-proc-info extracted-proc))
+       [(Closure-Record base-name (smrk mark) lifted-index)
+        (if base-name
+            (let* ([name
+                    (if lifted-index
+                        (construct-lifted-name (sstx-s base-name) (sstx-s lifted-index))
+                        (sstx-s base-name))])
+              (if (and assigned-name
+                       (free-identifier=? (sstx-s base-name) assigned-name))
+                  (recon-source-expr
+                   (mark-source mark) (list mark) null null render-settings)
+                  #`#,name))
+            (recon-source-expr
+             (mark-source mark) (list mark) null null render-settings))]
+       [#f
         (cond
-          ; running promise cached by recon-inner
-          [(or (hash-ref partially-evaluated-promises-table val (λ () #f))
-               ; can be an extra promise layer when dealing with lists
-               (hash-ref partially-evaluated-promises-table (pref val) (λ () #f)))]
-          ; running promise not found by search in recon-inner
-          ; must be a nested running promise
-          [(and (nested-promise-running? val)
-                (not (eq? current-so-far nothing-so-far)))
-           (hash-set! partially-evaluated-promises-table val current-so-far)
-           current-so-far]
-          #;[(and (nested-promise-running? val)
-                  (not (null? last-so-far)))
-             last-so-far]
-          ; promise is not running if we get here
-          [(and (promise-forced? val)
-                (not (nested-promise-running? val))
-                (not (assq val seen-promises)))
-           (recon-value (force val) render-settings
-                        assigned-name current-so-far
-                        (cons (list val assigned-name) seen-promises))]
-          ; for cyclic lists, use assigned name if it's available
-          [(let ([v (assq val seen-promises)])
-             (and v (cadr v)))]
-          ; unknown promise: promise not in src code, created in library fn
-          [(hash-ref unknown-promises-table val (λ () #f))
-           =>
-           render-unknown-promise]
-          [else ; else generate a fresh unknown promise
-           (begin0
-             (render-unknown-promise next-unknown-promise)
-             (hash-set! unknown-promises-table
-                        val next-unknown-promise)
-             (set! next-unknown-promise
-                   (add1 next-unknown-promise)))])]
-       ; STC: handle lists here, instead of deferring to render-to-sexp fn
-       ; because there may be nested promises
-       #;[(null? val) #'empty]
-       [(and (not (null? val))
-             (list? val)
-             (ormap promise? val))
-        (with-syntax
-            ([(reconed-vals ...)
-              (for/list ([v (in-list val)])
-                (recon-value v render-settings #f current-so-far seen-promises))])
-          (if (render-settings-constructor-style-printing? render-settings)
-              #'(#%plain-app list reconed-vals ...)
-              #'`(reconed-vals ...)))]
-       [(and (pair? val)
-             (or (promise? (car val))
-                 (promise? (cdr val))))
-        (with-syntax
-            ([reconed-car
-              (recon-value (car val) render-settings
-                           #f current-so-far seen-promises)]
-             [reconed-cdr
-              (recon-value (cdr val) render-settings
-                           #f current-so-far seen-promises)])
-          #'(#%plain-app cons reconed-car reconed-cdr))]
-       [else
-        (define rendered ((render-settings-render-to-sexp render-settings) val))
-        (if (symbol? rendered)
-            #`#,rendered
-            #`(quote #,rendered))])]))
+          ; promise does not have annotation info,
+          ; must be from library code, or it's a running promise
+          ; or it's a nested promise?
+          [(promise? val)
+           (cond
+             ; running promise cached by recon-inner
+             [(or (hash-ref partially-evaluated-promises-table val (λ () #f))
+                  ; can be an extra promise layer when dealing with lists
+                  (hash-ref partially-evaluated-promises-table (pref val) (λ () #f)))]
+             ; running promise not found by search in recon-inner
+             ; must be a nested running promise
+             [(and (nested-promise-running? val)
+                   (not (eq? current-so-far nothing-so-far)))
+              (hash-set! partially-evaluated-promises-table val current-so-far)
+              current-so-far]
+             #;[(and (nested-promise-running? val)
+                     (not (null? last-so-far)))
+                last-so-far]
+             ; promise is not running if we get here
+             [(and (promise-forced? val)
+                   (not (nested-promise-running? val))
+                   (not (assq val seen-promises)))
+              (recon-value (force val) render-settings
+                           assigned-name current-so-far
+                           (cons (list val assigned-name) seen-promises))]
+             ; for cyclic lists, use assigned name if it's available
+             [(let ([v (assq val seen-promises)])
+                (and v (cadr v)))]
+             ; unknown promise: promise not in src code, created in library fn
+             [(hash-ref unknown-promises-table val (λ () #f))
+              =>
+              render-unknown-promise]
+             [else ; else generate a fresh unknown promise
+              (begin0
+                (render-unknown-promise next-unknown-promise)
+                (hash-set! unknown-promises-table
+                           val next-unknown-promise)
+                (set! next-unknown-promise
+                      (add1 next-unknown-promise)))])]
+          
+          ; STC: handle lists here, instead of deferring to render-to-sexp fn
+          ; because there may be nested promises
+          #;[(null? val) #'empty]
+          [(and (not (null? val))
+                (list? val)
+                (ormap promise? val))
+           (with-syntax
+               ([(reconed-vals ...)
+                 (for/list ([v (in-list val)])
+                   (recon-value v render-settings #f current-so-far seen-promises))])
+             (if (render-settings-constructor-style-printing? render-settings)
+                 #'(#%plain-app list reconed-vals ...)
+                 #'`(reconed-vals ...)))]
+          [(and (pair? val)
+                (or (promise? (car val))
+                    (promise? (cdr val))))
+           (with-syntax
+               ([reconed-car
+                 (recon-value (car val) render-settings
+                              #f current-so-far seen-promises)]
+                [reconed-cdr
+                 (recon-value (cdr val) render-settings
+                              #f current-so-far seen-promises)])
+             #'(#%plain-app cons reconed-car reconed-cdr))]
+          [else
+           (define rendered ((render-settings-render-to-sexp render-settings) val))
+           (if (symbol? rendered)
+               #`#,rendered
+               #`(quote #,rendered))])])]))
 
 ; STC: helper fns for recon-value, to reconstruct promises
 ; extract-proc-if-struct : any -> procedure? or any

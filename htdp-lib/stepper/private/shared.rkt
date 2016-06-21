@@ -62,7 +62,6 @@
  get-set-pair-union-stats ; profiling info
  re-intern-identifier
  finished-xml-box-table
- language-level->name
  saved-code-inspector
  
  
@@ -586,9 +585,6 @@
             [`(xml-box ,@(xmlspec ...)) (send scheme-editor insert (construct-xml-box xmlspec))]
             [(? string? text) (send scheme-editor insert text)])
            spec)))))
-    
-(define (language-level->name language)
-  (car (last-pair (send language get-language-position))))
 
 ;; per Robby's suggestion: rather than using a hash table for 
 ;; lambdas, just use an applicable structure instead.

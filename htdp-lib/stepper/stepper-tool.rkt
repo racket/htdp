@@ -10,6 +10,7 @@
          racket/match
          string-constants
          lang/stepper-language-interface
+         (only-in racket/list last)
          (prefix-in x: "private/mred-extensions.rkt")
          "private/shared.rkt"
          "private/xml-sig.rkt"
@@ -353,8 +354,7 @@
     ;; open a new stepper window, start it running
     (define (create-new-stepper)
       (let* ([language-level
-              (extract-language-level (get-defs))]
-             [language-level-name (language-level->name language-level)])
+              (extract-language-level (get-defs))])
         (if (or (stepper-works-for? language-level)
                 (is-a? language-level drracket:module-language:module-language<%>))
             (parameterize ([current-directory (or (get-directory) (current-directory))])
@@ -367,7 +367,7 @@
             (message-box
              (string-constant stepper-name)
              (format (string-constant stepper-language-level-message)
-                     language-level-name)))))
+                     (last (send language-level get-language-position)))))))
 
     (define/override (enable-evaluation)
       (super enable-evaluation)

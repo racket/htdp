@@ -15,7 +15,8 @@
          (struct-out Closure-Record))
 
 (require/typed "syntax-hider.rkt"
-               [#:opaque SStx sstx?])
+               [#:opaque SStx sstx?]
+               [#:opaque SMrk smrk?])
 
 (define-type Varref-Set (Listof Identifier)) ;; should be set?
 (define-type Binding-Set (U Varref-Set 'all))
@@ -71,6 +72,6 @@
 (struct Closure-Record ([name : (U False
                                    SStx)]
                         ;; FIXME narrow type later
-                        [mark : Any]
+                        [mark : SMrk]
                         [lifted-index : (U False SStx)])
   #:transparent)
