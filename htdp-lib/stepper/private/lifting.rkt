@@ -3,6 +3,7 @@
 (require (prefix-in kernel: syntax/kerncase)
          racket/match
          racket/contract
+         (only-in racket/list split-at)
          "shared.rkt"
          "syntax-property.rkt"
          (for-syntax racket/base))
@@ -288,8 +289,9 @@
                           (values (append defns so-far-defs) body)]
                          [(match path [`(1 ,n 1) n]) =>
                           (lambda (n)
-                            (values (append (sublist 0 n defns) so-far-defs (sublist n (length defns) defns))
-                                    body))]))]
+                            (let-values ([(pre post) (split-at defns n)])
+                              (values (append pre so-far-defs post)
+                                    body)))]))]
                 [else (error 'lift-helper "let or letrec does not have expected shape: ~v\n" (syntax->datum stx))]))])
     (kernel:kernel-syntax-case stx #f
       [(let-values . dc)

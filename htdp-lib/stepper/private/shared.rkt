@@ -19,7 +19,6 @@
                          . -> . 
                          syntax?)]
    [in-closure-table (-> any/c boolean?)]
-   [sublist (-> number? number? list? list?)]
    [attach-info (-> syntax? syntax? syntax?)]
    [transfer-info (-> syntax? syntax? syntax?)]
    [arglist->ilist (-> arglist? any)]
@@ -27,7 +26,6 @@
 
 (provide
  skipto/auto
- sublist
  attach-info
  transfer-info
  arglist->ilist
@@ -38,9 +36,6 @@
  varref-set-pair-union
  varref-set-remove-bindings
  binding-set-varref-set-intersect
- list-take
- list-partition
- (struct-out closure-record)
  *unevaluated* 
  struct-flag
  multiple-highlight
@@ -80,12 +75,6 @@
 (provide/contract [syntax->interned-datum (syntax? ; input
                                            . -> .
                                            any)]) ; sexp
-
-  
-
-; the closure record is placed in the closure table
-
-(define-struct closure-record (name mark constructor? lifted-index))
 
 ; bogus-binding is used so that we can create legal bindings for temporary variables
 
@@ -188,28 +177,11 @@
   ; struct-flag : uninterned symbol
   (define struct-flag (gensym "struct-flag-"))
   
-  ; list-partition takes a list and a number, and returns a 2vals containing 2 lists; the first one contains the
-  ; first n elements of the list, and the second contains the remainder.  If n is greater than
-  ; the length of the list, the exn:application:mismatch exception is raised.
-  
-  (define (list-partition lst n)
-    (if (= n 0)
-        (vector null lst)
-        (if (null? lst)
-            (list-ref lst 0) ; cheap way to generate exception
-            (match-let* ([(vector first rest) (list-partition (cdr lst) (- n 1))])
-              (vector (cons (car lst) first) rest)))))
-  
 ;  (define expr-read read-getter)
 ;  (define set-expr-read! read-setter)
   
-  (define (list-take n a-list)
-    (if (= n 0)
-        null
-        (cons (car a-list) (list-take (- n 1) (cdr a-list)))))
-  
   (define (flatten-take n a-list)
-    (apply append (list-take n a-list)))
+    (apply append (take a-list n)))
   
   (define-values (closure-table-put! closure-table-lookup in-closure-table)
     (let ([closure-table (make-weak-hash)])
@@ -480,17 +452,6 @@
     (cond [(eq? bindings 'all)
            (error 'varref-set-remove-bindings "binding-set 'all passed as second argument, first argument was: ~s" varrefs)]
           [else (remove* bindings varrefs bound-identifier=?)]))
-
-  ;; sublist returns the list beginning with element <begin> and ending just
-  ;; before element <end>.
-  ;; (-> number? number? list? list?)
-  (define (sublist begin end lst)
-    (if (= end 0)
-        null
-        (if (= begin 0)
-            (cons (car lst)
-                  (sublist 0 (- end 1) (cdr lst)))
-            (sublist (- begin 1) (- end 1) (cdr lst)))))
 
   ;; take info from source expressions to reconstructed expressions
 

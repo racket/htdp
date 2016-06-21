@@ -11,6 +11,8 @@
          "marks.rkt"
          "model-settings.rkt"
          "shared.rkt"
+         "shared-typed.rkt"
+         "syntax-hider.rkt"
          "syntax-property.rkt"
          "my-macros.rkt"
          (for-syntax racket/base)
@@ -126,8 +128,8 @@
                       (closure-record-lifted-index maybe-closure-record)]
                      [name
                       (if lifted-index
-                          (construct-lifted-name base-name lifted-index)
-                          base-name)])
+                          (construct-lifted-name (sstx-s base-name) (sstx-s lifted-index))
+                          (sstx-s base-name))])
                 (if (and assigned-name
                          (free-identifier=? base-name assigned-name))
                     (recon-source-expr

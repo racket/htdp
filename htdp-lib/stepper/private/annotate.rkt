@@ -5,6 +5,8 @@
          racket/contract
          "marks.rkt"
          "shared.rkt"
+         "shared-typed.rkt"
+         "syntax-hider.rkt"
          "syntax-property.rkt"
          "my-macros.rkt"
          #;"xml-box.rkt"
@@ -337,11 +339,12 @@
               (lambda (clo debug-info maybe-index)
                 (annotated-proc
                  clo
-                 (make-closure-record 
-                  closure-name
+                 (Closure-Record
+                  ;; FIXME WHEN TR HAS SYNTAX CHAPERONES
+                  (if closure-name (sstx closure-name) #f)
                   debug-info
-                  #f
-                  maybe-index)))]
+                  ;; FIXME WHEN TR HAS SYNTAX CHAPERONES
+                  (if maybe-index (sstx maybe-index) #f))))]
              
              [captured
               (cond [(pair? procedure-name-info)

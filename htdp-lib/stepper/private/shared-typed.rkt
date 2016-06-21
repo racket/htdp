@@ -11,7 +11,8 @@
          (struct-out Before-Error-Result)
          (struct-out Error-Result)
          (struct-out Runaway-Process)
-         (struct-out Posn-Info))
+         (struct-out Posn-Info)
+         (struct-out Closure-Record))
 
 (require/typed "syntax-hider.rkt"
                [#:opaque SStx sstx?])
@@ -65,3 +66,11 @@
      'user-application))
 
 (define-predicate step-result? Step-Result)
+
+; the closure record is placed in the closure table
+(struct Closure-Record ([name : (U False
+                                   SStx)]
+                        ;; FIXME narrow type later
+                        [mark : Any]
+                        [lifted-index : (U False SStx)])
+  #:transparent)
