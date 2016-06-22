@@ -23,6 +23,7 @@
     "srfi-lite-lib"
     "string-constants-lib"
     "typed-racket-lib"
+    "typed-racket-more"
     "web-server-lib"
     "wxme-lib"
     ("gui-lib" #:version "1.7")
