@@ -1,10 +1,10 @@
-;; The first three lines of this file were inserted by DrScheme. They record metadata
+;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname dir) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ())))
+#reader(lib "htdp-intermediate-lambda-reader.ss" "lang")((modname dir) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 (require htdp/dir)
 
 (define current (create-dir "."))
-(define teachps (create-dir (string-append "/Users/matthias/plt/" "collects/teachpack/htdp")))
+(define teachps (create-dir "/Users/matthias/plt/extra-pkgs/htdp/htdp-test/htdp/tests"))
 
 (define current-files (map file-name (dir-files current)))
 (define teachps-files (map file-name (dir-files teachps)))
@@ -17,3 +17,7 @@
 
 (check-expect (make-file 'a 1 2) (make-file 'a 1 2))
 
+;; added to accommodate time field 
+(check-expect (make-file 'a 1 2 4) (make-file 'a 1 2 4))
+
+(check-error (make-file 1 2) "make-file: expects 3 or 4 arguments, but found only 2")

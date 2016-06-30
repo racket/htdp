@@ -15,7 +15,10 @@ directories:
 
 @defstruct[dir ([name symbol?][dirs (listof dir?)][files (listof file?)])]{}
 
-@defstruct[file ([name symbol?][size integer?][content (listof char?)])]{}
+@defstruct[file ([name symbol?][size integer?] [time natural-number/c] [content (listof char?)])]{	
+represents files in the teaching languages. The struct's time field is
+optional for clients. Calling @racket[make-field] with three arguments
+fills the time field with @racket[0].}
 
 @defproc[(create-dir [path symbol?]) dir?]{
  Turns the directory found at @racket[path] on your computer into an instance of @racket[dir?].}

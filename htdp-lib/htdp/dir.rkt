@@ -10,22 +10,36 @@
  dir? make-dir dir-name dir-dirs dir-files
  
  ; structure 
- file? make-file file-name file-content file-size
+ file? [rename-out [create-file make-file]]  file-name file-content file-size file-time
  )
 
 ;; ---------------------------------------------------------------------------------------------------
 
-(require htdp/error lang/prim (only-in racket/base [file-size s:file-size]))
+(require
+  htdp/error
+  lang/prim
+  (only-in racket/base
+    [file-or-directory-modify-seconds s:file-or-directory-modify-seconds]
+    [file-size s:file-size]))
 
 ;; Structures: 
 (define-struct dir (name dirs files) #:transparent)
-(define-struct file (name size content) #:transparent)
+(define-struct file (name size time content) #:transparent)
+
+(define create-file
+  (let* ([old make-file]
+	 [make-file 
+	  (case-lambda
+	    [(name size time content) (old name size time content)]
+	    [(name size content) (old name size 0 content)]
+	    [x (error 'make-file "expects 3 or 4 arguments, but found only ~a" (length x))])])
+    make-file))
 
 (define-primitive create-dir create-dir/proc)
 
 ;; Data:
 ;; Directory  = (make-dir Symbol (listof Dir) (listof File))
-;; File       = (make-file Symbol Number (union '() X))
+;; File       = (make-file Symbol Number Nat (union '() X))
 
 (define (create-dir/proc a-path)
   (check-arg 'create-dir (string? a-path) "string" "first" a-path)
@@ -38,13 +52,14 @@
 (define (explore dirs)
   (map (lambda (d) 
          (let-values ([(fs ds) (pushd d directory-files&directories)]) 
+	   (define files (map (lambda (x) (build-path d x)) fs))
            (make-dir
             (string->symbol (path->string (my-split-path d)))
             (explore (map (lambda (x) (build-path d x)) ds))
             (map make-file
                  (map (compose string->symbol path->string) fs)
-                 (map (lambda (x) (if (file-exists? x) (s:file-size x) 0))
-                      (map (lambda (x) (build-path d x)) fs))
+                 (map (lambda (x) (if (file-exists? x) (s:file-size x) 0)) files)
+		 (map (lambda (x) (if (file-exists? x) (s:file-or-directory-modify-seconds x) 0)) files)
                  (map (lambda (x) "") fs)))))
        dirs))
 
