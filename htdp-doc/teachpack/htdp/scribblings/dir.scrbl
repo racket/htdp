@@ -1,7 +1,11 @@
 #lang scribble/doc
 
 @(require scribble/manual "shared.rkt"
-          (for-label (except-in racket/base file-size)
+          (for-label (except-in racket/base file-size 
+	               make-date
+		       date-year
+		       date-month
+		       date-day)
                      teachpack/htdp/dir
                      racket/contract))
 
@@ -15,13 +19,18 @@ directories:
 
 @defstruct[dir ([name symbol?][dirs (listof dir?)][files (listof file?)])]{}
 
-@defstruct[file ([name symbol?][size integer?] [time natural-number/c] [content (listof char?)])]{	
-represents files in the teaching languages. The struct's time field is
+@defstruct[file ([name symbol?][size integer?] [date (or/c 0 date?)] [content (listof char?)])]{	
+represents files in the teaching languages. The struct's @racket[date] field is
 optional for clients. Calling @racket[make-field] with three arguments
 fills the time field with @racket[0].}
 
 @defproc[(create-dir [path symbol?]) dir?]{
  Turns the directory found at @racket[path] on your computer into an instance of @racket[dir?].}
+
+@defstruct[date ([year natural-number/c][month natural-number/c][day natural-number/c]
+		 [hours natural-number/c][minutes natural-number/c][seconds natural-number/c])]{
+ represents dates for file construction}
+
 
 Sample: Set teachpack to @filepath{dir.rkt} and click Run:
 @(begin
