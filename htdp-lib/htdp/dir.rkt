@@ -10,12 +10,14 @@
  dir? make-dir dir-name dir-dirs dir-files
  
  ; structure 
- file? [rename-out [create-file make-file]]  file-name file-content file-size file-time
- )
+ file? [rename-out [create-file make-file]] file-name file-content file-size file-date
+
+ make-date date-year date-month date-day date-hours date-minutes date-seconds)
 
 ;; ---------------------------------------------------------------------------------------------------
 
 (require
+  (only-in racket match-define)
   htdp/error
   lang/prim
   (only-in racket/base
@@ -24,7 +26,14 @@
 
 ;; Structures: 
 (define-struct dir (name dirs files) #:transparent)
-(define-struct file (name size time content) #:transparent)
+(define-struct file (name size date content) #:transparent)
+(define-struct date (year month day hours minutes seconds) #:transparent)
+
+;; FilePath -> Date 
+(define (create-date x)
+  (define s (s:file-or-directory-modify-seconds x))
+  (match-define (date* sc mi h d mo y wd yd dst z nano zname) (seconds->date s))
+  (make-date d mo d h mi sc))
 
 (define create-file
   (let* ([old make-file]
@@ -59,7 +68,7 @@
             (map make-file
                  (map (compose string->symbol path->string) fs)
                  (map (lambda (x) (if (file-exists? x) (s:file-size x) 0)) files)
-		 (map (lambda (x) (if (file-exists? x) (s:file-or-directory-modify-seconds x) 0)) files)
+		 (map (lambda (x) (if (file-exists? x) (create-date x) 0)) files)
                  (map (lambda (x) "") fs)))))
        dirs))
 
