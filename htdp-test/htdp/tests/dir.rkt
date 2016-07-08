@@ -15,9 +15,24 @@
  (map (lambda (x) (format "in Test, not in  Teachpacks: ~s" x))
       (filter (lambda (x) (not (member x teachps-files))) current-files)))
 
-(check-expect (make-file 'a 1 2) (make-file 'a 1 2))
+(check-expect (make-file "a" 1 2) (make-file "a" 1 2))
 
 ;; added to accommodate time field 
-(check-expect (make-file 'a 1 2 4) (make-file 'a 1 2 4))
+(check-expect (make-file "a" 1 0 4) (make-file "a" 1 0 4))
+
+(define d (make-date 1 2 3 4 5 6))
+
+(check-expect (make-file "b" 1 d 4) (make-file "b" 1 d 4))
+(check-expect (date-year d) 1)
+(check-expect (date-seconds d) 6)
+(check-expect (date-minutes d) 5)
+(check-expect (date-hours d) 4)
+(check-expect (date-day d) 3)
+(check-expect (date-month d) 2)
 
 (check-error (make-file 1 2) "make-file: expects 3 or 4 arguments, but found only 2")
+(check-error (make-file 1 2 3 4 5) "make-file: expects 3 or 4 arguments, but found only 5")
+(check-error (make-file 'a 1 2) "make-file: expects a string as first argument, given 'a")
+(check-error (make-file "a" -1 2) "make-file: expects a natural number as second argument, given -1")
+(check-error (make-file "a" 1 2 3) "make-file: expects a date (or 0) as third argument, given 2")
+
