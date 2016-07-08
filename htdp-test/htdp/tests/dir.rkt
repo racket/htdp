@@ -16,6 +16,7 @@
       (filter (lambda (x) (not (member x teachps-files))) current-files)))
 
 (check-expect (make-file "a" 1 2) (make-file "a" 1 2))
+(check-expect (make-file 'a 1 2) (make-file 'a 1 2))
 
 ;; added to accommodate time field 
 (check-expect (make-file "a" 1 0 4) (make-file "a" 1 0 4))
