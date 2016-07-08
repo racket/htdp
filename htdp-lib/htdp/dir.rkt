@@ -17,7 +17,7 @@
 ;; ---------------------------------------------------------------------------------------------------
 
 (require
-  (only-in racket match-define)
+  (only-in racket match-define natural-number/c)
   htdp/error
   lang/prim
   (only-in racket/base
@@ -39,16 +39,21 @@
   (let* ([old make-file]
 	 [make-file 
 	  (case-lambda
-	    [(name size time content) (old name size time content)]
-	    [(name size content) (old name size 0 content)]
+	    [(name size time content)
+             (check-arg 'make-file (string? name) "string" "first" name)
+             (check-arg 'make-file (natural-number/c size) "natural number" "second" size)
+             (check-arg 'make-file (or (date? time) (and (number? time) (= 0 time))) "date (or 0)"
+                        "third" time)
+             (old name size time content)]
+	    [(name size content) (create-file name size 0 content)]
 	    [x (error 'make-file "expects 3 or 4 arguments, but found only ~a" (length x))])])
     make-file))
 
 (define-primitive create-dir create-dir/proc)
 
 ;; Data:
-;; Directory  = (make-dir  String (listof Dir) (listof File))
-;; File       = (make-file String Number Nat (union '() X))
+;; Directory  = (make-dir Symbol (listof Dir) (listof File))
+;; File       = (make-file Symbol Number Nat (union '() X))
 
 (define (create-dir/proc a-path)
   (check-arg 'create-dir (string? a-path) "string" "first" a-path)
@@ -63,10 +68,10 @@
          (let-values ([(fs ds) (pushd d directory-files&directories)]) 
 	   (define files (map (lambda (x) (build-path d x)) fs))
            (make-dir
-            (path->string (my-split-path d))
+            (string->symbol (path->string (my-split-path d)))
             (explore (map (lambda (x) (build-path d x)) ds))
             (map make-file
-                 (map path->string fs)
+                 (map (compose string->symbol path->string) fs)
                  (map (lambda (x) (if (file-exists? x) (s:file-size x) 0)) files)
 		 (map (lambda (x) (if (file-exists? x) (create-date x) 0)) files)
                  (map (lambda (x) "") fs)))))
@@ -100,4 +105,4 @@
 ;; option to expand the library ... 
 ;; cache it ... 
 (define (get-file-content f)
-  (read-string (file-size f) (open-input-file (file-name f))))
+  (read-string (file-size f) (open-input-file (symbol->string (file-name f)))))

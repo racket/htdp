@@ -19,7 +19,7 @@ directories:
 
 @defstruct[dir ([name string?][dirs (listof dir?)][files (listof file?)])]{}
 
-@defstruct[file ([name string?][size integer?] [date (or/c 0 date?)] [content (listof char?)])]{	
+@defstruct[file ([name string?][size integer?] [date (or/c 0 date?)] [content any/c])]{	
 represents files in the teaching languages. The struct's @racket[date] field is
 optional for clients. Calling @racket[make-field] with three arguments
 fills the time field with @racket[0].}
