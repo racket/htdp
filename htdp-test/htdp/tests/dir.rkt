@@ -32,7 +32,6 @@
 
 (check-error (make-file 1 2) "make-file: expects 3 or 4 arguments, but found only 2")
 (check-error (make-file 1 2 3 4 5) "make-file: expects 3 or 4 arguments, but found only 5")
-(check-error (make-file 'a 1 2) "make-file: expects a string as first argument, given 'a")
 (check-error (make-file "a" -1 2) "make-file: expects a natural number as second argument, given -1")
 (check-error (make-file "a" 1 2 3) "make-file: expects a date (or 0) as third argument, given 2")
 

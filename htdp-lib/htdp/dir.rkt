@@ -40,7 +40,7 @@
 	 [make-file 
 	  (case-lambda
 	    [(name size time content)
-             (check-arg 'make-file (string? name) "string" "first" name)
+             (check-arg 'make-file (or (string? name) (symbol? name)) "string or symbol" "first" name)
              (check-arg 'make-file (natural-number/c size) "natural number" "second" size)
              (check-arg 'make-file (or (date? time) (and (number? time) (= 0 time))) "date (or 0)"
                         "third" time)
@@ -71,7 +71,7 @@
             (string->symbol (path->string (my-split-path d)))
             (explore (map (lambda (x) (build-path d x)) ds))
             (map make-file
-                 (map (compose string->symbol path->string) fs)
+                 (map path->string fs)
                  (map (lambda (x) (if (file-exists? x) (s:file-size x) 0)) files)
 		 (map (lambda (x) (if (file-exists? x) (create-date x) 0)) files)
                  (map (lambda (x) "") fs)))))
