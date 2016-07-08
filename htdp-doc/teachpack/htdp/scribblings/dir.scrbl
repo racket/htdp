@@ -17,7 +17,7 @@
 The teachpack provides structures and functions for working with files and
 directories: 
 
-@defstruct[dir ([name string?][dirs (listof dir?)][files (listof file?)])]{
+@defstruct[dir ([name (or/c string? symbol?)][dirs (listof dir?)][files (listof file?)])]{
  Represents directories (file folders) in the teaching languages. 
 }
 
