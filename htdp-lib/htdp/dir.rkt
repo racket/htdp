@@ -47,8 +47,8 @@
 (define-primitive create-dir create-dir/proc)
 
 ;; Data:
-;; Directory  = (make-dir Symbol (listof Dir) (listof File))
-;; File       = (make-file Symbol Number Nat (union '() X))
+;; Directory  = (make-dir  String (listof Dir) (listof File))
+;; File       = (make-file String Number Nat (union '() X))
 
 (define (create-dir/proc a-path)
   (check-arg 'create-dir (string? a-path) "string" "first" a-path)
@@ -63,10 +63,10 @@
          (let-values ([(fs ds) (pushd d directory-files&directories)]) 
 	   (define files (map (lambda (x) (build-path d x)) fs))
            (make-dir
-            (string->symbol (path->string (my-split-path d)))
+            (path->string (my-split-path d))
             (explore (map (lambda (x) (build-path d x)) ds))
             (map make-file
-                 (map (compose string->symbol path->string) fs)
+                 (map path->string fs)
                  (map (lambda (x) (if (file-exists? x) (s:file-size x) 0)) files)
 		 (map (lambda (x) (if (file-exists? x) (create-date x) 0)) files)
                  (map (lambda (x) "") fs)))))
@@ -100,4 +100,4 @@
 ;; option to expand the library ... 
 ;; cache it ... 
 (define (get-file-content f)
-  (read-string (file-size f) (open-input-file (symbol->string (file-name f)))))
+  (read-string (file-size f) (open-input-file (file-name f))))
