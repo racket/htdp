@@ -62,7 +62,7 @@ constructors accept symbols for backwards compatibility.
 @bold{Note} Soft links are always treated as if they were empty files.
 
 @history[
- #:changed "1.1" @list{Fri Jul  8 13:09:13 EDT 2016 added optional date
+ #:changed "1.4" @list{Fri Jul  8 13:09:13 EDT 2016 added optional date
  field to file representation, added strings as representations of file
  names}
 
