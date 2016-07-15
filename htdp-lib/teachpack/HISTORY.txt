@@ -1,4 +1,10 @@
 ------------------------------------------------------------------------
+Version 6.6				  [Fri Jul 15 11:14:44 EDT 2016]
+
+* htdp/dir generates file representations that include date field. 
+  The domains of the API remain backwards compatible.
+
+------------------------------------------------------------------------
 Version 6.5				  [Thu Apr 21 09:15:01 EDT 2016]
 
 * bug fixes
