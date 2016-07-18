@@ -1,6 +1,12 @@
 Stepper
 -------
 
+Changes for 6.6:
+
+Moved parts of stepper to Typed Racket.
+
+Miscellaneous cleanup and bugfixes.
+
 Changes for 6.5:
 
 None.
