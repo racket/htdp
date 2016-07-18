@@ -5,6 +5,8 @@ Changes for 6.6:
 
 Moved parts of stepper to Typed Racket.
 
+Snips are now shown correctly in #lang htdp/bsl et al.
+
 Miscellaneous cleanup and bugfixes.
 
 Changes for 6.5:
