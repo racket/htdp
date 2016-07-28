@@ -21,7 +21,7 @@
     "slideshow-lib"
     "snip-lib"
     "srfi-lite-lib"
-    "string-constants-lib"
+    ["string-constants-lib" #:version "1.13"]
     "typed-racket-lib"
     "typed-racket-more"
     "web-server-lib"

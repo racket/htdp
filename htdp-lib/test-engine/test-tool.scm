@@ -1,7 +1,7 @@
 #lang scheme/base
 
 (require scheme/file scheme/class scheme/unit scheme/contract drscheme/tool framework mred
-         string-constants)
+         string-constants lang/htdp-langs-interface)
 (require "test-display.scm")
 (provide tool@)
 
@@ -149,13 +149,24 @@
                             (preferences:set 'test-engine:enable? #f)))
                         (super-instantiate ()))]
                      [enable? (preferences:get 'test-engine:enable?)]
-                     [enable-menu-item (make-object enable-menu-item%
-                                         (if enable? disable-label enable-label)
-                                         language-menu 
-                                         (lambda (_1 _2)
-                                           (if (send _1 is-test-enabled?)
-                                               (send _1 disable-tests)
-                                               (send _1 enable-tests))) #f)])
+                     [enable-menu-item
+                      (make-object enable-menu-item%
+                        (if enable? disable-label enable-label)
+                        language-menu
+                        (λ (menu-item _2)
+                          (cond
+                            [(is-a? (drscheme:language-configuration:language-settings-language
+                                     (send (get-definitions-text) get-next-settings))
+                                    htdp-language<%>)
+                             (if (send menu-item is-test-enabled?)
+                                 (send menu-item disable-tests)
+                                 (send menu-item enable-tests))]
+                            [else
+                             (message-box
+                              (string-constant drracket)
+                              (string-constant
+                               test-engine-enable-disable-tests-only-in-teaching-languages))]))
+                        #f)])
               
               (send enable-menu-item set-test-enabled?! enable?)
               (register-capability-menu-item 'tests:test-menu language-menu))))

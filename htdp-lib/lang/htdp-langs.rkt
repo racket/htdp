@@ -29,6 +29,7 @@
          lang/debugger-language-interface
          "run-teaching-program.rkt"
          "htdp-langs-save-file-prefix.rkt"
+         "htdp-langs-interface.rkt"
 
          (only-in test-engine/scheme-gui make-formatter)
          (only-in test-engine/racket-tests
@@ -58,17 +59,6 @@
       (define teachpacks-field-index (+ (procedure-arity drscheme:language:simple-settings) 1))
       
       (define image-string "<image>")
-      
-      (define htdp-language<%>
-        (interface ()
-          get-module
-          get-language-position
-          get-sharing-printing
-          get-abbreviate-cons-as-list
-          get-allow-sharing?
-          get-use-function-output-syntax?
-          get-accept-quasiquote?
-          get-read-accept-dot))
       
       ;; module-based-language-extension :    (implements drscheme:language:module-based-language<%>) 
       ;;                                   -> (implements drscheme:language:module-based-language<%>)
