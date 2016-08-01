@@ -248,10 +248,14 @@ inside the curve.
 
 @defproc[(text/font [string string?] [font-size (and/c integer? (<=/c 1 255))] [color image-color?]
                     [face (or/c string? #f)]
-                    [family (or/c 'default 'decorative 'roman 'script 
+                    [family (or/c "default" "decorative" "roman" "script"
+                                  "swiss" "modern" "symbol" "system"
+                                  'default 'decorative 'roman 'script 
                                   'swiss 'modern 'symbol 'system)]
-                    [style (or/c 'normal 'italic 'slant)]
-                    [weight (or/c 'normal 'bold 'light)]
+                    [style (or/c "normal" "italic" "slant"
+                                 'normal 'italic 'slant)]
+                    [weight (or/c "normal" "bold" "light"
+                                  'normal 'bold 'light)]
                     [underline? any/c])
          image?]{
                 

@@ -1989,6 +1989,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
+;; text/font accepts symbols & strings
+;;
+
+(test (text/font "abc" 120 "red" #f 'default 'italic 'light #f)
+      =>
+      (text/font "abc" 120 "red" #f "default" "italic" "light" #f))
+                 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
 ;; pen arguments
 ;;
 

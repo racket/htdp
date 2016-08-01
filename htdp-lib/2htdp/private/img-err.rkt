@@ -226,16 +226,27 @@
      (check-arg fn-name (or (not arg) (string? arg)) 'face i arg)
      arg]
     [(family)
-     (check-arg fn-name
-                (memq arg '(default decorative roman script swiss modern symbol system))
-                'family i arg)
-     arg]
+     (let ([syms '(default decorative roman script swiss modern symbol system)])
+       (check-arg fn-name
+                  (or (memq arg syms)
+                      (and (string? arg)
+                           (memq (string->symbol arg) syms)))
+                  'family i arg))
+     (if (string? arg) (string->symbol arg) arg)]
     [(style)
-     (check-arg fn-name (memq arg '(normal italic slant)) 'style i arg)
-     arg]
+     (let ([syms '(normal italic slant)])
+       (check-arg fn-name (or (memq arg syms)
+                              (and (string? arg)
+                                   (memq (string->symbol arg) syms)))
+                  'style i arg))
+     (if (string? arg) (string->symbol arg) arg)]
     [(weight)
-     (check-arg fn-name (memq arg '(normal bold light)) 'weight i arg)
-     arg]
+     (let ([syms '(normal bold light)])
+       (check-arg fn-name (or (memq arg syms)
+                              (and (string? arg)
+                                   (memq (string->symbol arg) syms)))
+                  'weight i arg))
+     (if (string? arg) (string->symbol arg) arg)]
     [(underline)
      (and arg #t)]
     [(posns)
