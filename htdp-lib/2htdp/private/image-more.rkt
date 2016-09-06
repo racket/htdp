@@ -10,6 +10,7 @@
          ;(only-in racket/gui/base frame% canvas% slider% horizontal-panel% button%)
          htdp/error
          racket/math
+         racket/string
          (for-syntax racket/base
                      racket/list)
          lang/posn
@@ -1130,17 +1131,23 @@
   (mk-text string font-size color face family style weight underline))
 
 (define (mk-text str font-size color face family style weight underline)
-  (cond
-    [(<= (string-length str) 1)
-     (mk-single-text str font-size color face family style weight underline)]
-    [else
-     (let ([letters (string->list str)])
-       (beside/internal
-        'baseline
-        (mk-single-text (string (car letters)) font-size color face family style weight underline)
-        (map (λ (letter)
-               (mk-single-text (string letter) font-size color face family style weight underline))
-             (cdr letters))))]))
+  (let ([lines (string-split str "\n")])
+       (apply
+        above/align
+        "left"
+        (map (λ(line)
+               (cond
+                 [(<= (string-length line) 1)
+                  (mk-single-text line font-size color face family style weight underline)]
+                 [else
+                  (let ([letters (string->list line)])
+                    (beside/internal
+                     'baseline
+                     (mk-single-text (string (car letters)) font-size color face family style weight underline)
+                     (map (λ (letter)
+                            (mk-single-text (string letter) font-size color face family style weight underline))
+                          (cdr letters))))]))
+             lines))))
 
 (define (mk-single-text letter font-size color face family style weight underline)
   (let ([text (make-text letter 0 1 color font-size face family style weight underline)])
