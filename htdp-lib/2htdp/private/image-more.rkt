@@ -1125,29 +1125,34 @@
 (define text-sizing-bm (make-object bitmap-dc% (make-object bitmap% 1 1)))
 
 (define/chk (text string font-size color)
-  (mk-text string font-size color #f 'swiss 'normal 'normal #f))
+  (mk-text/lines string font-size color #f 'swiss 'normal 'normal #f))
 
 (define/chk (text/font string font-size color face family style weight underline)
-  (mk-text string font-size color face family style weight underline))
+  (mk-text/lines string font-size color face family style weight underline))
+
+(define (mk-text/lines str font-size color face family style weight underline)
+  (let ([lines (string-split str "\n")])
+    (cond [(<= (length lines) 1)  (mk-text str font-size color face family style weight underline)]
+          [else
+           (apply
+            above/align
+            "left"
+            (map (λ(line)
+                   (mk-text line font-size color face family style weight underline))
+                 lines))])))
 
 (define (mk-text str font-size color face family style weight underline)
-  (let ([lines (string-split str "\n")])
-       (apply
-        above/align
-        "left"
-        (map (λ(line)
-               (cond
-                 [(<= (string-length line) 1)
-                  (mk-single-text line font-size color face family style weight underline)]
-                 [else
-                  (let ([letters (string->list line)])
-                    (beside/internal
-                     'baseline
-                     (mk-single-text (string (car letters)) font-size color face family style weight underline)
-                     (map (λ (letter)
-                            (mk-single-text (string letter) font-size color face family style weight underline))
-                          (cdr letters))))]))
-             lines))))
+  (cond
+    [(<= (string-length str) 1)
+     (mk-single-text str font-size color face family style weight underline)]
+    [else
+     (let ([letters (string->list str)])
+       (beside/internal
+        'baseline
+        (mk-single-text (string (car letters)) font-size color face family style weight underline)
+        (map (λ (letter)
+               (mk-single-text (string letter) font-size color face family style weight underline))
+             (cdr letters))))]))
 
 (define (mk-single-text letter font-size color face family style weight underline)
   (let ([text (make-text letter 0 1 color font-size face family style weight underline)])
