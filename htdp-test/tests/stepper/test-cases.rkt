@@ -1115,7 +1115,12 @@
      :: 9 (check-expect {(+ 3 4)} 17) -> 9 (check-expect {7} 17)
      :: 9 false (check-expect {(+ 1 1)} 2) -> 9 false (check-expect {2} 2)
      :: 9 false true (check-expect {(+ 2 2)} 4) -> 9 false true (check-expect {4} 4))
-  
+
+  (t 'check-expect-err m:upto-int/lam
+     (check-expect 0 (sqrt 2))
+     :: (check-expect 0 {(sqrt 2)}) -> (check-expect 0 {1.4142135623730951})
+     :: error: "check-expect cannot compare inexact numbers")
+
   (t1 'check-within
       m:upto-int/lam
       "(check-within (+ 3 4) (+ 8 10) (+ 10 90)) (check-expect (+ 1 1) 2)(+ 4 5)"

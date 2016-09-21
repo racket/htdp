@@ -99,14 +99,16 @@
                     (list (list exp-thunk lifting-indices getter))))))
 
   ;; the "held" variables are used to store the "before" step.
-  (define held-exp-list the-no-sexp)
-
-  (define-struct held (exps was-app? source-info))
+  ;; values should satisfy maybe-held-step/c
+  (define maybe-held-exp the-no-sexp)
+  (define/contract (set-maybe-held-exp! held)
+    (-> maybe-held-step/c void?)
+    (set! maybe-held-exp held))
 
   (define held-finished-list null)
 
   (define (reset-held-exp-list)
-    (set! held-exp-list the-no-sexp)
+    (set-maybe-held-exp! the-no-sexp)
     (set! held-finished-list null)
     (set! lhs-recon-thunk null))
 
@@ -344,7 +346,7 @@
             (when (or (eq? break-kind 'normal-break)
                       ;; not sure about this...
                       (eq? break-kind 'nomal-break/values))
-              (set! held-exp-list the-skipped-step)))
+              (set-maybe-held-exp! the-skipped-step)))
 
           (begin
             (case break-kind
@@ -367,7 +369,7 @@
                                     (syntax->hilite-datum x)))
                (define lhs-finished-exps (reconstruct-all-completed))
                (set! held-finished-list lhs-finished-exps)
-               (set! held-exp-list (create-held lhs-unwound))
+               (set-maybe-held-exp! (create-held lhs-unwound))
                (set! lhs-recon-thunk
                      (λ ()
                        (log-stepper-debug "forcing saved MARKLIST")
@@ -399,7 +401,7 @@
                    (log-stepper-debug "RHS (unwound): ~a"
                                       (syntax->hilite-datum x)))
                  rhs-unwound)
-               (match held-exp-list
+               (match maybe-held-exp
                  [(struct skipped-step ())
                   (log-stepper-debug "LHS = skipped, so skipping RHS")
                   ;; don't render if before step was a skipped-step
@@ -427,7 +429,7 @@
               [(double-break)
                ;; a double-break occurs at the beginning of a let's
                ;; evaluation.
-               (when (not (eq? held-exp-list the-no-sexp))
+               (when (not (eq? maybe-held-exp the-no-sexp))
                  (error
                   'break-reconstruction
                   "held-exp-list not empty when a double-break occurred"))
@@ -497,8 +499,12 @@
                    [test-engine:test-silence #t])
       (eval-syntax annotated)))
 
+  ;; given a message and an exception, notify the output to display
+  ;; the error (along with the held "before" step if present
   (define (err-display-handler message exn)
-    (match held-exp-list
+    (match maybe-held-exp
+      [(struct skipped-step ())
+       (receive-result (Error-Result message))]
       [(struct no-sexp ())
         (receive-result (Error-Result message))]
       [(struct held (exps dc posn-info))
@@ -507,7 +513,7 @@
           (Before-Error-Result (map sstx (append held-finished-list exps))
                                message
                                posn-info))
-         (set! held-exp-list the-no-sexp))]))
+         (set-maybe-held-exp! the-no-sexp))]))
 
   (program-expander
    (lambda () ; init
@@ -525,6 +531,8 @@
                 (step-through-expression expanded)
                 (continue-thunk))))))
 
+;; a 'held' represents a list of held 'before' steps
+(define-struct held (exps was-app? source-info))
 
 ; no-sexp is used to indicate no sexpression for display.
 ; e.g., on an error message, there's no sexp.
@@ -534,6 +542,8 @@
 ; skipped-step is used to indicate that the "before" step was skipped.
 (define-struct skipped-step ())
 (define the-skipped-step (make-skipped-step))
+
+(define maybe-held-step/c (or/c held? no-sexp? skipped-step?))
 
 ;; produce a posn-info structure or false based on the information in a mark-list
 ;; mark-list->posn-info : (listof mark) -> (or/c posn-info? false?)
