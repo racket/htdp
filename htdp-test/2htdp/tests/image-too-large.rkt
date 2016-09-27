@@ -16,7 +16,10 @@
 				 (define msg (exn-message x))
 				 (define reg (regexp-match "draw-large" msg))
 				 (pair? reg))])
-      (big-bang 0 (to-draw draw-large) (on-tick add1) (stop-when zero?))
+      (big-bang 1
+        (to-draw draw-large)
+        (on-tick sub1)
+        (stop-when zero?))
       #false))
 
   (check-true
