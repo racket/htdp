@@ -410,8 +410,9 @@
              [last-picture (if (pair? stop-when) (second stop-when) #f)])
       
       (define/private (last-draw)
-        (when last-picture (set! draw last-picture))
-        (pdraw))
+        (when last-picture
+          (set! draw last-picture)
+          (pdraw)))
       
       ;; ---------------------------------------------------------------------------------------------
       ;; start & stop
@@ -451,14 +452,17 @@
           (define w (send world get))
           (cond
             [(stop w) 
-             (when last-picture (set! draw last-picture))
-             (show-canvas)
+             (when last-picture
+               (set! draw last-picture)
+               (show-canvas))
              (stop! w)]
             [(stop-the-world? w) 
-             (when last-picture (set! draw last-picture))
-             (show-canvas)
+             (when last-picture
+               (set! draw last-picture)
+               (show-canvas))
              (stop! (stop-the-world-world w))]
-            [else (show-canvas)])))
+            [else
+             (show-canvas)])))
       
       (define/public (stop! w)
         (set! live #f)

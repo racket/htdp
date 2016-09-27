@@ -41,6 +41,7 @@ run server-rename.rkt
 run world0-stops.rkt
 run record.rkt
 run record-stop-when.rkt
+run stop-when-bad-draw.rkt
 run stop-when-error.rkt
 run stop-when-crash.rkt
 run stop-when-not-boolean.rkt
