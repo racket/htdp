@@ -37,5 +37,5 @@
            number-of-png)))
 
 (testing
-  (create-n-images 3 3 "images3/")
+  (create-n-images 3 2 "images3/")
   (create-n-images 0 0 "images0/"))
