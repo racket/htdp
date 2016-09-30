@@ -14,6 +14,7 @@
     "pad1.rkt"
     "universe-receive.rkt"
     "batch-io-xexpr.rkt"
+    "stop-when-bad-draw.rkt"
     "close-on-stop.rkt"))
 
 (define test-responsibles '(("test-image.rkt" robby)
