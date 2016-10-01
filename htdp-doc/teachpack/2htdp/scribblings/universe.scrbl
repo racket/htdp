@@ -22,6 +22,9 @@
          #;(map flow* (map cadr stuff))))))
 
 @(define WorldState @tech[#:tag-prefixes '("world")]{WorldState})
+@(define KeyEvent @tech[#:tag-prefixes '("world")]{KeyEvent})
+@(define PadEvent @tech[#:tag-prefixes '("world")]{PadEvent})
+@(define MouseEvent @tech[#:tag-prefixes '("world")]{MouseEvent})
 @(define S-expression @tech[#:tag-prefixes '("universe")]{S-expression})
 
 @; -----------------------------------------------------------------------------
@@ -907,6 +910,119 @@ A typical program does not use all three of these functions. Furthermore,
 
 @centerline{An extended example is available in
  @link["http://www.ccs.neu.edu/home/matthias/HtDP2e/"]{How to Design Programs/2e}.}
+
+@; -----------------------------------------------------------------------------
+@subsection{Writing tests for big-bang functions}
+
+The best way to test that your program works properly is by thoroughly
+ testing the handler functions by themselves using @racket[check-expect].
+ However, sometimes there are more complex interactions between handler
+ functions, and you want to test how that interaction works in a
+ @racket[big-bang] expression. To test that, you need
+ @racket[check-big-bang].
+
+@defform[
+  #:literals (make-tick make-key make-pad make-release make-mouse make-receive)
+  (check-big-bang expr
+    [event expected-world]
+    ...)
+  #:grammar ([event (make-tick)
+                    (make-key key-event)
+                    (make-pad pad-event)
+                    (make-release key-event)
+                    (make-mouse x y mouse-event)
+                    (make-receive message)])
+  #:contracts ([expected-world @#,|WorldState|]
+               [key-event @#,|KeyEvent|]
+               [pad-event @#,|PadEvent|]
+               [mouse-event @#,|MouseEvent|]
+               [message @#,|S-expression|])]{
+Tests how the handler functions in the big-bang program launched by
+ @racket[expr] react to the given sequence of events. At each step along
+ the way, it checks that the resulting world-state is equal to the
+ @racket[expected-world] for that step.
+
+A simple example:
+@racketblock[
+  #reader scribble/comment-reader
+  ;; main : Integer -> Integer
+  (define (main x)
+    (big-bang x
+      [on-tick add1]
+      [on-key handle-key]
+      [on-mouse handle-mouse]
+      [to-draw render]))
+  #reader scribble/comment-reader
+  ;; render : Integer -> Image
+  (define (render x)
+    (place-image (circle 10 "solid" "red")
+                 x 100
+                 (empty-scene 400 200)))
+  #reader scribble/comment-reader
+  ;; handle-key : Integer KeyEvent -> Integer
+  (define (handle-key x ke)
+    (cond [(key=? ke "left")  (- x 5)]
+          [(key=? ke "right") (+ x 5)]
+          [else x]))
+  #reader scribble/comment-reader
+  ;; handle-mouse : Integer Integer Integer KeyEvent -> Integer
+  (define (handle-key w x y me)
+    x)
+
+  (check-big-bang (main 0)
+    [(make-tick) 1]
+    [(make-key "left") -4]
+    [(make-tick) -3]
+    [(make-key "right") 2]
+    [(make-tick) 3]
+    [(make-mouse 123 45 "button-down") 123]
+    [(make-tick) 124])
+]
+
+@defproc[(make-tick) event]{
+Represents a tick event to be used in @racket[check-big-bang]. When
+ @racket[check-big-bang] gets to a clause with a @racket[(make-tick)], it
+ calls the @racket[on-tick] handler with the current world-state to get the
+ next state.
+}
+
+@defproc[(make-key [ke @#,|KeyEvent|]) event]{
+Represents a key press event within @racket[check-big-bang]. When it gets
+ to a clause with @racket[(make-key ke)], it calls the @racket[on-key]
+ handler with the current world-state as the first argument and the
+ key-event @racket[ke] as the second argument, and uses the result to
+ determine the next world-state.
+}
+
+@defproc[(make-pad [pe @#,|PadEvent|]) event]{
+Represensts a pad event within @racket[check-big-bang]. When it gets to a
+ clause with @racket[(make-pad pe)], it calls the @racket[on-pad] handler
+ with the current world-state and @racket[pe] as the arguments, and uses
+ the result to determine the next state.
+}
+
+@defproc[(make-release [ke @#,|KeyEvent|]) event]{
+Represents a key release event within @racket[check-big-bang]. When
+ @racket[check-big-bang] gets to a clause with @racket[(make-release ke)],
+ it calls the @racket[on-release] handler with the current world-state and
+ @racket[ke] as the arguments, and uses the result to determine the next
+ state.
+}
+
+@defproc[(make-mouse [x Integer] [y Integer] [me @#,|MouseEvent|]) event]{
+Represents a mouse event within @racket[check-big-bang]. When
+ @racket[check-big-bang] gets to a clause with @racket[(make-mouse x y me)],
+ it calls the @racket[on-mouse] handler function with the four arguments as
+ the current world-state, @racket[x], @racket[y], and @racket[me]. It uses
+ the result of the handler to get the next world-state.
+}
+@defproc[(make-receive [msg @#,|S-expression|]) event]{
+Represents an event within @racket[check-big-bang] where the world received
+ a message from the server. When it gets to a clause with
+ @racket[(make-receive msg)], it calls the @racket[on-receive] handler with
+ the current world-state and @racket[msg], and uses the result to determine
+ the next world-state.
+}}
 
 @; -----------------------------------------------------------------------------
 @section[#:tag "world2" #:tag-prefix "universe"]{The World is not Enough}

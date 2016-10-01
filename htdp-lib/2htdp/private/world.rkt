@@ -15,7 +15,7 @@
          string-constants
          mrlib/gif)
 
-(provide world% aworld%)
+(provide world% aworld% big-bang-launches-window?)
 
 ;                                     
 ;                                     
@@ -34,6 +34,9 @@
 ;                                     
 
 (define MIN-WIDT-FOR-GAME-PAD 300)
+
+(define big-bang-launches-window?
+  (make-parameter #true))
 
 ;; -----------------------------------------------------------------------------
 ;; packages for broadcasting information to the universe 
@@ -166,7 +169,8 @@
                      "a game pad requires a scene whose width is greater or equal to ~a, given ~e"
                      MIN-WIDT-FOR-GAME-PAD fst-scene))
             (set! game-pad-image (scale (/ width (image-width game-pad)) game-pad)))
-          (create-frame)
+          (when (big-bang-launches-window?)
+            (create-frame))
           (show fst-scene)))
       
       (define/private (add-game-pad scene)
@@ -207,7 +211,8 @@
       ;; allows embedding of the world-canvas in other GUIs
       (define/public (create-frame)
         (create-frame/universe))
-      
+
+      ;; the-frame will remain #f if big-bang doesn't open a window
       ;; effect: create, show and set the-frame
       (define the-frame #f)
       (define/pubment (create-frame/universe)
@@ -419,18 +424,20 @@
 
       ;; wrap up actions 
       (define/private (wrap-up name)
-	(last-draw)
-	(callback-stop! 'name)
-	(enable-images-button)
+        (last-draw)
+        (callback-stop! 'name)
+        (enable-images-button)
         ;; in principle, a big-bang that specifies both
         ;;   [record? #true]
         ;; and
         ;;   [close-on-stop #true]
         ;; is self-contradictory; I will wait until someone complaints -- MF, 22 Nov 2015
-	(when close-on-stop
+        (when close-on-stop
           (unless (boolean? close-on-stop)
             (sleep close-on-stop))
-	  (send the-frame show #f)))
+          ;; only close the frame if there was a frame to begin with
+          (when the-frame
+            (send the-frame show #f))))
 
       (define/public (callback-stop! msg)
         (stop! (send world get)))

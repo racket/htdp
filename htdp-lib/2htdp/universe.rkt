@@ -16,8 +16,13 @@
    -- make window resizable :: why
 |#
 
-(require (for-syntax "private/clauses-spec-and-process.rkt"
+(require (for-syntax syntax/parse
+                     "private/clauses-spec-and-process.rkt"
                      stepper/private/syntax-property)
+         (only-in syntax/location quote-srcloc)
+         (only-in test-engine/racket-tests check-expect-maker)
+         (only-in test-engine/test-engine test-format)
+         (only-in (lib "test-engine/test-info.scm") make-unequal)
          "private/define-keywords.rkt"
          "private/clauses-spec-aux.rkt" 
          ;; ---
@@ -47,6 +52,10 @@
 (provide-primitive
  sexp?  ;; Any -> Boolean 
  )
+
+(define check-big-bang-continuation-key
+  (make-continuation-mark-key
+   'check-big-bang-continuation-key))
 
 (define new-world (create-world world0))
 (define new-universe (create-universe universe0))
@@ -180,8 +189,10 @@
 ;                                     
 
 (provide 
- big-bang     ;; <syntax> : see below 
- pad-handler  ;; <syntax> : see below 
+ big-bang     ;; <syntax> : see below
+ pad-handler  ;; <syntax> : see below
+ check-big-bang
+ check-big-bang*
  )
 
 (provide-primitives
@@ -195,7 +206,15 @@
  key=?         ;; KEY-EVTS KEY-EVTS -> Boolean
  pad-event?    ;; KeyEvent -> Boolean
  ;; is the given key-event also a pad-event? 
- pad=?         ;; PadEvent PadEvent -> Boolean 
+ pad=?         ;; PadEvent PadEvent -> Boolean
+ ;; Events for check-big-bang
+ make-event-expect ;; BigBangEvent World -> (EventExpectof World)
+ make-tick          ;; -> BigBangEvent
+ make-key           ;; KeyEvent -> BigBangEvent
+ make-pad           ;; PadEvent -> BigBangEvent
+ make-release       ;; ReleaseEvent -> BigBangEvent
+ make-mouse         ;; Integer Integer MouseEvent -> BigBangEvent
+ make-receive       ;; S-Exp -> BigBangEvent
  ;; ---
  ;; IP : a string that points to a machine on the net 
  )
@@ -434,8 +453,22 @@
 ;                                          
 
 ;; (-> Object) -> Any
+;; Launches a big-bang window, unless it's within a check-big-bang form.
 (define (run-it o)
-  (send (o) last))
+  ; If this is called within a check-big-bang form,
+  ; don't launch a window; call the send-world-obj
+  ; continuation instead
+  (define send-world-obj
+    (continuation-mark-set-first
+     (current-continuation-marks)
+     check-big-bang-continuation-key
+     #f))
+  (cond [send-world-obj
+         (parameterize ([big-bang-launches-window? #false])
+           (send-world-obj (o)))]
+        [else
+         ; Otherwise launch the window and return the last state.
+         (send (o) last)]))
 
 #;
 (define (run-it o)
@@ -446,3 +479,173 @@
     (parameterize ([current-eventspace esp])
       (queue-callback (lambda () (channel-put obj:ch (o)))))
     (send (channel-get obj:ch) last)))
+
+;; ---------------------------------------------------------------------------------------------------
+
+;; check-big-bang and check-big-bang*
+
+;; Example usage:
+;; (check-big-bang (main (make-posn 0 0))
+;;   [(make-tick)        (make-posn 1 1)]
+;;   [(make-key "right") (make-posn 6 1)]
+;;   [(make-tick)        (make-posn 7 2)]
+;;   [(make-key "left")  (make-posn 2 2)]
+;;   [(make-key "down")  (make-posn 2 7)]
+;;   [(make-tick)        (make-posn 3 8)]
+;;   [(make-mouse 100 50 "button-down") (make-posn 100 50)]
+;;   [(make-tick)        (make-posn 101 51)])
+
+(begin-for-syntax
+  (define-syntax-class check-big-bang-clause
+    [pattern (~and stx [event:expr expected-state:expr])
+             #:with norm (syntax/loc #'stx (make-event-expect event expected-state))]))
+
+(define-syntax check-big-bang
+  (lambda (stx)
+    (syntax-parse stx
+      [(check-big-bang big-bang-expr:expr
+                       clause:check-big-bang-clause
+                       ...)
+       (syntax/loc stx
+         (check-big-bang* big-bang-expr
+                          (list clause.norm
+                                ...)))])))
+
+(define-syntax check-big-bang*
+  (lambda (stx)
+    (syntax-parse stx
+      [(check-big-bang* big-bang-expr:expr
+                        event-expects-expr:expr)
+       (check-expect-maker
+        stx
+        #'check-big-bang-function
+        #'big-bang-expr
+        (list #'event-expects-expr)
+        'comes-from-check-big-bang)])))
+
+;; An (EventExpectof WorldState) is a (make-event-expect BigBangEvent WorldState)
+(struct event-expect (event world) #:transparent)
+
+;; make-event-expect : BigBangEvent WorldState -> (EventExpectof WorldState)
+(define (make-event-expect event world)
+  (check-arg 'make-event-expect (check-big-bang-event? event) "check-big-bang event" "first" event)
+  (event-expect event world))
+
+;; A BigBangEvent is one of:
+;;  - (make-tick)
+;;  - (make-key KeyEvent)
+;;  - (make-pad PadEvent)
+;;  - (make-release KeyEvent)
+;;  - (make-mouse Integer Integer MouseEvent)
+;;  - (make-receive S-Exp)
+(struct tick () #:transparent #:extra-constructor-name make-tick)
+(struct key (event) #:transparent)
+(struct pad (event) #:transparent)
+(struct release (event) #:transparent)
+(struct mouse (x y event) #:transparent)
+(struct receive (s-exp) #:transparent)
+
+;; check-big-bang-event? : Any -> Boolean
+(define (check-big-bang-event? v)
+  (or (tick? v)
+      (key? v)
+      (pad? v)
+      (release? v)
+      (mouse? v)
+      (receive? v)))
+
+;; make-key : KeyEvent -> BigBangEvent
+(define (make-key k)
+  (check-arg 'make-key (key-event? k) "KeyEvent" "first" k)
+  (key k))
+
+;; make-pad : PadEvent -> BigBangEvent
+(define (make-pad k)
+  (check-arg 'make-pad (pad-event? k) "PadEvent" "first" k)
+  (pad k))
+
+;; make-release : KeyEvent -> BigBangEvent
+(define (make-release k)
+  (check-arg 'make-release (key-event? k) "KeyEvent" "first" k)
+  (release k))
+
+;; make-mouse : Integer Integer MouseEvent -> BigBangEvent
+(define (make-mouse x y m)
+  (check-arg 'make-mouse (integer? x) "Integer" "first" x)
+  (check-arg 'make-mouse (integer? y) "Integer" "second" y)
+  (check-arg 'make-mouse (mouse-event? m) "MouseEvent" "third" m)
+  (mouse x y m))
+
+;; make-receive : S-Exp -> BigBangEvent
+(define (make-receive msg)
+  (check-arg 'make-receive (sexp? msg) "S-expression" "first" msg)
+  (make-receive msg))
+
+;; check-big-bang-function : (-> Any) (Listof EventExpect) Srcloc Test-Engine -> Boolean
+(define (check-big-bang-function big-bang-thunk event-expects src test-engine)
+  (define world-obj
+    (let/cc send-world-obj
+      (with-continuation-mark check-big-bang-continuation-key send-world-obj
+        (big-bang-thunk))))
+  ; check that world-obj is an (Instance world%)
+  (check-arg 'check-big-bang
+             (and (object? world-obj) (is-a? world-obj world%))
+             "big-bang expression"
+             "first"
+             world-obj)
+  ; make sure that the timer doesn't add extra tick events
+  (send (get-field timer world-obj) stop)
+  ; check that event-expects is a (Listof EventExpect)
+  (check-arg 'check-big-bang*
+             (and (list? event-expects) (andmap event-expect? event-expects))
+             "list of event-expects"
+             "second"
+             event-expects)
+  ; announce that it's running a test
+  (define test-info (send test-engine get-info))
+  (send test-info add-check)
+  ; the success and failure functions
+  ; -> Boolean
+  (define (success)
+    #true)
+  ; Any Any -> Boolean
+  (define (failure world expected)
+    (send test-info check-failed
+          (make-unequal src (test-format) world expected)
+          world
+          #false)
+    #false)
+  (check-big-bang-loop world-obj event-expects success failure))
+
+;; check-big-bang-loop :
+;; (Instance world%) (Listof Event-Expect) (-> Boolean) (Any Any -> Boolean) -> Boolean
+(define (check-big-bang-loop world-obj event-expects success failure)
+  (match event-expects
+    ['()
+     (success)]
+    [(cons (event-expect event expected) rest)
+     (send-big-bang-event! world-obj event)
+     (yield 'wait)
+     (define world (get-current-world world-obj))
+     (cond
+       [(not (equal? world expected))
+        (failure world expected)]
+       [else
+        (check-big-bang-loop world-obj rest success failure)])]))
+
+;; get-current-world : (Instance world%) -> WorldState
+(define (get-current-world world-obj)
+  (send (get-field world world-obj) get))
+
+;; send-big-bang-event! : (Instance world%) BigBangEvent -> Void
+(define (send-big-bang-event! world-obj event)
+  (match event
+    [(tick) (send world-obj ptock)]
+    [(key key-event) (send world-obj pkey key-event)]
+    [(pad pad-event) (send world-obj ppad pad-event)]
+    [(release key-event) (send world-obj prelease key-event)]
+    [(mouse x y mouse-event) (send world-obj pmouse x y mouse-event)]
+    [(receive message) (send world-obj prec message)]
+    ))
+
+
