@@ -40,7 +40,6 @@
       [else (format "~v" value)]))
   
   (define (test*)
-    (printf "test*\n")
     (run-tests)
     (pop-up))
   
@@ -57,7 +56,6 @@
         (and test-info
              (send test-info refine-display-class test-display%)
              (send test-info setup-display #f #f)
-             (printf "calling summarize-results method\n")
              (send test-info summarize-results (current-output-port))))))
   
   (provide test format-value make-formatter (all-from-out "scheme-tests.rkt"))

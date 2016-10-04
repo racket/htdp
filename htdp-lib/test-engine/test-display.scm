@@ -264,7 +264,7 @@
                 (define cff (check-fail-format fail))
                 (cond
                   [(procedure-arity-includes? cff 2)
-                   (cff (open-output-text-editor text) v)]
+                   (cff v (open-output-text-editor text))]
                   [else
                    (define m (cff v))
                    (when (is-a? m snip%)
