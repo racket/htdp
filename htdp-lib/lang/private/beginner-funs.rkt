@@ -256,15 +256,15 @@
                                           @interaction[#:eval (bsl) (integer? (sqrt 2))]
                                           }
   @defproc[(zero? [x number]) boolean?]{
-                                        Determines if some value is zero or not.  
+                                        Determines if some number is zero or not.
                                         @interaction[#:eval (bsl) (zero? 2)]
                                         }
-  @defproc[(positive? [x number]) boolean?]{
-                                            Determines if some value is strictly larger than zero. 
+  @defproc[(positive? [x real]) boolean?]{
+                                            Determines if some real number is strictly larger than zero. 
                                             @interaction[#:eval (bsl) (positive? -2)]
                                             }
-  @defproc[(negative? [x number]) boolean?]{
-                                            Determines if some value is strictly smaller than zero.
+  @defproc[(negative? [x real]) boolean?]{
+                                            Determines if some real number is strictly smaller than zero.
                                             @interaction[#:eval (bsl) (negative? -2)]
                                             }
   @defproc[(odd? [x integer]) boolean?]{
