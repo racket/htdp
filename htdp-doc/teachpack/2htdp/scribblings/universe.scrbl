@@ -924,15 +924,18 @@ The best way to test that your program works properly is by thoroughly
 @defform[
   #:literals (make-tick make-key make-pad make-release make-mouse make-receive)
   (check-big-bang expr
-    [event expected-world]
+    clause
     ...)
-  #:grammar ([event (make-tick)
+  #:grammar ([clause [event expected-world]
+                     [event expected-world expected-msg]]
+             [event (make-tick)
                     (make-key key-event)
                     (make-pad pad-event)
                     (make-release key-event)
                     (make-mouse x y mouse-event)
                     (make-receive message)])
   #:contracts ([expected-world @#,|WorldState|]
+               [expected-msg @#,|S-expression|]
                [key-event @#,|KeyEvent|]
                [pad-event @#,|PadEvent|]
                [mouse-event @#,|MouseEvent|]
