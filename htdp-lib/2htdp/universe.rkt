@@ -498,7 +498,11 @@
 (begin-for-syntax
   (define-syntax-class check-big-bang-clause
     [pattern (~and stx [event:expr expected-state:expr])
-             #:with norm (syntax/loc #'stx (make-event-expect event expected-state))]))
+             #:with norm
+             (syntax/loc #'stx (make-event-expect event expected-state))]
+    [pattern (~and stx [event:expr expected-state:expr expected-msg:expr])
+             #:with norm
+             (syntax/loc #'stx (make-event-expect-package event expected-state expected-msg))]))
 
 (define-syntax check-big-bang
   (lambda (stx)
@@ -523,13 +527,29 @@
         (list #'event-expects-expr)
         'comes-from-check-big-bang)])))
 
-;; An (EventExpectof WorldState) is a (make-event-expect BigBangEvent WorldState)
+;; An (EventExpectof WorldState) is one of:
+;;  - (make-event-expect BigBangEvent WorldState)
+;;  - (make-event-expect-package BigBangEvent WorldState S-Exp)
 (struct event-expect (event world) #:transparent)
+(struct event-expect-package (event world sent-msg) #:transparent)
+
+;; event-expectation? : Any -> Boolean
+(define (event-expectation? v)
+  (or (event-expect? v) (event-expect-package? v)))
 
 ;; make-event-expect : BigBangEvent WorldState -> (EventExpectof WorldState)
 (define (make-event-expect event world)
-  (check-arg 'make-event-expect (check-big-bang-event? event) "check-big-bang event" "first" event)
+  (check-arg 'make-event-expect (check-big-bang-event? event) "check-big-bang event"
+             "first" event)
   (event-expect event world))
+
+;; make-event-expect-package : BigBangEvent WorldState S-Exp -> (EventExpectof WorldState)
+(define (make-event-expect-package event world sent-msg)
+  (check-arg 'make-event-expect-package (check-big-bang-event? event) "check-big-bang event"
+             "first" event)
+  (check-arg 'make-event-expect-package (sexp? sent-msg) "S-expression"
+             "third" sent-msg)
+  (event-expect-package event world sent-msg))
 
 ;; A BigBangEvent is one of:
 ;;  - (make-tick)
@@ -597,7 +617,7 @@
   (send (get-field timer world-obj) stop)
   ; check that event-expects is a (Listof EventExpect)
   (check-arg 'check-big-bang*
-             (and (list? event-expects) (andmap event-expect? event-expects))
+             (and (list? event-expects) (andmap event-expectation? event-expects))
              "list of event-expects"
              "second"
              event-expects)
@@ -623,13 +643,41 @@
   (match event-expects
     ['()
      (success)]
-    [(cons (event-expect event expected) rest)
+    [(cons expectation rest)
+     (check-big-bang-expect world-obj expectation rest success failure)]))
+
+;; check-big-bang-expect :
+;; (Instance world%) Event-Expect (Listof Event-Expect) (-> Boolean) (Any Any -> Boolean)
+;; ->
+;; Boolean
+(define (check-big-bang-expect world-obj expectation rest success failure)
+  (match expectation
+    [(event-expect event expected)
+     (define out (set-big-bang-package-output-string! world-obj))
      (send-big-bang-event! world-obj event)
      (yield 'wait)
      (define world (get-current-world world-obj))
      (cond
        [(not (equal? world expected))
         (failure world expected)]
+       [(not (string=? (get-output-string out) ""))
+        (failure "" (get-output-string out))]
+       [else
+        (check-big-bang-loop world-obj rest success failure)])]
+    [(event-expect-package event expected expected-sent-msg)
+     (define-values [in out]
+       (set-big-bang-package-output-pipe! world-obj))
+     (send-big-bang-event! world-obj event)
+     (yield 'wait)
+     (close-output-port out)
+     (define world (get-current-world world-obj))
+     (define sent-msg (read in))
+     (close-input-port in)
+     (cond
+       [(not (equal? world expected))
+        (failure world expected)]
+       [(not (equal? sent-msg expected-sent-msg))
+        (failure sent-msg expected-sent-msg)]
        [else
         (check-big-bang-loop world-obj rest success failure)])]))
 
@@ -648,4 +696,16 @@
     [(receive message) (send world-obj prec message)]
     ))
 
+;; set-big-bang-package-output-string! : (Instance world%) -> String-Output-Port
+(define (set-big-bang-package-output-string! world-obj)
+  (define out (open-output-string 'sent-messages))
+  (set-field! *out* world-obj out)
+  out)
+
+
+;; set-big-bang-package-output-pipe! : (Instance world%) -> (values Input-Port Output-Por)
+(define (set-big-bang-package-output-pipe! world-obj)
+  (define-values [in out] (make-pipe))
+  (set-field! *out* world-obj out)
+  (values in out))
 

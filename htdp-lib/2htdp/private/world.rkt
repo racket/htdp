@@ -35,6 +35,8 @@
 
 (define MIN-WIDT-FOR-GAME-PAD 300)
 
+;; big-bang-launches-window? : (Parameterof Boolean)
+;; Controlls whether or not big-bang launches a window and sends packages
 (define big-bang-launches-window?
   (make-parameter #true))
 
@@ -122,7 +124,11 @@
                                (if (= n 1) 
                                    (printf FMTtry register TRIES)
                                    (begin (sleep PAUSE) (try (- n 1)))))))
-              (define-values (in out) (tcp-connect register port))
+              (define-values (in out)
+                (if (big-bang-launches-window?)
+                    (tcp-connect register port)
+                    (values (open-input-string "" 'mock-server)
+                            (open-output-string 'sent-messages))))
               (tcp-register in out name)
               (printf "... successful registered and ready to receive\n")
               (set! *out* out)

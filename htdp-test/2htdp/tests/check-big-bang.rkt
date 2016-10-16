@@ -48,6 +48,7 @@
   [(make-tick)        (make-posn 1 1)]
   [(make-key "right") (make-posn 6 1)]
   [(make-tick)        (make-posn 7 2)]
+  [(make-key " ")     (make-posn 7 2) (list "AT" (list 7 2))]
   [(make-key "left")  (make-posn 2 2)]
   [(make-key "down")  (make-posn 2 7)]
   [(make-tick)        (make-posn 3 8)]
@@ -77,6 +78,7 @@
         [(key=? k "right") (make-posn (+ (posn-x p) 5) (posn-y p))]
         [(key=? k "up")    (make-posn (posn-x p) (- (posn-y p) 5))]
         [(key=? k "down")  (make-posn (posn-x p) (+ (posn-y p) 5))]
+        [(key=? k " ")     (make-package p (list "AT" (list (posn-x p) (posn-y p))))]
         [else p]))
 
 ;; posn-handle-mouse : Posn Integer Integer Mouse-Event -> Posn
