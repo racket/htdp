@@ -1,4 +1,13 @@
 ------------------------------------------------------------------------
+Version 6.7				  [Thu Oct 20 17:25:43 EDT 2016]
+
+* a small change to the semantics of big-bang from 2htdp/universe, 
+  big-bang used to draw images even after a stop-when value was 
+  discovered. Most of the time, this actually worked out. When it 
+  didn't, programmers had used the stop-when drawing function for the 
+  final image. Now big-bang draws one picture less than before. 
+
+------------------------------------------------------------------------
 Version 6.6				  [Fri Jul 15 11:14:44 EDT 2016]
 
 * htdp/dir generates file representations that include date field. 
