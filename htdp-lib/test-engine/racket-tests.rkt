@@ -106,7 +106,9 @@
                                                  (['stepper-hide-reduction #t])
                                                  #`(list
                                                     (lambda () #,test-expr)
-                                                    #,(syntax/loc stx (void))))))
+                                                    #,(with-stepper-syntax-properties
+                                                          (['stepper-hide-reduction #t])
+                                                        (syntax/loc stx (void)))))))
                                         #,@embedded-stxes
                                         #,src-info
                                         #,(with-stepper-syntax-properties
