@@ -5,6 +5,8 @@
 
 @title[#:tag "intermediate"]{Intermediate Student}
 
+@section-index["ISL"]
+
 @declare-exporting[lang/htdp-intermediate]
 
 @racketgrammar*+qq[

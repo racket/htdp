@@ -4,6 +4,8 @@
 
 @title[#:tag "advanced"]{Advanced Student}
 
+@section-index["ASL"]
+
 @declare-exporting[lang/htdp-advanced]
 
 @racketgrammar*+qq[
