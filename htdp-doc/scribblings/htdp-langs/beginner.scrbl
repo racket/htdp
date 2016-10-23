@@ -5,6 +5,8 @@
 
 @title[#:tag "beginner"]{Beginning Student}
 
+@section-index["BSL"]
+
 @declare-exporting[lang/htdp-beginner #:use-sources (lang/htdp-beginner lang/private/teachprims)]
 
 @racketgrammar*+library[

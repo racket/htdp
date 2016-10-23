@@ -4,6 +4,8 @@
 
 @title[#:tag "intermediate-lam"]{Intermediate Student with Lambda}
 
+@section-index["ISL+"]
+
 @declare-exporting[lang/htdp-intermediate-lambda]
 
 @racketgrammar*+qq[

@@ -4,6 +4,8 @@
 
 @title[#:tag "beginner-abbr"]{Beginning Student with List Abbreviations}
 
+@section-index["BSL+"]
+
 @declare-exporting[lang/htdp-beginner-abbr]
 
 @racketgrammar*+qq[
