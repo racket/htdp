@@ -16,3 +16,5 @@ Try programs which print snips (print-convert-test.ss)
 
 try programs that contain test cases; make sure that the popups behave sensibly.
 
+try DMdA program, make sure that test cases don't show extra steps.
+
