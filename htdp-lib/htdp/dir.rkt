@@ -33,7 +33,7 @@
 (define (create-date x)
   (define s (s:file-or-directory-modify-seconds x))
   (match-define (date* sc mi h d mo y wd yd dst z nano zname) (seconds->date s))
-  (make-date d mo d h mi sc))
+  (make-date y mo d h mi sc))
 
 (define create-file
   (let* ([old make-file]
