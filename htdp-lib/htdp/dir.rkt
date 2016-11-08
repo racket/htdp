@@ -18,16 +18,27 @@
 
 (require
   (only-in racket match-define natural-number/c)
+  ; (only-in lang/htdp-beginner define-struct)
   htdp/error
   lang/prim
   (only-in racket/base
-    [file-or-directory-modify-seconds s:file-or-directory-modify-seconds]
-    [file-size s:file-size]))
+           [file-or-directory-modify-seconds s:file-or-directory-modify-seconds]
+           [file-size s:file-size]))
 
 ;; Structures: 
 (define-struct dir (name dirs files) #:transparent)
 (define-struct file (name size date content) #:transparent)
 (define-struct date (year month day hours minutes seconds) #:transparent)
+
+(set! make-dir
+      (let ([old make-dir])
+        (lambda x
+          (cond
+            [(null? x) (error 'make-dir "expects 3 arguments, but found none" x)]
+            [(null? (cdr x)) (error 'make-dir "expects 3 arguments, but found only 1")]
+            [(null? (cddr x)) (error 'make-dir "expects 3 arguments, but found only 2")]
+            [(> (length x) 3) (error 'make-dir "expects 3 arguments, but found ~a" (length x))]
+            [else (apply old x)]))))
 
 ;; FilePath -> Date 
 (define (create-date x)
@@ -37,16 +48,16 @@
 
 (define create-file
   (let* ([old make-file]
-	 [make-file 
-	  (case-lambda
-	    [(name size time content)
+         [make-file 
+          (case-lambda
+            [(name size time content)
              (check-arg 'make-file (or (string? name) (symbol? name)) "string or symbol" "first" name)
              (check-arg 'make-file (natural-number/c size) "natural number" "second" size)
              (check-arg 'make-file (or (date? time) (and (number? time) (= 0 time))) "date (or 0)"
                         "third" time)
              (old name size time content)]
-	    [(name size content) (create-file name size 0 content)]
-	    [x (error 'make-file "expects 3 or 4 arguments, but found only ~a" (length x))])])
+            [(name size content) (create-file name size 0 content)]
+            [x (error 'make-file "expects 3 or 4 arguments, but found only ~a" (length x))])])
     make-file))
 
 (define-primitive create-dir create-dir/proc)
@@ -66,14 +77,14 @@
 (define (explore dirs)
   (map (lambda (d) 
          (let-values ([(fs ds) (pushd d directory-files&directories)]) 
-	   (define files (map (lambda (x) (build-path d x)) fs))
+           (define files (map (lambda (x) (build-path d x)) fs))
            (make-dir
             (string->symbol (path->string (my-split-path d)))
             (explore (map (lambda (x) (build-path d x)) ds))
             (map make-file
                  (map path->string fs)
                  (map (lambda (x) (if (file-exists? x) (s:file-size x) 0)) files)
-		 (map (lambda (x) (if (file-exists? x) (create-date x) 0)) files)
+                 (map (lambda (x) (if (file-exists? x) (create-date x) 0)) files)
                  (map (lambda (x) "") fs)))))
        dirs))
 
