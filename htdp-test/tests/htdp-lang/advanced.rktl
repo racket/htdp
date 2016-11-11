@@ -439,12 +439,12 @@
   (define-struct s (x y)))
 (mz-require 'my-advanced-module)
 (parameterize ([current-namespace (module->namespace ''my-advanced-module)])
-  (eval #'(set! x 12))
-  (eval #'(set! f 12))
-  (eval #'(set! make-s 12))
-  (eval #'(set! s-x 12))
-  (eval #'(set! s? 12))
-  (eval #'(set! set-s-x! 12)))
+  (eval '(set! x 12))
+  (eval '(set! f 12))
+  (eval '(set! make-s 12))
+  (eval '(set! s-x 12))
+  (eval '(set! s? 12))
+  (eval '(set! set-s-x! 12)))
 
 ;; define-datatype
 
