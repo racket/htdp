@@ -193,19 +193,14 @@
      (identifier? #'expected-property:id)
      (let* ([prop (first-order->higher-order #'expected-property:id)]
             [name (symbol->string (syntax-e  #'expected-property:id))]
-            [code 
-             #`(lambda (x)
-                 (with-handlers ([exn:fail:contract:arity?
-                                  (lambda (x) 
-                                    (error-check (lambda (v) #f) #,name SATISFIED-FMT #t))])
-                   (#,prop x)))])
+            [code #`(lambda (x) (#,prop x))])
        (check-expect-maker stx 
                            #'check-values-property 
                            #'actual:exp
                            (list code name)
                            'comes-from-check-satisfied))]
     [(_ actual:exp expected-property:exp)
-     (let* ([prop #'(let ([p? expected-property:exp])
+     (let* ([prop #`(let ([p? expected-property:exp])
                        (unless (and (procedure? p?) (procedure-arity-includes? p? 1))
                          (define name (object-name p?))
                          (if name
