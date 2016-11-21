@@ -1,6 +1,6 @@
 #lang info
 
-(define test-responsibles '((all kathyg)))
+(define test-responsibles '((all matthias)))
 
 (define test-omit-paths '("check-satisfied2.rkt"
                           "check-satisfied4.rkt"
