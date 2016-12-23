@@ -264,7 +264,7 @@ inside the curve.
   The @racket[face] and the @racket[family] combine to give the complete typeface. If 
   @racket[face] is available on the system, it is used, but if not then a default typeface
   based on the @racket[family] is chosen. The @racket[style] controls if the face is italic
-  or not (on Windows and Mac OS X, @racket['slant] and @racket['italic] are the same),
+  or not (on Windows and Mac OS, @racket['slant] and @racket['italic] are the same),
   the @racket[weight] controls if it is boldface (or light), and @racket[underline?]
   determines if the face is underlined. For more details on these arguments, see @racket[font%],
   which ultimately is what this code uses to draw the font.
