@@ -453,9 +453,10 @@ physical events on some form of mouse:
 }
 }
 
-@item{A @tech{PadEvent} is a @tech{KeyEvent} for a game-pad simulation via
-@racket[big-bang]. The presence of an @racket[on-pad] clause superimposes
-the game-pad image onto the current image, suitably scaled to its size:
+@item{A @tech{PadEvent} is a @tech{KeyEvent} for a
+@index["game-pad"]{game-pad} simulation via @racket[big-bang].
+The presence of an @racket[on-pad] clause superimposes the game-pad image onto
+the current image, suitably scaled to its size:
 
 @image["gamepad.png"]
 
