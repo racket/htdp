@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version 6.8				  [Mon Jan 16 17:13:05 EST 2017]
+
+* bug fixes in test engine (regression) 
+
+------------------------------------------------------------------------
 Version 6.7				  [Thu Oct 20 17:25:43 EDT 2016]
 
 * a small change to the semantics of big-bang from 2htdp/universe, 
