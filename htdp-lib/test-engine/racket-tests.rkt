@@ -191,9 +191,22 @@
   (syntax-case stx ()
     [(_ actual:exp expected-property:id)
      (identifier? #'expected-property:id)
-     (let* ([prop (first-order->higher-order #'expected-property:id)]
+     (let* ([prop1 (first-order->higher-order #'expected-property:id)]
             [name (symbol->string (syntax-e  #'expected-property:id))]
-            [code #`(lambda (x) (#,prop x))])
+            [code #`(lambda (x)
+                      (with-handlers ([exn:fail:contract:arity?
+                                       (lambda (xn)
+                                         (define msg (exn-message xn))
+                                         (define msg1 (regexp-match #px"(.*): arity mismatch" msg))
+                                         (cond
+                                           [msg1
+                                            (define raised-name (cadr msg1))
+                                            ;; I am comparing strings here. Can this go wrong?
+                                            (if (equal? #,name raised-name)
+                                                (error-check (lambda (v) #f) #,name SATISFIED-FMT #t)
+                                                (raise xn))]
+                                           [else (raise xn)]))])
+                        (#,prop1 x)))])
        (check-expect-maker stx 
                            #'check-values-property 
                            #'actual:exp
@@ -201,11 +214,11 @@
                            'comes-from-check-satisfied))]
     [(_ actual:exp expected-property:exp)
      (let* ([prop #`(let ([p? expected-property:exp])
-                       (unless (and (procedure? p?) (procedure-arity-includes? p? 1))
-                         (define name (object-name p?))
-                         (if name
-                             (error-check (lambda (v) #f) name SATISFIED-FMT #t)
-                             (error-check (lambda (v) #f) p? SATISFIED-FMT #t)))
+                      (define name (object-name p?))
+                      (unless (and (procedure? p?) (procedure-arity-includes? p? 1))
+                        (if name  ;; this produces the BSL/ISL name 
+                            (error-check (lambda (v) #f) name SATISFIED-FMT #t)
+                            (error-check (lambda (v) #f) p? SATISFIED-FMT #t)))
                       p?)])
        (check-expect-maker stx 
                            #'check-values-property 
