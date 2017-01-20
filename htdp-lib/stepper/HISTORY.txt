@@ -1,5 +1,10 @@
 Stepper
 -------
+
+Changes for 6.8:
+
+None.
+
 Changes for 6.7:
 
 Several bug fixes.
