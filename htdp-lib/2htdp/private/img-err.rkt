@@ -159,7 +159,7 @@
      (check-arg fn-name
                 (and (integer? arg)
                      (>= arg 2))
-                'integer\ greater\ than\ 2
+                'integer\ greater\ than\ or\ equal\ to\ 2
                 i arg)
      arg]
     [(dx dy x y x1 y1 x2 y2 pull pull1 pull2)
