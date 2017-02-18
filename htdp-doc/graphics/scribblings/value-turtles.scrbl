@@ -1,3 +1,4 @@
+
 #lang scribble/doc
 @(require "common.rkt" (for-label graphics/value-turtles))
 
@@ -77,8 +78,33 @@ window contains all of the turtles of the previous two windows, but
 only the line drawings of the first turtles argument.}
 
 @defproc[(clean [turtles turtles?]) turtles?]{
-  Produces a turtles like @racket[turtles], but with only a single
-  turtle, positioned in the center.
+ Produces a turtles with the drawing as in @racket[turtles], but with
+ zero turtles.
+}
+
+@defproc[(turtles-width [turtles turtles?]) (and/c real? positive?)]{
+  Returns the width of @racket[turtles].
+}
+
+@defproc[(turtles-height [turtles turtles?]) (and/c real? positive?)]{
+  Returns the height of @racket[turtles].
+}
+
+@defproc[(turtle-state [turtles turtles?]) (listof (vector/c real? real? real?
+                                                             #:immutable? #t
+                                                             #:flat? #t))]{
+  Returns the position and heading of all of the turtles; the first
+ element in each vector is the @racket[_x] coordinate, the second is the
+ @racket[_y] coordinate and the third is the angle in degrees.
+}
+
+@defproc[(restore-turtle-state [turtles turtles?]
+                               [state (listof (vector/c real? real? real?
+                                                        #:immutable? #t
+                                                        #:flat? #t))])
+         turtles?]{
+ Keeps the drawing as in @racket[turtles], but puts the turtles positions
+ and headings as specified in @racket[state].
 }
 
 @; ----------------------------------------

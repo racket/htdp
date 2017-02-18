@@ -1,5 +1,6 @@
 #lang racket/base
 (require "private/value-turtles.rkt"
+         "private/value-turtles-reader.rkt"
          racket/contract)
 (provide
  (contract-out
@@ -17,4 +18,16 @@
   [turn (-> real? turtles? turtles?)]
   [turn/radians (-> real? turtles? turtles?)]
   [merge (->* (turtles?) #:rest (listof turtles?) turtles?)]
-  [clean (-> turtles? turtles?)]))
+  [clean (-> turtles? turtles?)]
+  [turtle-state (-> turtles? (listof (vector/c real? real? real?
+                                               #:immutable #t
+                                               #:flat? #t)))]
+  [restore-turtle-state (-> turtles?
+                            (listof (vector/c real? real? real?
+                                              #:immutable #t
+                                              #:flat? #t))
+                            turtles?)]
+  [turtles-width (-> turtles? (and/c real? positive?))]
+  [turtles-height (-> turtles? (and/c real? positive?))]))
+
+

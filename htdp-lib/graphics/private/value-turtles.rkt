@@ -1,14 +1,16 @@
 #lang racket/base
 (require racket/math
          racket/class
-         racket/gui/base
+         racket/draw
+         racket/snip
          racket/list
          racket/format
          "value-turtles-reader.rkt"
          "value-turtles-wxme.rkt")
 
 (provide turtles move draw turn turn/radians merge clean turtles?
-         snip-class turtle-snip-class%)
+         snip-class turtle-snip-class% turtle-state restore-turtle-state
+         turtles-width turtles-height)
 
 (define saved-turtle-snip% #f)
 (define saved-turtles #f)
@@ -319,6 +321,27 @@
         (for/list ([tv (in-list tvs)])
           (wxme-turtle->snip turtle-snip% tv))))
 (define (clean tv) (send (wxme-turtle->snip turtle-snip% tv) clean-op))
+(define (turtle-state tv)
+  (define t (wxme-turtle->snip turtle-snip% tv))
+  (send t flatten)
+  (for/list ([t (in-list (send t get-turtles))])
+    (vector-immutable (turtle-x t) (turtle-y t) (turtle-angle t))))
+(define (restore-turtle-state _tv state)
+  (define tv (wxme-turtle->snip turtle-snip% _tv))
+  (define w (send tv get-width))
+  (define h (send tv get-height))
+  (apply
+   merge
+   (clean tv)
+   (for/list ([s (in-list (reverse state))])
+     (define x (vector-ref s 0))
+     (define y (vector-ref s 1))
+     (define θ (vector-ref s 2))
+     (define w/x (move x (move (- (/ w 2)) (turtles w h))))
+     (define w/y (turn -90 (move (- y) (move (/ h 2) (turn 90 w/x)))))
+     (turn/radians (- θ) w/y))))
+(define (turtles-width tv) (send (wxme-turtle->snip turtle-snip% tv) get-width))
+(define (turtles-height tv) (send (wxme-turtle->snip turtle-snip% tv) get-height))
 
 (set! saved-turtle-snip% turtle-snip%)
 (set! saved-turtles turtles)
