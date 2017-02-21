@@ -5,12 +5,13 @@
          racket/snip
          racket/list
          racket/format
+         pict
          "value-turtles-reader.rkt"
          "value-turtles-wxme.rkt")
 
 (provide turtles move draw turn turn/radians merge clean turtles?
          snip-class turtle-snip-class% turtle-state restore-turtle-state
-         turtles-width turtles-height)
+         turtles-width turtles-height turtles-pict)
 
 (define saved-turtle-snip% #f)
 (define saved-turtles #f)
@@ -121,21 +122,54 @@
          (send dc set-pen b-pen)]
         [else
          (void)]))
+
+    (define/public (to-pict)
+      (flatten)
+
+      (cond
+        [(pair? lines)
+         (define l (min (line-x1 (car lines)) (line-x2 (car lines))))
+         (define r (max (line-x1 (car lines)) (line-x2 (car lines))))
+         (define t (min (line-y1 (car lines)) (line-y2 (car lines))))
+         (define b (max (line-y1 (car lines)) (line-y2 (car lines))))
+
+         (for ([line (in-list lines)])
+           (set! l (min l (line-x1 line) (line-x2 line)))
+           (set! r (max r (line-x1 line) (line-x2 line)))
+           (set! t (min t (line-y1 line) (line-y2 line)))
+           (set! b (max b (line-y1 line) (line-y2 line))))
+
+         (dc (λ (dc dx dy)
+               (define pen (send dc get-pen))
+               (for ([line (in-list lines)])
+                 (send dc set-pen (if (line-black? line) b-pen w-pen))
+                 (send dc draw-line
+                       (- (line-x1 line) l)
+                       (- (line-y1 line) t)
+                       (- (line-x2 line) l)
+                       (- (line-y2 line) t)))
+               (send dc set-pen pen))
+             (- r l)
+             (- b t))]
+        [else (blank)]))
     
+    (define/private (draw-in-dc dc dx dy)
+      (flatten)
+      (for ([line (in-list lines)])
+        (send dc set-pen (if (line-black? line) b-pen w-pen))
+        (send dc draw-line
+              (+ dx (line-x1 line))
+              (+ dy (line-y1 line))
+              (+ dx (line-x2 line))
+              (+ dy (line-y2 line)))))
+      
     (define/private (construct-bitmap)
       (unless bitmap
-        (flatten)
         (set! bitmap (make-bitmap width height))
-        (let* ([bitmap-dc (make-object bitmap-dc% bitmap)])
-          (send bitmap-dc set-smoothing 'aligned)
-          (send bitmap-dc clear)
-          (for ([line (in-list lines)])
-            (send bitmap-dc set-pen (if (line-black? line) b-pen w-pen))
-            (send bitmap-dc draw-line
-                  (line-x1 line)
-                  (line-y1 line)
-                  (line-x2 line)
-                  (line-y2 line))))))
+        (define bitmap-dc (make-object bitmap-dc% bitmap))
+        (send bitmap-dc set-smoothing 'aligned)
+        (send bitmap-dc clear)
+        (draw-in-dc bitmap-dc 0 0)))
     
     (define/override (draw dc x y left top right bottom dx dy draw-caret)
       (construct-bitmap)
@@ -342,6 +376,7 @@
      (turn/radians (- θ) w/y))))
 (define (turtles-width tv) (send (wxme-turtle->snip turtle-snip% tv) get-width))
 (define (turtles-height tv) (send (wxme-turtle->snip turtle-snip% tv) get-height))
+(define (turtles-pict tv) (send (wxme-turtle->snip turtle-snip% tv) to-pict))
 
 (set! saved-turtle-snip% turtle-snip%)
 (set! saved-turtles turtles)

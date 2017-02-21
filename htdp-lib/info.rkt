@@ -27,7 +27,8 @@
     "web-server-lib"
     "wxme-lib"
     ("gui-lib" #:version "1.7")
-    "deinprogramm-signature"))
+    "deinprogramm-signature"
+    "pict-lib"))
 (define build-deps '("racket-index"
                      "at-exp-lib"
                      "rackunit-lib"))

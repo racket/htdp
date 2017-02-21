@@ -1,7 +1,8 @@
 #lang racket/base
 (require "private/value-turtles.rkt"
          "private/value-turtles-reader.rkt"
-         racket/contract)
+         racket/contract
+         pict)
 (provide
  (contract-out
   [turtles? (-> any/c boolean?)]
@@ -28,6 +29,5 @@
                                               #:flat? #t))
                             turtles?)]
   [turtles-width (-> turtles? (and/c real? positive?))]
-  [turtles-height (-> turtles? (and/c real? positive?))]))
-
-
+  [turtles-height (-> turtles? (and/c real? positive?))]
+  [turtles-pict (-> turtles? pict?)]))

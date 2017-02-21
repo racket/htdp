@@ -1,6 +1,6 @@
 
 #lang scribble/doc
-@(require "common.rkt" (for-label graphics/value-turtles))
+@(require "common.rkt" (for-label graphics/value-turtles pict))
 
 @title{Value Turtles}
 
@@ -105,6 +105,14 @@ only the line drawings of the first turtles argument.}
          turtles?]{
  Keeps the drawing as in @racket[turtles], but puts the turtles positions
  and headings as specified in @racket[state].
+}
+
+@defproc[(turtles-pict [turtles turtles?]) pict?]{
+ Constructs a pict that draws the same way that @racket[turtles] would draw,
+ except that it does not draw the frame around the turtles, nor
+ does it draw the turtles themselves. Additionally, the size of the resulting
+ is not the size of @racket[turtles], but instead sized exactly to the
+ the lines that that are in the drawing in @racket[turtles].
 }
 
 @; ----------------------------------------
