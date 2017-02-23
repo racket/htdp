@@ -144,10 +144,10 @@
                (for ([line (in-list lines)])
                  (send dc set-pen (if (line-black? line) b-pen w-pen))
                  (send dc draw-line
-                       (- (line-x1 line) l)
-                       (- (line-y1 line) t)
-                       (- (line-x2 line) l)
-                       (- (line-y2 line) t)))
+                       (+ dx (- (line-x1 line) l))
+                       (+ dy (- (line-y1 line) t))
+                       (+ dx (- (line-x2 line) l))
+                       (+ dy (- (line-y2 line) t))))
                (send dc set-pen pen))
              (- r l)
              (- b t))]
