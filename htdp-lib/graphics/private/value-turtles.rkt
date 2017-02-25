@@ -63,9 +63,10 @@
 (define w-brush (send the-brush-list find-or-create-brush "WHITE" 'solid))
 
 (define empty-cache (make-offset 0 0 0))
+(define scroll-step 16)
 
 (define turtle-snip%
-  (class snip% 
+  (class snip%
     (init-field width height turtles cache lines)
     (define/public (get-lines) lines)
     (define/public (get-turtles) turtles)
@@ -73,14 +74,10 @@
     (define/public (get-width) width)
     (define/public (get-height) height)
     
-    (define turtle-style 'triangle)
     (define bitmap #f)
-    
-    [define pl (make-object point% 0 0)]
-    [define pr (make-object point% 0 0)]
-    [define ph (make-object point% 0 0)]
-    [define points (list pl pr ph)]
+
     (define/private (flip-icons dc dx dy)
+      (define turtle-style 'triangle)
       (case turtle-style
         [(triangle line)
          (define proc
@@ -103,6 +100,10 @@
                         [short-size 7]
                         [l-theta (+ theta pi/2)]
                         [r-theta (- theta pi/2)])
+                   (define pl (make-object point% 0 0))
+                   (define pr (make-object point% 0 0))
+                   (define ph (make-object point% 0 0))
+                   (define points (list pl pr ph))
                    (send ph set-x (+ dx x (* long-size (cos theta))))
                    (send ph set-y (+ dy y (* long-size (sin theta))))
                    (send pl set-x (+ dx x (* short-size (cos l-theta))))
@@ -193,7 +194,6 @@
       (set-box/f lspace 0)
       (set-box/f rspace 0))
 
-    (define scroll-step 16)
     (define/override (get-num-scroll-steps) (max 1 (inexact->exact (ceiling (/ height scroll-step)))))
     (define/override (find-scroll-step y) (inexact->exact (round (/ y scroll-step))))
     (define/override (get-scroll-step-offset offset) (* offset scroll-step))
