@@ -143,7 +143,10 @@
          (dc (λ (dc dx dy)
                (define pen (send dc get-pen))
                (for ([line (in-list lines)])
-                 (send dc set-pen (if (line-black? line) b-pen w-pen))
+                 (send dc set-pen
+                       (if (line-black? line) "black" "white")
+                       (send pen get-width)
+                       'solid)
                  (send dc draw-line
                        (+ dx (- (line-x1 line) l))
                        (+ dy (- (line-y1 line) t))
