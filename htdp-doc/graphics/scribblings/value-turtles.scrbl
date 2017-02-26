@@ -24,7 +24,7 @@ turtles-window value.
 Creates a new turtles window with the given @racket[width] and
 @racket[height]. The remaining arguments specify position of the
 initial turtle and the direction in radians (where @racket[0] is to
-the right).}
+the right). The turtle's pen width is @racket[1].}
 
 @defproc[(turtles? [v any/c]) boolean?]{
   Determines if @racket[v] is a turtles drawing.
@@ -65,6 +65,12 @@ new turtles window.}
 Turns the turtle @racket[theta] radians counter-clockwise, returning a
 new turtles window.}
 
+@defproc[(set-pen-width [turtles turtles?] [width (real-in 0 255)]) turtles?]{
+  Creates a new turtles that draws with the pen width @racket[width].
+
+ @history[#:added "1.5"]
+}
+
 @defproc[(merge [turtles1 turtles?] [turtles2 turtles?]) turtles?]{
 
 The @racket[split] and @racket[tprompt] forms provided by
@@ -90,12 +96,21 @@ only the line drawings of the first turtles argument.}
   Returns the height of @racket[turtles].
 }
 
+@defproc[(turtles-pen-width [turtles turtles?]) (real-in 0 255)]{
+  Returns the current width of the pen that the turtles use to draw.
+
+  @history[#:added "1.5"]
+}
+
 @defproc[(turtle-state [turtles turtles?]) (listof (vector/c real? real? real?
                                                              #:immutable? #t
                                                              #:flat? #t))]{
   Returns the position and heading of all of the turtles; the first
  element in each vector is the @racket[_x] coordinate, the second is the
  @racket[_y] coordinate and the third is the angle in degrees.
+
+  @history[#:added "1.5"]
+
 }
 
 @defproc[(restore-turtle-state [turtles turtles?]
@@ -105,6 +120,8 @@ only the line drawings of the first turtles argument.}
          turtles?]{
  Keeps the drawing as in @racket[turtles], but puts the turtles positions
  and headings as specified in @racket[state].
+
+  @history[#:added "1.5"]
 }
 
 @defproc[(turtles-pict [turtles turtles?]) pict?]{
@@ -113,6 +130,8 @@ only the line drawings of the first turtles argument.}
  does it draw the turtles themselves. Additionally, the size of the resulting
  is not the size of @racket[turtles], but instead sized exactly to the
  the lines that that are in the drawing in @racket[turtles].
+
+  @history[#:added "1.5"]
 }
 
 @; ----------------------------------------

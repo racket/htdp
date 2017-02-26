@@ -30,4 +30,6 @@
                             turtles?)]
   [turtles-width (-> turtles? (and/c real? positive?))]
   [turtles-height (-> turtles? (and/c real? positive?))]
-  [turtles-pict (-> turtles? pict?)]))
+  [turtles-pict (-> turtles? pict?)]
+  [turtles-pen-width (-> turtles? (real-in 0 255))]
+  [set-pen-width (-> turtles? (real-in 0 255) turtles?)]))

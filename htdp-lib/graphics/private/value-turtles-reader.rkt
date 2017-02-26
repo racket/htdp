@@ -14,7 +14,13 @@
      (apply (case (vector-ref sexp 0)
               [(struct:turtle) make-turtle]
               [(struct:offset) make-offset]
-              [(struct:line) make-line]
+              [(struct:line)
+               (λ args
+                 (cond
+                   [(= (length args) (procedure-arity make-line))
+                    (apply make-line args)]
+                   [(= (+ (length args) 1) (procedure-arity make-line))
+                    (apply make-line (append args (list 1)))]))]
               [(struct:tmerge) make-tmerge]
               [(struct:turtles/offset) make-turtles/offset]
               [else (error 'vec->struc "unknown structure: ~s\n" sexp)])
@@ -33,7 +39,7 @@
 
 ;; a lines is:
 ;;   - (list-of line)
-(define-struct line (x1 y1 x2 y2 black?))
+(define-struct line (x1 y1 x2 y2 black? width))
 (define line->vector (make-->vector line))
 
 ;; a turtles is either

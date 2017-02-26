@@ -11,7 +11,8 @@
 
 (provide turtles move draw turn turn/radians merge clean turtles?
          snip-class turtle-snip-class% turtle-state restore-turtle-state
-         turtles-width turtles-height turtles-pict)
+         turtles-width turtles-height turtles-pict
+         turtles-pen-width set-pen-width)
 
 (define saved-turtle-snip% #f)
 (define saved-turtles #f)
@@ -40,12 +41,23 @@
                 (equal? #"" str))
             (saved-turtles 150 150)
             (let ([sexp (vec->struc (prim-read (open-input-bytes str)))])
-              (make-object saved-turtle-snip%
-                (first sexp)
-                (second sexp)
-                (third sexp)
-                (fourth sexp)
-                (fifth sexp))))))
+              (cond
+                [(= (length sexp) 5)
+                 (make-object saved-turtle-snip%
+                   (first sexp)
+                   (second sexp)
+                   (third sexp)
+                   (fourth sexp)
+                   (fifth sexp)
+                   1)]
+                [(= (length sexp) 6)
+                 (make-object saved-turtle-snip%
+                   (first sexp)
+                   (second sexp)
+                   (third sexp)
+                   (fourth sexp)
+                   (fifth sexp)
+                   (sixth sexp))])))))
     (super-instantiate ())))
 
 (define snip-class (make-object turtle-snip-class%))
@@ -67,12 +79,15 @@
 
 (define turtle-snip%
   (class snip%
-    (init-field width height turtles cache lines)
+    (init-field width height turtles cache lines pen-width)
     (define/public (get-lines) lines)
     (define/public (get-turtles) turtles)
     (define/public (get-cache) cache)
     (define/public (get-width) width)
     (define/public (get-height) height)
+    (define/public (get-pen-width) pen-width)
+    (define/public (set-pen-width pw)
+      (make-object turtle-snip% width height turtles cache lines pw))
     
     (define bitmap #f)
 
@@ -145,7 +160,7 @@
                (for ([line (in-list lines)])
                  (send dc set-pen
                        (if (line-black? line) "black" "white")
-                       (send pen get-width)
+                       (* (send pen get-width) (line-width line))
                        'solid)
                  (send dc draw-line
                        (+ dx (- (line-x1 line) l))
@@ -160,7 +175,10 @@
     (define/private (draw-in-dc dc dx dy)
       (flatten)
       (for ([line (in-list lines)])
-        (send dc set-pen (if (line-black? line) b-pen w-pen))
+        (send dc set-pen
+              (if (line-black? line) "black" "white")
+              (line-width line)
+              'solid)
         (send dc draw-line
               (+ dx (line-x1 line))
               (+ dy (line-y1 line))
@@ -202,7 +220,7 @@
     (define/override (get-scroll-step-offset offset) (* offset scroll-step))
     
     (define/override (copy)
-      (make-object turtle-snip% width height turtles cache lines))
+      (make-object turtle-snip% width height turtles cache lines pen-width))
     (define/override (write stream-out)
       (define p (open-output-bytes))
       (prim-write (struc->vec (list width height turtles cache lines)) p)
@@ -254,7 +272,8 @@
            y
            (+ x (* d (cos theta)))
            (+ y (* d (sin theta)))
-           #t)))
+           #t
+           pen-width)))
       (make-object turtle-snip%
         width
         height
@@ -262,7 +281,8 @@
         cache
         (foldl (lambda (turtle lines) (cons (build-line turtle) lines))
                lines
-               turtles)))
+               turtles)
+        pen-width))
     (define/public (merge-op tvs)
       (make-object turtle-snip%
         width
@@ -272,7 +292,8 @@
                                         (send tv get-cache)))
                           (cons this tvs)))
         empty-cache
-        lines))
+        lines
+        pen-width))
     
     (define/public (move-op n)
       (make-object turtle-snip%
@@ -285,7 +306,8 @@
                [newx (+ x (* n (cos angle)))]
                [newy (+ y (* n (sin angle)))])
           (make-offset newx newy angle))
-        lines))
+        lines
+        pen-width))
     (define/public (turn-op d)
       (make-object turtle-snip%
         width
@@ -295,7 +317,8 @@
                      (offset-y cache)
                      (- (offset-angle cache)
                         d))
-        lines))
+        lines
+        pen-width))
     (define/public (clean-op)
       (flatten)
       (make-object turtle-snip%
@@ -303,7 +326,8 @@
         height
         null
         empty-cache
-        lines))
+        lines
+        pen-width))
     (super-new)
     (inherit set-snipclass)
     (set-snipclass snip-class)))
@@ -340,7 +364,8 @@
        width height
        (list (make-turtle x y theta))
        empty-cache
-       null)]
+       null
+       1)]
     [(width height)
      (turtles width height 
               (quotient width 2)
@@ -380,6 +405,8 @@
 (define (turtles-width tv) (send (wxme-turtle->snip turtle-snip% tv) get-width))
 (define (turtles-height tv) (send (wxme-turtle->snip turtle-snip% tv) get-height))
 (define (turtles-pict tv) (send (wxme-turtle->snip turtle-snip% tv) to-pict))
+(define (turtles-pen-width tv) (send (wxme-turtle->snip turtle-snip% tv) get-pen-width))
+(define (set-pen-width tv pw) (send (wxme-turtle->snip turtle-snip% tv) set-pen-width pw))
 
 (set! saved-turtle-snip% turtle-snip%)
 (set! saved-turtles turtles)

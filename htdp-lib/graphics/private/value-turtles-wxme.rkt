@@ -24,10 +24,21 @@
   (cond
     [(wxme-turtle? tv)
      (define sexp (wxme-turtle-exp tv))
-     (make-object turtle-snip%
-       (first sexp)
-       (second sexp)
-       (third sexp)
-       (fourth sexp)
-       (fifth sexp))]
+     (cond
+       [(= (length sexp) 5)
+        (make-object turtle-snip%
+          (first sexp)
+          (second sexp)
+          (third sexp)
+          (fourth sexp)
+          (fifth sexp)
+          1)]
+       [(= (length sexp) 6)
+        (make-object turtle-snip%
+          (first sexp)
+          (second sexp)
+          (third sexp)
+          (fourth sexp)
+          (fifth sexp)
+          (sixth sexp))])]
     [else tv]))
