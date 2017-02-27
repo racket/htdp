@@ -160,7 +160,7 @@
                (for ([line (in-list lines)])
                  (send dc set-pen
                        (if (line-black? line) "black" "white")
-                       (* (send pen get-width) (line-width line))
+                       (min 255 (* (send pen get-width) (line-width line)))
                        'solid)
                  (send dc draw-line
                        (+ dx (- (line-x1 line) l))
