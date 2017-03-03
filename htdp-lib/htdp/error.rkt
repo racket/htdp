@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require lang/private/rewrite-error-message)
+(require lang/private/rewrite-error-message
+         (only-in racket/math natural?))
 
 ;; -----------------------------------------------------------------------------
 ;; this module provides one-point functionality to report errors in teachpacks 
@@ -124,9 +125,6 @@
 (define (find-non pred? l)
   (let ([r (filter (compose not pred?) l)])
     (if (null? r) #f (car r))))
-
-(define (natural? w)
-  (and (number? w) (integer? w) (>= w 0)))
 
 ;; add-article : anything -> string
 ;; (add-article 'color) should be "a color"
