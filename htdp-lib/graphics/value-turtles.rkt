@@ -1,7 +1,7 @@
 #lang racket/base
 (require "private/value-turtles.rkt"
          "private/value-turtles-reader.rkt"
-         racket/contract
+         racket/contract racket/class racket/draw
          pict)
 (provide
  (contract-out
@@ -32,4 +32,8 @@
   [turtles-height (-> turtles? (and/c real? positive?))]
   [turtles-pict (-> turtles? pict?)]
   [turtles-pen-width (-> turtles? (real-in 0 255))]
-  [set-pen-width (-> turtles? (real-in 0 255) turtles?)]))
+  [set-pen-width (-> turtles? (real-in 0 255) turtles?)]
+  [turtles-pen-color (-> turtles? (is-a?/c color%))]
+  [set-pen-color (-> turtles?
+                     (or/c string? (is-a?/c color%))
+                     turtles?)]))

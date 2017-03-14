@@ -71,6 +71,12 @@ new turtles window.}
  @history[#:added "1.5"]
 }
 
+@defproc[(set-pen-color [turtles turtles?] [color (or/c string? (is-a?/c color%))]) turtles?]{
+  Creates a new turtles that draws with the pen color @racket[color].
+
+ @history[#:added "1.6"]
+}
+
 @defproc[(merge [turtles1 turtles?] [turtles2 turtles?]) turtles?]{
 
 The @racket[split] and @racket[tprompt] forms provided by
@@ -100,6 +106,12 @@ only the line drawings of the first turtles argument.}
   Returns the current width of the pen that the turtles use to draw.
 
   @history[#:added "1.5"]
+}
+
+@defproc[(turtles-pen-color [turtles turtles?]) (is-a?/c color%)]{
+  Returns the current color of the pen that the turtles use to draw.
+
+  @history[#:added "1.6"]
 }
 
 @defproc[(turtle-state [turtles turtles?]) (listof (vector/c real? real? real?

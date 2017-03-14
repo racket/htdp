@@ -12,7 +12,8 @@
 (provide turtles move draw turn turn/radians merge clean turtles?
          snip-class turtle-snip-class% turtle-state restore-turtle-state
          turtles-width turtles-height turtles-pict
-         turtles-pen-width set-pen-width)
+         turtles-pen-width set-pen-width
+         turtles-pen-color set-pen-color)
 
 (define saved-turtle-snip% #f)
 (define saved-turtles #f)
@@ -49,7 +50,8 @@
                    (third sexp)
                    (fourth sexp)
                    (fifth sexp)
-                   1)]
+                   1
+                   "black")]
                 [(= (length sexp) 6)
                  (make-object saved-turtle-snip%
                    (first sexp)
@@ -57,8 +59,20 @@
                    (third sexp)
                    (fourth sexp)
                    (fifth sexp)
-                   (sixth sexp))])))))
+                   (sixth sexp)
+                   "black")]
+                [(= (length sexp) 7)
+                 (make-object saved-turtle-snip%
+                   (first sexp)
+                   (second sexp)
+                   (third sexp)
+                   (fourth sexp)
+                   (fifth sexp)
+                   (sixth sexp)
+                   (to-color (seventh sexp)))])))))
     (super-instantiate ())))
+
+(define (to-color lst) (make-object color% (first lst) (second lst) (third lst) (fourth lst)))
 
 (define snip-class (make-object turtle-snip-class%))
 (send snip-class set-classname (~s '((lib "value-turtles.rkt" "graphics" "private")
@@ -79,15 +93,18 @@
 
 (define turtle-snip%
   (class snip%
-    (init-field width height turtles cache lines pen-width)
+    (init-field width height turtles cache lines pen-width pen-color)
     (define/public (get-lines) lines)
     (define/public (get-turtles) turtles)
     (define/public (get-cache) cache)
     (define/public (get-width) width)
     (define/public (get-height) height)
     (define/public (get-pen-width) pen-width)
+    (define/public (get-pen-color) pen-color)
     (define/public (set-pen-width pw)
-      (make-object turtle-snip% width height turtles cache lines pw))
+      (make-object turtle-snip% width height turtles cache lines pw pen-color))
+    (define/public (set-pen-color pc)
+      (make-object turtle-snip% width height turtles cache lines pen-width pc))
     
     (define bitmap #f)
 
@@ -159,7 +176,7 @@
                (define pen (send dc get-pen))
                (for ([line (in-list lines)])
                  (send dc set-pen
-                       (if (line-black? line) "black" "white")
+                       (line-color line)
                        (min 255 (* (send pen get-width) (line-width line)))
                        'solid)
                  (send dc draw-line
@@ -176,7 +193,7 @@
       (flatten)
       (for ([line (in-list lines)])
         (send dc set-pen
-              (if (line-black? line) "black" "white")
+              (line-color line)
               (line-width line)
               'solid)
         (send dc draw-line
@@ -220,10 +237,14 @@
     (define/override (get-scroll-step-offset offset) (* offset scroll-step))
     
     (define/override (copy)
-      (make-object turtle-snip% width height turtles cache lines pen-width))
+      (make-object turtle-snip% width height turtles cache lines pen-width pen-color))
     (define/override (write stream-out)
       (define p (open-output-bytes))
-      (prim-write (struc->vec (list width height turtles cache lines)) p)
+      (prim-write (struc->vec (list width height turtles cache lines pen-width
+                                    (list (send pen-color red)
+                                          (send pen-color green)
+                                          (send pen-color blue)
+                                          (send pen-color alpha)))) p)
       (define btes (get-output-bytes p))
       (send stream-out put (bytes-length btes) btes))
     
@@ -272,7 +293,7 @@
            y
            (+ x (* d (cos theta)))
            (+ y (* d (sin theta)))
-           #t
+           pen-color
            pen-width)))
       (make-object turtle-snip%
         width
@@ -282,7 +303,8 @@
         (foldl (lambda (turtle lines) (cons (build-line turtle) lines))
                lines
                turtles)
-        pen-width))
+        pen-width
+        pen-color))
     (define/public (merge-op tvs)
       (make-object turtle-snip%
         width
@@ -293,7 +315,8 @@
                           (cons this tvs)))
         empty-cache
         lines
-        pen-width))
+        pen-width
+        pen-color))
     
     (define/public (move-op n)
       (make-object turtle-snip%
@@ -307,7 +330,8 @@
                [newy (+ y (* n (sin angle)))])
           (make-offset newx newy angle))
         lines
-        pen-width))
+        pen-width
+        pen-color))
     (define/public (turn-op d)
       (make-object turtle-snip%
         width
@@ -318,7 +342,8 @@
                      (- (offset-angle cache)
                         d))
         lines
-        pen-width))
+        pen-width
+        pen-color))
     (define/public (clean-op)
       (flatten)
       (make-object turtle-snip%
@@ -327,7 +352,8 @@
         null
         empty-cache
         lines
-        pen-width))
+        pen-width
+        pen-color))
     (super-new)
     (inherit set-snipclass)
     (set-snipclass snip-class)))
@@ -365,7 +391,8 @@
        (list (make-turtle x y theta))
        empty-cache
        null
-       1)]
+       1
+       "black")]
     [(width height)
      (turtles width height 
               (quotient width 2)
@@ -406,7 +433,16 @@
 (define (turtles-height tv) (send (wxme-turtle->snip turtle-snip% tv) get-height))
 (define (turtles-pict tv) (send (wxme-turtle->snip turtle-snip% tv) to-pict))
 (define (turtles-pen-width tv) (send (wxme-turtle->snip turtle-snip% tv) get-pen-width))
+(define (turtles-pen-color tv) (send (wxme-turtle->snip turtle-snip% tv) get-pen-color))
 (define (set-pen-width tv pw) (send (wxme-turtle->snip turtle-snip% tv) set-pen-width pw))
+(define (set-pen-color tv _pc)
+  (define pc
+    (cond
+      [(string? _pc)
+       (or (send the-color-database find-color _pc)
+           (send the-color-database find-color "black"))]
+      [else _pc]))
+  (send (wxme-turtle->snip turtle-snip% tv) set-pen-color pc))
 
 (set! saved-turtle-snip% turtle-snip%)
 (set! saved-turtles turtles)
