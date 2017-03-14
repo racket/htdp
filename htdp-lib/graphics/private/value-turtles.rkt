@@ -51,7 +51,7 @@
                    (fourth sexp)
                    (fifth sexp)
                    1
-                   "black")]
+                   (send the-color-database find-color "black"))]
                 [(= (length sexp) 6)
                  (make-object saved-turtle-snip%
                    (first sexp)
@@ -60,7 +60,7 @@
                    (fourth sexp)
                    (fifth sexp)
                    (sixth sexp)
-                   "black")]
+                   (send the-color-database find-color "black"))]
                 [(= (length sexp) 7)
                  (make-object saved-turtle-snip%
                    (first sexp)
@@ -392,7 +392,7 @@
        empty-cache
        null
        1
-       "black")]
+       (send the-color-database find-color "black"))]
     [(width height)
      (turtles width height 
               (quotient width 2)
