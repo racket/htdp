@@ -1,8 +1,8 @@
 ;; The first three lines of this file were inserted by DrRacket. They record metadata
 ;; about the language level of this file in a form that our tools can easily process.
-#reader(lib "htdp-advanced-reader.ss" "lang")((modname TestEngineTest) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #t #t none #f ())))
+#reader(lib "htdp-advanced-reader.ss" "lang")((modname TestEngineTest) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #t #t none #f () #f)))
 ;; *****************************************************************************
-;; Expect 42 checks, 19 failures, the last one is finel
+;; Expect 42 checks, 19 failures, the last one is final
 ;; *****************************************************************************
 ;; 3 additonals must be uncommented to check error message for check-satisfied
 

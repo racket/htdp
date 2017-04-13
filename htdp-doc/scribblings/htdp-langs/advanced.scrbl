@@ -13,8 +13,9 @@
             local let let* letrec time begin begin0 set! delay shared recur when case match unless
              ; match
              _ cons list list* struct vector box
-            check-expect check-random check-satisfied check-within check-member-of check-range check-error)
-(check-expect check-random check-satisfied check-within check-error check-member-of check-range require)
+            check-expect check-random check-within check-member-of
+	    check-range check-error check-satisfied)
+(expr  check-satisfied check-expect check-random check-within check-error check-member-of check-range require)
 [program (code:line def-or-expr ...)]
 [def-or-expr definition
              expr

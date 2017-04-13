@@ -429,8 +429,8 @@ value or an inexact number; see note on @racket[check-expect] for details.
 
    Checks that the first @racket[expression] satisfies the named
    @racket[predicate] (function of one argument).  Recall that
-   ``satisfies'' means ``the function produces a value other than
-   @racket[false].''
+   ``satisfies'' means ``the function produces @racket[#true] for the given
+   value.''
 
 Here are simple examples for @racket[check-satisfied]: 
 @interaction[

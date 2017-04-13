@@ -242,7 +242,7 @@
      (cond
        [(boolean? r) r]
        [else 
-        (error-check (lambda (v) #f) name "expected a boolean" #t)
+	 ; (error-check (lambda (v) #f) name "expected a boolean" #t)
         (check-result (format "~a [as predicate in check-satisfied]" name) boolean? "boolean" r)]))
    ;; maker
    (lambda (src format v1 _v2 _) (make-satisfied-failed src format v1 name))
@@ -351,7 +351,7 @@
           #f)
         #t)))
 
-;;error-check: (scheme-val -> boolean) format-string boolean) -> void : raise exn:fail:contract
+;;error-check: (any -> boolean) any format-string boolean) -> void : raise exn:fail:contract
 (define (error-check pred? actual fmt fmt-act?)
   (unless (pred? actual)
     (define msg (if fmt-act? (format fmt actual) fmt))

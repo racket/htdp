@@ -11,8 +11,8 @@
 
 @racketgrammar*+library[
 #:literals (define define-struct lambda cond else if and or require lib planet
-            check-expect check-random check-satisfied check-within check-error)
-(check-expect check-random check-satisfied check-within check-member-of check-range check-error require)
+            check-expect check-random check-within check-error check-satisfied)
+(name check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
 [program (code:line def-or-expr ...)]
 [def-or-expr definition
              expr
