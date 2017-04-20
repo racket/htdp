@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version 6.9				  [Wed Apr 19 21:48:38 EDT 2017]
+
+* bug fixes in test engine and 2htdp/universe 
+
+------------------------------------------------------------------------
 Version 6.8				  [Mon Jan 16 17:13:05 EST 2017]
 
 * bug fixes in test engine (regression) 
