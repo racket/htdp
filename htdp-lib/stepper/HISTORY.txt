@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 6.9:
+
+None.
+
 Changes for 6.8:
 
 None.
