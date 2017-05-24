@@ -99,7 +99,7 @@
         (define/override (make-root-area-container cls parent)
           (let* ([outer-p (super make-root-area-container
                                  panel:vertical-dragable% parent)]
-                 [louter-panel (make-object vertical-panel% outer-p)]
+                 [louter-panel (make-object vertical-pane% outer-p)]
                  [test-p (make-object test-panel% outer-p '(deleted))]
                  [root (make-object cls louter-panel)])
             (set! test-panel test-p)
