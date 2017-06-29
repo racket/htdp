@@ -6,8 +6,8 @@
           racket/base syntax/parse
           (utils tc-utils)
           (env init-envs)
-          (except-in (rep filter-rep object-rep type-rep) make-arr)
-          (rename-in (types abbrev numeric-tower union) [make-arr* make-arr])))
+          (rep filter-rep object-rep type-rep)
+          (types abbrev numeric-tower union)))
 
 (define-for-syntax ce-env
   (make-env
