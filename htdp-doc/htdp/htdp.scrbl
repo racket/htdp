@@ -65,10 +65,10 @@ of DrRacket's teaching languages.
 @defmodule[htdp/color-structs]
 
 @defstruct[color ([red any/c] [green any/c] [blue any/c])]{
-  This is the color sturct that is also exported by @racketmodname[htdp/image],
+  This is the color struct that is also exported by @racketmodname[htdp/image],
   but here it is exported via @racket[(provide (struct-out color))].
 }
 @defstruct[alpha-color ([alpha any/c] [red any/c] [green any/c] [blue any/c])]{
-  This is the color sturct that is also exported by @racketmodname[htdp/image],
+  This is the color struct that is also exported by @racketmodname[htdp/image],
   but here it is exported via @racket[(provide (struct-out alpha-color))].
 }
