@@ -238,11 +238,18 @@ inside the curve.
                  
   @image-examples[(text "Hello" 24 "olive")
                   (text "Goodbye" 36 "indigo")]
+
+  If the string contains newlines, the result pict will have multiple lines.
+
+  @image-examples[(text "Hello and\nGoodbye" 24 "orange")]
   
   The text size is measured in pixels, not points, so passing @racket[24]
   to @racket[text] should result in an image whose height is @racket[24]
   (which might not be the case if the size were measured in points).
   @image-examples[(image-height (text "Hello" 24 "olive"))]
+
+  @history[#:changed "1.7" @elem{When called with strings that have newlines,
+             @racket[text] returns multiple-line images.}]
   
 }
 
