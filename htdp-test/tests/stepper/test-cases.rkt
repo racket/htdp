@@ -295,6 +295,11 @@
    (cond [else 3])
    :: {(cond (else 3))} -> {3})
 
+(t 'cond-all-false m:upto-int/lam
+   (cond [#false 132])
+   :: {(cond [false 132])}
+   -> error: "cond: all question results were false")
+
 (t 'nested-cond m:upto-int/lam
    (cond [else (cond [else 3])])
    :: {(cond (else (cond (else 3))))}
