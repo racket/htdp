@@ -267,6 +267,8 @@
                 [result (unwind result-stx settings)])
     #`(new-test result)))
 
+;; given an expanded conditional (a nested chain of 'if's) and
+;; the reconstruction settings (?), return the resugared 'cond'.
 (define (unwind-cond stx settings)
   (let ([outer-stx stx])
     (with-syntax
