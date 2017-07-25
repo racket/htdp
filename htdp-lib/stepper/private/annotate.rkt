@@ -1284,7 +1284,7 @@
                                             (syntax-position test-stx)))))]
                    [else ; not from a 'cond' at all.
                     (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) disarmed-stx)]))]
-          [(begin body) ; else clauses of conds; ALWAYS AN ERROR CALL
+          [_ ; else clauses of conds; ALWAYS AN ERROR CALL
            (cond-test disarmed-stx)
            (stepper-syntax-property disarmed-stx 'stepper-skip-completely #t)]
           
