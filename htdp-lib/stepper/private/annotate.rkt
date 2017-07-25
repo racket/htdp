@@ -1183,7 +1183,13 @@
 
 ; top-level-rewrite performs several tasks; it labels variables with their types 
 ; (let-bound, lambda-bound, or non-lexical), it flags if's which could come from 
-; cond's, it labels the begins in conds with 'stepper-skip annotations
+; cond's, it labels the begins in conds with 'stepper-skip annotations.
+; Why aren't these labels added earlier? Most of these labeling operations happen
+; in teach.rkt, attached to the expansion (thereby keeping single point of control
+; over the expansion and the corresponding tags. These, unfortunately, are performed
+; in C (though you know, this might soon change... 2017-07-25), and are therefore
+; added by this separate pass.
+
 
 ; label-var-types returns a syntax object which is identical to the 
 ; original except that the variable references are labeled with the 
@@ -1242,14 +1248,14 @@
            (stepper-syntax-property stx 'stepper-black-box-expr))
        stx]
       [else
+       (define disarmed-stx (syntax-disarm stx saved-code-inspector))
        (define rewritten
-         (let ([stx (syntax-disarm stx saved-code-inspector)])
-           (kernel:kernel-syntax-case 
-          stx
+         (kernel:kernel-syntax-case 
+          disarmed-stx
           #f
           ; cond :
           [(if test (let-values () then) else-stx)
-           (let ([origin (syntax-property stx 'origin)]
+           (let ([origin (syntax-property disarmed-stx 'origin)]
                  [rebuild-if
                   (lambda (new-cond-test)
                     (let* ([new-then (recur-regular (syntax then))]
@@ -1260,27 +1266,27 @@
                                    ,new-then
                                    ,(recur-in-cond (syntax else-stx)
                                                    new-cond-test))
-                                          stx)
+                              disarmed-stx)
                              'stepper-hint
                              'comes-from-cond)])
                       ; move the stepper-else mark to the if, if it's present:
                       (if (stepper-syntax-property (syntax test) 'stepper-else)
                           (stepper-syntax-property rebuilt 'stepper-else #t)
                           rebuilt)))])
-             (cond [(cond-test stx) ; continuing an existing 'cond'
+             (cond [(cond-test disarmed-stx) ; continuing an existing 'cond'
                     (rebuild-if cond-test)]
                    [(and origin (pair? origin) 
                          (eq? (syntax-e (car origin)) 'cond)) ; starting a new 'cond'
                     (rebuild-if (lambda (test-stx) 
-                                  (and (eq? (syntax-source stx)
+                                  (and (eq? (syntax-source disarmed-stx)
                                             (syntax-source test-stx))
-                                       (eq? (syntax-position stx)
+                                       (eq? (syntax-position disarmed-stx)
                                             (syntax-position test-stx)))))]
                    [else ; not from a 'cond' at all.
-                    (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) stx)]))]
+                    (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) disarmed-stx)]))]
           [(begin body) ; else clauses of conds; ALWAYS AN ERROR CALL
-           (cond-test stx)
-           (stepper-syntax-property stx 'stepper-skip-completely #t)]
+           (cond-test disarmed-stx)
+           (stepper-syntax-property disarmed-stx 'stepper-skip-completely #t)]
           
           ; wrapper on a local.  This is necessary because 
           ; teach.rkt expands local into a trivial let wrapping a bunch of
@@ -1289,7 +1295,7 @@
           ; exist.  So we patch it up after expansion.  And we 
           ; discard the outer 'let' at the same time.
           [(let-values () expansion-of-local)
-           (eq? (stepper-syntax-property stx 'stepper-hint) 'comes-from-local)
+           (eq? (stepper-syntax-property disarmed-stx 'stepper-hint) 'comes-from-local)
            (syntax-case #`expansion-of-local (letrec-values)
              [(letrec-values (bogus-clause clause ...) . bodies)
               (recur-regular
@@ -1298,8 +1304,8 @@
                           (syntax->datum #`expansion-of-local))])]
           
           ; let/letrec :
-          [(let-values x ...) (do-let/rec stx #f)]
-          [(letrec-values x ...) (do-let/rec stx #t)]
+          [(let-values x ...) (do-let/rec disarmed-stx #f)]
+          [(letrec-values x ...) (do-let/rec disarmed-stx #t)]
           
           ; varref :
           [var
@@ -1316,10 +1322,10 @@
                 'non-lexical))]
           
           [else
-           (let ([content (syntax-e stx)])
+           (let ([content (syntax-e disarmed-stx)])
              (if (pair? content)
-                 (rebuild-stx (syntax-pair-map content recur-regular) stx)
-                 stx))])))
+                 (rebuild-stx (syntax-pair-map content recur-regular) disarmed-stx)
+                 disarmed-stx))]))
        
        (if (eq? (stepper-syntax-property stx 'stepper-xml-hint) 'from-xml-box)
            (stepper-syntax-property #`(#%plain-app 

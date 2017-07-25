@@ -212,6 +212,9 @@ stepper-skipto/discard :
  replace the expression the property is attached to by the
  subexpression indicated by its value.
 
+ That is, the outer portion is not just unannotated; it's discarded
+ entirely.
+
  (This is used in the contracts implementation for "Die Macht der
  Abstraktion", where procedures are wrapped in a contract-checking
  context that has no impact on the reduction semantics.)
