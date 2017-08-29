@@ -357,11 +357,16 @@
        (for-each (lambda (name)
                    (let ([b (identifier-binding name)])
                      (when b
+                       (define-values (mp bp) (if (pair? b)
+                                                  (module-path-index-split (car b))
+                                                  (values #f #f)))
                        (teach-syntax-error
                         (syntax-e name)
                         name
                         #f
-                        "this name was defined previously and cannot be re-defined"))))
+                        (if (not mp)
+                            "this name was defined previously and cannot be re-defined"
+                            "this name was defined in the language or a required library and cannot be re-defined")))))
                  names)
        (if assign
            (with-syntax ([(name ...) (if (eq? assign #t)
