@@ -1132,7 +1132,9 @@
 
 (define (mk-text/lines str font-size color face family style weight underline)
   (let ([lines (string-split str "\n")])
-    (cond [(null? (cdr lines)) (mk-text str font-size color face family style weight underline)]
+    (cond [(or (null? lines)
+               (null? (cdr lines)))
+           (mk-text str font-size color face family style weight underline)]
           [else
            (apply
             above/align

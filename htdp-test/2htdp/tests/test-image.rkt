@@ -1079,7 +1079,13 @@
               (scale 0.1 (text "Howdy!" 12 'red)))
       =>
       #f)
-      
+
+;; make sure that the empty string doesn't raise errors
+(test (equal? (text "" 12 'black)
+              (text "1" 12 'black))
+      =>
+      #f)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; triangle
