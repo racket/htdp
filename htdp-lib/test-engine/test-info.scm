@@ -181,7 +181,7 @@
              [(eof-object? c)
               (if (null? sofar)
                   #f
-                  sofar)]
+                  (reverse sofar))]
              [(equal? #\newline c)
               (reverse sofar)]
              [else (loop (cons c sofar))])))
@@ -198,7 +198,7 @@
        lines)
      
      (define (send-loss loss)
-       (for ([ele (in-list (reverse loss))])
+       (for ([ele (in-list loss)])
          (cond
            [(char? ele) (display ele)]
            [(port-writes-special? (current-output-port))
