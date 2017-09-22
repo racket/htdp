@@ -613,7 +613,7 @@
                                                          }
   @defproc[(cdadr [x list?]) any/c]{
                                     LISP-style selector: @racket[(cdr (car (cdr x)))].
-                                                         @interaction[#:eval (bsl) z (cdadr z)]
+                                                         @interaction[#:eval (bsl) (cdadr (list 1 (list 2 "a") 3))]
                                                          }
   @defproc[(cadar [x list?]) any/c]{
                                     LISP-style selector: @racket[(car (cdr (car x)))].
