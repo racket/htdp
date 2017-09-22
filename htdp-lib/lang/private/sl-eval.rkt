@@ -10,10 +10,6 @@
 
 (provide
  ;; syntax: 
- ;; use with (define-module-local-eval e) ... (eval 'foo e)
- define-module-local-eval 
-
- ;; syntax: 
  ;; use with @interaction[#:eval (*sl-eval (define x ...) ...) ...] to create interactive examples 
  bsl-eval
  bsl+-eval
@@ -23,7 +19,33 @@
 
 ;; this definition is a pile of hacks accumulated over the course of HtDP/2e writing 
 ;; there should be a better and simpler way to get this done
-(require teachpack/2htdp/scribblings/img-eval)
+(define (make-img-eval)
+  (define img-eval (make-base-eval))
+  (set-eval-handler-to-tweak-images img-eval)
+  img-eval)
+
+(define (set-eval-handler-to-tweak-images img-eval)
+  (interaction-eval #:eval img-eval (require 2htdp/image))
+  ;; (interaction-eval #:eval img-eval (require lang/posn))
+  
+  (img-eval '(define extra-margin (make-parameter 0)))
+  
+  (img-eval
+   `(let ([ce (current-eval)])
+      (define (adjust-image exp i)
+        (if (image? i)
+            (let ([em (extra-margin)])
+              (overlay/xy i 
+                          (- em) (- em)
+                          (rectangle 
+                           (+ (image-width i) 1 em em)
+                           (+ (image-height i) 1 em em)
+                           'solid
+                           (color 255 0 0 0))))
+            i))
+      (current-eval
+       (λ (exp)
+         (adjust-image exp (ce exp)))))))
 
 (define-syntax *sl-eval
   (syntax-rules ()
@@ -39,7 +61,6 @@
        ;;       (me '(pretty-print-columns 15))
        ;;       (me '(current-print pretty-print-handler))
        (me '(current-print (lambda (v) (unless (void? v) (print v)))))
-       (me 'def) ... ;; <--- too early ?
        (call-in-sandbox-context me (lambda () (error-print-source-location #f)))
        (call-in-sandbox-context me (lambda () (sandbox-output 'string)))
        (call-in-sandbox-context me (lambda () (sandbox-error-output 'string)))
@@ -83,11 +104,30 @@
           ((dynamic-require 'htdp/bsl/runtime 'configure)
            (dynamic-require reader 'options))))
        ;; see Matthew's 9 Feb 2016 email to user
-       (call-in-sandbox-context me (lambda () (namespace-require module-lang)))
+       (call-in-sandbox-context
+	 me
+	 (lambda ()
+           (namespace-require module-lang)
+	   ; (namespace-undefine-variable! 'make-posn)
+	   ; (namespace-undefine-variable! 'posn?)
+	   ; (namespace-undefine-variable! 'posn-x)
+	   ; (namespace-undefine-variable! 'posn-y)
+	   ))
+       
+       (me
+	 '(struct posn (x y)
+	    #:mutable
+	    #:transparent
+	    #:extra-constructor-name make-posn 
+	    #:reflection-name 'make-posn
+	    ))
+       ;; do not use here: prints the wrong way 
+       ;; (interaction-eval #:eval me (require lang/posn))
+
        ; (me '(require mzlib/pconvert))
        ; (me '(add-make-prefix-to-constructor #t))
+       (me 'def) ... 
        (me 'exp) ...
-       (interaction-eval #:eval me (require lang/posn))
        (interaction-eval #:eval me (require 2htdp/batch-io))
        me)]
     [(_ module-lang reader)
@@ -128,3 +168,10 @@
                      [sandbox-error-output 'string]
                      [sandbox-output 'string])
         (make-base-eval)))))
+
+#;
+(provide
+  ;; syntax: 
+  ;; use with (define-module-local-eval e) ... (eval 'foo e)
+  define-module-local-eval 
+  )

@@ -87,7 +87,8 @@
    (define (bsl)
      (define *bsl
        (bsl+-eval
-	 [(define c1 (circle 10 "solid" "green"))
+	 [
+	  (define c1 (circle 10 "solid" "green"))
         
 	  (define zero 0)
         
@@ -102,7 +103,7 @@
 	  (define z (list (list (list (list 'a 'b) 2 3) ) (list #false #true) "world"))
 	  (define y (list (list (list 1 2 3) #false "world")))
 	  (define x (list 2 "hello" #true))
-	  (define z (list 2 "hello" #true "hello"))]))
+	  (define hello-2 (list 2 "hello" #true "hello"))]))
      (set! bsl (lambda () *bsl))
      *bsl))
  
@@ -545,12 +546,12 @@
   @defproc[((beginner-remove remove) [x any/c][l list?]) list?]{
                                                                 Constructs a list like the given one, with the first occurrence of the
                                                                 given item removed (comparing values with equal?).
-                                                                @interaction[#:eval (bsl) x (remove "hello" x) z (remove "hello" z)]
+                                                                @interaction[#:eval (bsl) x (remove "hello" x) hello-2 (remove "hello" hello-2)]
                                                                 }
   @defproc[((beginner-remove-all remove-all) [x any/c][l list?]) list?]{
                                                                 Constructs a list like the given one, with all occurrences of the
                                                                 given item removed (comparing values with equal?).
-                                                                @interaction[#:eval (bsl) x (remove-all "hello" x) z (remove-all "hello" z)]
+                                                                @interaction[#:eval (bsl) x (remove-all "hello" x) hello-2 (remove-all "hello" hello-2)]
                                                                 }
   @defproc[(reverse [l list?]) list]{
                                      Creates a reversed version of a list.
@@ -931,14 +932,16 @@
                                                Determines whether two values are equivalent from the perspective of all functions that can be applied to it (extensional). 
                                                @interaction[#:eval (bsl) (eqv? (cons 1 '()) (cons 1 '())) one (eqv? one one)]
                                                }
-  @defproc[((beginner-=~ =~) [x number][y number][z non-negative-real]) boolean?]{
-                                                                                  Checks whether @racket[x] and @racket[y] are within @racket[z] of either other. 
-                                                                                                 @interaction[#:eval (bsl) (=~ 1.01 1.0 .1) (=~ 1.01 1.5 .1)]
-                                                                                                 }
-  @defproc[((beginner-equal~? equal~?) [x any/c][y any/c][z non-negative-real]) boolean?]{
-                                                                                          Compares @racket[x] and @racket[y] like @racket[equal?] but uses =~ in the case of numbers. 
-                                                                                                   @interaction[#:eval (bsl) (equal~? (make-posn 1.01 1.0) (make-posn 1.01 .99) .2)]
-                                                                                                   }
+  @defproc[((beginner-=~ =~) [x number][y number][eps non-negative-real]) 
+boolean?]{
+ Checks whether @racket[x] and @racket[y] are within @racket[eps] of either other. 
+ @interaction[#:eval (bsl) (=~ 1.01 1.0 .1) (=~ 1.01 1.5 .1)]
+ }
+ @defproc[((beginner-equal~? equal~?) [x any/c][y any/c][z non-negative-real])
+boolean?]{
+ Compares @racket[x] and @racket[y] like @racket[equal?] but uses =~ in the case of numbers. 
+ @interaction[#:eval (bsl) (equal~? (make-posn 1.01 1.0) (make-posn 1.01 .99) .2)]
+ }
   @defthing[eof eof-object?]{A value that represents the end of a file: 
                               @interaction[#:eval (bsl) eof]
                               }
