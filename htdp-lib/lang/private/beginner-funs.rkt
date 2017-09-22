@@ -87,23 +87,22 @@
    (define (bsl)
      (define *bsl
        (bsl+-eval
-        (require 2htdp/image)
-        (define c1 (circle 10 "solid" "green"))
+	 [(define c1 (circle 10 "solid" "green"))
         
-        (define zero 0)
+	  (define zero 0)
         
-        (define one (list 1))
+	  (define one (list 1))
         
-        (define q (make-posn "bye" 2))
-        (define p (make-posn 2 -3))
+	  (define q (make-posn "bye" 2))
+	  (define p (make-posn 2 -3))
         
-        (define a (list (list 'a 22) (list 'b 8) (list 'c 70)))
-        (define v (list 1 2 3 4 5 6 7 8 9 'A))
-        (define w (list (list (list (list "bye") 3) #true) 42))
-        (define z (list (list (list (list 'a 'b) 2 3) ) (list #false #true) "world"))
-        (define y (list (list (list 1 2 3) #false "world")))
-        (define x (list 2 "hello" #true))
-	(define z (list 2 "hello" #true "hello"))))
+	  (define a (list (list 'a 22) (list 'b 8) (list 'c 70)))
+	  (define v (list 1 2 3 4 5 6 7 8 9 'A))
+	  (define w (list (list (list (list "bye") 3) #true) 42))
+	  (define z (list (list (list (list 'a 'b) 2 3) ) (list #false #true) "world"))
+	  (define y (list (list (list 1 2 3) #false "world")))
+	  (define x (list 2 "hello" #true))
+	  (define z (list 2 "hello" #true "hello"))]))
      (set! bsl (lambda () *bsl))
      *bsl))
  
@@ -504,7 +503,7 @@
                                                                                 }
   @defproc[((beginner-list* list*) [x any/c]  ... [l list?]) list?]{
                                                                     Constructs a list by adding multiple items to a list.
-                                                                    @interaction[#:eval (bsl-eval (define x (list 2 "hello" #true))) x (list* 4 3 x)]
+                                                                    @interaction[#:eval (bsl) x (list* 4 3 x)]
                                                                     }
   @defproc[((beginner-range range) [start number][end number][step number]) list?]{
                                                                                    Constructs a list of numbers by @racket[step]ping from @racket[start]

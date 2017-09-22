@@ -24,8 +24,7 @@
      (define (asl)
        (define *bsl
          (asl-eval
-          (require 2htdp/image)
-          (define c1 (circle 10 "solid" "green"))
+	   [(define c1 (circle 10 "solid" "green"))
 
           (define zero 0)
 
@@ -49,7 +48,7 @@
           (define b (box 33))
 
           (define s "hello world")
-          (define x (list 2 "hello" #true))))
+          (define x (list 2 "hello" #true))]))
        (set! asl (lambda () *bsl))
        *bsl))
    

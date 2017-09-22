@@ -18,10 +18,9 @@
     (define (isl)
       (define *bsl
         (isl+-eval
-         ; (require 2htdp/image)
-         (define i 3)
-         (define a-list '(0 1 2 3 4 5 6 7 8 9))
-         (define threshold 3)))
+	  [(define i 3)
+	   (define a-list '(0 1 2 3 4 5 6 7 8 9))
+	   (define threshold 3)]))
       (set! isl (lambda () *bsl))
       *bsl))
 

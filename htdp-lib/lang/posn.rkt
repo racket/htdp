@@ -44,7 +44,7 @@
       ;; everything else remains a syntax error 
       [_ (raise-syntax-error #f "this function is not defined" stx)])))
 
-(struct posn (x y) #:mutable #:transparent)
+(struct posn (x y) #:mutable #:transparent #:reflection-name 'make-posn)
 
 ;; We define a separate function so tha it has the 
 ;; name `make-posn':
