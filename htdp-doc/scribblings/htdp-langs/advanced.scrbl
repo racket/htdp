@@ -256,19 +256,19 @@ pattern, it is an error.}
 @; ----------------------------------------------------------------------
 
 
-@defform[(when test-expression body-expression)]{
+@defform[(when question-expression body-expression)]{
 
-If @racket[test-expression] evaluates to @racket[true], the result of the
+If @racket[question-expression] evaluates to @racket[true], the result of the
 @racket[when] expression is the result of evaluating the 
 @racket[body-expression], otherwise the result is @racket[(void)] and the 
 @racket[body-expression] is not evaluated. If the result of evaluating the
-@racket[test-expression] is neither @racket[true] nor @racket[false], it is an
+@racket[question-expression] is neither @racket[true] nor @racket[false], it is an
 error.}
 
-@defform[(unless test-expression body-expression)]{
+@defform[(unless question-expression body-expression)]{
 
 Like @racket[when], but the @racket[body-expression] is evaluated when the
-@racket[test-expression] produces @racket[false] instead of @racket[true].}
+@racket[question-expression] produces @racket[false] instead of @racket[true].}
 
 
 @section[#:tag "advanced-common-syntax"]{Common Syntaxes}

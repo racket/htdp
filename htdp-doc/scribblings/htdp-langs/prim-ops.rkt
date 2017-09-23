@@ -300,13 +300,15 @@
   @; ----------------------------------------------------------------------
 
   @defform*[#:id [if if-id]
-            [(if test-expression then-expression else-expression)]]{
+            [(if question-expression
+		 then-answer-expression
+		 else-answer-expression)]]{
 
-   When the value of the @racket[test-expression] is @true-elem,
-   @if-elem evaluates the @racket[then-expression]. When the test is
-   @false-elem, @if-elem evaluates the @racket[else-expression].
+   When the value of the @racket[question-expression] is @true-elem,
+   @if-elem evaluates the @racket[then-answer-expression]. When the test is
+   @false-elem, @if-elem evaluates the @racket[else-answer-expression].
 
-   If the @racket[test-expression] is neither @true-elem nor
+   If the @racket[question-expression] is neither @true-elem nor
    @false-elem, @if-elem reports an error.}
 
   @; ----------------------------------------------------------------------
