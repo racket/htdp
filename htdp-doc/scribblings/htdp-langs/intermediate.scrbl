@@ -9,29 +9,33 @@
 
 @declare-exporting[lang/htdp-intermediate]
 
+The grammar notation uses the notation @racket[X #, @dots] (bold dots) to indicate that
+@racket[X] may occur an arbitrary number of times (zero, one, or more). The 
+grammar also provides @racket[...] as an identifier to be used in templates. 
+
 @racketgrammar*+qq[
 #:literals (define define-struct lambda cond else if and or require lib planet
             local let let* letrec time check-expect check-random check-within check-error check-satisfied)
 (expr check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
-[program (code:line def-or-expr ...)]
+[program (code:line def-or-expr #, @dots)]
 [def-or-expr definition
              expr
              test-case
              library-require]
-[definition (define (name variable variable ...) expr)
+[definition (define (name variable variable #, @dots) expr)
             (define name expr)
-            (define name (lambda (variable variable ...) expr))
-            (define-struct name (name ...))]
-[expr (local [definition ...] expr)
-      (letrec ([name expr-for-let] ...) expr)
-      (let ([name expr-for-let] ...) expr)
-      (let* ([name expr-for-let] ...) expr)
-      (code:line (name expr expr ...) )
-      (cond [expr expr] ... [expr expr])
-      (cond [expr expr] ... [else expr])
+            (define name (lambda (variable variable #, @dots) expr))
+            (define-struct name (name #, @dots))]
+[expr (local [definition #, @dots] expr)
+      (letrec ([name expr-for-let] #, @dots) expr)
+      (let ([name expr-for-let] #, @dots) expr)
+      (let* ([name expr-for-let] #, @dots) expr)
+      (code:line (name expr expr #, @dots) )
+      (cond [expr expr] #, @dots [expr expr])
+      (cond [expr expr] #, @dots [else expr])
       (if expr expr expr)
-      (and expr expr expr ...)
-      (or expr expr expr ...)
+      (and expr expr expr #, @dots)
+      (or expr expr expr #, @dots)
       (time expr)
       (code:line name)
       (code:line @#,elem{@racketvalfont{'}@racket[_quoted]})
@@ -41,7 +45,7 @@
       boolean 
       string
       character]
-[expr-for-let (lambda (variable variable ...) expr)
+[expr-for-let (lambda (variable variable #, @dots) expr)
               expr]
 ]
 

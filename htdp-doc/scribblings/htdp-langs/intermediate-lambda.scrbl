@@ -8,31 +8,35 @@
 
 @declare-exporting[lang/htdp-intermediate-lambda]
 
+The grammar notation uses the notation @racket[X #, @dots] (bold dots) to indicate that
+@racket[X] may occur an arbitrary number of times (zero, one, or more). The 
+grammar also provides @racket[...] as an identifier to be used in templates. 
+
 @racketgrammar*+qq[
 #:literals (define define-struct lambda λ cond else if and or require lib planet
             local let let* letrec time check-expect check-random
 	    check-within check-member-of check-range check-error check-satisfied)
 (expr check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
-[program (code:line def-or-expr ...)]
+[program (code:line def-or-expr #, @dots)]
 [def-or-expr definition
              expr
              test-case
              library-require]
-[definition (define (name variable variable ...) expr)
+[definition (define (name variable variable #, @dots) expr)
             (define name expr)
-            (define-struct name (name ...))]
-[expr (lambda (variable variable ...) expr)
-      (λ (variable variable ...) expr)
-      (local [definition ...] expr)
-      (letrec ([name expr] ...) expr)
-      (let ([name expr] ...) expr)
-      (let* ([name expr] ...) expr)
-      (code:line (expr expr expr ...))
-      (cond [expr expr] ... [expr expr])
-      (cond [expr expr] ... [else expr])
+            (define-struct name (name #, @dots))]
+[expr (lambda (variable variable #, @dots) expr)
+      (λ (variable variable #, @dots) expr)
+      (local [definition #, @dots] expr)
+      (letrec ([name expr] #, @dots) expr)
+      (let ([name expr] #, @dots) expr)
+      (let* ([name expr] #, @dots) expr)
+      (code:line (expr expr expr #, @dots))
+      (cond [expr expr] #, @dots [expr expr])
+      (cond [expr expr] #, @dots [else expr])
       (if expr expr expr)
-      (and expr expr expr ...)
-      (or expr expr expr ...)
+      (and expr expr expr #, @dots)
+      (or expr expr expr #, @dots)
       (time expr)
       (code:line name)
       (code:line prim-op)
@@ -55,18 +59,18 @@
 @section[#:tag "intm-w-lambda-syntax"]{Syntax for Intermediate with Lambda}
 
 
-@defform[(lambda (variable variable ...) expression)]{
+@defform[(lambda (variable variable #, @dots) expression)]{
 
 Creates a function that takes as many arguments as given @racket[variable]s,
 and whose body is @racket[expression].}
 
-@defform[(λ (variable variable ...) expression)]{
+@defform[(λ (variable variable #, @dots) expression)]{
 
 The Greek letter @racket[λ] is a synonym for @racket[lambda].}
 
 
 
-@defform/none[(expression expression expression ...)]{
+@defform/none[(expression expression expression #, @dots)]{
 
 Calls the function that results from evaluating the first
 @racket[expression]. The value of the call is the value of function's body when

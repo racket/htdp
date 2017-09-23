@@ -8,6 +8,10 @@
 
 @declare-exporting[lang/htdp-advanced]
 
+The grammar notation uses the notation @racket[X #, @dots] (bold dots) to indicate that
+@racket[X] may occur an arbitrary number of times (zero, one, or more). The 
+grammar also provides @racket[...] as an identifier to be used in templates. 
+
 @racketgrammar*+qq[
 #:literals (define define-struct define-datatype lambda λ cond else if and or require lib planet
             local let let* letrec time begin begin0 set! delay shared recur when case match unless
@@ -16,41 +20,41 @@
             check-expect check-random check-within check-member-of
 	    check-range check-error check-satisfied)
 (expr  check-satisfied check-expect check-random check-within check-error check-member-of check-range require)
-[program (code:line def-or-expr ...)]
+[program (code:line def-or-expr #, @dots)]
 [def-or-expr definition
              expr
              test-case
              library-require]
-[definition (define (name variable ...) expr)
+[definition (define (name variable #, @dots) expr)
             (define name expr)
-            (define-struct name (name ...))
-            (define-datatype name (name name ...) ...)]
-[expr (begin expr expr ...)
-      (begin0 expr expr ...)
+            (define-struct name (name #, @dots))
+            (define-datatype name (name name #, @dots) #, @dots)]
+[expr (begin expr expr #, @dots)
+      (begin0 expr expr #, @dots)
       (set! variable expr)
       (delay expr)
-      (lambda (variable ...) expr)
-      (λ (variable ...) expr)
-      (local [definition ...] expr)
-      (letrec ([name expr] ...) expr)
-      (shared ([name expr] ...) expr)
-      (let ([name expr] ...) expr)
-      (let name ([name expr] ...) expr)
-      (let* ([name expr] ...) expr)
-      (recur name ([name expr] ...) expr)
-      (code:line (expr expr ...))
-      (cond [expr expr] ... [expr expr])
-      (cond [expr expr] ... [else expr])
-      (case expr [(choice choice ...) expr] ... 
-                 [(choice choice ...) expr])
-      (case expr [(choice choice ...) expr] ... 
+      (lambda (variable #, @dots) expr)
+      (λ (variable #, @dots) expr)
+      (local [definition #, @dots] expr)
+      (letrec ([name expr] #, @dots) expr)
+      (shared ([name expr] #, @dots) expr)
+      (let ([name expr] #, @dots) expr)
+      (let name ([name expr] #, @dots) expr)
+      (let* ([name expr] #, @dots) expr)
+      (recur name ([name expr] #, @dots) expr)
+      (code:line (expr expr #, @dots))
+      (cond [expr expr] #, @dots [expr expr])
+      (cond [expr expr] #, @dots [else expr])
+      (case expr [(choice choice #, @dots) expr] #, @dots 
+                 [(choice choice #, @dots) expr])
+      (case expr [(choice choice #, @dots) expr] #, @dots 
                  [else expr])
-      (match expr [pattern expr] ...)
+      (match expr [pattern expr] #, @dots)
       (if expr expr expr)
       (when expr expr)
       (unless expr expr)
-      (and expr expr expr ...)
-      (or expr expr expr ...)
+      (and expr expr expr #, @dots)
+      (or expr expr expr #, @dots)
       (time expr)
       (code:line name)
       (code:line @#,elem{@racketvalfont{'}@racket[_quoted]})
@@ -72,16 +76,16 @@
          @#,elem{@racketvalfont{'}@racket[_quoted]}
          @#,elem{@racketvalfont{`}@racket[_quasiquoted-pattern]}
          (cons pattern pattern)
-         (list pattern ...)
-         (list* pattern ...)
-         (struct id (pattern ...))
-         (vector pattern ...)
+         (list pattern #, @dots)
+         (list* pattern #, @dots)
+         (struct id (pattern #, @dots))
+         (vector pattern #, @dots)
          (box pattern)]
 [quasiquoted-pattern name
                      number
                      string
                      character
-                     (quasiquoted-pattern ...)
+                     (quasiquoted-pattern #, @dots)
                      @#,elem{@racketvalfont{'}@racket[_quasiquoted-pattern]}
                      @#,elem{@racketvalfont{`}@racket[_quasiquoted-pattern]}
                      @#,elem{@racketfont[","]@racket[_pattern]}
@@ -102,16 +106,16 @@ In Advanced, @racket[set!] can be used to mutate variables, and
 invoke functions of zero arguments.
 
 
-@defform[(lambda (variable ...) expression)]{
+@defform[(lambda (variable #, @dots) expression)]{
 
 Creates a function that takes as many arguments as given @racket[variable]s,
 and whose body is @racket[expression].}
 
-@defform[(λ (variable ...) expression)]{
+@defform[(λ (variable #, @dots) expression)]{
 
 The Greek letter @racket[λ] is a synonym for @racket[lambda].}
 
-@defform/none[(expression expression ...)]{
+@defform/none[(expression expression #, @dots)]{
 
 Calls the function that results from evaluating the first
 @racket[expression]. The value of the call is the value of function's body when
@@ -126,13 +130,13 @@ the function.}
 @; ----------------------------------------------------------------------
 
 
-@defform[(define-datatype dataype-name [variant-name field-name ...] ...)]{
+@defform[(define-datatype dataype-name [variant-name field-name #, @dots] #, @dots)]{
 
 A short-hand for defining a group of related structures. The following @racket[define-datatype]:
 
 @racketblock[
  (define-datatype datatype-name
-   [variant-name field-name (unsyntax @racketidfont{...})]
+   [variant-name field-name (unsyntax @racketidfont{#, @dots})]
    (unsyntax @racketidfont{...}))
 ]
 is equivalent to:
@@ -145,14 +149,14 @@ is equivalent to:
 
 
 
-@defform[(begin expression expression ...)]{
+@defform[(begin expression expression #, @dots)]{
 
 Evaluates the @racket[expression]s in order from left to right. The value of
 the @racket[begin] expression is the value of the last @racket[expression].}
 
 
 
-@defform[(begin0 expression expression ...)]{
+@defform[(begin0 expression expression #, @dots)]{
 
 Evaluates the @racket[expression]s in order from left to right. The value of
 the @racket[begin] expression is the value of the first @racket[expression].}
@@ -175,7 +179,7 @@ the promise is forced, the result is recorded, so that any further
 
 
 
-@defform[(shared ([name expression] ...) expression)]{
+@defform[(shared ([name expression] #, @dots) expression)]{
 
 Like @racket[letrec], but when an @racket[expression] next to an @racket[id]
 is a @racket[cons], @racket[list], @racket[vector], quasiquoted
@@ -188,7 +192,7 @@ expression, or @racketidfont{make-}@racket[_struct-name] from a
 @; ----------------------------------------------------------------------
 
 
-@defform[(recur name ([name expression] ...) expression)]{
+@defform[(recur name ([name expression] #, @dots) expression)]{
 
 A short-hand syntax for recursive loops. The first @racket[name] corresponds to
 the name of the recursive function. The @racket[name]s in the parenthesis are
@@ -211,7 +215,7 @@ is equivalent to:
 ]}
 
 
-@defform/none[(let name ([name expression] ...) expression)]{
+@defform/none[(let name ([name expression] #, @dots) expression)]{
 
 An alternate syntax for @racket[recur].}
 
@@ -219,7 +223,7 @@ An alternate syntax for @racket[recur].}
 @; ----------------------------------------------------------------------
 
 
-@defform[(case expression [(choice ...) expression] ... [(choice ...) expression])]{
+@defform[(case expression [(choice #, @dots) expression] #, @dots [(choice #, @dots) expression])]{
 
 A @racket[case] form contains one or more clauses. Each clause contains a
 choices (in parentheses)---either numbers or names---and an answer
@@ -232,7 +236,7 @@ with the names. If none of the lines contains a matching choice, it is an
 error.}
 
 @defform/none[#:literals (case else)
-              (case expression [(choice ...) expression] ... [else expression])]{
+              (case expression [(choice #, @dots) expression] #, @dots [else expression])]{
 
 This form of @racket[case] is similar to the prior one, except that the final
 @racket[else] clause is taken if no clause contains a choice matching the value
@@ -241,7 +245,7 @@ of the initial @racket[expression].}
 @; ----------------------------------------------------------------------
 
 
-@defform[(match expression [pattern expression] ...)]{
+@defform[(match expression [pattern expression] #, @dots)]{
 
 A @racket[match] form contains one or more clauses that are surrounded by
 square brackets. Each clause contains a pattern---a description of a value---and
