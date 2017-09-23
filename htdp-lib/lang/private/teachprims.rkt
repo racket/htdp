@@ -443,27 +443,27 @@ namespace.
 
 (define-teach advanced make-hash
   (lambda ([a empty])
-    (make-hash (map (lambda (l) (cons (car l) (cdr l))) a))))
+    (make-hash (map (lambda (l) (cons (car l) (cadr l))) a))))
 
 (define-teach advanced make-hasheq
   (lambda ([a empty])
-    (make-hasheq (map (lambda (l) (cons (car l) (cdr l))) a))))
+    (make-hasheq (map (lambda (l) (cons (car l) (cadr l))) a))))
 
 (define-teach advanced make-hasheqv
   (lambda ([a empty])
-    (make-hasheqv (map (lambda (l) (cons (car l) (cdr l))) a))))
+    (make-hasheqv (map (lambda (l) (cons (car l) (cadr l))) a))))
 
 (define-teach advanced make-immutable-hash
   (lambda ([a empty])
-    (make-immutable-hash (map (lambda (l) (cons (car l) (cdr l))) a))))
+    (make-immutable-hash (map (lambda (l) (cons (car l) (cadr l))) a))))
 
 (define-teach advanced make-immutable-hasheq
   (lambda ([a empty])
-    (make-immutable-hasheq (map (lambda (l) (cons (car l) (cdr l))) a))))
+    (make-immutable-hasheq (map (lambda (l) (cons (car l) (cadr l))) a))))
 
 (define-teach advanced make-immutable-hasheqv
   (lambda ([a empty])
-    (make-immutable-hasheqv (map (lambda (l) (cons (car l) (cdr  l))) a))))
+    (make-immutable-hasheqv (map (lambda (l) (cons (car l) (cadr  l))) a))))
 
 (provide  
  false?
