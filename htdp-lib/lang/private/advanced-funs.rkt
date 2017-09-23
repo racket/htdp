@@ -31,7 +31,7 @@
           (define one (list 1))
 
           ;; b 69, c 42, e 61
-          (define list-for-hash '((b . 69) (c . 42) (e . 61) (r . 999)))
+          (define list-for-hash '((b 69) (c 42) (e 61) (r 999)))
 
           (define hsh (make-hash list-for-hash))
           (define heq (make-hasheq list-for-hash))
@@ -54,9 +54,9 @@
    
    ("Numbers: Integers, Rationals, Reals, Complex, Exacts, Inexacts"
     @defproc[(random [x natural]) natural]{
-    Generates a random number. If given one argument @racket[random] returns a natural number less than the given natural.
-    In ASL, if given no arguments, @racket[random] generates a random inexact number between 0.0
-    and 1.0 exclusive.
+    Generates a random number. If given one argument @racket[random] returns a natural number
+    less than the given natural. In ASL, if given no arguments, @racket[random] generates a
+    random inexact number between 0.0 and 1.0 exclusive.
     @interaction[#:eval (asl) (random)]
     @interaction[#:eval (asl) (random)]
     @interaction[#:eval (asl) (random 42)]
@@ -107,10 +107,11 @@
     } 
     @defproc[((pp pretty-print) [x any]) void]{
     Pretty prints S-expressions (like @racket[write]). 
-    @interaction[#:eval (asl)
-                  (pretty-print '((1 2 3) ((a) ("hello world" #true) (((false "good bye"))))))
-                  (pretty-print (build-list 10 (lambda (i) (build-list 10 (lambda (j) (= i j))))))
-                  ]
+    @interaction[
+ #:eval (asl)
+ (pretty-print '((1 2 3) ((a) ("hello world" #true) (((false "good bye"))))))
+ (pretty-print (build-list 10 (lambda (i) (build-list 10 (lambda (j) (= i j))))))
+ ]
     }
 
     @defproc[(printf [f string] [x any] ...) void]{
@@ -188,7 +189,8 @@
     @interaction[#:eval (asl) (make-vector 5 0)]
     } 
     @defproc[(build-vector [n nat] [f (nat -> X)]) (vectorof X)]{
-    Constructs a vector by applying @racket[f] to the numbers @racket[0] through @racket[(- n 1)]. 
+    Constructs a vector by applying @racket[f] to the numbers @racket[0] through
+    @racket[(- n 1)].
     @interaction[#:eval (asl) (build-vector 5 add1)]
     }
     @defproc[(vector-ref [v (vector X)] [n nat]) X]{
@@ -394,54 +396,4 @@
       heqv
       (hash-eqv? heqv)
       ]
-    })) 
-
-#|
-@defproc[(random (case-> (natural -> natural) (-> (and/c real inexact? (>/c 0) (</c 1)))]{
- Generates a random natural number less than some given natural number, or to
- generate a random inexact number between 0.0 and 1.0 exclusive.}
-
-@defproc[((advanced-make-hash make-hash) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
- Constructs a mutable hash table from an optional list of mappings that
- uses equal? for comparisons.}
-
-@defproc[((advanced-make-hasheq make-hasheq) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
- Constructs a mutable hash table from an optional list of mappings that
- uses eq? for comparisons.}
-
-@defproc[((advanced-make-hasheqv make-hasheqv) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
- Constructs a mutable hash table from an optional list of mappings that
- uses eqv? for comparisons.}
-
-@defproc[((advanced-make-immutable-hash make-immutable-hash) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
- Constructs an immutable hash table from an optional list of mappings that
- uses equal? for comparisons.}
-
-@defproc[((advanced-make-immutable-hasheq make-immutable-hasheq) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
- Constructs an immutable hash table from an optional list of mappings that
- uses eq? for comparisons.}
-
-@defproc[((advanced-make-immutable-hasheqv make-immutable-hasheqv) (case-> (-> (hash X Y)) ((listof (list X Y)) -> (hash X Y))]{
- Constructs an immutable hash table from an optional list of mappings that
- uses eqv? for comparisons.}
-
-@defproc[(hash-ref (case-> ((hash X Y) X -> Y) ((hash X Y) X Y -> Y) ((hash X Y) X (-> Y) -> Y))]{
- Extracts the value associated with a key from a hash table; the three
- argument case allows a default value or default value computation.} 
-
-@defproc[(hash-ref! (case-> ((hash X Y) X Y -> Y) ((hash X Y) X (-> Y) -> Y))]{
- Extracts the value associated with a key from a mutable hash table; if the
- key does not have an mapping, the third argument is used as the value (or
- used to compute the value) and is added to the hash table associated with
- the key.} 
-
-@defproc[(hash-update! (case-> ((hash X Y) X (Y -> Y) -> void) ((hash X Y) X (Y -> Y) Y -> void) ((hash X Y) X (Y -> Y) (-> Y) -> void))]{
- Composes hash-ref and hash-set! to update an existing mapping; the third
- argument is used to compute the new mapping value; the fourth argument is
- used as the third argument to hash-ref.} 
-
-@defproc[(hash-update (case-> ((hash X Y) X (Y -> Y) -> (hash X Y)) ((hash X Y) X (Y -> Y) Y -> (hash X Y)) ((hash X Y) X (Y -> Y) (-> Y) -> (hash X Y)))]{
- Composes hash-ref and hash-set to update an existing mapping; the third
- argument is used to compute the new mapping value; the fourth argument is
- used as the third argument to hash-ref.} 
-|#
+    }))
