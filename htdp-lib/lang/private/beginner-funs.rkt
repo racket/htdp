@@ -940,22 +940,21 @@
  functions that can be applied to it (extensional). 
  @interaction[#:eval (bsl) (eqv? (cons 1 '()) (cons 1 '())) one (eqv? one one)]
 }
-  @defproc[((beginner-=~ =~) [x number][y number][eps non-negative-real]) 
-           boolean?]{
- Checks whether @racket[x] and @racket[y] are within @racket[eps] of either other. 
+  @defproc[((beginner-=~ =~) [x number][y number][eps non-negative-real]) boolean?]{Checks 
+ whether @racket[x] and @racket[y] are within @racket[eps] of either other. 
  @interaction[#:eval (bsl) (=~ 1.01 1.0 .1) (=~ 1.01 1.5 .1)]
 }
-                    @defproc[((beginner-equal~? equal~?) [x any/c][y any/c][z non-negative-real]) boolean?]{
+  @defproc[((beginner-equal~? equal~?) [x any/c][y any/c][z non-negative-real]) boolean?]{
  Compares @racket[x] and @racket[y] like @racket[equal?] but uses =~ in the case of numbers. 
  @interaction[#:eval (bsl) (equal~? (make-posn 1.01 1.0) (make-posn 1.01 .99) .2)]
 }
-                    @defthing[eof eof-object?]{A value that represents the end of a file: 
+  @defthing[eof eof-object?]{A value that represents the end of a file: 
  @interaction[#:eval (bsl) eof]
 }
-                    @defproc[(eof-object? [x any/c]) boolean?]{
+  @defproc[(eof-object? [x any/c]) boolean?]{
  Determines whether some value is the end-of-file value. 
  @interaction[#:eval (bsl) (eof-object? eof) (eof-object? 42)]
 }
-                    @defproc[((beginner-exit exit)) void]{
+  @defproc[((beginner-exit exit)) void]{
  Evaluating @racket[(exit)] terminates the running program. 
  }))
