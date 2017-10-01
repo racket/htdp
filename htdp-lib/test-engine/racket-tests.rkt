@@ -156,7 +156,7 @@
 
 (define-for-syntax (check-context?)
   (let ([c (syntax-local-context)])
-    (memq c '(module top-level))))
+    (memq c '(module top-leve module-begin))))
 
 (define-for-syntax (argcount-error-message/stx arity stx [at-least #f])
   (define ls (syntax->list stx))
