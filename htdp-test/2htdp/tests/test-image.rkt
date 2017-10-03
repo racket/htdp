@@ -2691,6 +2691,11 @@
   (test (image-height i2) => 30)
   (test i2 => i))
 
+;; this should return a 0x0 bitmap,
+;; but there isn't such a thing;
+;; for now we return a 1x1 bitmap
+(test (bytes? (convert empty-image 'png-bytes 'fallback)) => #t)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;  random testing of normalization
