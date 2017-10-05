@@ -52,7 +52,6 @@
          "macro-unwind.rkt"
          "lifting.rkt"
          (prefix-in test-engine: test-engine/scheme-tests)
-         #;(file "/Users/clements/clements/scheme-scraps/eli-debug.ss")
          ;; for breakpoint display
          ;; (commented out to allow nightly testing)
          #;"display-break-stuff.rkt"
