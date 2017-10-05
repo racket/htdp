@@ -1121,6 +1121,12 @@
      :: 9 false (check-expect {(+ 1 1)} 2) -> 9 false (check-expect {2} 2)
      :: 9 false true (check-expect {(+ 2 2)} 4) -> 9 false true (check-expect {4} 4))
 
+  (t 'check-random m:upto-int/lam
+     (check-random (+ 3 4) (+ 2 5)) (+ 4 5)
+     :: {(+ 4 5)} -> {9}
+     :: 9 (check-random (+ 3 4) {(+ 2 5)}) -> 9 (check-random (+ 3 4) {7})
+     :: 9 (check-random {(+ 3 4)} 7) -> 9 (check-random {7} 7))
+
   (t 'check-expect-err m:upto-int/lam
      (check-expect 0 (sqrt 2))
      :: (check-expect 0 {(sqrt 2)}) -> (check-expect 0 {1.4142135623730951})
