@@ -36,19 +36,12 @@
     begin-let-bug
     qq-splice))
 
-(let ((outer-namespace (current-namespace)))
-  (parameterize ([display-only-errors #t]
-                 ;; display-only-errors is insufficient, because the evals
-                 ;; actually cause output.  So we just eat stdout.
-                 [current-output-port (open-output-string)]
-		 [current-namespace (make-base-namespace)])
-    ;; make sure the tests' print-convert sees the teaching languages' properties
-    (namespace-attach-module outer-namespace 'mzlib/pconvert-prop (current-namespace))
-    (namespace-attach-module outer-namespace 'racket/class)
-    (namespace-attach-module outer-namespace 'test-engine/racket-tests)
-    (namespace-require 'test-engine/racket-tests)
-    (if (run-all-tests-except
-         (append advanced-language-feature-tests
-                 known-bug-tests))
-	(exit 0)
-	(exit 1))))
+(parameterize ([display-only-errors #t]
+               ;; display-only-errors is insufficient, because the evals
+               ;; actually cause output.  So we just eat stdout.
+               [current-output-port (open-output-string)])
+  (if (run-all-tests-except
+       (append advanced-language-feature-tests
+               known-bug-tests))
+      (exit 0)
+      (exit 1)))
