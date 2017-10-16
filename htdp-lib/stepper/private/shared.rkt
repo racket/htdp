@@ -394,32 +394,32 @@
                                                   '(syntax-e cdr car)))
                   'stepper-skipto
                   '(syntax-e cdr car))
-                 'discard
+                 #t
                  (lambda (x) x)))
    'c)
 
   (define (lifted-name sym) 
-  (syntax->datum (get-lifted-var sym)))
-(define cd-stx 
-  (datum->syntax #f 'cd))
+    (syntax->datum (get-lifted-var sym)))
+  (define cd-stx 
+    (datum->syntax #f 'cd))
 
-(check-equal? (lifted-name (datum->syntax #f 'ab)) 'lifter-ab-0)
-(check-equal? (lifted-name cd-stx) 'lifter-cd-1)
-(check-equal? (lifted-name (datum->syntax #f 'ef)) 'lifter-ef-2)
-(check-equal? (lifted-name cd-stx) 'lifter-cd-1)
+  (check-equal? (lifted-name (datum->syntax #f 'ab)) 'lifter-ab-0)
+  (check-equal? (lifted-name cd-stx) 'lifter-cd-1)
+  (check-equal? (lifted-name (datum->syntax #f 'ef)) 'lifter-ef-2)
+  (check-equal? (lifted-name cd-stx) 'lifter-cd-1)
 
-(check-exn exn:fail? (lambda () (stepper-syntax-property #`13 'boozle)))
-(check-exn exn:fail? (lambda () (stepper-syntax-property #`13 'boozle #t)))
-(check-equal? (stepper-syntax-property #`13 'stepper-hint) #f)
-(check-equal? (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes)
-                                       'stepper-hint) 'yes)
-(check-equal? 
- (stepper-syntax-property (stepper-syntax-property (stepper-syntax-property #`13 
-                                                                            'stepper-hint
-                                                                            'no)
-                                                   'stepper-hint 'yes)
-                          'stepper-hint)
- 'yes)
-(check-equal? (stepper-syntax-property (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes) 'stepper-black-box-expr 'arg) 'stepper-hint) 'yes)
-(check-equal? (syntax->datum (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes) 'stepper-black-box-expr 'arg)) 13)
-)
+  (check-exn exn:fail? (lambda () (stepper-syntax-property #`13 'boozle)))
+  (check-exn exn:fail? (lambda () (stepper-syntax-property #`13 'boozle #t)))
+  (check-equal? (stepper-syntax-property #`13 'stepper-hint) #f)
+  (check-equal? (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes)
+                                         'stepper-hint) 'yes)
+  (check-equal? 
+   (stepper-syntax-property (stepper-syntax-property (stepper-syntax-property #`13 
+                                                                              'stepper-hint
+                                                                              'no)
+                                                     'stepper-hint 'yes)
+                            'stepper-hint)
+   'yes)
+  (check-equal? (stepper-syntax-property (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes) 'stepper-black-box-expr 'arg) 'stepper-hint) 'yes)
+  (check-equal? (syntax->datum (stepper-syntax-property (stepper-syntax-property #`13 'stepper-hint 'yes) 'stepper-black-box-expr 'arg)) 13)
+  )
