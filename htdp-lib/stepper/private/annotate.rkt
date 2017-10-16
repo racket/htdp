@@ -198,8 +198,9 @@
     (lambda (exp tail-bound pre-break? procedure-name-info)
       
       ;; annotate an exp with a stepper/skipto or stepper-skipto/discard
-      ;; label
-      (define (dont-annotate traversal)
+      ;; label. If force-discard? is true, then we use a discarding
+      ;; reconstruction regardless of the tag
+      (define (dont-annotate)
         ;; mutable, to catch free vars. Mutated several times, we
         ;; only care about the last. A bit yecchy.
         (define free-vars-captured #f)
@@ -212,7 +213,7 @@
             (set! free-vars-captured free-vars)
             stx))
         
-        (define annotated (skipto/auto exp traversal subterm-recur))
+        (define annotated (skipto/auto exp #f subterm-recur))
         
         (vector (wcm-wrap skipto-mark annotated) free-vars-captured))
 
@@ -676,10 +677,9 @@
                    free-vars)]
           [error 'maybe-final-val-wrap "stepper internal error 20080527"]))
       
-      (cond [(stepper-syntax-property exp 'stepper-skipto) 
-             (dont-annotate 'rebuild)]
-            [(stepper-syntax-property exp 'stepper-skipto/discard)
-             (dont-annotate 'discard)]
+      (cond [(or (stepper-syntax-property exp 'stepper-skipto)
+                 (stepper-syntax-property exp 'stepper-skipto/discard))
+             (dont-annotate)]
             [(to-be-skipped? exp)
              (vector (wcm-wrap "supposed to be skipped" exp) null)]
             
@@ -1035,7 +1035,7 @@
            #`(begin #,exp
                     (#%plain-app #,(make-opaque-exp-break exp)))]
           [(stepper-syntax-property exp 'stepper-skipto)
-           (skipto/auto exp 'rebuild annotate/module-top-level)] 
+           (skipto/auto exp #f annotate/module-top-level)] 
           [else 
            (syntax-case exp (#%app #%plain-app call-with-values define-values define-syntaxes 
                                    #%require #%provide #%declare begin #%plain-lambda lambda

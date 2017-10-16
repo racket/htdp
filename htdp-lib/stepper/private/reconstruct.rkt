@@ -428,7 +428,7 @@
                        use-lifted-names render-settings))
   (skipto/auto
    expr
-   'discard
+   #t
    ;; transformer:
    (lambda (expr)
      ;; reconstruct the source by attaching the keyword to the result of
@@ -659,7 +659,7 @@
                            (syntax->list #`vars-stx)
                            lifting-indices)])
            (vector (reconstruct-completed-define exp vars (vals-getter) render-settings) #f))])
-      (let ([exp (skipto/auto exp 'discard (lambda (exp) exp))])
+      (let ([exp (skipto/auto exp #t (lambda (exp) exp))])
         (cond
           [(stepper-syntax-property exp 'stepper-black-box-expr)
            ;; the hint contains the original syntax
@@ -699,7 +699,7 @@
 (define (reconstruct-top-level source reconstructed)
   (skipto/auto
    source
-   'discard
+   #t
    (lambda (source)
      (kernel:kernel-syntax-case
       source #f
