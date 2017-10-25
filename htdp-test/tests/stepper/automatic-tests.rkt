@@ -36,12 +36,18 @@
     begin-let-bug
     qq-splice))
 
+;; this test anticipates the implementation of the stepper
+;; for check-random, which is not yet implemented
+(define new-feature-tests
+  '(check-random))
+
 (parameterize ([display-only-errors #t]
                ;; display-only-errors is insufficient, because the evals
                ;; actually cause output.  So we just eat stdout.
                [current-output-port (open-output-string)])
   (if (run-all-tests-except
        (append advanced-language-feature-tests
-               known-bug-tests))
+               known-bug-tests
+               new-feature-tests))
       (exit 0)
       (exit 1)))
