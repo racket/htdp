@@ -76,6 +76,8 @@
                     stepper/private/syntax-property
                     test-engine/racket-tests)
 
+(require (rename racket/base racket:define-struct define-struct))
+
 (define-for-syntax EXPECTED-HEADER
   "expected a variable name, or a function name and its variables (in parentheses), but ~a")
 
@@ -825,9 +827,31 @@
         (something-else/kw (syntax name)))]
       ;; Main case (`rest' is for nice error messages):
       [(_ name_ (field_ ...) . rest)
-       (let ([name (syntax name_)]
-             [fields (syntax->list (syntax (field_ ...)))]
-             [ht (make-hash-table)])
+
+       ;; MF: after working thru racket/htdp #42 as much as possible,
+       ;; here is where I am. Sadly, I don't even know how to make a
+       ;; failing test for this problem. (What a mess of a code.) 
+       
+       ;; option 1 properly highlights the source of the bug in
+       ;;   (define-struct s [x])
+       ;;   (s-x '())
+       ;; option 2: Mike's code somehow messes up this source thing.
+       ;; conjecture: something that ought to have a source doesn't get
+       ;; one and therefore isn't traced. 
+
+       ;; option 1, simplified: 
+       #;
+       (syntax/loc stx (racket:define-struct name_ (field_ ...)))
+
+       ;; option 2: Mike's code 
+       ;; but because we're possibly in a first-order language
+       ;; and want signature checking and all: 
+
+       (let ([name   (syntax/loc stx name_)]
+             [fields (syntax->list (syntax/loc stx (field_ ...)))]
+             [ht     (make-hash-table)])
+
+         ;; are all fields names? 
          (for-each
           (lambda (field)
             (unless (identifier? field)
@@ -847,6 +871,8 @@
                  sym))
               (hash-table-put! ht sym #t)))
           fields)
+
+         ;; is there 'junk' following the field names? 
          (let ([rest (syntax->list (syntax rest))])
            (unless (null? rest)
              (teach-syntax-error
@@ -856,18 +882,21 @@
               "expected nothing after the field names, but found ~a extra part~a"
               (length rest)
               (if (> (length rest) 1) "s" ""))))
+
+         ;; now let's define the proper names 
          [define-values (struct: constructor-name predicate-name getter-names setter-names)
            (make-struct-names name fields stx)]
+         
          [define field# (length fields)]
          [define signature-name (car (generate-temporaries (list name)))]
          [define parametric-signature-name (datum->syntax name (format-symbol "~a-of" name))]
-         [define to-define-names (list* constructor-name predicate-name
-                                        (if setters?
-                                            (append getter-names setter-names)
-                                            getter-names))]
-         [define proc-names to-define-names]
+         [define proc-names
+           (list* constructor-name
+                  predicate-name
+                  (if setters? (append getter-names setter-names) getter-names))]
          (define fields-without-location 
            (map (λ (x) (datum->syntax x (syntax->datum x) #f)) (syntax->list #'(field_ ...))))
+         
          (with-syntax ([compile-info 
                         (kw-app build-struct-expand-info name fields #f (not setters?) #t null null
                                 #:omit-struct-type? #t)]
@@ -884,12 +913,11 @@
                      (map (lambda (x) 1) (cddr proc-names)))
               (lambda (def-proc-names)
                 (with-syntax ([(def-proc-name ...) def-proc-names]
-                              [(proc-name ...) proc-names]
-                              [(getter-id ...) getter-names])
+                              [(proc-name ...)     proc-names]
+                              [(getter-id ...)     getter-names])
                   (define defns
-                    #;
-                    (#,signature-name #,parametric-signature-name def-proc-name ...)
-                    #`(define-values (#,parametric-signature-name def-proc-name ...)
+                    (quasisyntax/loc stx
+                      (define-values (#,parametric-signature-name def-proc-name ...)
                         (let ()
                           (define-values (type-descriptor
                                           raw-constructor
@@ -909,7 +937,8 @@
                                       (list '#,constructor-name
                                             #,@(map-with-index
                                                 (lambda (i _)
-                                                  #`(recur (raw-generic-access r #,i)))
+                                                  (quasisyntax/loc stx
+                                                    (recur (raw-generic-access r #,i))))
                                                 fields))))
                               (cons prop:custom-print-quotable
                                     'never)
@@ -922,7 +951,8 @@
                                       (lambda (r port mode)
                                         (let ((v (make-plain
                                                   #,@(map-with-index (lambda (i _)
-                                                                       #`(raw-generic-access r #,i))
+                                                                       (quasisyntax/loc stx
+                                                                         (raw-generic-access r #,i)))
                                                                      fields))))
                                           (cond
                                             [(eq? mode #t) (write v port)]
@@ -933,8 +963,9 @@
                                      (lambda (r1 r2 equal?)
                                        (and #,@(map-with-index 
                                                 (lambda (i field-spec)
-                                                  #`(equal? (raw-generic-access r1 #,i)
-                                                            (raw-generic-access r2 #,i)))
+                                                  (quasisyntax/loc stx
+                                                    (equal? (raw-generic-access r1 #,i)
+                                                            (raw-generic-access r2 #,i))))
                                                 fields)))
                                      (make-equal-hash 
                                       (lambda (r i) (raw-generic-access r i)) #,field#) 
@@ -945,11 +976,13 @@
                                      (lambda args (apply #,constructor-name args))
                                      (list #,@(map-with-index
                                                (lambda (i _) 
-                                                 #`(lambda (r) (raw-generic-access r #,i)))
+                                                 (quasisyntax/loc stx
+                                                   (lambda (r) (raw-generic-access r #,i))))
                                                fields))
                                      (list #,@(map-with-index
                                                (lambda (i _)
-                                                 #`(lambda (r v) (raw-generic-mutate r #,i v)))
+                                                 (quasisyntax/loc stx
+                                                   (lambda (r v) (raw-generic-mutate r #,i v))))
                                                fields))
                                      (lambda (r)
                                        (raw-generic-access r #,field#))
@@ -959,23 +992,25 @@
                              (make-inspector)))
                           
                           #,@(map-with-index (lambda (i name field-name)
-                                               #`(define #,name
+                                               (quasisyntax/loc stx
+                                                 (define #,name
                                                    (let ([raw (make-struct-field-accessor
                                                                raw-generic-access
                                                                #,i
                                                                '#,field-name)])
                                                      (lambda (r)
-                                                       (raw r)))))
+                                                       (raw r))))))
                                              getter-names
                                              fields)
                           #,@(map-with-index (lambda (i name field-name)
-                                               #`(define #,name 
+                                               (quasisyntax/loc stx
+                                                 (define #,name 
                                                    (let ([raw (make-struct-field-mutator
                                                                raw-generic-mutate
                                                                #,i
                                                                '#,field-name)])
                                                      (lambda (r v)
-                                                       (raw r v)))))
+                                                       (raw r v))))))
                                              setter-names
                                              fields)
                           (define #,predicate-name raw-predicate)
@@ -984,12 +1019,14 @@
                           (define #,signature-name (signature (predicate raw-predicate)))
                           
                           #,(if setters?
-                                #`(define (#,parametric-signature-name field_ ...)
+                                (quasisyntax/loc stx
+                                  (define (#,parametric-signature-name field_ ...)
                                     (signature
                                      (combined 
                                       (at name_ (predicate raw-predicate))
-                                      (at field_ (signature:property getter-id field_/no-loc)) ...)))
-                                #`(define (#,parametric-signature-name field_ ...)
+                                      (at field_ (signature:property getter-id field_/no-loc)) ...))))
+                                (quasisyntax/loc stx
+                                  (define (#,parametric-signature-name field_ ...)
                                     (let* ((sigs (list field_/no-loc ...))
                                            (sig
                                             (make-lazy-wrap-signature 'name_ #t
@@ -1005,16 +1042,16 @@
                                                   #,constructor-name 
                                                   (list #,@getter-names)
                                                   arbs))))
-                                      sig)))
+                                      sig))))
                           
-                          (values #;#,signature-name #,parametric-signature-name proc-name ...))))
+                          (values #;#,signature-name #,parametric-signature-name proc-name ...)))))
                   ;; --- IN ---
                   (stepper-syntax-property defns 'stepper-black-box-expr stx)))))
            ;; --------------------------------------------------------------------------------
            (define struct-name-size (string-length (symbol->string (syntax-e #'name_))))
            (define struct-name/locally-introduced (syntax-local-introduce #'name_))
            
-	   (define signature-name-directive #f)
+           (define signature-name-directive #f)
            (define parametric-signature-name-directive #f)
 
            (define struct-name-to-maker-directive
@@ -1093,7 +1130,8 @@
              (quasisyntax/loc stx
                (begin
                  #,(stepper-syntax-property
-                    #`(define-syntaxes (name_) 
+                    (quasisyntax/loc stx
+                      (define-syntaxes (name_) 
                         (let ()
                           (racket:define-struct info ()
                                                 #:super struct:struct-info
@@ -1109,28 +1147,27 @@
                                                       stx
                                                       #'self)]
                                                     [else
-						      (raise-syntax-error
+                                                     (raise-syntax-error
                                                       #f
                                                       (format "structure type; do you mean make-~a"
-							(syntax-e #'name_))
-						      stx
+                                                              (syntax-e #'name_))
+                                                      stx
                                                       stx)
-						      #;#'#,signature-name
-						      ])))
+                                                     #;#'#,signature-name
+                                                     ])))
                           ;; support `shared'
-                          (make-info (lambda () compile-info))))
+                          (make-info (lambda () compile-info)))))
                     'stepper-skip-completely
                     #t)
                  #,defn1)))
            (define defn3
              (check-definitions-new 'define-struct
                                     stx 
-                                    (list* name parametric-signature-name to-define-names)
+                                    (list* name parametric-signature-name proc-names)
                                     defn2
                                     (and setters? bind-names)))
-           (define defn4
-             (syntax-property defn3 'disappeared-use (list struct-name/locally-introduced)))
-           (syntax-property defn4 'sub-range-binders all-directives)))]
+           (define d4 (syntax-property defn3 'disappeared-use (list struct-name/locally-introduced)))
+           (syntax-property d4 'sub-range-binders all-directives)))]
       [(_ name_ something . rest)
        (teach-syntax-error
         'define-struct
