@@ -827,26 +827,6 @@
         (something-else/kw (syntax name)))]
       ;; Main case (`rest' is for nice error messages):
       [(_ name_ (field_ ...) . rest)
-
-       ;; MF: after working thru racket/htdp #42 as much as possible,
-       ;; here is where I am. Sadly, I don't even know how to make a
-       ;; failing test for this problem. (What a mess of a code.) 
-       
-       ;; option 1 properly highlights the source of the bug in
-       ;;   (define-struct s [x])
-       ;;   (s-x '())
-       ;; option 2: Mike's code somehow messes up this source thing.
-       ;; conjecture: something that ought to have a source doesn't get
-       ;; one and therefore isn't traced. 
-
-       ;; option 1, simplified: 
-       #;
-       (syntax/loc stx (racket:define-struct name_ (field_ ...)))
-
-       ;; option 2: Mike's code 
-       ;; but because we're possibly in a first-order language
-       ;; and want signature checking and all: 
-
        (let ([name   (syntax/loc stx name_)]
              [fields (syntax->list (syntax/loc stx (field_ ...)))]
              [ht     (make-hash-table)])
@@ -998,8 +978,7 @@
                                                                raw-generic-access
                                                                #,i
                                                                '#,field-name)])
-                                                     (lambda (r)
-                                                       (raw r))))))
+                                                     raw))))
                                              getter-names
                                              fields)
                           #,@(map-with-index (lambda (i name field-name)
@@ -1009,8 +988,7 @@
                                                                raw-generic-mutate
                                                                #,i
                                                                '#,field-name)])
-                                                     (lambda (r v)
-                                                       (raw r v))))))
+                                                     raw))))
                                              setter-names
                                              fields)
                           (define #,predicate-name raw-predicate)
