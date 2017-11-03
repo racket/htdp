@@ -110,9 +110,18 @@ namespace.
     (unless (boolean? a)
       (raise
        (make-exn:fail:contract
-        (format "not: expected either true or false; given ~e" a)
+        (format "not: expected either #true or #false; given ~e" a)
         (current-continuation-marks))))
     (not a)))
+
+(define-teach beginner boolean->string 
+  (lambda (a)
+    (unless (boolean? a)
+      (raise
+       (make-exn:fail:contract
+        (format "boolean->string: expected either #true or #false; given ~e" a)
+        (current-continuation-marks))))
+    (if a "#true" "#false")))
 
 (define-teach beginner random 
   (lambda (a)
@@ -470,6 +479,7 @@ namespace.
 (provide  
  false?
  beginner-not
+ beginner-boolean->string
  beginner-random
  beginner-+
  beginner-/
@@ -659,6 +669,12 @@ namespace.
     (cerr 'string-contains? (string? t) "string" t)
     (regexp-match? (regexp-quote s) t)))
 
+(define-teach beginner string-contains-ci? 
+  (lambda (s t)
+    (cerr 'string-contains? (string? s) "string" s)
+    (cerr 'string-contains? (string? t) "string" t)
+    (regexp-match? (regexp-quote (string-foldcase s)) (string-foldcase t))))
+
 (provide
  beginner-string-ith
  beginner-replicate
@@ -672,4 +688,5 @@ namespace.
  beginner-string-upper-case?
  beginner-string-lower-case?
  beginner-string-contains?
+ beginner-string-contains-ci?
  )

@@ -423,8 +423,12 @@
   @defproc[((beginner-not not) [x boolean?]) boolean?]{
  Negates a boolean value.
  @interaction[#:eval (bsl) (not #false)]
+ }
+   @defproc[((beginner-boolean->string boolean->string) [x boolean?]) string]{
+ Produces a string for the given boolean 
+ @interaction[#:eval (bsl) (boolean->string #false) (boolean->string #true)]
  })
- 
+
  ("Symbols"
   @defproc[(symbol? [x any/c]) boolean?]{
  Determines whether some value is a symbol.
@@ -801,6 +805,11 @@
  Determines whether the first string appears literally in the second one. 
  @interaction[#:eval (bsl) (string-contains? "at" "cat")]
 }
+  @defproc[((beginner-string-contains-ci? string-contains-ci?) [s string] [t string]) boolean?]{
+ Determines whether the first string appears in the second one without
+  regard to the case of the letters. 
+ @interaction[#:eval (bsl) (string-contains-ci? "At" "caT")]
+}
   @defproc[(string [c char] ...) string?]{
  Builds a string of the given characters. 
  @interaction[#:eval (bsl) (string #\d #\o #\g)]
@@ -826,6 +835,16 @@
  Concatenates the characters of several strings. 
  @interaction[#:eval (bsl) (string-append "hello" " " "world" " " "good bye")]
 }
+  @defproc[(string-upcase [s string]) string]{
+ Produces a string like the given one with all 'letters' as upper case. 
+ @interaction[#:eval (bsl) (string-upcase "cat") (string-upcase "cAt")]
+}
+
+  @defproc[(string-downcase [s string]) string]{
+ Produces a string like the given one with all 'letters' as lower case. 
+ @interaction[#:eval (bsl) (string-downcase "CAT") (string-downcase "cAt")]
+}
+
   @defproc[(string=? [s string][t string][x string] ...) boolean?]{
  Determines whether all strings are equal, character for character.
  @interaction[#:eval (bsl) (string=? "hello" "world") (string=? "bye" "bye")]
