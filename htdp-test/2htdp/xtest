@@ -55,3 +55,4 @@ run pad1-handler.rkt
 run pad1-in-bsl.rkt
 run error-messages.rkt
 run two-ports.rkt
+run web-io-automatic.rkt

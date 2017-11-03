@@ -18,3 +18,4 @@ run on-release-no-key.rkt
 run pad1.rkt
 # always keep this last because it doesn't shut down 
 run close-on-stop.rkt
+run web-io-manual.rkt
