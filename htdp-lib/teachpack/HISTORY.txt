@@ -1,4 +1,10 @@
 ------------------------------------------------------------------------
+Version XYZ				  [Fri Nov  3 13:09:49 EDT 2017]
+
+* added web-io teachpack (used to be a package) 
+* added some primitives to *SL 
+
+------------------------------------------------------------------------
 Version 6.11				  [Mon Oct 30 13:35:12 EDT 2017]
 
 * none 
