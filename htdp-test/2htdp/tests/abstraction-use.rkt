@@ -63,9 +63,9 @@
 
 (define (capitalize-every-other-letter s)
   (for/string ([c s][i (in-naturals 0)])
-    (if (even? i) (string-upcase c) c)))
+    (if (even? i) (string-upper-case c) c)))
 
-(define (string-upcase s)
+(define (string-upper-case s)
   (string (char-upcase (first (string->list s)))))
 
 
