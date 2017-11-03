@@ -1,11 +1,11 @@
 #lang scribble/manual
 
-@(require (for-label racket xml/xml))
+@(require "shared.rkt" (for-label racket xml/xml))
 
-@title{Web IO}
-@author{matthias}
+@teachpack["web-io"]{Web IO}
+@author{Matthias Felleisen}
 
-@defmodule[web-io]
+@defmodule[#:require-form beginner-require 2htdp/web-io]
 
 The teachpack provides a single function: 
 
