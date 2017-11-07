@@ -766,7 +766,24 @@ is immediately closed down.}
  @racket['fullscreen]. The @racket['normal] mode is the default and uses
  the size specifications from the @racket[to-draw] clause. If the
  @racket['fullscreen] mode is specified, @racket[big-bang] takes over the
- full screen.}}
+ full screen.}
+
+@defform/none[#:literals (display-mode)
+        (display-mode d-expr resize-expr)
+         #:contracts
+         ([d-expr (or/c 'fullscreen 'normal)]
+	  [resize-expr (-> #, @tech{WorldState} number? number? #, @tech{WorldState})])]{
+ informs DrRacket to choose one of two display modes: @racket['normal] or
+ @racket['fullscreen]. The @racket['normal] mode is the default and uses
+ the size specifications from the @racket[to-draw] clause. If the
+ @racket['fullscreen] mode is specified, @racket[big-bang] takes over the
+ full screen.
+
+ The optional @racket[resize-expr] is applied to the current world and the
+ sizes (width and height) of the display @bold{once}, when the world is initialized. This gives
+ the program a chance to draw shapes of a size relative to the display size
+ in a portable manner.}
+}
 
 @item{
 
