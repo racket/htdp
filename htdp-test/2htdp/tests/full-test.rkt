@@ -9,4 +9,7 @@
     (to-draw (lambda (x) (circle (+ 20 x) 'solid 'red)))
     (on-tick (lambda (x) (- x 20)))
     (stop-when (lambda (x) (< x 0)))
+    (close-on-stop #true)
     (display-mode x)))
+
+(main 'fullscreen)
