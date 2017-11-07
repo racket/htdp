@@ -70,6 +70,11 @@
       (init-field record?)
       (init-field name state register port check-with on-key on-release on-pad on-mouse)
       (init on-receive on-draw stop-when)
+
+      ;; -----------------------------------------------------------------------
+      (field
+       [display-full? (if (cons? display-mode) (first display-mode) display-mode)]
+       [display-info  (if (cons? display-mode) (second display-mode) (lambda (w width height) w))])
       
       ;; -----------------------------------------------------------------------
       (field
@@ -167,6 +172,7 @@
                      MIN-WIDT-FOR-GAME-PAD fst-scene))
             (set! game-pad-image (scale (/ width (image-width game-pad)) game-pad)))
           (create-frame)
+          (pdisplay-info width height)
           (show fst-scene)))
       
       (define/private (add-game-pad scene)
@@ -217,7 +223,7 @@
         (define frame-y 2)
         
         (define-values (mode-width mode-height mode-frame-x mode-frame-y mode-style)
-          (case display-mode
+          (case display-full?
             [(normal)
              (values width height frame-x frame-y '(no-resize-border #;no-caption))]
             [(fullscreen)
@@ -257,7 +263,7 @@
                      (inner (values void void) create-frame/universe frame play-back:cust))
         (send editor-canvas focus)
         
-        (send frame fullscreen (eq? display-mode 'fullscreen))
+        (send frame fullscreen (eq? display-full? 'fullscreen))
 	(set! the-frame frame)
         (send frame show #t))
       
@@ -388,6 +394,8 @@
       
       ;; receive revents 
       (def/cback pubment (prec msg) rec)
+
+      (def/cback private (pdisplay-info width height) display-info)
       
       ;; ----------------------------------------------------------------------
       ;; -> Void 

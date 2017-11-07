@@ -11,6 +11,7 @@ run() {
 cd tests 
 
 run full-test.rkt
+run full-test-width-height.rkt
 run abstraction-use.rkt
 run abstraction-errors.rkt
 run universe-disappearing.rkt

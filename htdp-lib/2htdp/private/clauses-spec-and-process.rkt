@@ -30,6 +30,13 @@
          (lambda (p)
            (syntax-case p ()
              [(_ x) #`(check> #,tag x)]
+             [_ (err tag p msg)])))]
+    [(_ check> msg #:except extra ...)
+     #`(lambda (tag)
+         (lambda (p)
+           (syntax-case p ()
+             [(_ x) #`(check> #,tag x)]
+             extra ...
              [_ (err tag p msg)])))]))
 
 (define-syntax function-with-arity

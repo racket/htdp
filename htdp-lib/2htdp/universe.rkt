@@ -116,6 +116,12 @@
               [(_ stop? last-picture)
                #'(list (proc> 'stop-when (f2h stop?) 1)
                        (proc> 'stop-when (f2h last-picture) 1 #:place "second"))])]
+  [display-mode DEFAULT #''normal
+                (expr-with-check display-mode> "expected a display mode ('normal, 'fullscreen)"
+                                 #:except
+                                 [(_ mode f)
+                                  #'(list (display-mode> "expected a display mode ('normal, 'fullscreen)" mode)
+                                          (proc> 'display-mode (f2h f) 3 #:place "second"))])]
   ;; (U #f Any)
   ;; -- should the session be recorded and turned into PNGs and an animated GIF
   ;; -- if the value is a string and is the name of a local directory, use it! 
@@ -129,8 +135,6 @@
   ;; is self-contradictory; I will wait until someone complaints -- MF, 22 Nov 2015
   [close-on-stop DEFAULT #'#f (expr-with-check opt-nat> "expected a boolean or a natural number")]
   
-  [display-mode DEFAULT #''normal
-                (expr-with-check display-mode> "expected a display mode ('normal, 'fullscreen)")]
   ;; (U #f String)
   ;; -- name specifies one string 
   [name DEFAULT #'#f (expr-with-check string-or-symbol> "expected a string")]
