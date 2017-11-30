@@ -371,11 +371,10 @@
     (unless (pred? c)
       (error 
        tag
-       "expects a list of mails as ~a argument, given a list that contains: ~e"
+       "expects a list of ~as as ~a argument, given a list that contains: ~e"
+       msg
        ith
        c)))
-  #;
-  (check-arg tag  msg (format "(elements of) ~a" ith) c)
   )
 
 ;; Symbol Any ->* Universe [Listof Mail] [Listof IWorld]
