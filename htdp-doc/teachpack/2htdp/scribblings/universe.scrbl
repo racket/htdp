@@ -825,7 +825,7 @@ a short-hand for three lines of code:
           (to-draw create-UFO-scene))
 ])
 
-Exercise: Add a condition for stopping the flight of the UFO when it
+@bold{Exercise} Add a condition for stopping the flight of the UFO when it
 reaches the bottom.
 
 
@@ -1173,7 +1173,7 @@ for universe programs. For example:
 @defproc[(bundle? [x any/c]) boolean?]{
  determines whether @racket[x] is a @emph{bundle}.}
 
-@defproc[(make-bundle [state any/c] [mails (listof mail?)] [low (listof iworld?)]) bundle?]{
+@defproc[(make-bundle [state any/c] [mails (listof mail?)] [low-to-remove (listof iworld?)]) bundle?]{
  creates a @emph{bundle} from a piece of data that
  represents a server state, a list of mails, and a list of iworlds.
  
@@ -1483,9 +1483,10 @@ in parallel:
 
 
 @; -----------------------------------------------------------------------------
-@section[#:tag "universe-sample"]{A First Sample Universe}
+@section[#:tag "universe-sample"]{A First Sample Universe} 
 
 This section uses a simple example to explain the design of a universe,
+ @margin-note*{The code assumes the "Intermediate with Lambda" language.}
  especially its server and some participating worlds. The first subsection
  explains the example, the second introduces the general design plan for
  such universes. The remaining sections present the full-fledged solution.
@@ -1708,9 +1709,9 @@ The preceding subsection dictates that our server program starts like this:
 @(begin
 #reader scribble/comment-reader
 [racketblock
-;; teachpack: universe.rkt
+ (require 2htdp/universe)
 
-;; UniverseState is '*
+;; UniverseState is [Listof iworld?]
 ;; StopMessage is 'done.
 ;; GoMessage is 'it-is-your-turn.
 ])
@@ -1752,16 +1753,16 @@ The second step of the design recipe calls for functional examples:
 [racketblock
 ;; an obvious example for adding a world:
 (check-expect
-  (add-world '() world1)
-  (make-bundle (list world1)
-               (list (make-mail world1 'it-is-your-turn))
+  (add-world '() iworld1)
+  (make-bundle (list iworld1)
+               (list (make-mail iworld1 'it-is-your-turn))
                '()))
 
 ;; an example for receiving a message from the active world:
 (check-expect
- (switch (list world1 world2) world1 'done)
- (make-bundle (list world2 world1)
-              (list (make-mail world2 'it-is-your-turn))
+ (switch (list iworld1 iworld2) iworld1 'done)
+ (make-bundle (list iworld2 iworld1)
+              (list (make-mail iworld2 'it-is-your-turn))
               '()))
 ])
 
@@ -1770,7 +1771,7 @@ The second step of the design recipe calls for functional examples:
  @racket[world3] because the teachpack applies these event handlers to real
  worlds.
 
-Exercise: Create additional examples for the two functions based on our
+@bold{Exercise} Create additional examples for the two functions based on our
 protocol.
 
 The protocol tells us that @emph{add-world} just adds the given
@@ -1816,7 +1817,7 @@ Start the server now.
 
  @racketblock[(universe '() (on-new add-world) (on-msg switch))]
 
-Exercise: The function definition simply assumes that @emph{wrld} is
+@bold{Exercise} The function definition simply assumes that @emph{wrld} is
  @racket[iworld=?] to @racket[(first univ)] and that the received message
  @emph{m} is @racket['done]. Modify the function definition so that it
  checks these assumptions and raises an error signal if either of them is
@@ -1827,7 +1828,7 @@ Exercise: The function definition simply assumes that @emph{wrld} is
  depends on the context. For now, stop the @tech{universe} at this point by
  returning an empty list of worlds. Consider alternative solutions, too.)
 
-Exercise: An alternative state representation would equate
+@bold{Exercise} An alternative state representation would equate
  @tech{UniverseState} with @emph{world} structures, keeping track of the
  active world. The list of world in the server would track the passive
  worlds only. Design appropriate @racket[add-world] and @racket[switch]
@@ -1846,7 +1847,7 @@ The final step is to design the ball @tech{world}. Recall that each world
 
 @(begin #reader scribble/comment-reader
 (racketblock
-;; teachpack: universe.rkt
+(require 2htdp/universe)
 
 ;; WorldState is one of:
 ;; -- Number             %% representing the @emph{y} coordinate
@@ -1919,7 +1920,7 @@ We choose to design @emph{receive} so that it ignores the message and
  returns the current state of an active @tech{world}.  This ensures that the ball
  moves in a continuous fashion and that the @tech{world} remains active.
 
-Exercise: One alternative design is to move the ball back to the bottom of
+@bold{Exercise} One alternative design is to move the ball back to the bottom of
 the image every time @racket['it-is-your-turn] is received. Design this function, too.
 
 @(begin
@@ -1970,36 +1971,13 @@ the image every time @racket['it-is-your-turn] is received. Design this function
                      (sub1 x))]))
 ))
 
-Exercise: what could happen if we had designed @emph{receive} so that it
+@bold{Exercise} what could happen if we had designed @emph{receive} so that it
  produces @racket['resting] when the state of the world is @racket[0]?  Use
  your answer to explain why you think it is better to leave this kind of
  state change to the tick event handler instead of the message receipt
  handler?
 
 Finally, here is the third function, which renders the state as an image:
-
-@(begin
-#reader scribble/comment-reader
-(racketblock
-; WorldState -> Image
-; render the state of the world as an image
-
-(check-expect (render HEIGHT) (underlay/xy MT 50 HEIGHT BALL))
-(check-expect (render 'resting)
-              (underlay/xy MT 10 10 (text "resting" 11 "red")))
-
-(define (render w)
-  (underlay/xy
-    (cond
-      [(symbol? w) (underlay/xy MT 10 10 (text "resting" 11 "red"))]
-      [(number? w) (underlay/xy MT 50 w BALL)])
-    5 85
-    (text name 11 "black")))
-
-))
-
- Here is an improvement that adds a name to the image and abstracts over
- the name at the same time:
 
 @(begin
 #reader scribble/comment-reader
@@ -2032,19 +2010,19 @@ Finally, here is the third function, which renders the state as an image:
 
 ; String -> WorldState
 ; create and hook up a world with the @racket[LOCALHOST] server
-(define (create-world n)
+(define (create-world name)
   (big-bang WORLD0
-           (on-receive receive)
-           (to-draw (draw n))
-           (on-tick move)
-           (name n)
-           (register LOCALHOST)))
+   (on-receive receive)
+   (to-draw    (draw n))
+   (on-tick    move)
+   (name       name)
+   (register   LOCALHOST)))
 ))
 
  Now you can use @racket[(create-world 'carl)] and @racket[(create-world 'sam)],
  respectively, to run two different worlds, after launching a @tech{server}
- first.
+ first. You may wish to use @racket[launch-many-worlds] here. 
 
-Exercise: Design a function that takes care of a world to which the
+@bold{Exercise} Design a function that takes care of a world to which the
  universe has lost its connection. Is @emph{Result} the proper contract for
  the result of this function?
