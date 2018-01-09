@@ -201,6 +201,9 @@ cruel world
 }
 ]
 
+@defproc[(file-exists? [f string?]) boolean?]{determines whether a file
+with the given name exists in the current directory.}
+
 @(parameterize ([current-directory here])
    (with-handlers ([exn:fail:filesystem? void])
      (delete-file "output.txt")))

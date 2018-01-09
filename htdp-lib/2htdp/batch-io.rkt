@@ -23,6 +23,9 @@
  ;; all reader functions consume the name of a file f:
  ;; -- f must be a file name (string) in the same folder as the program 
  
+ ;; String -> Boolean
+ file-exists?
+
  ;; String -> String
  ;; read the specified file as a string
  read-file
