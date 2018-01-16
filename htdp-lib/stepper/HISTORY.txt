@@ -1,5 +1,14 @@
 Stepper
 -------
+
+Changes for 6.12:
+
+None.
+
+Changes for 6.11:
+
+None.
+
 Changes for 6.10:
 
 None.
