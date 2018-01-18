@@ -425,7 +425,7 @@
     (cond [(check-fail? result)
            (define c (send test-engine get-info))
            (send c check-failed result (check-fail-src result) exn)
-           (if exn (raise exn) #f)]
+           #f]
           [else #t])))
 
 ;;Wishes
