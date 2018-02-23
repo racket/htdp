@@ -69,6 +69,9 @@
     stepper-use-val-as-final
     stepper-lifted-name
     lazy-op
+    ;; used temporarily to help locate syntax expressions
+    ;; when adding new skipto annotations:
+    finder
     ))
 
 
