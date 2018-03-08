@@ -2214,7 +2214,7 @@
   
   (t1 'bad-parens m:upto-int/lam
       "("
-      `((error "read: expected a `)' to close `('")))
+      `((error "read-syntax: expected a `)` to close `(`")))
   
   #;(t1 'bad-stx-and m:upto-int/lam
       "(and)"
