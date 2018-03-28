@@ -402,7 +402,7 @@ Images can connect to other libraries.  Specifically:
 @section[#:tag "nitty-gritty"]{The Nitty Gritty of Pixels, Pens, and Lines}
 
 The image library treats coordinates as if they are in the upper-left corner 
-of each pixel, and infinitesimally small (unlike pixels which have some area).
+of each pixel, and infinitesimally small (unlike pixels, which have some area).
 
 Thus, when drawing a solid @racket[square] of whose side-length is 10, the image library
 colors in all of the pixels enclosed by the @racket[square] starting at the upper
@@ -422,6 +422,12 @@ This means that the outline slightly exceeds the bounding box of the shape.
 Specifically, the upper and left-hand lines around the square are within
 the bounding box, but the lower and right-hand lines are just outside.
 
+@margin-note{If you are reading along with this section using
+ @seclink["top" #:doc '(lib "scribblings/drracket/drracket.scrbl")]{DrRacket},
+ note that DrRacket clips images to their bounding boxes when rendering them
+ in the interactions window; read on for the ramifications but know for now that
+ what you see in the example results here will not be exactly the same as
+ what you see in the interactions window for that reason.}
 This kind of rectangle is useful when putting rectangles next to each other
 and avoiding extra thick lines on the interior. For example, consider
 building a grid like this:
@@ -508,7 +514,7 @@ color in it:
                     (rectangle 100 100 'solid (make-color 2 2 2 50)))]
 To understand why, we must look more carefully at how alpha blending
 and image equality work. Image equality's definition is straightforward: two images
-are equality if they are both drawn the same. That is, image equality
+are equal if they are both drawn the same. That is, image equality
 is defined by simply drawing the two shapes on a white background and
 then comparing all of the pixels for the two drawings
 (it is implemented more efficiently in some cases, however).
@@ -535,5 +541,5 @@ color by @racket[(- 1 (/ α 255))] and then adds the results to get the final co
 Going back to the two example rectangles,
 the drawing library multiplies @code{50/255} by @racket[1] for the first
 shape and multiplies @code{50/255} by @racket[2] for the second shape (since they
-are both drawn on a white background). Then rounds them to integers, which
+are both drawn on a white background). Then it rounds them to integers, which
 results in @racket[0] for both colors, making the images the same.
