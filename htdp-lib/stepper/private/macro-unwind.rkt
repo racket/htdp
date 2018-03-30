@@ -78,7 +78,7 @@
       (#%plain-lambda args1 (#%plain-app (#%plain-app proc p) . args2)) 
       . args3)
      (and (eq? (syntax->datum #'proc) 'extract-if-lazy-proc)
-          (equal? (syntax->datum (cdr (syntax-e #'args1)))
+          (equal? (syntax->datum (datum->syntax #f (cdr (syntax-e #'args1))))
                   (syntax->datum #'args2)))
      (recur-on-pieces #'args3 settings)]
     [(#%plain-app exp ...)
