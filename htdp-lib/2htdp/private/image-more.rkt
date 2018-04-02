@@ -1597,7 +1597,10 @@
 
 (define (freeze/internal x y w h image)
   (cond
-    [(or (zero? w) (zero? h)) image]
+    [(or (zero? w) (zero? h))
+     ;; ensures that we never return an image with an embedded `text` in
+     ;; it which, in turn, guarantees that we can flip the result
+     (rectangle w h 'solid 'black)]
     [else
      (define bm (make-bitmap w h))
      (define bdc (make-object bitmap-dc% bm))
