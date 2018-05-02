@@ -46,7 +46,6 @@
     }
     )
   
-#;
   ("Posn"
     @defproc[(posn) signature]{Signature for posns.})
 
