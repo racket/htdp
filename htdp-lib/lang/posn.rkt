@@ -56,4 +56,4 @@
 ;; name `make-posn':
 (define (make-posn x y) (posn x y))
 
-(define posn-signature (signature (predicate posn?)))
+(define posn-signature (signature posn (predicate posn?)))

@@ -210,6 +210,9 @@
                                 (cond
                                   [(and (not tfe-ids?) (equal? val '())) ''()]
                                   [(equal? val set!-result) '(void)]
+				  [(signature? val)
+				   (or (signature-name val)
+				       '<signature>)]
                                   [else (ph val basic sub)])))]
                            [pretty-print-show-inexactness #t]
                            [pretty-print-exact-as-decimal #t]

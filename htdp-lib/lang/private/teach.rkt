@@ -972,13 +972,11 @@
                              (make-inspector)))
                           
                           #,@(map-with-index (lambda (i name field-name)
-                                               (quasisyntax/loc stx
-                                                 (define #,name
-                                                   (let ([raw (make-struct-field-accessor
+                                               #`(define #,name
+                                                   (make-struct-field-accessor
                                                                raw-generic-access
                                                                #,i
-                                                               '#,field-name)])
-                                                     raw))))
+                                                               '#,field-name)))
                                              getter-names
                                              fields)
                           #,@(map-with-index (lambda (i name field-name)
@@ -994,7 +992,7 @@
                           (define #,predicate-name raw-predicate)
                           (define #,constructor-name raw-constructor)
                           
-                          (define #,signature-name (signature (predicate raw-predicate)))
+                          (define #,signature-name (signature #,signature-name (predicate raw-predicate)))
                           
                           #,(if setters?
                                 (quasisyntax/loc stx
