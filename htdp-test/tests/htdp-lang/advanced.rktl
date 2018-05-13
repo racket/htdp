@@ -444,7 +444,9 @@
   (eval '(set! make-s 12))
   (eval '(set! s-x 12))
   (eval '(set! s? 12))
-  (eval '(set! set-s-x! 12)))
+  (eval '(set! set-s-x! 12))
+  (eval '(define defined-in-interactions 11))
+  (eval '(set! defined-in-interactions 12)))
 
 ;; define-datatype
 

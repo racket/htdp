@@ -494,6 +494,7 @@
   ;; step through a single expanded expression.
   (define (step-through-expression expanded)
     (define annotated (a:annotate expanded break show-lambdas-as-lambdas?))
+    (log-stepper-debug "expression successfully annotated")
     (parameterize (;; I think this parameterization is pointless in the #lang world
                    [test-engine:test-silence #t])
       (eval-syntax annotated)))

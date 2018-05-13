@@ -2,7 +2,9 @@
 
 (require xml/xml
          syntax/readerr
-         racket/gui
+         racket/gui/base
+         racket/class
+         racket/list
          "syntax-property.rkt")
 
 (provide xml-read-special
@@ -108,22 +110,30 @@
               [pos (wrapped-pos xexpr)]
               [line (wrapped-line xexpr)]
               [col (wrapped-col xexpr)]
-              [raw-stxs (list (send snip read-special text line col pos))])
-         (with-syntax ([(stxs ...) raw-stxs])
-           (if (and (is-a? snip scheme-snip<%>)
-                    (send snip get-splice?))
-               (with-syntax ([err (syntax/loc 
-                                      (car (last-pair raw-stxs))
-                                    (error 'scheme-splice-box "expected a list, found: ~e" lst))])
-                 #`,@#,(stepper-syntax-property #`(let ([lst (begin stxs ...)])
-                                                    (if (list? lst)
-                                                        lst
-                                                        err))
-                                                'stepper-xml-hint
-                                                'from-splice-box))
-               #`,#,(stepper-syntax-property #`(begin stxs ...) 
-                                             'stepper-xml-hint
-                                             'from-scheme-box))))]
+              [raw-stx (send snip read-special text line col pos)])
+         (if (and (is-a? snip scheme-snip<%>)
+                  (send snip get-splice?))
+             (datum->syntax
+              #f
+              (list 'unquote-splicing
+                    (stepper-syntax-property
+                     (datum->syntax
+                      #f
+                      `(let ([lst ,raw-stx])
+                         (if (list? lst)
+                             lst
+                             ,(datum->syntax
+                               #f
+                               '(error 'scheme-splice-box
+                                       "expected a list, found: ~e" lst)
+                               raw-stx))))
+                     'stepper-xml-hint
+                     'from-splice-box)))
+             (datum->syntax
+              #f
+              (list 'unquote (stepper-syntax-property (datum->syntax #f (list 'begin raw-stx))
+                                                      'stepper-xml-hint
+                                                      'from-scheme-box)))))]
       [else xexpr])))
 
 ;; eliminate-whitespace-in-list (listof xexpr) -> (listof xexpr)

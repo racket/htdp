@@ -1654,6 +1654,9 @@
   (test (equal? (rotate 0 i1) i2) => #t)
   (test (equal? i1 (rotate 0 i2)) => #t))
 
+;; make sure we can flip frozen text, even if the text is the empty string
+(test (image? (flip-vertical (freeze (text "abc" 24 "black")))) => #t)
+(test (image? (flip-vertical (freeze (text "" 24 "black")))) => #t)
 
 ;; this test case checks for broken behavior in scaled, translated
 ;; bitmaps whereby the translation amount isn't scaled properly so
