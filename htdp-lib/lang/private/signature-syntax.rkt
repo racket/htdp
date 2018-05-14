@@ -13,6 +13,8 @@
          (for-syntax stepper/private/syntax-property)
 	 (for-syntax "firstorder.rkt"))
 
+(module+ test (provide signature?))
+
 (define-for-syntax (phase-lift stx)
   (with-syntax ((?stx stx))
     (with-syntax ((?stx1 (syntax/loc stx #'?stx))) ; attach the occurrence position to the syntax object

@@ -10,13 +10,15 @@
 ;; Check export names:
 ;; based on new docs: 
 (require (submod lang/htdp-intermediate procedures))
+(require (only-in (submod lang/private/signature-syntax test) signature?))
 (for ((s (docs)))
   (for ((rows (cdr s)))
     (for ((r rows))
       (define sy (syntax-e (car r)))
       (define vv (dynamic-require 'lang/htdp-intermediate sy))
       (when (procedure? vv) 
-	(test sy object-name vv)))))
+	(unless (signature? vv)
+	  (test sy object-name vv))))))
 
 ;; based on old docs: 
 #;
