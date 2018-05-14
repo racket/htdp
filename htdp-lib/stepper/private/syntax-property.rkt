@@ -88,10 +88,10 @@
 
 
 ;; commonly used values for stepper-syntax-property:
-(define skipto/cdr `(syntax-e cdr))
-(define skipto/cddr `(syntax-e cdr cdr))
-(define skipto/first `(syntax-e car))
-(define skipto/second `(syntax-e cdr car))
-(define skipto/third `(syntax-e cdr cdr car))
-(define skipto/fourth `(syntax-e cdr cdr cdr car))
+(define skipto/cdr `(cdr))
+(define skipto/cddr `(cdr cdr))
+(define skipto/first `(car))
+(define skipto/second `(cdr car))
+(define skipto/third `(cdr cdr car))
+(define skipto/fourth `(cdr cdr cdr car))
 (define skipto/firstarg (append skipto/cdr skipto/second))

@@ -407,9 +407,9 @@
     (skipto/auto (stepper-syntax-property
                   #`(a #,(stepper-syntax-property #`(b c)
                                                   'stepper-skipto
-                                                  '(syntax-e cdr car)))
+                                                  '(cdr car)))
                   'stepper-skipto
-                  '(syntax-e cdr car))
+                  '(cdr car))
                  #t
                  (lambda (x) x)))
    'c)
