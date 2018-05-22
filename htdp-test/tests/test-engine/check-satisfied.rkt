@@ -17,6 +17,20 @@
           (define (f x) x)
           (define (q? x) x)
           (check-satisfied (f 1 2) q?)
-          (test)))
+          (test)
+          "no failure"))
+      (get-output-string sp))))
+
+(check-regexp-match
+ #rx"no failure"
+ (let ([sp (open-output-string)])
+     (string-append
+      (with-handlers ([exn:fail? exn-message])
+        (parameterize ([current-output-port sp])
+          (define (f x) x)
+          (define (q? x) x)
+          (check-satisfied (f 1 2) q?)
+          (test)
+          "no failure"))
       (get-output-string sp))))
 
