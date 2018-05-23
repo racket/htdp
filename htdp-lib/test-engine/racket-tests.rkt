@@ -17,6 +17,7 @@
          "test-info.scm")
 
 (require (for-syntax stepper/private/syntax-property))
+(require  syntax/macro-testing)
 
 (provide
  check-expect ;; syntax : (check-expect <expression> <expression>)
@@ -75,7 +76,7 @@
 #;
 (_ stx #'check-values-error #`test (list #`error) 'comes-from-check-error)
 
-(define-for-syntax arity-error #px"expects only \\d* argument")
+(define-for-syntax arity-error #px"expects .* argument")
 
 (define-for-syntax (check-expect-maker stx checker-proc-stx test-expr embedded-stxes hint-tag)
   (define bogus-name
@@ -87,18 +88,7 @@
                        (syntax-column stx)
                        (syntax-position stx)
                        (syntax-span stx)))))
-  (define test-expr-checked-for-syntax-error
-    (with-handlers ([exn:fail:syntax? (lambda (e)
-                                        ;; I should check here that it is an arity error
-                                        (define msg (exn-message e))
-                                        (define ae? (regexp-match arity-error msg))
-                                        (cond
-                                          [(not ae?) test-expr]
-                                          [else 
-                                           (define mks (exn-continuation-marks e))
-                                           #`(raise (exn:fail:contract #,msg #,mks))]))])
-      (define foo (local-expand test-expr 'expression '()))
-      test-expr))
+  (define test-expr-checked-for-syntax-error #`(convert-compile-time-error #,test-expr))
   (if (eq? 'module (syntax-local-context))
       #`(define #,bogus-name
           #,(stepper-syntax-property
