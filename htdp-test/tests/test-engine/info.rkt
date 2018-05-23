@@ -6,4 +6,6 @@
                           "check-satisfied4.rkt"
                           "check-satisfied5.rkt"
                           "check-satisfied8.rkt"
-			  "check-satisfied9.rkt"))
+			  "check-satisfied9.rkt"
+			  "check-failed-bsl.rkt"
+			  "check-failed-isl.rkt"))
