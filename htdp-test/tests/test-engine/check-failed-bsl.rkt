@@ -8,4 +8,7 @@
 
 (define (f x) x)
 (check-expect (f 1 2) 3)
+(check-expect (f) 1)
 (check-satisfied (f 1 2) odd?)
+(define (g x y) x)
+(check-expect (g 1 2 3) 4)
