@@ -94,6 +94,7 @@
   (cond
     [(empty? x) true]
     [(string? x) true]
+    [(bytes? x) true]
     [(symbol? x) true]
     [(number? x) true]
     [(boolean? x) true]
