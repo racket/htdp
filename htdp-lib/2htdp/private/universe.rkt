@@ -114,7 +114,10 @@
                     (define n (iworld-name w))
                     (if (memq w iworlds)
                         (with-handlers ((exn:fail? (lambda (e) (kill w "broadcast failed to ~a"))))
-                          (send gui add (format "-> ~a: ~a" n p))
+			  (define p-for-display (format "~a" p))
+			  (if (<= (string-length p-for-display) 100)
+			      (send gui add (format "-> ~a: ~a" n p-for-display))
+			      (send gui add (format "-> ~a: ~a" n (substring p-for-display 0 99))))
                           (iworld-send w p))
                         (send gui add (format "~s not on list" n))))
                   lm))
@@ -124,7 +127,10 @@
         (send gui add (format "~a signed up" (iworld-name iworld))))
       
       (def/cback private (pmsg iworld r) on-msg
-        (send gui add (format "~a ->: ~a" (iworld-name iworld) r)))
+	(let ([r-for-display (format "~a" r)])
+	  (if (<= (string-length r-for-display) 100)
+	      (send gui add (format "~a ->: ~a" (iworld-name iworld) r))
+	      (send gui add (format "~a ->: ~a" (iworld-name iworld) (substring r-for-display 0 99))))))
       
       (def/cback private (pdisconnect iworld) on-disconnect
         (kill iworld "~a !! closed port"))
