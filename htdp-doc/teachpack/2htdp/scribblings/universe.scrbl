@@ -961,8 +961,9 @@ data; to be precise, an S-expression is one of:
  @item{a number,}
  @item{a boolean,}
  @item{a char, or}
- @item{a list of S-expressions, or}
- @item{a prefab struct of S-expressions.}
+ @item{a list of S-expressions,}
+ @item{a prefab struct of S-expressions, or}
+ @item{a byte string.}
 ]
 Note the @racket[list] clause includes @racket[empty] of course.
 
@@ -1243,8 +1244,10 @@ renders its current state as a string.}
 
 Evaluating a @racket[universe] expression starts a server. Visually it opens
  a console window on which you can see that worlds join, which messages are
- received from which world, and which messages are sent to which world. For
- convenience, the console also has two buttons: one for shutting down a
+ received from which world, and which messages are sent to which world. 
+ Messages that are too long are truncated before they are displayed. 
+
+ For convenience, the console also has two buttons: one for shutting down a
  universe and another one for re-starting it. The latter functionality is
  especially useful during the integration of the various pieces of a
  distributed program.
