@@ -76,8 +76,6 @@
 #;
 (_ stx #'check-values-error #`test (list #`error) 'comes-from-check-error)
 
-(define-for-syntax arity-error #px"expects .* argument")
-
 (define-for-syntax (check-expect-maker stx checker-proc-stx test-expr embedded-stxes hint-tag)
   (define bogus-name
     (stepper-syntax-property #`#,(gensym 'test) 'stepper-hide-completed #t))

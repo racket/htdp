@@ -3,13 +3,13 @@
 (define (check-bad form)
   (with-handlers ([exn:fail? (lambda (exn)
                                (define msg (exn-message exn))
-                               (unless (regexp-match #rx"unbound identifier.*y$" msg)
-                                 (raise exn)))])
+                               (define mth (regexp-match #rx"y: unbound identifier" msg))
+                               (unless mth (raise exn)))])
     (expand form)
     (error 'check-bad "failed: ~v" form)))
 
 (define (check-good form)
-  (expand form))
+  (void (expand form)))
 
 (check-bad `(,#'module m racket/base (require lang/prim) (define-primitive x y)))
 (check-bad `(,#'module m racket/base (require lang/prim) (provide-primitive y)))
