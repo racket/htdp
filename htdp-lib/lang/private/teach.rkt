@@ -84,8 +84,9 @@
 (define-for-syntax EXPECTED-MATCH-PATTERN
   "expected a pattern--answer clause after the expression following `match', but nothing's there")
 
+#;
 (define-for-syntax EXPECTED-FUNCTION-NAME
-  "expected a function after the open parenthesis, but found a structure type")
+  "expected a function after the open parenthesis, but found a structure type (do you mean ~a)")
 
 (define-for-syntax EXPECTED-MUTABLE
   "expected a mutable variable after set!, but found a variable that cannot be modified: ~a")
@@ -1119,14 +1120,13 @@
                                                     [(self . args)
                                                      (raise-syntax-error
                                                       #f
-                                                      EXPECTED-FUNCTION-NAME
+                                                      (format EXPECTED-FUNCTION-NAME (format "make-~a" (syntax-e #'name_)))
                                                       stx
                                                       #'self)]
                                                     [else
                                                      (raise-syntax-error
                                                       #f
-                                                      (format "structure type; do you mean make-~a"
-                                                              (syntax-e #'name_))
+                                                      (format "structure type; do you mean make-~a" (syntax-e #'name_))
                                                       stx
                                                       stx)
                                                      #'#,signature-name

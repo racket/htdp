@@ -4,6 +4,7 @@
 
 (provide struct:posn make-posn posn? posn-x posn-y set-posn-x! set-posn-y!
          beginner-posn*
+	 (for-syntax EXPECTED-FUNCTION-NAME)
          (rename-out (posn posn-id))
          (rename-out (posn* posn)))
 
@@ -11,6 +12,9 @@
          (for-syntax #;"requiring from" lang/private/firstorder #;"avoids load cycle")
          ; (rename-in lang/prim (first-order->higher-order f2h))
          (for-syntax racket/base))
+
+(define-for-syntax EXPECTED-FUNCTION-NAME
+  "expected a function after the open parenthesis, but found a structure type (do you mean ~a)")
 
 (define-match-expander posn*
   ;; the match expander 
@@ -27,8 +31,8 @@
       ;; a signature 
       [x (identifier? #'x) #'posn-signature]
       ;; everything else remains a syntax error 
-      [_
-	(raise-syntax-error #f "expected a function after the open parenthesis, but found structure type" stx)])))
+      [(f . x)
+	(raise-syntax-error #f (format EXPECTED-FUNCTION-NAME "make-posn") #'f)])))
 
 (define-match-expander beginner-posn*
   ;; the match expander 
@@ -41,7 +45,8 @@
       ;; a signature 
       [x (identifier? #'x) (raise-syntax-error #f "this variable is not defined" stx)]
       ;; everything else remains a syntax error 
-      [_ (raise-syntax-error #f "this function is not defined" stx)])))
+      [(f . x)
+       (raise-syntax-error #f  (format EXPECTED-FUNCTION-NAME "make-posn") #'f)])))
 
 (struct posn (x y)
   #:mutable
