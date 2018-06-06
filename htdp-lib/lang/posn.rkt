@@ -28,8 +28,7 @@
       [x (identifier? #'x) #'posn-signature]
       ;; everything else remains a syntax error 
       [_
-       (let ([stx* (cons #'posn-signature (cdr (syntax-e stx)))])
-         (datum->syntax stx stx*))])))
+	(raise-syntax-error #f "expected a function after the open parenthesis, but found structure type" stx)])))
 
 (define-match-expander beginner-posn*
   ;; the match expander 

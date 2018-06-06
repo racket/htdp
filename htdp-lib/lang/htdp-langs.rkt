@@ -37,7 +37,9 @@
                   build-test-engine)
          (lib "test-engine/test-display.scm")
          deinprogramm/signature/signature)
-  
+
+(require setup/collects)
+(define *err (current-error-port))
   
   (provide tool@)
   
@@ -868,6 +870,12 @@
           (and (send bitmap ok?)
                (make-object image-snip% bitmap))))
       
+      (define (lang-path? path)
+	(define rel (path->collects-relative path))
+	(and (pair? rel)
+	     (eq? 'collects (car rel))
+	     (equal? #"lang" (cadr rel))))
+
       ;; teaching-languages-error-display-handler : 
       ;;    (string (union TST exn) -> void) -> string exn -> void
       ;; adds in the bug icon, if there are contexts to display
@@ -885,26 +893,28 @@
             (when (and (is-a? rep drscheme:rep:text<%>)
                        (eq? (send rep get-err-port) (current-error-port)))
               (let ([to-highlight 
-                     (cond
-                       [(exn:srclocs? exn) 
-                        ((exn:srclocs-accessor exn) exn)]
-                       [(exn? exn) 
-                        (let ([cms (continuation-mark-set->list 
-                                    (exn-continuation-marks exn)
-                                    teaching-languages-continuation-mark-key)])
-			  (cond
-			   ((not cms) '())
-			   ((findf (lambda (mark)
-				     (and mark
-					  (or (path? (car mark))
-					      (symbol? (car mark)))))
-				   cms)
-			    => (lambda (mark)
-				 (apply (lambda (source line col pos span)
-					  (list (make-srcloc source line col pos span)))
-					mark)))
-			   (else '())))]
-		       [else '()])])
+		      (cond
+			[(exn:srclocs? exn) ((exn:srclocs-accessor exn) exn)]
+			[(exn? exn) 
+			 (let* ([cms (exn-continuation-marks exn)]
+				[cms (continuation-mark-set->list cms teaching-languages-continuation-mark-key)])
+			   (cond
+			    ((not cms) '())
+			    ((findf (lambda (mark)
+				      (and mark
+					(or (and (path? (car mark))
+						 ;; exclude paths that result from macro expansion,
+						 ;; specifically define-record-procedures
+						 ;; see racket/drracket#157
+						 (not (lang-path? (car mark))))
+					    (symbol? (car mark)))))
+				    cms)
+			     => (lambda (mark)
+				  (apply (lambda (source line col pos span)
+					   (list (make-srcloc source line col pos span)))
+				         mark)))
+			    (else '())))]
+			[else '()])])
 
                 (parameterize ([current-eventspace drs-eventspace])
                   (queue-callback
@@ -919,23 +929,19 @@
       ;; teaching-languages-continuation-mark-key are members of the debug-source type
       (define (with-mark source-stx expr phase)
         (let ([source (syntax-source source-stx)]
-              [line (syntax-line source-stx)]
-              [col (syntax-column source-stx)]
-              [start-position (syntax-position source-stx)]
-              [span (syntax-span source-stx)])
+              [line   (syntax-line source-stx)]
+              [col    (syntax-column source-stx)]
+              [alpha  (syntax-position source-stx)]
+              [span   (syntax-span source-stx)])
           (if (and (or (symbol? source) (path? source))
-                   (number? start-position)
+		   (number? alpha)
                    (number? span))
-              (with-syntax ([expr expr]
-                            [mark (list source line col start-position span)]
-                            [teaching-languages-continuation-mark-key 
-                             teaching-languages-continuation-mark-key]
-                            [wcm (syntax-shift-phase-level #'with-continuation-mark 
-                                                           (- phase base-phase))]
-                            [quot (syntax-shift-phase-level #'quote (- phase base-phase))])
-                #`(wcm (quot teaching-languages-continuation-mark-key)
-                    (quot mark)
-                    expr))
+              (with-syntax ([expr  expr]
+                            [mark  (list source line col alpha span)]
+                            [tlcmk teaching-languages-continuation-mark-key]
+                            [wcm   (syntax-shift-phase-level #'with-continuation-mark (- phase base-phase))] 
+			    [quot  (syntax-shift-phase-level #'quote (- phase base-phase))])
+                #`(wcm (quot tlcmk) (quot mark) expr))
               expr)))
 
       (define base-phase

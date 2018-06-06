@@ -85,7 +85,7 @@
   "expected a pattern--answer clause after the expression following `match', but nothing's there")
 
 (define-for-syntax EXPECTED-FUNCTION-NAME
-  "expected a function after the open parenthesis, but found a structure name")
+  "expected a function after the open parenthesis, but found a structure type")
 
 (define-for-syntax EXPECTED-MUTABLE
   "expected a mutable variable after set!, but found a variable that cannot be modified: ~a")
@@ -897,7 +897,7 @@
                               [(getter-id ...)     getter-names])
                   (define defns
                     (quasisyntax/loc stx
-                      (define-values (#,parametric-signature-name def-proc-name ...)
+                      (define-values (#,signature-name #,parametric-signature-name def-proc-name ...)
                         (let ()
                           (define-values (type-descriptor
                                           raw-constructor
@@ -991,7 +991,7 @@
                                              fields)
                           (define #,predicate-name raw-predicate)
                           (define #,constructor-name raw-constructor)
-                          
+			  
                           (define #,signature-name (signature #,signature-name (predicate raw-predicate)))
                           
                           #,(if setters?
@@ -1020,7 +1020,7 @@
                                                   arbs))))
                                       sig))))
                           
-                          (values #;#,signature-name #,parametric-signature-name proc-name ...)))))
+                          (values #,signature-name #,parametric-signature-name proc-name ...)))))
                   ;; --- IN ---
                   (stepper-syntax-property defns 'stepper-black-box-expr stx)))))
            ;; --------------------------------------------------------------------------------
@@ -1129,7 +1129,7 @@
                                                               (syntax-e #'name_))
                                                       stx
                                                       stx)
-                                                     #;#'#,signature-name
+                                                     #'#,signature-name
                                                      ])))
                           ;; support `shared'
                           (make-info (lambda () compile-info)))))
