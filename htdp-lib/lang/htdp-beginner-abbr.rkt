@@ -17,6 +17,7 @@
           [beginner-define define]
           [beginner-define-struct define-struct]
           [beginner-lambda lambda]
+          [beginner-lambda λ]
           [beginner-app #%app]
           [beginner-top #%top]
           [beginner-cond cond]

@@ -1,8 +1,10 @@
 ------------------------------------------------------------------------
-Version 6.99				  [Wed May 23 17:35:03 EDT 2018]
+Version 6.99				  [Sun Jun 10 19:30:08 EDT 2018]
 
 * errors from tested expression no longer abort unit testing 
   (errors in expected expressions still do)
+* fixed error message and highlighting for struct creation and access
+* added uni-code lambda to BSL, BSL+, and ISL+
 
 ------------------------------------------------------------------------
 Version 6.12				  [Fri Nov  3 13:09:49 EDT 2017]
