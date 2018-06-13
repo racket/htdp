@@ -9,7 +9,7 @@
          "pad.rkt"
          (only-in 2htdp/image scale overlay/align rotate empty-image)
          htdp/error
-         mzlib/runtime-path
+         mrlib/include-bitmap
          mrlib/bitmap-label
          (only-in mrlib/image-core definitely-same-image?)
          string-constants
@@ -484,12 +484,12 @@
 ; (define make-new-world (new-world world%))
 
 ;; -----------------------------------------------------------------------------
-(define-runtime-path break-btn:path '(lib "icons/break.png"))
+(define break-btn:bmap (include-bitmap (lib "icons/break.png")))
 (define break-button:label 
-  ((bitmap-label-maker (string-constant break-button-label) break-btn:path) '_))
+  ((bitmap-label-maker (string-constant break-button-label) break-btn:bmap) '_))
 
-(define-runtime-path image-button:path '(lib "icons/file.gif"))
-(define image-button:label ((bitmap-label-maker "Images" image-button:path) '_))
+(define image-button:bmap (include-bitmap (lib "icons/file.gif")))
+(define image-button:label ((bitmap-label-maker "Images" image-button:bmap) '_))
 
 (define aworld%
   (class world% 
