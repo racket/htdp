@@ -2,7 +2,7 @@
 
 ;; provide basic elements for game pad clause in big-bang: the icon, pad-event?
 
-(require racket/runtime-path)
+(require mrlib/include-bitmap)
 
 (provide
   ;; bitmap
@@ -17,8 +17,7 @@
 
 ;; ---------------------------------------------------------------------------------------------------
 
-(define-runtime-path gamepad-path "gamepad.png")
-(define game-pad (read-bitmap gamepad-path 'png/alpha #f #t))
+(define game-pad (include-bitmap "gamepad.png" 'png/alpha))
 (unless (send game-pad ok?)
   (error 'big-bang "the game pad icon isn't available; please report error"))
 
