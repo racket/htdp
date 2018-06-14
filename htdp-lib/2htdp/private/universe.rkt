@@ -69,12 +69,12 @@
       
       (field 
        [universe 
-        (new checked-cell%
-	     [value0 universe0]
-	     [ok? check-with] 
-             [display (if (string? state) 
-                          (and (not (string=? "OliverFlatt" state)) state)
-                          (and state "your server's state"))])])
+         (new checked-cell%
+              [value0 universe0]
+              [ok? check-with] 
+              [display (if (string? state) 
+                           (and (not (string=? "OliverFlatt" state)) state)
+                           (and state "your server's state"))])])
  
       ;; -----------------------------------------------------------------------
       ;; dealing with events
@@ -90,7 +90,7 @@
             (define (handler e) (stop! e))
             (with-handlers ([exn? handler])
               (define ___  (begin 'dummy body ...))
-	      (define n (if (object-name name) (object-name name) name))
+              (define n (if (object-name name) (object-name name) name))
               (define nxt (name (send universe get) a ...))
               (cond
                 [(stop-the-world? nxt) (stop! (stop-the-world-world nxt))]
@@ -114,10 +114,10 @@
                     (define n (iworld-name w))
                     (if (memq w iworlds)
                         (with-handlers ((exn:fail? (lambda (e) (kill w "broadcast failed to ~a"))))
-			  (define p-for-display (format "~a" p))
-			  (if (<= (string-length p-for-display) 100)
-			      (send gui add (format "-> ~a: ~a" n p-for-display))
-			      (send gui add (format "-> ~a: ~a" n (substring p-for-display 0 99))))
+                          (define p-for-display (format "~a" p))
+                          (if (<= (string-length p-for-display) 100)
+                              (send gui add (format "-> ~a: ~a" n p-for-display))
+                              (send gui add (format "-> ~a: ~a" n (substring p-for-display 0 99))))
                           (iworld-send w p))
                         (send gui add (format "~s not on list" n))))
                   lm))
@@ -127,10 +127,10 @@
         (send gui add (format "~a signed up" (iworld-name iworld))))
       
       (def/cback private (pmsg iworld r) on-msg
-	(let ([r-for-display (format "~a" r)])
-	  (if (<= (string-length r-for-display) 100)
-	      (send gui add (format "~a ->: ~a" (iworld-name iworld) r))
-	      (send gui add (format "~a ->: ~a" (iworld-name iworld) (substring r-for-display 0 99))))))
+        (let ([r-for-display (format "~a" r)])
+          (if (<= (string-length r-for-display) 100)
+              (send gui add (format "~a ->: ~a" (iworld-name iworld) r))
+              (send gui add (format "~a ->: ~a" (iworld-name iworld) (substring r-for-display 0 99))))))
       
       (def/cback private (pdisconnect iworld) on-disconnect
         (kill iworld "~a !! closed port"))
@@ -155,11 +155,11 @@
       
       (field [iworlds   '()] ;; [Listof World]
              [gui
-	       (if (and (string? state) (string=? "OliverFlatt" state))
-		   (new dummy-gui%)
-		   (new gui%
-		     [stop-server (lambda () (stop! (send universe get)))] 
-		     [stop-and-restart (lambda () (restart))]))]
+              (if (and (string? state) (string=? "OliverFlatt" state))
+                  (new dummy-gui%)
+                  (new gui%
+                       [stop-server (lambda () (stop! (send universe get)))] 
+                       [stop-and-restart (lambda () (restart))]))]
              [dr:custodian  (current-custodian)]
              [the-custodian (make-custodian)])
       
@@ -198,17 +198,18 @@
       (define/private (restart)
         ;; I am running in a custodian that is about to be killed, 
         ;; so let's switch to one up in the hierarchy
-        (let ([old-t (current-thread)]
-              [go (make-semaphore)])
-          (parameterize ([current-custodian dr:custodian])
-            (thread (lambda ()
-                      (sync old-t go)
-                      (start!))))
-          (send gui add "stopping the universe")
-          (send gui add "----------------------------------")
-          (for-each iworld-close iworlds)
-          (custodian-shutdown-all the-custodian)
-          (semaphore-post go)))
+        [define old-thread (current-thread)]
+        [define all-done?  (make-semaphore)]
+        (parameterize ([current-custodian dr:custodian])
+          (thread
+           (lambda ()
+             (sync old-thread all-done?)
+             (start!))))
+        (send gui add "stopping the universe")
+        (send gui add "----------------------------------")
+        (for-each iworld-close iworlds)
+        (custodian-shutdown-all the-custodian)
+        (semaphore-post all-done?))
       
       (define/public (stop! msg) 
         (send gui show #f)
@@ -240,25 +241,25 @@
 (define-struct iworld (in out name info) #; #:transparent)
 ;; World = (make-iworld IPort OPort Symbol [Listof Sexp])
 
+(define (iworld=? u v)
+  (check-arg 'iworld=? (iworld? u) 'iworld "first" u)
+  (check-arg 'iworld=? (iworld? v) 'iworld "second" v)
+  (eq? u v))
+
 (define (iw* n) (make-iworld (current-input-port) (current-output-port) n '()))
 (define iworld1 (iw* "iworld1"))
 (define iworld2 (iw* "iworld2"))
 (define iworld3 (iw* "iworld3"))
 
-(define (iworld=? u v)
-  (check-arg 'iworld=? (iworld? u) 'iworld "first" u)
-  (check-arg 'iworld=? (iworld? v) 'iworld "second" v)
-  (eq? u v))
+;; IPort OPort Sexp -> IWorld 
+(define (create-iworld i o info)
+  (make-iworld i o info "info field not available"))
 
 ;; IWorld -> Void
 (define (iworld-close p)
   (with-handlers ([exn:fail? void])
     (close-output-port (iworld-out p))
     (close-input-port (iworld-in p))))
-
-;; IPort OPort Sexp -> IWorld 
-(define (create-iworld i o info)
-  (make-iworld i o info "info field not available"))
 
 ;; Player S-exp -> Void
 (define (iworld-send p sexp)
