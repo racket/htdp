@@ -10,6 +10,7 @@
 
 (define (uni)
   (universe '()
+    [on-tick values 1 3]
     [on-new (lambda (worlds w) (make-bundle (cons w worlds) (list (make-mail w long)) '()))]
     [on-msg (lambda (worlds from msg) (make-bundle worlds '() '()))]))
 

@@ -57,3 +57,4 @@ run pad1-in-bsl.rkt
 run error-messages.rkt
 run two-ports.rkt
 run web-io-automatic.rkt
+run world-dies-while-receiving.rkt
