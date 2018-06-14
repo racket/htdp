@@ -252,8 +252,9 @@
 
 ;; IWorld -> Void
 (define (iworld-close p)
-  (close-output-port (iworld-out p))
-  (close-input-port (iworld-in p)))
+  (with-handlers ([exn:fail? void])
+    (close-output-port (iworld-out p))
+    (close-input-port (iworld-in p))))
 
 ;; IPort OPort Sexp -> IWorld 
 (define (create-iworld i o info)
