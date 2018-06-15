@@ -13,6 +13,7 @@
     "on-release-no-key.rkt"
     "pad1.rkt"
     "universe-receive.rkt"
+    "world-dies-while-receiving.rkt"
     "batch-io-xexpr.rkt"
     "stop-when-bad-draw.rkt"
     "close-on-stop.rkt"))
