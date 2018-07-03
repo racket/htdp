@@ -687,7 +687,7 @@
  @interaction[#:eval (bsl) (char>? #\A #\z #\a)]
 }
   @defproc[(char<=? [c char][d char][e char] ...) boolean?]{
- Determines whether the characters are ordered in a strictly increasing manner.
+ Determines whether the characters are ordered in an increasing manner.
  @interaction[#:eval (bsl) (char<=? #\a #\a #\b)]
 }
   @defproc[(char>=? [c char][d char][e char] ...) boolean?]{
