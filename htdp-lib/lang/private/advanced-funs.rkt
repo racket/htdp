@@ -69,7 +69,7 @@
     Opens the named input file @racket[f] and allows @racket[p] to read from it.
     } 
     @defproc[(with-output-to-file [f string] [p (-> any)]) any]{
-    Opens the named input file @racket[f] and allows @racket[p] to write to it.
+    Opens the named output file @racket[f] and allows @racket[p] to write to it.
     } 
     @defproc[(with-input-from-string [s string] [p (-> any)]) any]{
     Turns @racket[s] into input for @racket[read] operations in @racket[p].
@@ -296,26 +296,26 @@
     } 
     @defproc[(hash-ref  [h (hash X Y)] [k X]) Y]{
     Extracts the value associated with a key from a hash table; the three
-    ; argument case allows a default value or default value computation.
+    argument case allows a default value or default value computation.
     @interaction[#:eval (asl) hsh (hash-ref hsh 'b)]
     } 
     @defproc[(hash-ref! [h (hash X Y)] [k X] [v Y]) Y]{
     Extracts the value associated with a key from a mutable hash table; if
-    ; the key does not have an mapping, the third argument is used as the
-    ; value (or used to compute the value) and is added to the hash table
-    ; associated with the key.
+    the key does not have an mapping, the third argument is used as the
+    value (or used to compute the value) and is added to the hash table
+    associated with the key.
     @interaction[#:eval (asl) hsh (hash-ref! hsh 'd 99) hsh]
     } 
     @defproc[(hash-update! [h (hash X Y)] [k X] [f (Y -> Y)]) void?]{
     Composes hash-ref and hash-set! to update an existing mapping; the
-    ; third argument is used to compute the new mapping value; the fourth
-    ; argument is used as the third argument to hash-ref.
+    third argument is used to compute the new mapping value; the fourth
+    argument is used as the third argument to hash-ref.
     @interaction[#:eval (asl) hsh (hash-update! hsh 'b (lambda (old-b) (+ old-b 1))) hsh]    
     } 
     @defproc[(hash-update  [h (hash X Y)] [k X] [f (Y -> Y)]) (hash X Y)]{
     Composes hash-ref and hash-set to update an existing mapping; the third
-    ; argument is used to compute the new mapping value; the fourth
-    ; argument is used as the third argument to hash-ref.
+    argument is used to compute the new mapping value; the fourth
+    argument is used as the third argument to hash-ref.
     @interaction[#:eval (asl) (hash-update ish 'b (lambda (old-b) (+ old-b 1)))]        
     } 
     @defproc[(hash-has-key? [h (hash X Y)] [x X]) boolean]{
