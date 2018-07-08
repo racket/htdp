@@ -501,7 +501,7 @@ different colors. This section explains how that happens.
 
 To start, consider the color @racket[(make-color 1 1 1 50)].
 This color is nearly the darkest shade of black, but with lots of transparency,
-to it renders a light gray color on a white background, e.g.:
+so it renders a light gray color on a white background, e.g.:
 @image-interaction[(rectangle 100 100 "solid" (make-color 1 1 1 50))]
 If the background had been green, the same rectangle would look like a darker shade of green:
 @image-interaction[(overlay
