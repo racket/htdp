@@ -41,7 +41,12 @@
          (lib "test-engine/test-display.scm")
          deinprogramm/signature/signature)
 
-(require setup/collects)
+(require setup/collects
+         setup/getinfo)
+
+(define HTDP-TEACHPACK-MODULE-KEY '2htdp:teachpack-modules)
+(define HTDP-TEACHPACK-INFO-KEYS
+  (list HTDP-TEACHPACK-MODULE-KEY))
 
 (define o (current-output-port))
 (define (oprintf . args) (apply fprintf o args))
@@ -591,6 +596,23 @@
                      [else
                       ans]))]))))
 
+        ;; obtain the list of modules that requested to be
+        ;; searchable for HtDP
+        (define extra-teachpack-modules
+          (let ()
+            (define pkgs (find-relevant-directories HTDP-TEACHPACK-INFO-KEYS))
+            (define infos
+              (for/list ([pkg (in-list pkgs)])
+                (with-handlers ([exn:fail? (λ (e) #f)])
+                  (get-info/full pkg))))
+            (define modules
+              (for*/list ([info (in-list infos)]
+                          #:when (and info
+                                      (list? (info HTDP-TEACHPACK-MODULE-KEY)))
+                          [module-name (in-list (info HTDP-TEACHPACK-MODULE-KEY))])
+                module-name))
+            modules))
+
 
         (define keywords #f)
         (define/augment (capability-value key)
@@ -608,7 +630,12 @@
                     [m (and m (regexp-match #rx"^(lang/[^/.]+).ss$" m))]
                     [m (and m (cadr m))])
                (if m
-                   (format "O:{ L:~a T:teachpack T:picturing-programs }" m)
+                   (format "O:{ L:~a T:teachpack T:picturing-programs ~a }"
+                           m
+                           (string-join
+                            (for/list ([extra-module (in-list extra-teachpack-modules)])
+                              (format "M:~a" extra-module))
+                            " "))
                    (error 'drscheme:help-context-term
                           "internal error: unexpected module spec")))]
             [(tests:test-menu tests:dock-menu) #t]

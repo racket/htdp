@@ -332,9 +332,9 @@ Our analysis and data definition leaves us with three functions to design:
 
 @itemize[
 
-@item{@racket[automatic-closer], which closes the time during one tick;}
+@item{@racket[automatic-closer], which closes the door during one tick;}
 
-@item{@racket[door-actions], which manipulates the time in response to
+@item{@racket[door-actions], which manipulates the door in response to
 pressing a key; and}
 
 @item{@racket[render], which translates the current state of the door into

@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 7.0:
+
+Bug fixes, refactoring.
+
 Changes for 6.12:
 
 None.

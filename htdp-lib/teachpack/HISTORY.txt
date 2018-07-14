@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------
-Version 6.99				  [Sun Jun 10 19:30:08 EDT 2018]
+Version 7.0				  [Fri Jun 29 13:21:58 EDT 2018]
 
 * errors from tested expression no longer abort unit testing 
   (errors in expected expressions still do)
