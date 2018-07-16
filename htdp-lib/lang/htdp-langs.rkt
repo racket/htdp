@@ -269,7 +269,7 @@
                 (let*-values ([(value) (if (not (bytes? value))
                                            value
                                            (if (< (bytes-length value) 100)
-                                               bytes
+                                               values
                                                (bytes-append (subbytes value 0 99) #"...")))]
                               [(converted-value write?)
                                (call-with-values
