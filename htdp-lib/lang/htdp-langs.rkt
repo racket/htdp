@@ -221,6 +221,10 @@
                                 [(signature? val)
                                  (or (signature-name val)
                                      '<signature>)]
+				[(bytes? val)
+				 (if (< (bytes-length val) 100)
+				     val
+				     (bytes-append (subbytes val 0 99) #"... truncated"))]
                                 [else (ph val basic sub)])))]
                          [pretty-print-show-inexactness #t]
                          [pretty-print-exact-as-decimal #t]
@@ -266,12 +270,7 @@
              (set-printing-parameters
               settings
               (λ ()
-                (let*-values ([(value) (if (not (bytes? value))
-                                           value
-                                           (if (< (bytes-length value) 100)
-                                               value
-                                               (bytes-append (subbytes value 0 99) #"...")))]
-                              [(converted-value write?)
+                (let*-values ([(converted-value write?)
                                (call-with-values
                                 (lambda ()
                                   (drscheme:language:simple-module-based-language-convert-value
