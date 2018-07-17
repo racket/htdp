@@ -351,7 +351,11 @@
       (send canvas set-editor e)
       (send e reset-width canvas)
       ;; why set the position within the step? I'm confused by this.--JBC
-      (send e set-position (send e last-position))
+      ;;
+      ;; gfb responding: this didn't. The editor has three large snips on one line,
+      ;; so setting the position to the end set it to the top end of that one line.
+      #;(send e set-position (send e last-position))
+
       (send e end-edit-sequence))
     (update-status-bar))
   
