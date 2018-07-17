@@ -350,8 +350,6 @@
       (send e begin-edit-sequence)
       (send canvas set-editor e)
       (send e reset-width canvas)
-      ;; why set the position within the step? I'm confused by this.--JBC
-      (send e set-position (send e last-position))
       (send e end-edit-sequence))
     (update-status-bar))
   
