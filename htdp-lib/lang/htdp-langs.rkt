@@ -216,6 +216,10 @@
                                 [(signature? val)
                                  (or (signature-name val)
                                      '<signature>)]
+                               [(bytes? val)
+                                (if (< (bytes-length val) 100)
+                                    val
+                                    (bytes-append (subbytes val 0 99) #"... truncated"))]
                                 [else (ph val basic sub)])))]
                          [pretty-print-show-inexactness #t]
                          [pretty-print-exact-as-decimal #t]
