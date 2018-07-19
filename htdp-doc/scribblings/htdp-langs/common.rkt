@@ -4,6 +4,7 @@
   grammar
   i1-2-expl
   i2-3-expl
+  pre-defined-fun
   dots
   i1-2
   i2-3
@@ -32,3 +33,8 @@
 (define i2-3-expl
   @list{See @link[i2-3]{How to Design Programs/2e, Intermezzo 2} for an explanation
   of quoted lists.})
+
+(define pre-defined-fun
+  @list{The remaining subsections list those functions that are built into the
+  programming language. All other functions are imported from a teachpack or
+  must be defined in the program. })

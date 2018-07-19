@@ -9,9 +9,7 @@
 
 @declare-exporting[lang/htdp-intermediate]
 
-The grammar notation uses the notation @racket[X #, @dots] (bold dots) to indicate that
-@racket[X] may occur an arbitrary number of times (zero, one, or more). The 
-grammar also provides @racket[...] as an identifier to be used in templates. 
+@grammar
 
 @racketgrammar*+qq[
 #:literals (define define-struct lambda cond else if and or require lib planet
@@ -106,9 +104,7 @@ did in the @secref["beginner-abbr"] level.
 
 @section[#:tag "intermediate-pre-defined" ]{Pre-defined Functions}
 
-The remaining subsections list those functions that are built into the
-programming language. All other functions are imported from a teachpack or
-must be defined in the program. 
+@pre-defined-fun
 
 @(require (submod lang/htdp-intermediate procedures))
 @(render-sections (docs) #'here "htdp-intermediate")
