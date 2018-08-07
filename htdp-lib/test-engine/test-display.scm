@@ -294,10 +294,15 @@
                         (satisfied-failed-actual fail)
                         (satisfied-failed-name fail))]
           [(outofrange? fail)
-           (the-printer (string-constant test-engine-actual-value-not-within-error)
-                        (outofrange-test fail)
-                        (outofrange-range fail)
-                        (outofrange-actual fail))]
+           (if (string-constant-in-current-language? test-engine-actual-value-not-within-error)
+               (the-printer (string-constant test-engine-actual-value-not-within-error)
+                            (outofrange-test fail)
+                            (outofrange-range fail)
+                            (outofrange-actual fail))
+               (the-printer (string-constant test-engine-actual-value-not-within-error/alt-order)
+                            (outofrange-test fail)
+                            (outofrange-actual fail)
+                            (outofrange-range fail)))]
           [(incorrect-error? fail)
            (the-printer (string-constant test-engine-encountered-error-error)
                         (incorrect-error-expected fail)
