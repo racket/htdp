@@ -1,6 +1,6 @@
 #lang racket
 (require test-engine/racket-tests
-         rackunit)
+         (except-in rackunit check-within))
 
 ;; this test case grabs all the output
 ;; just to check that the right kind of

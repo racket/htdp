@@ -31,7 +31,7 @@
     "pict-lib"))
 (define build-deps '("racket-index"
                      "at-exp-lib"
-                     "rackunit-lib"))
+                     ["rackunit-lib" #:version "1.10"]))
 
 (define pkg-desc "implementation (no documentation) part of \"htdp\"")
 
