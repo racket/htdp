@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 7.1:
+
+Stepper no longer scrolls up to the top every time when stepping forward.
+
 Changes for 7.0:
 
 Bug fixes, refactoring.
