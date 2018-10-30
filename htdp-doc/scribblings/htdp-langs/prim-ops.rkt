@@ -400,22 +400,28 @@ Here is a simple example of where @racket[check-random] is useful:
 @;%
 Note how @racket[random] is called on the same numbers in the same order in
  both parts of @racket[check-random]. If the two parts call @racket[random]
-  for different intervals, they are likely to fail: 
+ for different intervals, they are likely to fail: 
 @;%
 @(begin
 #reader scribble/comment-reader
 (racketblock
-;; String -> @italic{Player}
+;; String -> Player
 
 (check-random (create-randomly-placed-player "David Van Horn")
 	      (make-player "David Van Horn" (random WIDTH) (random HEIGHT)))
 
 (define (create-randomly-placed-player name)
-  (local ((define h (random HEIGHT))
-          (define w (random WIDTH)))
-    (make-player name w h)))
+  (a-helper-function name (random HEIGHT)))
+
+;; Striing Number -> Player
+(define (a-helper-function name height)
+   (make-player name (random WIDTH) height))
 ))
 @;%
+Because the argument to  @racket[a-helper-function] is evaluated first,
+@racket[random] is first called for the interval @math{[0,HEIGHT)} and then
+for @math{[0,WIDTH)}, that is, in a different order than in the preceding
+@racket[check-random]. 
 
 It is an error for @racket[expr] or @racket[expected-expr] to produce a function
 value or an inexact number; see note on @racket[check-expect] for details.
@@ -662,16 +668,17 @@ functions that compute inexact numbers:
 @(begin
 #reader scribble/comment-reader
 (racketblock
+(define EPSILON .001)
+
 ;; [Real -> Real] Real -> Real 
 ;; what is the slope of @racket[f] at @racket[x]?
 (define (differentiate f x)
-  (local ((define epsilon .001)
-          (define left (- x epsilon))
-          (define right (+ x epsilon))
-          (define slope 
-            (/ (- (f right) (f left))
-               2 epsilon)))
-    slope))
+  (slope f (- x EPSILON) (+ x EPSILON)))
+
+;; [Real -> Real] Real Real -> Real 
+(define (slope-of f left right)
+  (/ (- (f right) (f left))
+     2 EPSILON))
 
 (check-range (differentiate sin 0) 0.99 1.00)
 ))
