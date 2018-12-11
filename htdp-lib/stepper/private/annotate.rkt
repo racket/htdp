@@ -83,8 +83,14 @@
 ;; lambdas are to be displayed as lambdas, return an annotated expression.
 (define (annotate main-exp break show-lambdas-as-lambdas?)
   
+  ;; check for identifiers ending in underscore numbers
+  ;; invariant: the user's program is all wrapped in a single module.
+  (define max-underscore (program-max-underscore main-exp))
+  (define starting-index (cond [max-underscore (add1 max-underscore)]
+                               [else 0]))
+  
   (define binding-indexer
-    (let ([binding-index 0])
+    (let ([binding-index starting-index])
       (lambda ()
         (let ([temp binding-index])
           (set! binding-index (+ binding-index 1))
@@ -1344,3 +1350,45 @@
 ;; does this stx have the 'stepper-skip-completely property?
 (define (to-be-skipped? stx)
   (stepper-syntax-property stx 'stepper-skip-completely))
+
+;; given a syntax object, return the largest number that appears as part of
+;; an identifier of the form .*_[0-9]+
+;; yes, this will pick up user symbols as well, but who cares?
+(define (program-max-underscore stx)
+  (match stx
+    [(? symbol? s) (match (symbol->string s)
+                   ;; 0 is a special case because in other situations leading
+                   ;; 0's disqualify the id from counting against the max
+                   [(regexp #px"_0$") 0]
+                   [(regexp #px"_([1-9][0-9]*)$" (list _ n)) (string->number n)]
+                   [else #f])]
+    [(cons f r) (maybe-max (program-max-underscore f)
+                           (program-max-underscore r))]
+    [(? syntax? so) (program-max-underscore (syntax-e so))]
+    [other #f]))
+
+;; return the maximum of two numbers-or-false. 
+(define (maybe-max a b)
+  (cond [(and a (not (real? a)))
+         (raise-argument-error 'maybe-max "real or false"
+                               0 a b)]
+        [(and b (not (real? b)))
+         (raise-argument-error 'maybe-max "real or false"
+                               1 a b)]
+        [(not a) b]
+        [(not b) a]
+        [else (max a b)]))
+
+(module+ test
+  (require rackunit)
+
+  (check-equal? (maybe-max #f #f) #f)
+  (check-equal? (maybe-max #f 3) 3)
+  (check-equal? (maybe-max 3 #f) 3)
+
+  (check-equal? (program-max-underscore #'(+ 3 4)) #f)
+  (check-equal? (program-max-underscore #'(define x_0 4)) 0)
+  ;; surprising but not a problem:
+  (check-equal? (program-max-underscore #'(define x_0 'aoe_4)) 4)
+  (check-equal? (program-max-underscore #'(define x_00 'aoe_04)) #f)
+  )

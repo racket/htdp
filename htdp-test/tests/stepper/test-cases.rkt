@@ -972,6 +972,20 @@
                         (,@defs4 (hilite 4)))
           (finished-stepping))))
 
+  (t1 'capture-avoiding-renaming
+      m:intermediate/both
+      "(define x_0 4) (local ((define x 5)) x) x_0"
+      (let ()
+        (define def1 '(define x_0 4))
+        `((before-after (,def1 (hilite (local ((define x 5)) x)))
+                        (,def1 (hilite (define x_1 5)) (hilite x_1)))
+          (before-after (,def1 (define x_1 5) (hilite x_1))
+                        (,def1 (define x_1 5) (hilite 5)))
+          (before-after (,def1 (define x_1 5) 5 (hilite x_0))
+                        (,def1 (define x_1 5) 5 (hilite 4)))
+          (finished-stepping))))
+  
+
   ;;;;;;;;;;;;;
   ;;
   ;;  Reduction of Lambda in int/lambda
