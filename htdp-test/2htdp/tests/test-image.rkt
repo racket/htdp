@@ -335,6 +335,10 @@
 (test (rectangle 10 10 'solid "r e d")
       =>
       (rectangle 10 10 'solid "RE    D"))
+;; make sure extra color names are there and normalized
+(test (rectangle 10 10 'solid "mediumyellow")
+      =>
+      (rectangle 10 10 'solid "MEDIUMYELLOW"))
 
 (test (overlay (rectangle 10 10 'solid "blue")
                (rectangle 10 10 'solid "transparent"))
