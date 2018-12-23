@@ -328,6 +328,13 @@
 (test (rectangle 10 10 'solid (make-color 0 0 0))
       =>
       (rectangle 10 10 'solid 'black))
+;; make sure color names are normalized
+(test (rectangle 10 10 'solid "red")
+      =>
+      (rectangle 10 10 'solid "RED"))
+(test (rectangle 10 10 'solid "r e d")
+      =>
+      (rectangle 10 10 'solid "RE    D"))
 
 (test (overlay (rectangle 10 10 'solid "blue")
                (rectangle 10 10 'solid "transparent"))
@@ -341,6 +348,11 @@
 
 (test (overlay (rectangle 10 10 'solid "blue")
                (rectangle 10 10 'solid "transparent"))
+      =>
+      (rectangle 10 10 'solid "blue"))
+
+(test (overlay (rectangle 10 10 'solid "blue")
+               (rectangle 10 10 'solid "TRANSPARENT"))
       =>
       (rectangle 10 10 'solid "blue"))
 
@@ -2441,6 +2453,10 @@
           #rx"^rectangle: expects an image-color")
 
 (test/exn (rectangle 10 10 'solid (make-pen "black" 12 "solid" "round" "round"))
+          =>
+          #rx"^rectangle: expects an image-color")
+
+(test/exn (rectangle 10 10 "solid" "blaaaack")
           =>
           #rx"^rectangle: expects an image-color")
 

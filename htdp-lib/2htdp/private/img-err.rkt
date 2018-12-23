@@ -197,7 +197,8 @@
      (check-arg fn-name (image-color? arg) 'image-color i arg)
      (cond
        [(color? arg) arg]
-       [else (convert-symbol-or-string-to-color-string arg)])]
+       [(string? arg) arg]
+       [(symbol? arg) (symbol->string arg)])]
     [(color)
      (check-arg fn-name (or (image-color? arg) (pen? arg)) 'image-color-or-pen i arg)
      ;; return either a string, color, or a pen,
@@ -210,7 +211,8 @@
      (cond
        [(color? arg) arg]
        [(pen? arg) arg]
-       [else (convert-symbol-or-string-to-color-string arg)])]
+       [(symbol? arg) (symbol->string arg)]
+       [(string? arg) arg])]
     [(color-list)
      (check-arg fn-name (and (list? arg) (andmap image-color? arg)) 'color-list i arg)
      arg]
@@ -322,16 +324,6 @@
             fn-name
             argname)]))
 
-(define (convert-symbol-or-string-to-color-string arg)
-  (define color-str
-    (if (symbol? arg)
-        (symbol->string arg)
-        arg))
-  (cond
-    [(equal? color-str "transparent") "transparent"]
-    [(send the-color-database find-color color-str) color-str]
-    [else "black"]))
-
 (define (y-place? arg)
   (and (member arg '("top" top "bottom" bottom "middle" middle "center" center 
                            "baseline" baseline "pinhole" pinhole))
@@ -350,7 +342,15 @@
 (define (step-count? i)
   (and (integer? i)
        (1 . <= .  i)))
-(define (image-color? c) (or (symbol? c) (string? c) (color? c)))
+(define (image-color? c)
+  (cond
+    [(color? c) #t]
+    [(symbol? c)
+     (and (string->color-object/f (symbol->string c)) #t)]
+    [(string? c)
+     (and (string->color-object/f c) #t)]
+    [else #f]))
+
 (define (pen-style? arg) 
   (and (member (if (string? arg) (string->symbol arg) arg)
                '(solid dot long-dash short-dash dot-dash))
