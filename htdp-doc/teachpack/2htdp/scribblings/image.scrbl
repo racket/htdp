@@ -7,11 +7,16 @@
                      lang/posn
                      (except-in racket/gui/base make-color make-pen)
                      (only-in racket/base path-string?))
+          (only-in scribblings/draw/common colorName)
           lang/posn
           "shared.rkt"
           teachpack/2htdp/scribblings/img-eval
           scribble/decode
-          scribble/manual)
+          scribble/manual
+          racket/class
+          racket/set
+          racket/draw
+          (only-in mrlib/image-core extra-colors))
 
 @(require scribble/eval)
 
@@ -1702,6 +1707,72 @@ This section lists predicates for the basic structures provided by the image lib
  The integer @racket[0] means fully transparent.
 }
 
+@(define-values (sorted-color-names nice-color-name->color base-color-names)
+   (let ()
+     (define (cap-it clr-bytes)
+       (for ([i (in-range 0 (bytes-length clr-bytes))])
+         (when (or (= i 0)
+                   (equal? (bytes-ref clr-bytes (- i 1)) (bytes-ref #" " 0)))
+           (define b (bytes-ref clr-bytes i))
+           (bytes-set! clr-bytes i (+ b (- (bytes-ref #"A" 0) (bytes-ref #"a" 0)))))))
+     
+     (define nice-color-names
+       (for/set ([(clr-str _) (in-hash extra-colors)]
+                 #:unless (equal? clr-str "transparent"))
+         (define clr-bytes (string->bytes/utf-8 clr-str))
+         (define (add-space reg)
+           (define m (regexp-match reg clr-bytes))
+           (when m
+             (set! clr-bytes (bytes-append (list-ref m 1) #" " (list-ref m 2)))))
+         (add-space #rx#"^(light)(.*)$")
+         (add-space #rx#"^(dark)(.*)$")
+         (add-space #rx#"^(medium)(.*)$")
+         (cap-it clr-bytes)
+         (bytes->string/utf-8 clr-bytes)))
+
+     (define base-color-names
+       (sort (set->list
+              (for/set ([color-name (in-set nice-color-names)])
+                (regexp-replace #rx"^[^ ]* " color-name "")))
+             string<?))
+     
+     (define (break-up color-name)
+       (define m (regexp-match #rx"^(.*) (.*)$" color-name))
+       (cond
+        [m (values (list-ref m 1) (list-ref m 2))]
+        [else (values #f color-name)]))
+
+     (define (prefix->n prefix)
+       (case prefix
+         [("Light") 0]
+         [(#f) 1]
+         [("Medium") 2]
+         [("Dark") 3]
+         [else (error 'prefix->n "ack ~s" prefix)]))
+     
+     (define (color-string<? a b)
+       (define-values (prefix-a base-a) (break-up a))
+       (define-values (prefix-b base-b) (break-up b))
+       (cond
+         [(equal? base-a base-b)
+          (< (prefix->n prefix-a) (prefix->n prefix-b))]
+         [else
+          (string<? base-a base-b)]))
+     
+     (define sorted-color-names (sort (append
+                                       (set->list nice-color-names)
+                                       base-color-names)
+                                      color-string<?))
+
+     (define (nice-color-name->color name)
+       (cond
+         [(regexp-match? #rx" " name)
+          (hash-ref extra-colors (string-downcase (regexp-replace #rx" " name "")))]
+         [else
+          (send the-color-database find-color name)]))
+     
+     (values sorted-color-names nice-color-name->color base-color-names)))
+
 @defproc[(image-color? [x any/c]) boolean?]{
 
   Determines if @racket[x] represents a color. Strings, symbols,
@@ -1712,12 +1783,25 @@ This section lists predicates for the basic structures provided by the image lib
   are allowed. Colors are not case-sensitive, so 
   @racket["Magenta"], @racket["Black"], @racket['Orange], and @racket['Purple]
   are also allowed, and are the same colors as in the previous sentence.
-  If a string or symbol color name is not recognized, black is used in its place.
+  Additionally, spaces are not considered, so @racket["light orange"] is the same
+  color as @racket["lightorange"].
   
   The complete list of colors is the same as the colors allowed in
   @racket[color-database<%>], plus the color @racket["transparent"], a transparent
-  color.
-
+  color, as well as the following variants of the colors
+  @(let ([last-one (- (length base-color-names) 1)])
+     (for/list ([s (in-list base-color-names)]
+                [i (in-naturals)])
+       (cond
+         [(= i 0) s]
+         [(= i last-one) (list ", and " s)]
+         [else (list ", " s)]))):
+ @(tabular
+   (for/list ([clr-str (in-list sorted-color-names)])
+     (define clr (nice-color-name->color clr-str))
+     (define clr-bytes (string->bytes/utf-8 clr-str))
+     (list
+      (list @colorName[clr-bytes clr-bytes (send clr red) (send clr green) (send clr blue)]))))
 }
 
 @defstruct[color ([red (and/c natural-number/c (<=/c 255))]
