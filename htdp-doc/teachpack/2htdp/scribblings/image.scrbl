@@ -1759,15 +1759,12 @@ This section lists predicates for the basic structures provided by the image lib
          [else
           (string<? base-a base-b)]))
      
-     (define sorted-color-names (sort (append
-                                       (set->list nice-color-names)
-                                       base-color-names)
-                                      color-string<?))
+     (define sorted-color-names (sort (set->list nice-color-names) color-string<?))
 
      (define (nice-color-name->color name)
        (cond
          [(regexp-match? #rx" " name)
-          (hash-ref extra-colors (string-downcase (regexp-replace #rx" " name "")))]
+          (hash-ref extra-2htdp/image-colors (string-downcase (regexp-replace #rx" " name "")))]
          [else
           (send the-color-database find-color name)]))
      
@@ -1788,14 +1785,14 @@ This section lists predicates for the basic structures provided by the image lib
   
   The complete list of colors is the same as the colors allowed in
   @racket[color-database<%>], plus the color @racket["transparent"], a transparent
-  color, as well as the following variants of the colors
+  color, as well as the following variants of the colors:
   @(let ([last-one (- (length base-color-names) 1)])
      (for/list ([s (in-list base-color-names)]
                 [i (in-naturals)])
        (cond
          [(= i 0) s]
          [(= i last-one) (list ", and " s)]
-         [else (list ", " s)]))):
+         [else (list ", " s)]))).
  @(tabular
    (for/list ([clr-str (in-list sorted-color-names)])
      (define clr (nice-color-name->color clr-str))
