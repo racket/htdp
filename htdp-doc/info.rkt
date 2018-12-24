@@ -7,7 +7,7 @@
     "scribble-lib"
     "at-exp-lib"
     "draw-lib"
-    "gui-lib"
+    ["gui-lib" #:version "1.37"]
     "htdp-lib"
     "plai"
     "sandbox-lib"

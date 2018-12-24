@@ -16,7 +16,7 @@
           racket/class
           racket/set
           racket/draw
-          (only-in mrlib/image-core extra-colors))
+          (only-in mrlib/image-core extra-2htdp/image-colors))
 
 @(require scribble/eval)
 
@@ -1717,7 +1717,7 @@ This section lists predicates for the basic structures provided by the image lib
            (bytes-set! clr-bytes i (+ b (- (bytes-ref #"A" 0) (bytes-ref #"a" 0)))))))
      
      (define nice-color-names
-       (for/set ([(clr-str _) (in-hash extra-colors)]
+       (for/set ([(clr-str _) (in-hash extra-2htdp/image-colors)]
                  #:unless (equal? clr-str "transparent"))
          (define clr-bytes (string->bytes/utf-8 clr-str))
          (define (add-space reg)
