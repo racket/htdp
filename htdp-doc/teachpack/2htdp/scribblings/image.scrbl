@@ -1985,7 +1985,7 @@ See also @secref["nitty-gritty-alpha"].
 
 A pinhole is an optional property of an image that identifies a point somewhere
 in the image. The pinhole can then be used to facilitate overlaying images by
-lining them up on the their pinholes. 
+lining them up on their pinholes. 
 
 When an image has a pinhole, the pinhole
 is drawn with crosshairs on the image.
