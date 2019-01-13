@@ -218,6 +218,7 @@
             (make-error-link editor
                              (failed-check-reason failed-check)
                              (failed-check-exn? failed-check)
+			     (failed-check-srcloc? failed-check)
                              (check-fail-src (failed-check-reason failed-check))
                              src-editor)
             (make-link editor
@@ -242,6 +243,9 @@
     ;; make-link: text% check-fail src editor -> void
     (define (make-link text reason dest src-editor)
       (display-reason text reason)
+      (display-link text dest src-editor))
+
+    (define (display-link text dest src-editor)
       (let ((start (send text get-end-position)))
         (send text insert (format-src dest))
         (when (and src-editor current-rep)
@@ -344,8 +348,16 @@
         (print-string "\n")))
     
     ;; make-error-link: text% check-fail exn src editor -> void
-    (define (make-error-link text reason exn dest src-editor)
+    (define (make-error-link text reason exn srcloc dest src-editor)
       (make-link text reason dest src-editor)
+      
+      (when (and exn srcloc)
+	(send text insert (string-append (string-constant test-engine-check-error-cause) " "))
+	(display-link text
+		      (map (lambda (acc) (acc srcloc))
+			   (list srcloc-source srcloc-line srcloc-column srcloc-position srcloc-span))
+		      src-editor))
+      
       ;; the following code never worked
       #;(let ((start (send text get-end-position)))
         (send text insert (string-constant test-engine-trace-error))

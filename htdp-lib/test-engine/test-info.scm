@@ -9,8 +9,8 @@
 
 (provide (all-defined-out))
 
-;; (make-failed-check check-fail (U #f exn)
-(define-struct failed-check (reason exn?))
+;; (make-failed-check check-fail (U #f exn) (U #f srcloc?)
+(define-struct failed-check (reason exn? srcloc?))
 
 (define-struct check-fail (src format))
 
@@ -102,10 +102,10 @@
       (set! total-tsts (add1 total-tsts))
       (inner (void) add-test))
     
-    (define/pubment (add-check-failure fail exn?)
+    (define/pubment (add-check-failure fail exn? srcloc?)
       (set! failed-cks (add1 failed-cks))
-      (set! failures (cons (make-failed-check fail exn?) failures))
-      (inner (void) add-check-failure fail exn?))
+      (set! failures (cons (make-failed-check fail exn? srcloc?) failures))
+      (inner (void) add-check-failure fail exn? srcloc?))
     
     (define/pubment (add-wish name)
       (unless (memq name wishes)
@@ -113,7 +113,7 @@
       (inner (void) add-wish name))
     
     ;; check-failed: (U check-fail (list (U string snip%))) src (U exn false) -> void
-    (define/pubment (check-failed msg src exn?)
+    (define/pubment (check-failed msg src exn? srcloc?)
       (let ((fail
              ;; We'd like every caller to make a check-fail object,
              ;; but some (such as ProfessorJ's run time) cannot because
@@ -121,9 +121,9 @@
              (if (check-fail? msg)
                  msg
                  (make-message-error src #f msg))))
-        (add-check-failure fail exn?)
+        (add-check-failure fail exn? srcloc?)
         (report-failure)
-        (inner (void) check-failed fail src exn?)))
+        (inner (void) check-failed fail src exn? srcloc?)))
     
     (define/pubment (test-failed failed-info)
       (set! failed-tsts (add1 failed-tsts))

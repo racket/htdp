@@ -11,6 +11,7 @@
          ; racket/function
          htdp/error
          lang/private/continuation-mark-key
+	 setup/collects
          lang/private/rewrite-error-message
          (for-syntax #;"requiring from" lang/private/firstorder #;"avoids load cycle")
          "test-engine.rkt"
@@ -334,7 +335,8 @@
         (begin
           (send (send test-engine get-info) check-failed
                 result (check-fail-src result)
-                (and (incorrect-error? result) (incorrect-error-exn result)))
+                (and (incorrect-error? result) (incorrect-error-exn result))
+		#f)
           #f)
         #t)))
 
@@ -349,7 +351,7 @@
         (begin
           (send (send test-engine get-info) check-failed
                 result (check-fail-src result)
-                #f)
+                #f #f)
           #f)
         #t)))
 
@@ -424,8 +426,37 @@
     (define failed? (check-fail? result))
     (cond [(not failed?) #t]
           [else (define c (send test-engine get-info))
-                (send c check-failed result (check-fail-src result) exn)
+                (send c check-failed result (check-fail-src result) exn (and (exn? exn) (exn-srcloc exn)))
                 #f])))
+
+; return srcloc associated with exception, in user program, or #f
+(define (exn-srcloc exn)
+  (if (exn:srclocs? exn)
+      (let ([srclocs ((exn:srclocs-accessor exn) exn)])
+	(and (pair? srclocs)
+	     (car srclocs)))
+      (continuation-marks-srcloc (exn-continuation-marks exn))))
+    
+(define (continuation-marks-srcloc marks)
+  (let ([cms (continuation-mark-set->list marks teaching-languages-continuation-mark-key)])
+    (cond
+     [(not cms) '()]
+     [(findf (lambda (mark)
+	       (and mark
+		    (let ([ppath (car mark)])
+		      (or (and (path? ppath)
+			       (not (let ([rel (path->collects-relative ppath)])
+				      (and (pair? rel)
+					   (eq? 'collects (car rel))
+					   (or (equal? #"lang" (cadr rel))
+					       (equal? #"deinprogramm" (cadr rel)))))))
+			  (symbol? ppath)))))
+	     cms)
+      => (lambda (mark)
+	   (apply (lambda (source line col pos span)
+		    (make-srcloc source line col pos span))
+		  mark))]
+     (else #f))))
 
 ;;Wishes
 (struct exn:fail:wish exn:fail (name args))
@@ -505,24 +536,10 @@
     
     (define/pubment (signature-failed obj signature message blame)
       
-      (let* ((cms
-              (continuation-mark-set->list (current-continuation-marks)
-                                           teaching-languages-continuation-mark-key))
-             (srcloc
-              (cond
-                ((findf (lambda (mark)
-                          (and mark
-                               (or (path? (car mark))
-                                   (symbol? (car mark)))))
-                        cms)
-                 => (lambda (mark)
-                      (apply (lambda (source line col pos span)
-                               (make-srcloc source line col pos span))
-                             mark)))
-                (else #f)))
-             (message
+      (let* ([srcloc (continuation-marks-srcloc (current-continuation-marks))]
+             [message
               (or message
-                  (make-signature-got obj (test-format)))))
+                  (make-signature-got obj (test-format)))])
         
         (set! signature-violations
               (cons (make-signature-violation obj signature message srcloc blame)
