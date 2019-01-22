@@ -339,6 +339,9 @@
 (test (rectangle 10 10 'solid "mediumyellow")
       =>
       (rectangle 10 10 'solid "MEDIUMYELLOW"))
+(test (rectangle 10 10 'solid "mediumgray")
+      =>
+      (rectangle 10 10 'solid "mediumgrey"))
 
 (test (overlay (rectangle 10 10 'solid "blue")
                (rectangle 10 10 'solid "transparent"))
