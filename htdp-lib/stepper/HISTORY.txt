@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 7.2:
+
+Stepper now renames properly to avoid collisions on renamed variables.
+
 Changes for 7.1:
 
 Stepper no longer scrolls up to the top every time when stepping forward.
