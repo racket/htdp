@@ -552,11 +552,11 @@
     (inherit add-check-failure)
     (define/pubment (property-failed result src-info)
       (report-failure)
-      (add-check-failure (make-property-fail src-info (test-format) result) #f))
+      (add-check-failure (make-property-fail src-info (test-format) result) #f #f))
     
     (define/pubment (property-error exn src-info)
       (report-failure)
-      (add-check-failure (make-property-error src-info (test-format) (exn-message exn) exn) exn))
+      (add-check-failure (make-property-error src-info (test-format) (exn-message exn) exn) exn (exn-srcloc exn)))
     
     (super-instantiate ())))
 
