@@ -1,4 +1,10 @@
 ------------------------------------------------------------------------
+Version 7.2				  [Mon Jan 28 10:29:15 EST 2019]
+
+* none for HtDP 
+* improvements to DeinProgram 
+
+------------------------------------------------------------------------
 Version 7.1				  [Sat Oct 20 11:12:54 EDT 2018]
 
 * errors from tested expression no longer abort unit testing 
