@@ -77,6 +77,15 @@
            (when _
              (insert-test _ (lambda () (check-member-of-values-expected _ _ _ _ _))))))
        #'check-member-of-values-expected])
-    ((-> Univ) Univ (-lst Univ) Univ Univ . -> . -Void)]))
+    ((-> Univ) Univ (-lst Univ) Univ Univ . -> . -Void)]
+   ;; check-random-values
+   [(syntax-parse (local-expand #'(ce:check-random 1 1) 'module #f)
+      #:literals (let* when define-values)
+      [(define-values _
+         (let* ((_ _) (_ _))
+           (when _
+             (insert-test _ (lambda () (check-random-values _ _ _ _))))))
+       #'check-random-values])
+    ((-> Univ) (-> Univ) (-lst Univ) Univ . -> . -Void)]))
 
 (begin-for-syntax (initialize-type-env ce-env))
