@@ -312,7 +312,8 @@
     [(_ test)
      (check-expect-maker stx #'check-values-error/no-string #`test null
                          'comes-from-check-error)]
-    [_ (raise-syntax-error 'check-error (argcount-error-message/stx 1 stx #t) stx)]))
+    [(_) (raise-syntax-error 'check-error (argcount-error-message/stx 1 stx #t) stx)]
+    [_ (raise-syntax-error 'check-error (argcount-error-message/stx 2 stx) stx)]))
 
 ;; check-values-error: (-> scheme-val) scheme-val src test-engine -> void
 (define (check-values-error test error src test-engine)
