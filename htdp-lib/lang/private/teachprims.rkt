@@ -675,7 +675,63 @@ namespace.
     (cerr 'string-contains? (string? t) "string" t)
     (regexp-match? (regexp-quote (string-foldcase s)) (string-foldcase t))))
 
+(define-teach beginner string-append
+  (lambda (s t . args)
+    (apply  string-append s t args)))
+
+(define-teach beginner string=?
+  (lambda (s t . args)
+    (apply  string=? s t args)))
+
+(define-teach beginner string<?
+  (lambda (s t . args)
+    (apply  string<? s t args)))
+
+(define-teach beginner string>?
+  (lambda (s t . args)
+    (apply  string>? s t args)))
+
+(define-teach beginner string<=?
+  (lambda (s t . args)
+    (apply  string<=? s t args)))
+
+(define-teach beginner string>=?
+  (lambda (s t . args)
+    (apply  string>=? s t args)))
+
+(define-teach beginner string-ci=?
+  (lambda (s t . args)
+    (apply  string-ci=? s t args)))
+
+(define-teach beginner string-ci<?
+  (lambda (s t . args)
+    (apply  string-ci<? s t args)))
+
+(define-teach beginner string-ci>?
+  (lambda (s t . args)
+    (apply  string-ci>? s t args)))
+
+(define-teach beginner string-ci<=?
+  (lambda (s t . args)
+    (apply  string-ci<=? s t args)))
+
+(define-teach beginner string-ci>=?
+  (lambda (s t . args)
+    (apply  string-ci>=? s t args)))
+
 (provide
+ beginner-string-append
+ beginner-string=?
+ beginner-string<? 
+ beginner-string>? 
+ beginner-string<=? 
+ beginner-string>=? 
+ beginner-string-ci=?  
+ beginner-string-ci<?  
+ beginner-string-ci>?  
+ beginner-string-ci<=? 
+ beginner-string-ci>=? 
+
  beginner-string-ith
  beginner-replicate
  beginner-int->string 
