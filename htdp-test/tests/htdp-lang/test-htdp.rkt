@@ -10,4 +10,4 @@
 (load-in-sandbox "intermediate-lambda.rktl" #:testing testing-path)
 (load-in-sandbox "advanced.rktl" #:testing testing-path)
 
-(report-errs)
+(report-errs #t)
