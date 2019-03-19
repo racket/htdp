@@ -1,7 +1,7 @@
 #lang scribble/doc
 
 @(require (for-label (only-in racket/contract and/c or/c any/c not/c listof
-                                              >=/c <=/c)
+                                              >=/c <=/c natural-number/c)
                      2htdp/image
                      (except-in lang/htdp-beginner posn make-posn posn? posn-x posn-y image?)
                      lang/posn
