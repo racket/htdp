@@ -1,7 +1,6 @@
 #lang scribble/doc
 
-@(require (for-label (only-in racket/contract and/c or/c any/c not/c listof
-                                              >=/c <=/c)
+@(require (for-label racket/contract
                      2htdp/image
                      (except-in lang/htdp-beginner posn make-posn posn? posn-x posn-y image?)
                      lang/posn
@@ -1801,10 +1800,10 @@ This section lists predicates for the basic structures provided by the image lib
       (list @colorName[clr-bytes clr-bytes (send clr red) (send clr green) (send clr blue)]))))
 }
 
-@defstruct[color ([red (and/c natural-number/c (<=/c 255))]
-                  [green (and/c natural-number/c (<=/c 255))]
-                  [blue (and/c natural-number/c (<=/c 255))]
-                  [alpha (and/c natural-number/c (<=/c 255))])]{
+@defstruct[color ([red (integer-in 0 255)]
+                  [green (integer-in 0 255)]
+                  [blue (integer-in 0 255)]
+                  [alpha (integer-in 0 255)])]{
   The @racket[color] struct defines a color with @racket[red], 
       @racket[green], @racket[blue], and @racket[alpha] components
       that range from @racket[0] to @racket[255]. 
