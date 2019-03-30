@@ -158,8 +158,8 @@
  @interaction[#:eval (bsl) (min 3 2 8 7 2 9 0)]
 }
   @defproc[(quotient [x integer][y integer]) integer]{
- Divides the second integer---also called divisor---into the first---known as 
- dividend---to obtain the @index[(list "divide" "quotient")]{quotient}.
+ Divides the first integer---also called dividend---by the second---known as 
+ divisor---to obtain the @index[(list "divide" "quotient")]{quotient}.
  @interaction[#:eval (bsl) (quotient 9 2) (quotient 3 4)] 
 }
   @defproc[(remainder [x integer][y integer]) integer]{
