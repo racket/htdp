@@ -41,7 +41,7 @@
  break-kind? ; predicate
  re-intern-identifier
  finished-xml-box-table
- saved-code-inspector 
+ disarm
  (struct-out annotated-proc) 
  view-controller^
  stepper-frame^
@@ -114,8 +114,10 @@
 
 (define saved-code-inspector (variable-reference->module-declaration-inspector
                               (#%variable-reference)))
+(define (disarm stx) (syntax-disarm stx saved-code-inspector))
 
-(define (rebuild-stx new old)
+(define (rebuild-stx new old/maybe-armed)
+  (define old (disarm old/maybe-armed))
   (datum->syntax old new old old))
 
 (define break-kind?
@@ -197,7 +199,7 @@
      (cond
        [(syntax? stx)
         (define up (up-fn-finder 'syntax-e))
-        (up stx (update fn-list (syntax-e stx) core-fn up-fn-finder))]
+        (up stx (update fn-list (syntax-e (disarm stx)) core-fn up-fn-finder))]
        ;; simply ignore the syntax-e symbol
        ;; (this clause should not be necessary after the now-obsolete syntax-e label is
        ;; removed everywhere):
