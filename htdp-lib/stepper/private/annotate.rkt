@@ -690,7 +690,7 @@
              (vector (wcm-wrap "supposed to be skipped" exp) null)]
             
             [else
-             (let ([exp (syntax-disarm exp saved-code-inspector)])
+             (let ([exp (disarm exp)])
               (recertifier
               (maybe-final-val-wrap
                (kernel:kernel-syntax-case 
@@ -1254,7 +1254,7 @@
            (stepper-syntax-property stx 'stepper-black-box-expr))
        stx]
       [else
-       (define disarmed-stx (syntax-disarm stx saved-code-inspector))
+       (define disarmed-stx (disarm stx))
        (define rewritten
          (kernel:kernel-syntax-case 
           disarmed-stx
