@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 7.3:
+
+Bug fixes.
+
 Changes for 7.2:
 
 Stepper now renames properly to avoid collisions on renamed variables.
