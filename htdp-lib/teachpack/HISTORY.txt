@@ -1,8 +1,10 @@
-Version 7.2.0.6				  [///]
+Version 7.3				  [Fri May 10 11:08:51 EDT 2019]
 
 * change signature for 
-   string-append, string=?, string<?, string>?, string<=?, string>=?,
-   string-ci=?, string-ci<?, string-ci>?, string-ci<=?, string-ci>=?
+    string-append, string=?, string<?, string>?, string<=?, string>=?,
+    string-ci=?, string-ci<?, string-ci>?, string-ci<=?, string-ci>=?
+  so that they take at least two arguments in BSL 
+  and can be used with fold and friends in ISL and ISL+
 
 ------------------------------------------------------------------------
 Version 7.2				  [Mon Jan 28 10:29:15 EST 2019]
