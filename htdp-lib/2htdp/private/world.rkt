@@ -80,7 +80,9 @@
       (field
        [to-draw on-draw]
        [world
-        (new checked-cell% [value0 world0] [ok? check-with]
+        (new checked-cell%
+             [value0 world0]
+             [ok? check-with]
              [display (and state (or name "your world program's state"))])])
       
       
