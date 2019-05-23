@@ -116,21 +116,21 @@
                         (with-handlers ((exn:fail? (lambda (e) (kill w "broadcast failed to ~a"))))
                           (define p-for-display (format "~a" p))
                           (if (<= (string-length p-for-display) 100)
-                              (send gui add (format "-> ~a: ~a" n p-for-display))
-                              (send gui add (format "-> ~a: ~a" n (substring p-for-display 0 99))))
+                              (send gui add "-> ~a: ~a" n p-for-display)
+                              (send gui add "-> ~a: ~a" n (substring p-for-display 0 99)))
                           (iworld-send w p))
-                        (send gui add (format "~s not on list" n))))
+                        (send gui add "~s not on list" n)))
                   lm))
       
       (def/cback private (pnew iworld) on-new
         (set! iworlds (cons iworld iworlds))
-        (send gui add (format "~a signed up" (iworld-name iworld))))
+        (send gui add "~a signed up" (iworld-name iworld)))
       
       (def/cback private (pmsg iworld r) on-msg
         (let ([r-for-display (format "~a" r)])
           (if (<= (string-length r-for-display) 100)
-              (send gui add (format "~a ->: ~a" (iworld-name iworld) r))
-              (send gui add (format "~a ->: ~a" (iworld-name iworld) (substring r-for-display 0 99))))))
+              (send gui add "~a ->: ~a" (iworld-name iworld) r)
+              (send gui add "~a ->: ~a" (iworld-name iworld) (substring r-for-display 0 99)))))
       
       (def/cback private (pdisconnect iworld) on-disconnect
         (kill iworld "~a !! closed port"))
@@ -147,7 +147,7 @@
       (define/private (kill w msg)
         (iworld-close w)
         (set! iworlds (remq w iworlds))
-        (send gui add (format msg (iworld-name w)))
+        (send gui add msg (iworld-name w))
         (when (null? iworlds) (restart)))
       
       ;; -----------------------------------------------------------------------
@@ -300,11 +300,12 @@
                  [style '(no-border no-hscroll auto-vscroll)])])
     
     ;; add lines to the end of the text 
-    (define/public (add str)
+    (define/public (add fmt . x)
+      (define str (apply format (string-append fmt "\n") x))
       (queue-callback 
        (lambda () 
          (send text lock #f)
-         (send text insert (format "~a\n" str) (send text last-position))
+         (send text insert str (send text last-position))
          (send text lock #t))))
     
     ;; -------------------------------------------------------------------------
