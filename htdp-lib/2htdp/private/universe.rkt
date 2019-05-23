@@ -96,8 +96,7 @@
               (cond
                 [(stop-the-world? nxt) (stop! (stop-the-world-world nxt))]
                 [(bundle? nxt) 
-                 (define-values (u mails bad)
-                   (bundle> n nxt))
+                 (define-values (u mails bad) (bundle> n nxt))
                  (send universe set (format "value returned from ~a" 'name) u)
                  (unless (boolean? to-string) (send gui log (to-string u)))
                  (broadcast mails)
@@ -154,13 +153,13 @@
       ;; -----------------------------------------------------------------------
       ;; start and stop server, start and stop the universe
       
-      (field [iworlds   '()] ;; [Listof World]
+      (field [iworlds '()] ;; [Listof World]
              [gui
               (if (and (string? state) (string=? "OliverFlatt" state))
                   (new dummy-gui%)
                   (new gui%
-                       [stop-server (lambda () (stop! (send universe get)))] 
-                       [stop-and-restart (lambda () (restart))]))]
+                       [stop-server (lambda () (stop! (send universe get)))]
+                       [restart     (lambda () (restart))]))]
              [dr:custodian  (current-custodian)]
              [the-custodian (make-custodian)])
       
@@ -291,9 +290,10 @@
     (init stop-server restart)
     (inherit show)
     (super-new)
+    (define cc '(center center))
     (field
      [end   (lambda _ (show #f) (stop-server))]
-     [panel (new horizontal-panel% [parent this] [stretchable-height #f] [alignment '(center)])]
+     [panel (new horizontal-panel% [parent this] [stretchable-height #f] [alignment cc])]
      [stop  (new button% [parent panel] [label "stop"] [callback end])]
      [s&re  (new button% [parent panel] [label "stop and restart"] [callback (λ (_b _e) (restart))])])
     (define/augment (on-close) (end))))
