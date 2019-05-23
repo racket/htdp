@@ -3,16 +3,6 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; provides the universe functionality (distributed worlds)
 
-(require "checked-cell.rkt"
-         "check-aux.rkt"
-         "timer.rkt"    
-         "last.rkt"
-         "clauses-spec-aux.rkt"
-         "stop.rkt"
-         htdp/error
-         (only-in mzlib/etc evcase)
-         string-constants)
-
 (provide 
  universe%
  ;; --- sample worlds and function on worlds ---
@@ -30,6 +20,17 @@
  make-mail   ;; World S-expression -> Mail 
  mail?       ;; is this a real mail? 
  )
+
+(require "checked-cell.rkt"
+         "check-aux.rkt"
+         "timer.rkt"    
+         "last.rkt"
+         "clauses-spec-aux.rkt"
+         "stop.rkt"
+         "logging-gui.rkt"
+         htdp/error
+         (only-in mzlib/etc evcase)
+         string-constants)
 
 ;                                                          
 ;                                                          
@@ -98,12 +99,12 @@
                  (define-values (u mails bad)
                    (bundle> n nxt))
                  (send universe set (format "value returned from ~a" 'name) u)
-                 (unless (boolean? to-string) (send gui add (to-string u)))
+                 (unless (boolean? to-string) (send gui log (to-string u)))
                  (broadcast mails)
                  (for-each (lambda (iw) (kill iw "disconnected ~a")) bad)]
                 [else ;; plain universe state 
                  (send universe set (format "value returned from ~a" 'name) nxt)
-                 (unless (boolean? to-string) (send gui add (to-string nxt)))])))))
+                 (unless (boolean? to-string) (send gui log (to-string nxt)))])))))
       
       ;; [Listof Mail] -> Void
       ;; send payload of messages to designated worlds 
@@ -116,21 +117,21 @@
                         (with-handlers ((exn:fail? (lambda (e) (kill w "broadcast failed to ~a"))))
                           (define p-for-display (format "~a" p))
                           (if (<= (string-length p-for-display) 100)
-                              (send gui add "-> ~a: ~a" n p-for-display)
-                              (send gui add "-> ~a: ~a" n (substring p-for-display 0 99)))
+                              (send gui log "-> ~a: ~a" n p-for-display)
+                              (send gui log "-> ~a: ~a" n (substring p-for-display 0 99)))
                           (iworld-send w p))
-                        (send gui add "~s not on list" n)))
+                        (send gui log "~s not on list" n)))
                   lm))
       
       (def/cback private (pnew iworld) on-new
         (set! iworlds (cons iworld iworlds))
-        (send gui add "~a signed up" (iworld-name iworld)))
+        (send gui log "~a signed up" (iworld-name iworld)))
       
       (def/cback private (pmsg iworld r) on-msg
         (let ([r-for-display (format "~a" r)])
           (if (<= (string-length r-for-display) 100)
-              (send gui add "~a ->: ~a" (iworld-name iworld) r)
-              (send gui add "~a ->: ~a" (iworld-name iworld) (substring r-for-display 0 99)))))
+              (send gui log "~a ->: ~a" (iworld-name iworld) r)
+              (send gui log "~a ->: ~a" (iworld-name iworld) (substring r-for-display 0 99)))))
       
       (def/cback private (pdisconnect iworld) on-disconnect
         (kill iworld "~a !! closed port"))
@@ -147,7 +148,7 @@
       (define/private (kill w msg)
         (iworld-close w)
         (set! iworlds (remq w iworlds))
-        (send gui add msg (iworld-name w))
+        (send gui log msg (iworld-name w))
         (when (null? iworlds) (restart)))
       
       ;; -----------------------------------------------------------------------
@@ -192,7 +193,7 @@
           ;; --- go universe go ---
           (set! iworlds '())
           (send universe set "initial expression" universe0)
-          (send gui add "a new universe is up and running")
+          (send gui log "a new universe is up and running")
           (thread loop)))
       
       (define/private (restart)
@@ -205,8 +206,8 @@
            (lambda ()
              (sync old-thread all-done?)
              (start!))))
-        (send gui add "stopping the universe")
-        (send gui add "----------------------------------")
+        (send gui log "stopping the universe")
+        (send gui log "----------------------------------")
         (for-each iworld-close iworlds)
         (custodian-shutdown-all the-custodian)
         (semaphore-post all-done?))
@@ -265,88 +266,37 @@
 (define (iworld-send p sexp)
   (tcp-send (iworld-out p) sexp))
 
-;                       
-;                       
-;                       
-;    ;;;   ;   ;    ;   
-;   ;   ;  ;   ;    ;   
-;   ;      ;   ;    ;   
-;   ;      ;   ;    ;   
-;   ;  ;;  ;   ;    ;   
-;   ;   ;  ;   ;    ;   
-;   ;   ;  ;   ;    ;   
-;   ;   ;  ;   ;    ;   
-;    ;;;    ;;;     ;   
-;                       
-;                       
-;                       
 
-;; effect: create and show a gui with two buttons and an editor for logging
+;                          
+;                          
+;                          
+;     ;;;;  ;       ;;;;;  
+;    ;    ; ;         ;    
+;   ;       ;         ;    
+;   ;       ;         ;    
+;   ;    ;; ;         ;    
+;   ;     ; ;         ;    
+;   ;     ; ;         ;    
+;    ;    ; ;;   ;    ;    
+;     ;;;;   ;;;;;  ;;;;;  
+;                          
+;                          
+;                          
+;                          
+
+
+;; EFFECT: create and show a gui with two buttons 
 (define gui%
-  (class frame%
-    (init stop-server stop-and-restart)
+  (class logging-gui%
+    (init stop-server restart)
     (inherit show)
-    (define/augment (on-close) (end))
-    (super-new [label "Universe"][width 500][height 300][style '(metal)])
-    (field
-     [end (lambda _ (show #f) (stop-server))]
-     [panel (new horizontal-panel% [parent this] [stretchable-height #f]
-                 [alignment '(center center)])]
-     [stop  (new button% [parent panel] [label "stop"] [callback end])]
-     [s&re  (new button% [parent panel] [label "stop and restart"] 
-                 [callback (lambda (but evt) (stop-and-restart))])]
-     [text  (new text%)]
-     [edit  (new editor-canvas% [parent this] [editor text]
-                 [style '(no-border no-hscroll auto-vscroll)])])
-    
-    ;; add lines to the end of the text 
-    (define/public (add fmt . x)
-      (define str (apply format (string-append fmt "\n") x))
-      (queue-callback 
-       (lambda () 
-         (send text lock #f)
-         (send text insert str (send text last-position))
-         (send text lock #t))))
-    
-    ;; -------------------------------------------------------------------------
-    ;; add menu, lock, and show 
-    (copy-and-paste this)
-    (send text lock #t)))
-
-;; throw away all messages, for Oliver to run on R Pi 
-(define dummy-gui%
-  (class object%
     (super-new)
-    (define/public (show x) (void))
-    (define/public (add x) (void))))
-
-;; -----------------------------------------------------------------------------
-;; Frame Text -> Void
-;; add menu bar to frame for copying all of the text 
-(require string-constants)
-
-(define (copy-and-paste frame)
-  (define mb (new menu-bar% [parent frame]))
-  (define edit (new menu%
-                    [label (string-constant edit-menu-label)]
-                    [parent mb]))
-  (new menu-item%
-       [label (string-constant copy-menu-item)]
-       [parent edit]
-       [shortcut #\c]
-       [callback (lambda (m e)
-                   (define t (send frame get-focus-object))
-                   (when (is-a? t editor<%>)
-                     (send t copy)))])
-  (new menu-item%
-       [label (string-constant select-all-menu-item)]
-       [parent edit]
-       [shortcut #\a]
-       [callback (lambda (m e)
-                   (define t (send frame get-focus-object))
-                   (when (is-a? t text%)
-                     (send t set-position 0 (send t last-position))))])
-  (void))
+    (field
+     [end   (lambda _ (show #f) (stop-server))]
+     [panel (new horizontal-panel% [parent this] [stretchable-height #f] [alignment '(center)])]
+     [stop  (new button% [parent panel] [label "stop"] [callback end])]
+     [s&re  (new button% [parent panel] [label "stop and restart"] [callback (λ (_b _e) (restart))])])
+    (define/augment (on-close) (end))))
 
 ;                              
 ;                              
