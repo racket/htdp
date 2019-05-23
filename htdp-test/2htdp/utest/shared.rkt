@@ -16,9 +16,9 @@
 (define mt (nw:rectangle DefWidth HEIGHT 'solid 'gray))
 
 ;; -----------------------------------------------------------------------------
-;; Number (U String Symbol) -> true
+;; Number (U String Symbol) [Boolean] -> true
 ;; create and hook up a player with the localhost server 
-(define (make-player width t)
+(define (make-player width t (show-state? #f))
   (local ((define mt (place-image (text (format "~a" t) 11 'black) 
                                   5 85 
                                   (empty-scene width HEIGHT)))
@@ -61,6 +61,7 @@
               (on-receive receive)
               (on-tick move .01)
               (name t)
+	      (state show-state?)
               (check-with (lambda (w) (or (symbol? w) (number? w))))
               (register LOCALHOST))))
 
@@ -70,5 +71,6 @@
 
 (require scheme/contract)
 
-(provide/contract
- [make-player (-> (and/c number? (>=/c 100)) (or/c string? symbol?) any/c)])
+(provide
+  (contract-out 
+    [make-player (->* ((and/c number? (>=/c 100)) (or/c string? symbol?)) (boolean?) any/c)]))

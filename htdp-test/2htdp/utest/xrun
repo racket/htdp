@@ -7,5 +7,5 @@ exec racket -t "$0" ${1+"$@"}
 
 (require 2htdp/universe "balls.rkt" "shared.ss")
 
-(launch-many-worlds (run 'go) (make-player 200 "carl") (make-player 200 "sam"))
+(launch-many-worlds (run 'go) (make-player 200 "carl" #t) (make-player 200 "sam"))
 
