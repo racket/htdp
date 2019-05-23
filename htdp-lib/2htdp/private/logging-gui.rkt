@@ -12,7 +12,7 @@
   (class frame%
     (init (label "Universe"))
     (inherit show)
-    (super-new [label label][width 500][height 300])
+    (super-new [label (or label "!! should not show !!")][width 500][height 300])
     (field [text (new text%)]
            [edit (new editor-canvas% [parent this] [editor text])])
     
