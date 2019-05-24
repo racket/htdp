@@ -7,16 +7,30 @@
  logging-gui%
  dummy-gui%)
 
-(require htdp/error mzlib/pconvert)
+(require mzlib/pconvert)
+(require string-constants)
 
+;; -----------------------------------------------------------------------------
 ;; an editor for logging messages 
 (define logging-gui%
   (class frame%
     (init (label "Universe"))
     (inherit show)
-    (super-new [label (or label "!! should not show !!")][width 500][height 300])
+    (super-new [label (or label "! should not show !")][width 500][height 300])
     (field [text (new text%)]
            [edit (new editor-canvas% [parent this] [editor text])])
+
+    ;; [Listof String] -> Void
+    ;; EFFECT add str to end of text editor with 
+    (define/public (make-queue-callback lostr (clear #f))
+      (queue-callback
+       (lambda ()
+         (send text lock #f)
+         (when clear (send text erase))
+         (for ((str lostr))
+           (send text insert str (send text last-position))
+           (send text insert "\n" (send text last-position)))
+         (send text lock #t))))
     
     ;; add lines to the end of the text 
     (define/public (log fmt . x)
@@ -25,13 +39,9 @@
           (parameterize ([constructor-style-printing #t]
                          [booleans-as-true/false     #t]
                          [abbreviate-cons-as-list    #t])
-            (print-convert i))))
-      (define str (apply format (string-append fmt "\n") y))
-      (queue-callback 
-       (lambda () 
-         (send text lock #f)
-         (send text insert str (send text last-position))
-         (send text lock #t))))
+            (pretty-format (print-convert i) #:mode 'write))))
+      (define str (apply format fmt y))
+      (make-queue-callback (list str)))
     
     ;; -------------------------------------------------------------------------
     ;; add menu, lock, and show 
@@ -48,7 +58,6 @@
 ;; -----------------------------------------------------------------------------
 ;; Frame Text -> Void
 ;; add menu bar to frame for copying all of the text 
-(require string-constants)
 
 (define (copy-and-paste frame)
   (define mb (new menu-bar% [parent frame]))
@@ -71,8 +80,50 @@
                    (define t (send frame get-focus-object))
                    (when (is-a? t text%)
                      (send t set-position 0 (send t last-position))))])
+
+  ;; The following is a first, experimental stab at a filtering facility so
+  ;; that students can selectively view a subset of the events. 
+  (new menu-item%
+       [label "Filter"]
+       [parent edit]
+       [shortcut #\f]
+       [callback
+        (lambda (m e)
+          (define t (send frame get-focus-object))
+          (when (and (is-a? t editor<%>) (is-a? t text%))
+            (define text  (send t get-text))
+            (define lines (port->lines (open-input-string text)))
+            (define pickd (filter-events "receive" "new state" lines))
+            (send frame make-queue-callback pickd #t)))])
   (void))
 
+;; Regexp-pattern Regexp-pattern [Listof String] -> [Listof String]
+;; filter out stretches of lines between a "line" matching start-pat to one matching end-pat (incl.)
+(define (filter-events start-part end-pat lines)
+  (letrec ([pick
+            (lambda (start-pat end-pat lines)
+              (cond
+                [(empty? lines) '()]
+                [else
+                 (define fst (first lines))
+                 (if (regexp-match start-pat fst)
+                     (let-values ([(front end) (up-to end-pat (rest lines))])
+                       (append (list* fst front) (pick start-pat end-pat (rest lines))))
+                     (pick start-pat end-pat (rest lines)))]))]
+           [up-to
+            (lambda (pat lines)
+              (cond
+                [(empty? lines) '()]
+                [else (define fst (first lines))
+                      (define rst (rest lines))
+                      (if (regexp-match pat fst)
+                          (values (list fst) rst)
+                          (let-values ([(front end)  (up-to pat rst)])
+                            (values (cons fst front) end)))]))])
+    (pick "receive" "new state" lines)))
+
+;; -----------------------------------------------------------------------------
+;; watch how things work, not real tests 
 (module+ test
   (struct foo (bar) #:prefab)
   (define (a-foo . _) (foo 1))
@@ -81,8 +132,15 @@
 
   (send logging-gui show #t)
 
-  (send logging-gui log "long S-expression: ~s" (build-list 100 add1))
-  (send logging-gui log "long string: ~s" (make-string 200 #\a))
-  (send logging-gui log "a string in a list: ~s" (list (make-string 200 #\a)))
-  (send logging-gui log "a list of structs: ~s" (build-list 10 a-foo))
-  (send logging-gui log "a byte string: ~s" #"hello world, good bye world"))
+  (send logging-gui log "receive short S-expression: ~a" (build-list 3 add1))
+  (send logging-gui log "new state ~a" 'a)
+  (send logging-gui log "long S-expression: ~a" (build-list 100 add1))
+  (send logging-gui log "new state ~a" 'b)
+  (send logging-gui log "long string: ~a" (make-string 200 #\a))
+  (send logging-gui log "new state ~a" 'c)
+  (send logging-gui log "a string in a list: ~a" (list (make-string 200 #\a)))
+  (send logging-gui log "new state ~a" 'd)
+  (send logging-gui log "a list of structs: ~a" (build-list 10 a-foo))
+  (send logging-gui log "new state ~a" 'e)
+  (send logging-gui log "receive a byte string: ~a" #"hello world, good bye world")
+  (send logging-gui log "new state ~a" 'f))
