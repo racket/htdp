@@ -328,15 +328,18 @@
                (queue-callback 
                 (lambda ()
                   (collect-garbage 'incremental)
-
-                  ;; log events:
-                  (define e* (string-append "~a event: " (begin arg "~e") ...))
-                  (unless (eq? 'pub 'private) (send gui log e* 'transform arg ...))
-                  
                   (define H (handler #t))
                   (with-handlers ([exn? H])
-                    ; (define tag (object-name transform))
-                    (define nw (transform (send world get) arg ...))
+		    (define ws (send world get))
+                    (define nw (transform ws arg ...))
+
+		    ;; log events:
+		    (unless (eq? 'pub 'private)
+		      (define tg (symbol->string 'transform))
+		      (define e* (string-append tg " event: ~a " (begin arg "~a ") ...))
+		      (send gui log e* ws arg ...)
+		      (send gui log "new state: ~a" nw))
+
                     (define (d) 
                       (with-handlers ((exn? H))
                         (pdraw))
