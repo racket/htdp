@@ -1,5 +1,8 @@
 #lang scheme
 
+;; the on-mouse and on-draw clauses are added to show more events in the
+;; event log; they are no-ops otherwise 
+
 (require 2htdp/universe htdp/testing htdp/image)
 ;(require "../universe.rkt" htdp/testing)
 
@@ -57,13 +60,15 @@
               [(symbol? w) (place-image (text "resting" 11 'red) 10 10 mt)]
               [(number? w) (place-image BALL 50 w mt)])))
     (big-bang WORLD0 
-              (on-draw draw)
-              (on-receive receive)
-              (on-tick move .01)
-              (name t)
-	      (state show-state?)
+              (on-draw    draw)
+              (on-tick    move .01)
+              (on-mouse   (lambda (w x y me) w))
+	      (on-key     (lambda (w ke) w))
               (check-with (lambda (w) (or (symbol? w) (number? w))))
-              (register LOCALHOST))))
+              (on-receive receive)
+	      (state      show-state?)
+	      (name       t)
+              (register   LOCALHOST))))
 
 ; (generate-report)
 
