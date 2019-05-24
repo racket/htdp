@@ -788,10 +788,13 @@ is immediately closed down.}
 @item{
 
 @defform[#:literals (state) (state expr)]{
- if not @racket[#f], DrRacket opens a separate window in which the current
- state is rendered each time it is updated. This is useful for beginners
- who wish to see how their world evolves---without having to design a
- rendering function---or for general debugging of world programs.
+ if not @racket[#f], DrRacket opens two separate windows:
+ @itemlist[
+  @item{one shows the current state each time it is updated.}
+  @item{another that displays the events and the related event data.}
+ ]
+ This is useful for beginners who wish to see how their world
+ evolves and why---without having to design a rendering function.
 }}
 
 @item{
@@ -1403,9 +1406,9 @@ optional handlers:
 
 @item{
 @defform/none[#:literals (state) (state expr)]{
- if not #f, DrRacket opens a separate window in which the current state is 
- rendered each time it is updated. This is mostly useful for
- debugging server programs.
+ if not #f, DrRacket opens a separate window that shows the current state
+ and the messages received from and sent to the registered worlds. 
+ This is mostly useful for debugging server programs.
 }}
 
 ]
