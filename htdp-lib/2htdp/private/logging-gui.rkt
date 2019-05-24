@@ -7,6 +7,8 @@
  logging-gui%
  dummy-gui%)
 
+(require htdp/error mzlib/pconvert)
+
 ;; an editor for logging messages 
 (define logging-gui%
   (class frame%
@@ -18,7 +20,13 @@
     
     ;; add lines to the end of the text 
     (define/public (log fmt . x)
-      (define str (apply format (string-append fmt "\n") x))
+      (define y
+        (for/list ((i x))
+          (parameterize ([constructor-style-printing #t]
+                         [booleans-as-true/false     #t]
+                         [abbreviate-cons-as-list    #t])
+            (print-convert i))))
+      (define str (apply format (string-append fmt "\n") y))
       (queue-callback 
        (lambda () 
          (send text lock #f)
@@ -64,3 +72,17 @@
                    (when (is-a? t text%)
                      (send t set-position 0 (send t last-position))))])
   (void))
+
+(module+ test
+  (struct foo (bar) #:prefab)
+  (define (a-foo . _) (foo 1))
+
+  (define logging-gui (new logging-gui% [label "testing"]))
+
+  (send logging-gui show #t)
+
+  (send logging-gui log "long S-expression: ~s" (build-list 100 add1))
+  (send logging-gui log "long string: ~s" (make-string 200 #\a))
+  (send logging-gui log "a string in a list: ~s" (list (make-string 200 #\a)))
+  (send logging-gui log "a list of structs: ~s" (build-list 10 a-foo))
+  (send logging-gui log "a byte string: ~s" #"hello world, good bye world"))
