@@ -685,7 +685,7 @@ functions that compute inexact numbers:
 @;%
 
 It is an error for @racket[expression], @racket[low-expression], or
-@racket[high-expression] to produce a function value or an inexact number;
+@racket[high-expression] to produce a function value;
 see note on @racket[check-expect] for details.  }
 
   @; ----------------------------------------------------------------------
