@@ -188,7 +188,7 @@
 	 #,(strip-context stx)))
     (unless stx-err?
       (if exn?
-	  (err/rt-test (eval #`(mz-require '#,name)) exn?)
+	  (err/rt-test/once (eval #`(mz-require '#,name)) exn?)
 	  (eval #`(mz-require '#,name))))))
 
 (define-syntax (htdp-eval stx)
