@@ -12,22 +12,29 @@ two rounds of macro-expansion for a program written in a teaching
 language.  First, the program is expanded according to the
 macro definitions contained in the "lang" collection.  Then, the
 code is expanded according to the macro definitions built into
-mzscheme.  So, for instance, a beginner 'cond' expands into a
-mzscheme 'cond' which expands into a nested series of 'if's.
+racket.  So, for instance, a beginner 'cond' expands into a
+racket 'cond' which expands into a nested series of 'if's.
 
 Correspondingly, the stepper's addition of syntax properties is broken
 into two parts; those added for the beginner macros, and those added
-for the mzscheme macros.  However, since it is harder to alter the
-macro expansion which occurs in mzscheme, the latter set are added not
-during the actual macro expansion in mzscheme but as part of a pass
+for the racket macros.  However, since it is harder to alter the
+macro expansion which occurs in racket, the latter set are added not
+during the actual macro expansion in racket but as part of a pass
 over the code that occurs in the annotator between expansion and the
 main annotation.  This procedure is called 'top-level-rewrite'.
 
-Therefore, the stepper's syntax-property additions occur in two
-textual locations: collects/lang/private/teach.ss, and
-collects/stepper/private/annotate.ss (with a few stray ones
-in collects/lang/private/teachhelp.ss).
-[Ed note: these paths are long since changed... 2015-08-28, JBC]
+These syntax properties are therefore applied in two sets of
+locations: the teching language definitions, and the stepper
+itself. Currently, these are the paths in the first and second sets:
+
+- htdp-lib/2htdp/universe.rkt
+- htdp-lib/lang/prim.rkt
+- htdp-lib/lang/private/signature-syntax.rkt
+- htdp-lib/lang/private/teach.rkt
+- htdp-lib/lang/run-teaching-program.rkt
+
+- htdp-lib/stepper/private/annotate.rkt
+- htdp-lib/stepper/private/shared.rkt
 
 In order to make it easy to move the stepper's syntax properties
 as a group and also in order to check that only sane ones are
@@ -65,6 +72,11 @@ stepper-skip-completely :
  a nonsensical one.  This is where the 'expressions are lists of
  subexpressions' abstraction and the 'expressions are one of A...Z'
  abstraction part ways.
+
+ Also, note that if annotated code is evaluated inside of an expression
+ so tagged, things will break. As they should. (Actually, I think that
+ if the annotated code is in tail WRT the skipped-completely code,
+ you won't get an error. It's still a bad thing to do.)
 
  Uses:
  - applied to the check of the test-variable in the expansion of the
@@ -115,7 +127,7 @@ stepper-define-type:
  Question 1: why the right-hand side?  Why not on the define itself?
  A: because for certain kinds of define (namely those in a local),
     the define itself evaporates into an internal define which is then
-    expanded in a mzscheme-native expansion into a letrec.
+    expanded in a racket-native expansion into a letrec.
 
  Question 2: won't the right-hand side change, losing the mark?
  A: yes it will, but not for definitions of lambdas.  Since there
@@ -295,7 +307,7 @@ STEPPER-HINT COLLISIONS
 
  exceptions:
 
-1) the beginner cond expands into the mzscheme cond, which is
+1) the beginner cond expands into the racket cond, which is
 then annotated by the top-level-rewrite. In this case, the expansion
 of the beginner cond does not add any stepper-hint properties, so no
 collision can occur.

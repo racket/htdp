@@ -26,6 +26,9 @@ that this lookup occurs only when the varref is evaluated, not when it
 is first `encountered' (e.g., in the body of a closure). One reason that
 this mechanism is necessary is that a Scheme REPL permits top-level
 references to variables that have not yet been defined.
+[Ed. Note: in 2019, I don't believe that top-level variables will *ever*
+occur in code submitted to the stepper. I'm not even sure they're
+still a thing.]
 
 Bound varrefs have a known lexical binding location, and they can be
 looked up directly, rather than going through the indirection of
@@ -197,28 +200,28 @@ That worked great!
 
 ************
 
-Man, there's a lot of shared code in here. 
+Man, there's a lot of shared code in here.
 
 ************
 
 Okay, back to the drawing board on a lot of things.
 
-1) Matthias and Robby are of the opinion that the break for an expression 
+1) Matthias and Robby are of the opinion that the break for an expression
 should be triggered only when that expression becomes the redex.  For
 example, the breakpoint for an if expression is triggered _after_ the
 test expression is evaluated.
 
-2) I've realized that I need a more general approach in the annotater to 
-handle binding constructs other than lambda.  In particular, the new 
-scheme handles top-level variables differently than lexically bound ones.  
-In particular, the mark for an expression contains the value of a 
-top-level variable if (1) the variable occurs free in the expression, and 
+2) I've realized that I need a more general approach in the annotater to
+handle binding constructs other than lambda.  In particular, the new
+scheme handles top-level variables differently than lexically bound ones.
+In particular, the mark for an expression contains the value of a
+top-level variable if (1) the variable occurs free in the expression, and
 (2) the expression is on the spine of the current procedure or definition.
-Lexically bound variables are placed in the mark if (1) they occur free in 
-the expression, and (2) they are in tail position relative to the innermost 
+Lexically bound variables are placed in the mark if (1) they occur free in
+the expression, and (2) they are in tail position relative to the innermost
 binding expression for the variable.
 
-*** Wait, no.  This is crap, because the bodies of lambdas need to store 
+*** Wait, no.  This is crap, because the bodies of lambdas need to store
 all free variables, regardless of whether they're lexically tail w.r.t.
 the binding occurrence. Maybe it really would just be easier to do this
 in two passes.  How would this work?  One pass would attach the free
