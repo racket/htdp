@@ -58,10 +58,19 @@
    list-of-tests))
 
 (define (run-all-tests-except nix-list)
+  (define reduced-list
+    (filter (lambda (pr) (not (member (car pr) nix-list)))
+            list-of-tests))
+  (define num-tests-removed
+    (- (length list-of-tests)
+       (length reduced-list)))
+  (unless (= num-tests-removed (length nix-list))
+    (raise-argument-error 'run-all-tests-except
+                          "list of test names each occurring once in list of tests"
+                          0 nix-list))
   (andmap/no-shortcut 
    run-one-test/helper
-   (filter (lambda (pr) (not (member (car pr) nix-list)))
-           list-of-tests)))
+   reduced-list))
 
 ;; given the name of a test, look it up and run it
 (define (run-test name)
