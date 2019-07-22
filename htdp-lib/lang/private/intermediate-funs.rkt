@@ -14,15 +14,17 @@
  procedures
 
  (begin
-   (require scribble/manual scribble/eval "sl-eval.rkt")
+   (require scribble/manual scribble/examples (except-in scribble/eval examples) "sl-eval.rkt")
    (define (isl)
      (define *bsl
-       (isl+-eval
+       (isl-eval
         [(define i 3)
          (define a-list '(0 1 2 3 4 5 6 7 8 9))
          (define threshold 3)]))
      (set! isl (lambda () *bsl))
-     *bsl))
+     *bsl)
+ 
+  @(define ev-isl (isl)))
 
  (all-from-except beginner:
                   (submod lang/private/beginner-funs without-wrapper)
@@ -125,69 +127,88 @@
  more existing lists:
  @codeblock{(map f (list x-1 ... x-n)) = (list (f x-1) ... (f x-n))}
  @codeblock{(map f (list x-1 ... x-n) (list y-1 ... y-n)) = (list (f x-1 y-1) ... (f x-n y-n))}
- @interaction[#:eval (isl) 
-              (map add1 '(3 -4.01 2/5)) 
-              (map (lambda (x) (list 'my-list (+ x 1))) '(3 -4.01 2/5))
-              (map (lambda (x y) (+ x (* x y))) '(3 -4 2/5) '(1 2 3))]
+
+ @interaction[#:eval ev-isl (map add1 (list 3 -4.01 2/5))]
+
+ @examples[#:eval ev-isl #:label "Mapping a user-defined function:"
+ (define (tag-with-a x) 
+   (list "a" (+ x 1)))
+ ]
+
+ @interaction[#:eval ev-isl (map tag-with-a (list 3 -4.01 2/5))]
+
+ @examples[#:eval ev-isl #:label "Mapping over two lists:"
+ (define (add-and-multiply x y) 
+   (+ x (* x y)))
+ ]
+
+ @interaction[#:eval ev-isl (map add-and-multiply (list 3 -4 2/5) '(1 2 3))]
 }
-  @defproc[(for-each [f (any ... -> any)] [l (listof any)] ...) void?]{
- Applies a function to each item on one or more lists for effect only:
- @codeblock{(for-each f (list x-1 ... x-n)) = (begin (f x-1) ... (f x-n))}
- @interaction[#:eval (asl-eval)
-              (for-each (lambda (x) (begin (display x) (newline))) '(1 2 3))
-              ]
-}
+
   @defproc[((intermediate-filter filter) [p? (X -> boolean)] [l (listof X)]) (listof X)]{
  Constructs a list from all those items on a list for which the predicate holds.
- @interaction[#:eval (isl)
-              (filter odd? '(0 1 2 3 4 5 6 7 8 9))
-              threshold
-              (filter (lambda (x) (>= x threshold)) '(0 1 2 3 4 5 6 7 8 9))
-              ]
+
+ @interaction[#:eval ev-isl (filter odd? '(0 1 2 3 4 5 6 7 8 9))]
+
+ @examples[#:eval ev-isl #:label "Keep only numbers that are large enough:"
+ (define (large-enough? x)
+   (>= x 3))]
+ 
+ @interaction[#:eval ev-isl (filter large-enough? '(0 1 2 3 4 5 6 7 8 9))]
+              
 }
   @defproc[((intermediate-foldr foldr) [f (X ... Y -> Y)] [base Y] [l (listof X)] ...) Y]{
  @codeblock{(foldr f base (list x-1 ... x-n)) = (f x-1 ... (f x-n base))}
  @codeblock{(foldr f base (list x-1 ... x-n) (list y-1 ... y-n))
   = (f x-1 y-1 ... (f x-n y-n base))}
- @interaction[#:eval (isl)
-              (foldr + 0 '(0 1 2 3 4 5 6 7 8 9))
-              a-list
-              (foldr (lambda (x r) (if (> x threshold) (cons (* 2 x) r) r)) '() a-list)
-              (foldr (lambda (x y r) (+ x y r)) 0 '(1 2 3) '(10 11 12))
-              ]
+
+ @interaction[#:eval ev-isl (foldr + 0 '(0 1 2 3 4 5 6 7 8 9))]
+
+ @examples[#:eval ev-isl #:label "Append all rests of all lists:"
+ (define (append-rests f r)
+   (append (rest f) r))]
+
+ @interaction[#:eval ev-isl (foldr append-rests '() '((1 a) (2 b c) (3 d e f)))]
+
+ @examples[#:eval ev-isl #:label "Add two lists of numbers:"
+ (define (add-two-lists x y r)
+   (+ x y r))]
+
+ @interaction[#:eval ev-isl (foldr add-two-lists 0 '(1 2 3) '(10 11 12))]
 }
   @defproc[((intermediate-foldl foldl) [f (X ... Y -> Y)] [base Y] [l (listof X)] ...) Y]{
  @codeblock{(foldl f base (list x-1 ... x-n)) = (f x-n ... (f x-1 base))}
  @codeblock{(foldl f base (list x-1 ... x-n) (list x-1 ... x-n))
   = (f x-n y-n ... (f x-1 y-1 base))}
- @interaction[#:eval (isl)
-              (foldl + 0 '(0 1 2 3 4 5 6 7 8 9))
-              a-list
-              (foldl (lambda (x r) (if (> x threshold) (cons (* 2 x) r) r)) '() a-list)
-              (foldl (lambda (x y r) (+ x y r)) 0 '(1 2 3) '(10 11 12))
-              ]
+ @interaction[#:eval ev-isl (foldl + 0 '(0 1 2 3 4 5 6 7 8 9))]
+ 
+ @interaction[#:eval ev-isl (foldl cons '() '(a b c))]
 }
   @defproc[(build-list [n nat] [f (nat -> X)]) (listof X)]{
  Constructs a list by applying @racket[f] to the numbers between @racket[0] and @racket[(- n 1)]:
  @codeblock{(build-list n f) = (list (f 0) ... (f (- n 1)))}
- @interaction[#:eval (isl)
-              (build-list 22 add1)
-              i
-              (build-list 3 (lambda (j) (+ j i)))
-              (build-list 5
-                          (lambda (i)
-                            (build-list 5
-                                        (lambda (j)
-                                          (if (= i j) 1 0)))))
-              ]
+ @interaction[#:eval (isl) (build-list 22 add1)]
+
+ @examples[#:eval ev-isl #:label "Creating a diagnoal matrix:"
+ (define (diagonalize i)
+   (local ((define (off j)
+             (if (= i j) 1 0)))
+     (build-list 3 off)))
+ ]
+
+ @interaction[#:eval (isl) (build-list 3 diagonalize)]
 }
   @defproc[((intermediate-build-string build-string) [n nat] [f (nat -> char)]) string]{
  Constructs a string by applying @racket[f] to the numbers between @racket[0] and
  @racket[(- n 1)]: 
  @codeblock{(build-string n f) = (string (f 0) ... (f (- n 1)))}
- @interaction[#:eval (isl)
-              (build-string 10 integer->char)
-              (build-string 26 (lambda (x) (integer->char (+ 65 x))))]
+ @interaction[#:eval (isl) (build-string 10 integer->char)]
+
+ @examples[#:eval ev-isl #:label "Making the alphabet:"
+ (define (starting-at-a x)
+   (integer->char (+ 65 x)))]
+
+ @interaction[#:eval (isl) (build-string 26 starting-at-a)]
 }
   @defproc[((intermediate-quicksort quicksort) [l (listof X)] [comp (X X -> boolean)]) (listof X)]{
  Sorts the items on @racket[l], in an order according to @racket[comp] (using the quicksort
@@ -200,29 +221,47 @@
  @interaction[#:eval (isl)
               (sort '(6 7 2 1 3 4 0 5 9 8) <)]
 }
-  @defproc[((intermediate-andmap andmap) [p? (X ... -> boolean)] [l (listof X) ...]) boolean]{
+  @defproc[((intermediate-andmap andmap) [p? (X ... -> boolean)] [l (listof X)] ...) boolean]{
  Determines whether @racket[p?] holds for all items of @racket[l] ...:
  @codeblock{(andmap p (list x-1 ... x-n)) = (and (p x-1) ... (p x-n))}
  @codeblock{(andmap p (list x-1 ... x-n) (list y-1 ... y-n)) = (and (p x-1 y-1) ... (p x-n y-n))}
- @interaction[#:eval (isl)
-              (andmap odd? '(1 3 5 7 9))
-              threshold 
-              (andmap (lambda (x) (< x threshold)) '(0 1 2))
-              (andmap even? '())
-              (andmap (lambda (x f) (f x)) (list 0 1 2) (list odd? even? positive?))
-              ]
+ @interaction[#:eval ev-isl (andmap odd? '(1 3 5 7 9))]
+
+ @interaction[#:eval ev-isl (andmap even? '())]
+ 
+ @examples[#:eval ev-isl #:label "Making sure all numbers are below some threshold:"
+ (define (small-enough? x)
+   (< x 3))]
+
+ @interaction[#:eval ev-isl (andmap small-enough? '(0 1 2))]
+
+ @examples[#:eval ev-isl
+  #:label "Checking that all items in the first list satisfy the corresponding predictate in the 2nd:"
+ (define (and-satisfies? x f)
+   (f x))]
+
+ @interaction[#:eval ev-isl (andmap and-satisfies? (list 0 1 2) (list odd? even? positive?))]
 }
-  @defproc[((intermediate-ormap ormap)   [p? (X -> boolean)] [l (listof X)]) boolean]{
+  @defproc[((intermediate-ormap ormap)   [p? (X ... -> boolean)] [l (listof X)] ...) boolean]{
  Determines whether @racket[p?] holds for at least one items of @racket[l]:
  @codeblock{(ormap p (list x-1 ... x-n)) = (or (p x-1) ... (p x-n))}
  @codeblock{(ormap p (list x-1 ... x-n) (list y-1 ... y-n)) = (or (p x-1 y-1) ... (p x-n y-n))}
- @interaction[#:eval (isl)
-              (ormap odd? '(1 3 5 7 9))
-              threshold 
-              (ormap (lambda (x) (< x threshold)) '(6 7 8 1 5))
-              (ormap even? '())
-              (ormap (lambda (x f) (f x)) (list 0 1 2) (list odd? even? positive?))
-              ]
+
+ @interaction[#:eval (isl) (ormap odd? '(1 3 5 7 9))]
+ @interaction[#:eval (isl) (ormap even? '())]
+
+ @examples[#:eval ev-isl #:label "Making sure at least one number is below some threshold:"
+ (define (a-small-one? x)
+   (< x 3))]
+
+ @interaction[#:eval (isl) (ormap a-small-one? '(6 7 8 1 5))]
+
+ @examples[#:eval ev-isl
+  #:label "Checking that one item in the first list satisfy the corresponding predictate in the 2nd:"
+ (define (or-satisfies? x f)
+   (f x))]
+
+ @interaction[#:eval (isl) (ormap or-satisfies? (list 0 1 2) (list odd? even? positive?))]
 }
   @defproc[(argmin [f (X -> real)] [l (listof X)]) X]{
  Finds the (first) element of the list that minimizes the output of the function.
@@ -255,19 +294,25 @@
 }
   @defproc[(compose [f (Y -> Z)] [g (X -> Y)]) (X -> Z)]{
  Composes a sequence of procedures into a single procedure:
- @codeblock{(compose f g) = (lambda (x) (f (g x)))}
- @interaction[#:eval (isl)
-              ((compose add1 second) '(add 3))
-              (map (compose add1 second) '((add 3) (sub 2) (mul 4)))
-              ]
+ @codeblock{(compose f g)}
+ is equivalent to
+ @codeblock{
+ (define (f-after-g x)
+   (f (g x)))}
+ 
+ @interaction[#:eval (isl) (map (compose add1 second) '((add 3) (sub 2) (mul 4))) ]
 }
   @defproc[(procedure? [x any]) boolean?]{
  Produces true if the value is a procedure.
- @interaction[#:eval (isl)
-              (procedure? cons)
-              (procedure? add1) 
-              (procedure? (lambda (x) (> x 22)))
-              ]
+ @interaction[#:eval (isl) (procedure? cons)]
+ 
+ @interaction[#:eval (isl) (procedure? add1) ]
+
+ @examples[#:eval ev-isl #:label "Checking a programmer-defined function:"
+ (define (my-function x)
+   x)]
+ 
+ @interaction[#:eval ev-isl (procedure? my-function) ]
 }
   )
  )
