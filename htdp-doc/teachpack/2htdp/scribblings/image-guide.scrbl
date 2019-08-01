@@ -221,7 +221,8 @@ a little.
 With shapes that have opaque colors like @racket["red"] and @racket["blue"], 
 overlaying one on top completely blots out the one one the bottom. 
 
-For example, the red rectangle here completely covers the blue one.
+For example, the green rectangle here completely covers the blue one
+where the two rectangles overlap.
 
 @image-interaction[(overlay
                     (rectangle 60 100 "solid" (color 127 255 127))
