@@ -13,6 +13,7 @@
   (create-embedding-executable 
    exe-name
    #:aux '((embed-dlls? . #t))
+   #:expand-namespace (make-base-namespace)
    #:modules `((#f ,reader-module)
                (#f (lib "wxme/read.ss"))
                (#f (lib "mred/mred.ss"))
