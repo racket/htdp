@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version 7.????				  
+
+* fix performance bug with event log for very large states 
+
+------------------------------------------------------------------------
 Version 7.4				  [Fri Jul 26 11:45:01 EDT 2019]
 
 * add event log window for big-bang so that students can see the events,
