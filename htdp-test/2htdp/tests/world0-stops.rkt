@@ -1,7 +1,9 @@
 #lang racket 
 
 ;; ---------------------------------------------------------------------------------------------------
-;; does big-bang stop when the initial world is already a final world? does it draw the final image? 
+;; does big-bang stop when the initial world is already a final world? does it draw the final image?
+
+;; MF: the last test generates intermittent failures. I need to check into this eventually. 
 
 (require 2htdp/universe 2htdp/image "test-aux.rkt")
 
