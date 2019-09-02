@@ -334,7 +334,7 @@
                     (define nw (transform ws arg ...))
 
 		    ;; log events:
-		    (unless (eq? 'pub 'private)
+		    (when (and state (not (eq? 'pub 'private)))
 		      (define tg (symbol->string 'transform))
 		      (define e* (string-append tg " event: ~a " (begin arg "~a ") ...))
 		      (send gui log e* ws arg ...)
