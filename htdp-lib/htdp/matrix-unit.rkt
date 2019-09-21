@@ -15,8 +15,18 @@
 ;; [Matrix X] = [BST X]
 
 (define matrix% 
-  (class* object% (matrix<%>)
+  (class* object% (matrix<%>  equal<%>)
     (define/public (->rectangle) (matrix->rectangle this))
+
+    (define/public (equal-to? other recur)
+      (recur (->rectangle) (send other ->rectangle)))
+    
+    (define/public (equal-hash-code-of hash-code)
+      (hash-code (->rectangle)))
+
+    (define/public (equal-secondary-hash-code-of hash-code)
+      (hash-code (->rectangle)))
+
     (super-new)))
 
 (define bmatrix%
@@ -27,6 +37,7 @@
     (define/public (get-mat) mat)
     ;; [InnerMatrix X] = Nat x Nat x [vectorof X] 
     ;; s.t. (= (* n m)(vector-length vector))
+
     (super-new)))
 
 (define imatrix%
