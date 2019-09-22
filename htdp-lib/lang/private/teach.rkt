@@ -69,6 +69,7 @@
                     "teach-shared.rkt"
                     "rewrite-error-message.rkt"
                     racket/syntax
+		    (only racket/string string-replace)
                     syntax/kerncase
                     syntax/stx
                     syntax/struct
@@ -816,6 +817,19 @@
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; define-struct (beginner)
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (define (struct-name->signature-name loc-name struct-name)
+    (define signature-name
+      (string->symbol
+       (string-replace (string-titlecase (symbol->string struct-name))
+		       "-" "")))
+    (when (eq? signature-name struct-name)
+      (teach-syntax-error
+       'define-struct
+       loc-name
+       loc-name
+       "the struct name must start with a lower-case letter"))
+    (datum->syntax loc-name signature-name))
   
   (define (do-define-struct stx first-order? setters?)
     
@@ -880,19 +894,16 @@
            (make-struct-names name fields stx)]
          
          [define field# (length fields)]
-         [define signature-name (car (generate-temporaries (list name)))]
-         [define parametric-signature-name (datum->syntax name (format-symbol "~a-of" name))]
+         [define signature-name (struct-name->signature-name name (syntax->datum name))]
+         [define parametric-signature-name (struct-name->signature-name name (format-symbol "~a-of" name))]
          [define proc-names
            (list* constructor-name
                   predicate-name
                   (if setters? (append getter-names setter-names) getter-names))]
-         (define fields-without-location 
-           (map (λ (x) (datum->syntax x (syntax->datum x) #f)) (syntax->list #'(field_ ...))))
          
          (with-syntax ([compile-info 
                         (kw-app build-struct-expand-info name fields #f (not setters?) #t null null
-                                #:omit-struct-type? #t)]
-                       [(field_/no-loc ...) fields-without-location])
+                                #:omit-struct-type? #t)])
            (define-values (defn0 bind-names)
              (wrap-func-definitions 
               first-order? 
@@ -1009,13 +1020,20 @@
                           #,(if setters?
                                 (quasisyntax/loc stx
                                   (define (#,parametric-signature-name field_ ...)
-                                    (signature
-                                     (combined 
-                                      (at name_ (predicate raw-predicate))
-                                      (at field_ (signature:property getter-id field_/no-loc)) ...))))
+                                    (make-combined-signature
+                                     '#,signature-name
+                                     (list (signature (at name_ (predicate raw-predicate)))
+                                           #,@(map (lambda (field-name getter-name)
+                                                     #`(make-property-signature (signature-name #,field-name)
+                                                                                #,getter-name
+                                                                                #,field-name
+                                                                                (signature-syntax #,field-name)))
+                                                   (syntax->list #'(field_ ...))
+                                                   (syntax->list #'(getter-id ...))))
+                                     'parametric-signature)))
                                 (quasisyntax/loc stx
                                   (define (#,parametric-signature-name field_ ...)
-                                    (let* ((sigs (list field_/no-loc ...))
+                                    (let* ((sigs (list (signature field_) ...))
                                            (sig
                                             (make-lazy-wrap-signature 'name_ #t
                                                                       type-descriptor
@@ -1039,9 +1057,6 @@
            (define struct-name-size (string-length (symbol->string (syntax-e #'name_))))
            (define struct-name/locally-introduced (syntax-local-introduce #'name_))
            
-           (define signature-name-directive #f)
-           (define parametric-signature-name-directive #f)
-
            (define struct-name-to-maker-directive
              (vector (syntax-local-introduce constructor-name)
                      5
@@ -1103,9 +1118,7 @@
                      field-name-size))
            
            (define all-directives
-             (list* signature-name-directive
-                    parametric-signature-name-directive
-                    struct-name-to-maker-directive
+             (list* struct-name-to-maker-directive
                     struct-name-to-predicate-directive
                     (map field->selector-directive fields getter-names)
                     (map struct->selector-directive getter-names)
@@ -1139,9 +1152,7 @@
                                                       #f
                                                       (format "structure type; do you mean make-~a" (syntax-e #'name_))
                                                       stx
-                                                      stx)
-                                                     #'#,signature-name
-                                                     ])))
+                                                      stx)])))
                           ;; support `shared'
                           (make-info (lambda () compile-info)))))
                     'stepper-skip-completely
@@ -3162,40 +3173,40 @@
         [(_ a b) (syntax/loc stx (the-cons/tagged a b))]))))
 
 (provide signature :
-         -> mixed one-of predicate combined)
+         -> mixed enum predicate combined ListOf)
 
 (provide Integer Number Rational Real Natural 
          Boolean True False
-         String Char Symbol Empty-list
+         String Char Symbol EmptyList
          Any Unspecific
-         cons-of)
+         ConsOf)
 
-(define Integer (signature/arbitrary arbitrary-integer (predicate integer?)))
-(define Number (signature/arbitrary arbitrary-real (predicate number?)))
-(define Rational (signature/arbitrary arbitrary-rational (predicate rational?)))
-(define Real (signature/arbitrary arbitrary-real (predicate real?)))
+(define Integer (signature/arbitrary arbitrary-integer Integer (predicate integer?)))
+(define Number (signature/arbitrary arbitrary-real Number (predicate number?)))
+(define Rational (signature/arbitrary arbitrary-rational Rational (predicate rational?)))
+(define Real (signature/arbitrary arbitrary-real Real (predicate real?)))
 
 (define (natural? x)
   (and (integer? x)
        (not (negative? x))))
 
-(define Natural (signature/arbitrary arbitrary-natural (predicate natural?)))
+(define Natural (signature/arbitrary arbitrary-natural Natural (predicate natural?)))
 
-(define Boolean (signature/arbitrary arbitrary-boolean (predicate boolean?)))
+(define Boolean (signature/arbitrary arbitrary-boolean Boolean (predicate boolean?)))
 
-(define True (signature (one-of #f)))
-(define False (signature (one-of #f)))
+(define True (signature True (enum #f)))
+(define False (signature False (enum #f)))
 
-(define String (signature/arbitrary arbitrary-printable-ascii-string (predicate string?)))
-(define Char (signature/arbitrary arbitrary-printable-ascii-string (predicate char?)))
-(define Symbol (signature/arbitrary arbitrary-symbol (predicate symbol?)))
-(define Empty-list (signature (one-of empty)))
+(define String (signature/arbitrary arbitrary-printable-ascii-string String (predicate string?)))
+(define Char (signature/arbitrary arbitrary-printable-ascii-string Char (predicate char?)))
+(define Symbol (signature/arbitrary arbitrary-symbol Symbol (predicate symbol?)))
+(define EmptyList (signature EmptyList (enum empty)))
 
 (define Any (signature Any %Any))
 
 (define Unspecific (signature Unspecific %Unspecific))
 
-(define (cons-of car-sig cdr-sig)
+(define (ConsOf car-sig cdr-sig)
   (make-pair-signature #t car-sig cdr-sig))
 
 ; QuickCheck

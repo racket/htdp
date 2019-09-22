@@ -1,9 +1,9 @@
-#lang scheme/base
+#lang racket/base
 
 (provide :
 	 signature signature/arbitrary
 	 define/signature define-values/signature
-	 -> mixed one-of predicate combined property list-of vector-of)
+	 -> mixed enum predicate combined property ListOf VectorOf)
 
 (require deinprogramm/signature/signature
 	 deinprogramm/signature/signature-english
@@ -22,7 +22,7 @@
 
 (define-for-syntax (parse-signature name stx)
   (syntax-case* stx
-		(mixed one-of predicate list-of vector-of -> combined property reference at signature)
+		(mixed enum predicate ListOf VectorOf -> combined property reference at signature)
 		module-or-top-identifier=?
     ((mixed ?signature ...)
      (with-syntax ((?stx (phase-lift stx))
@@ -33,7 +33,7 @@
        #'(make-mixed-signature '?name
 			      (list ?signature-expr ...)
 			      ?stx)))
-    ((one-of ?exp ...)
+    ((enum ?exp ...)
      (with-syntax ((((?temp ?exp) ...) 
 		    (map list
 			 (generate-temporaries #'(?exp ...)) (syntax->list #'(?exp ...))))
@@ -56,23 +56,23 @@
      (with-syntax ((?stx (phase-lift stx))
 		   (?name name))
        #'(make-predicate-signature '?name (delay ?exp) ?stx)))
-    ((list-of ?signature)
+    ((ListOf ?signature)
      (with-syntax ((?stx (phase-lift stx))
 		   (?name name)
 		   (?signature-expr (parse-signature #f #'?signature)))
        #'(make-list-signature '?name ?signature-expr ?stx)))
-    ((list-of ?signature1 ?rest ...)
+    ((ListOf ?signature1 ?rest ...)
      (raise-syntax-error #f
-			 "list-of signature accepts only a single operand"
+			 "ListOf signature accepts only a single operand"
 			 (syntax ?signature1)))
-    ((vector-of ?signature)
+    ((VectorOf ?signature)
      (with-syntax ((?stx (phase-lift stx))
 		   (?name name)
 		   (?signature-expr (parse-signature #f #'?signature)))
        #'(make-vector-signature '?name ?signature-expr ?stx)))
-    ((vector-of ?signature1 ?rest ...)
+    ((VectorOf ?signature1 ?rest ...)
      (raise-syntax-error #f
-			 "vector-of signature accepts only a single operand"
+			 "VectorOf signature accepts only a single operand"
 			 (syntax ?signature1)))
     ((?arg-signature ... -> ?return-signature)
      (with-syntax ((?stx (phase-lift stx))
@@ -255,9 +255,9 @@
 
 (define-syntax -> within-signature-syntax-transformer)
 (define-syntax mixed within-signature-syntax-transformer)
-(define-syntax one-of within-signature-syntax-transformer)
+(define-syntax enum within-signature-syntax-transformer)
 (define-syntax predicate within-signature-syntax-transformer)
 (define-syntax combined within-signature-syntax-transformer)
 (define-syntax property within-signature-syntax-transformer)
-(define-syntax list-of within-signature-syntax-transformer)
-(define-syntax vector-of within-signature-syntax-transformer)
+(define-syntax ListOf within-signature-syntax-transformer)
+(define-syntax VectorOf within-signature-syntax-transformer)
