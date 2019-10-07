@@ -335,6 +335,19 @@ namespace.
     (check-three a b c '=~ number? 'number number? 'number positive-real? 'non-negative-real)
     (<= (magnitude (- a b)) c)))
 
+#;
+(define (=~ a b c)
+ (cond
+   [(= c +inf.0) #t]
+   [(and (= a +inf.0)
+         (= b +inf.0))
+    #t]
+   [(and (= a -inf.0)
+         (= b -inf.0))
+    #t]
+   [else
+    (<= (magnitude (- a b)) c)]))
+
 (define-teach beginner equal~?
   (lambda (a b c)
     (check-three a b c 'equal~? values 'any values 'any positive-real? 'non-negative-real)
