@@ -1220,6 +1220,14 @@
       (if s s s)))"
       '((finished-stepping)))
 
+  (t1 'big-bang
+      m:beginner
+      "(require 2htdp/image)
+(require 2htdp/universe)
+(define (f2 w) (text \"hi\" 30 \"red\"))
+(big-bang \"dummy\" [to-draw f2])"
+      '((finished-stepping)))
+  
 
   ;  ;;;;;;;;;;;;;
   ;  ;;
@@ -1275,6 +1283,8 @@
         (before-after ((hilite (and true true)))
                       ((hilite true)))
         (finished-stepping)))
+
+  
   
   #;(t1 'teachpack-universe
         (test-teachpack-sequence
