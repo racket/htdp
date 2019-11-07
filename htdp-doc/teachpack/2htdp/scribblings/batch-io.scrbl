@@ -101,7 +101,7 @@ This time, however, the extra leading space of the second line of
 a part of the separator that surrounds the word @racket["good"].
 }
 
-@item{@reading[read-words/line (listof string?)]{a list of lists, one per line; each line is represented as a list of strings}
+@item{@reading[read-words/line (listof (listof string?))]{a list of lists, one per line; each line is represented as a list of strings}
 
 @examples[#:eval (examples-batch-io)
 (read-words/line "data.txt")
