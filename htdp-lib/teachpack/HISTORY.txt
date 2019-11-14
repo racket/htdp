@@ -1,5 +1,6 @@
+
 ------------------------------------------------------------------------
-Version 7.????				  
+Version 7.5				  [Wed Nov 13 21:19:52 EST 2019]
 
 * fix performance bug with event log for very large states 
 * fix equality for matrix so that it works on structs with properties
