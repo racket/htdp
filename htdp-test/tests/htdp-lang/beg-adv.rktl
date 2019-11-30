@@ -3,8 +3,8 @@
 (htdp-err/rt-test (add1 'a 'b 'c) "add1: expects only 1 argument, but found 3")
 (htdp-err/rt-test (define x x) "x is used here before its definition")
 (htdp-err/rt-test (add1 'a) "add1: expects a number, given 'a")
-(htdp-err/rt-test (+ 'a 1) "[+]: expects a number as 1st argument, given 'a")
-(htdp-err/rt-test (+ 1 'a) "[+]: expects a number as 2nd argument, given 'a")
+(htdp-err/rt-test (+ 'a 1) "[+]: expects a number(?: as 1st argument)?, given 'a")
+(htdp-err/rt-test (+ 1 'a) "[+]: expects a number(?: as 2nd argument)?, given 'a")
 
 (htdp-syntax-test #'() "function call: expected a function after the open parenthesis, but nothing's there")
 
