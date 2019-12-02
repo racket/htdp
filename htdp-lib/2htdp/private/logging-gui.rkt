@@ -124,7 +124,7 @@
 
 ;; -----------------------------------------------------------------------------
 ;; watch how things work, not real tests 
-(module+ test
+(module+ main
   (struct foo (bar) #:prefab)
   (define (a-foo . _) (foo 1))
 
@@ -144,3 +144,7 @@
   (send logging-gui log "new state ~a" 'e)
   (send logging-gui log "receive a byte string: ~a" #"hello world, good bye world")
   (send logging-gui log "new state ~a" 'f))
+
+;; Don't run the almost-test in DrDr:
+(module test racket/base
+  (printf "Run a demo as the `main` submodule\n"))
