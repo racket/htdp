@@ -8,4 +8,5 @@
                           "check-satisfied8.rkt"
 			  "check-satisfied9.rkt"
 			  "check-failed-bsl.rkt"
-			  "check-failed-isl.rkt"))
+			  "check-failed-isl.rkt"
+                          "check-ordered.rkt"))
