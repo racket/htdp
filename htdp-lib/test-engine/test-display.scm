@@ -176,6 +176,7 @@
               (lambda (zero-message)
                 (check-outcomes total-tests failed-tests
                                 zero-message #f))])
+        (define start-pos (send editor last-position))
         (case style
           [(test-require)
            (test-outcomes
@@ -202,7 +203,12 @@
                    (send editor insert "\n")
                    (display-signature-violations violated-signatures
                                                 editor test-info src-editor))
-                 insert-test-results editor test-info src-editor))))
+                 insert-test-results editor test-info src-editor))
+        (send editor change-style
+              (send (editor:get-standard-style-list) find-named-style
+                    (editor:get-default-color-style-name))
+              0
+              (send editor last-position))))
 
     (define (format-list l)
       (cond
@@ -564,7 +570,7 @@
 
     (super-instantiate ())
 
-    (define content (make-object editor-canvas% this #f '()))
+    (define content (make-object canvas:color% this #f '()))
     (define button-panel (make-object horizontal-panel% this
                                       '() #t 0 0 0 0 '(right bottom) 0 0 #t #f))
     (define (hide)

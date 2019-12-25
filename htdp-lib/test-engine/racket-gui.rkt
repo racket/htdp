@@ -15,6 +15,7 @@
                              (editor:basic-mixin
                               text%))))))]
              [text-snip (new editor-snip% [editor text*])])
+        (send text-snip use-style-background #t)
         (printer value (send text* get-value-port))
         (flush-output (send text* get-value-port))
         (send text* delete/io (- (send text* last-position) 1) (send text* last-position))
