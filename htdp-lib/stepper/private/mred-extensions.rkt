@@ -426,15 +426,20 @@
     
     (lock #t)))
 
+;; AA
 (define finished-text
-  (instantiate (class text%
+  (instantiate (class f:text:standard-style-list%
                  (define/public (reset-width arg)
                    (void))
                  
                  (super-instantiate ())
                  
-                 (inherit insert lock)
+                 (inherit insert get-style-list change-style lock hide-caret)
+
+                 (change-style (send (get-style-list) find-named-style
+                                     (f:editor:get-default-color-style-name)))
                  (insert (string-constant stepper-complete))
+                 (hide-caret #t)
                  (lock #t)) 
     ()))
 
