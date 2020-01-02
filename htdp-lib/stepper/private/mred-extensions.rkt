@@ -18,38 +18,24 @@
  finished-text
  vertical-separator-snip-class%)
 
-(define test-dc (make-object bitmap-dc% (make-object bitmap% 1 1)))
-(define reduct-highlight-color (make-object color% 255 255 255))
-(define wob-reduct-highlight-color (make-object color% 255 255 255))
-(define redex-highlight-color (make-object color% 255 255 255))
-(define wob-redex-highlight-color (make-object color% 255 255 255))
-(send test-dc try-color (make-object color% 212 159 245) reduct-highlight-color)
-(send test-dc try-color (make-object color% 135 81 168) wob-reduct-highlight-color)
-(send test-dc try-color (make-object color% 193 251 181) redex-highlight-color)
-(send test-dc try-color (make-object color% 67 122 55) wob-redex-highlight-color)
-(define (get-redex-highlight-color)
-  (if (f:preferences:get 'framework:white-on-black?)
-      wob-redex-highlight-color
-      redex-highlight-color))
-(define (get-reduct-highlight-color)
-  (if (f:preferences:get 'framework:white-on-black?)
-      wob-reduct-highlight-color
-      reduct-highlight-color))
-         
-(define error-delta (make-object style-delta% 'change-style 'italic))
-(define dont-care (send error-delta set-delta-foreground "RED"))
+(f:color-prefs:add-color-scheme-entry 'stepper:reduct-highlight-color
+                                      (make-object color% 212 159 245)
+                                      (make-object color% 135 81 168))
+(f:color-prefs:add-color-scheme-entry 'stepper:redex-highlight-color
+                                      (make-object color% 193 251 181)
+                                      (make-object color% 67 122 55))
+(f:color-prefs:add-color-scheme-entry 'stepper:error-color "red" "red")
+(f:color-prefs:add-color-scheme-entry 'stepper:arrow-color "red" "red")
 
 (define snip-delta (make-object style-delta% 'change-alignment 'top))
 
 
-
 ;;;; VERTICAL-SEPARATOR : the red arrow that separates the left half of the display from the right half.
 
-(define red-arrow-pict
-  (colorize (scale-to-fit
-             (hc-append (blank 4 0) (arrow 30 0) (blank 4 0))
-             20 15)
-            "red"))
+(define arrow-pict
+  (scale-to-fit
+   (hc-append (blank 4 0) (arrow 30 0) (blank 4 0))
+   20 15))
 
 (define vertical-separator-snip-class%
   (class snip-class%
@@ -108,7 +94,10 @@
     (define (draw dc x y left top right bottom dx dy draw-caret)
       (let ([y-offset (round (/ (- height bitmap-height) 2))]
             [x-offset left-white])
-        (draw-pict red-arrow-pict dc (+ x x-offset) (+ y y-offset))))
+        (draw-pict
+         (colorize arrow-pict
+                   (f:color-prefs:lookup-in-color-scheme 'stepper:arrow-color))
+         dc (+ x x-offset) (+ y y-offset))))
     
     (super-instantiate ())
     (set-snipclass vertical-separator-snipclass)))
@@ -149,7 +138,7 @@
 (define stepper-sub-text%
   (class f:text:standard-style-list%
     
-    (init-field exps get-highlight-color show-inexactness? print-boolean-long-form?)
+    (init-field exps highlight-color show-inexactness? print-boolean-long-form?)
     
     (inherit insert get-style-list set-style-list change-style highlight-range last-position lock erase
              begin-edit-sequence end-edit-sequence get-start-position select-all clear)
@@ -246,7 +235,9 @@
                   (unless highlight-begin
                     (error 'format-whole-step "no highlight-begin to match highlight-end"))
                   (set! clear-highlight-thunks
-                        (cons (highlight-range highlight-begin highlight-end (get-highlight-color))
+                        (cons (highlight-range
+                               highlight-begin highlight-end
+                               (f:color-prefs:lookup-in-color-scheme highlight-color))
                               clear-highlight-thunks))
                   (set! highlight-begin #f))))]
            ;; mflatt: MAJOR HACK - this setting needs to come from the language
@@ -304,6 +295,9 @@
                           (f:editor:get-default-color-style-name)))
       (auto-wrap #t)
       (insert error-msg)
+      (define error-delta (make-object style-delta% 'change-style 'italic))
+      (send error-delta set-delta-foreground
+            (f:color-prefs:lookup-in-color-scheme 'stepper:error-color))
       (change-style error-delta before-error-msg (last-position)))))
 
 ;;    ;
@@ -415,17 +409,17 @@
     
     ;; attach the editors to the snips, and populate those editors.
     
-    (define (setup-editor-snip snip error-or-exps get-highlight-color)
+    (define (setup-editor-snip snip error-or-exps highlight-color)
       (send snip set-editor 
             (cond [(string? error-or-exps) 
                    (make-object stepper-sub-error-text% error-or-exps)]
                   [else 
                    (make-object stepper-sub-text%
-                     error-or-exps get-highlight-color show-inexactness?
+                     error-or-exps highlight-color show-inexactness?
                      print-boolean-long-form?)])))
     
-    (setup-editor-snip before-snip left-side get-redex-highlight-color)
-    (setup-editor-snip after-snip right-side get-reduct-highlight-color)
+    (setup-editor-snip before-snip left-side 'stepper:redex-highlight-color)
+    (setup-editor-snip after-snip right-side 'stepper:reduct-highlight-color)
     
     
     
