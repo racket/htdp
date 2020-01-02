@@ -6,6 +6,7 @@
          "syntax-property.rkt"
          images/compile-time
          string-constants
+         pict
          (for-syntax images/icons/control images/icons/style))
 
 (provide
@@ -19,10 +20,22 @@
 
 (define test-dc (make-object bitmap-dc% (make-object bitmap% 1 1)))
 (define reduct-highlight-color (make-object color% 255 255 255))
+(define wob-reduct-highlight-color (make-object color% 255 255 255))
 (define redex-highlight-color (make-object color% 255 255 255))
+(define wob-redex-highlight-color (make-object color% 255 255 255))
 (send test-dc try-color (make-object color% 212 159 245) reduct-highlight-color)
+(send test-dc try-color (make-object color% 135 81 168) wob-reduct-highlight-color)
 (send test-dc try-color (make-object color% 193 251 181) redex-highlight-color)
-
+(send test-dc try-color (make-object color% 67 122 55) wob-redex-highlight-color)
+(define (get-redex-highlight-color)
+  (if (f:preferences:get 'framework:white-on-black?)
+      wob-redex-highlight-color
+      redex-highlight-color))
+(define (get-reduct-highlight-color)
+  (if (f:preferences:get 'framework:white-on-black?)
+      wob-reduct-highlight-color
+      reduct-highlight-color))
+         
 (define error-delta (make-object style-delta% 'change-style 'italic))
 (define dont-care (send error-delta set-delta-foreground "RED"))
 
@@ -32,11 +45,11 @@
 
 ;;;; VERTICAL-SEPARATOR : the red arrow that separates the left half of the display from the right half.
 
-(define red-arrow-bitmap
-  (make-object bitmap% (collection-file-path "red-arrow.bmp" "icons") 'bmp))
-
-(unless (send red-arrow-bitmap ok?)
-  (error 'red-arrow-bitmap "unable to load red-arrow bitmap"))
+(define red-arrow-pict
+  (colorize (scale-to-fit
+             (hc-append (blank 4 0) (arrow 30 0) (blank 4 0))
+             20 15)
+            "red"))
 
 (define vertical-separator-snip-class%
   (class snip-class%
@@ -95,7 +108,7 @@
     (define (draw dc x y left top right bottom dx dy draw-caret)
       (let ([y-offset (round (/ (- height bitmap-height) 2))]
             [x-offset left-white])
-        (send dc draw-bitmap red-arrow-bitmap (+ x x-offset) (+ y y-offset))))
+        (draw-pict red-arrow-pict dc (+ x x-offset) (+ y y-offset))))
     
     (super-instantiate ())
     (set-snipclass vertical-separator-snipclass)))
@@ -114,7 +127,9 @@
         (let ([editor (get-editor)])
           (when editor
             (send editor reset-pretty-print-width width canvas))))])
-    (super-instantiate (#f #f 0 0 0 0 0 0 0 0))))
+    (super-instantiate (#f #f 0 0 0 0 0 0 0 0))
+    (inherit use-style-background)
+    (use-style-background #t)))
 
 ;                                    ;;    ;
 ;                                                          ;              ;                 ;  ;  ;  ; 
@@ -134,7 +149,7 @@
 (define stepper-sub-text%
   (class f:text:standard-style-list%
     
-    (init-field exps highlight-color show-inexactness? print-boolean-long-form?)
+    (init-field exps get-highlight-color show-inexactness? print-boolean-long-form?)
     
     (inherit insert get-style-list set-style-list change-style highlight-range last-position lock erase
              begin-edit-sequence end-edit-sequence get-start-position select-all clear)
@@ -156,9 +171,11 @@
     (define pretty-printed-width #f)
     (define clear-highlight-thunks null)
     (define/private (reset-style)
-      (change-style (send (get-style-list) find-named-style "Standard")))
+      (change-style (send (get-style-list) find-named-style
+                          (f:editor:get-default-color-style-name))))
     (define/private (set-last-style)
-      (change-style (send (get-style-list) find-named-style "Standard")
+      (change-style (send (get-style-list) find-named-style
+                          (f:editor:get-default-color-style-name))
                     (sub1 (last-position))
                     (last-position)))
     
@@ -229,7 +246,7 @@
                   (unless highlight-begin
                     (error 'format-whole-step "no highlight-begin to match highlight-end"))
                   (set! clear-highlight-thunks
-                        (cons (highlight-range highlight-begin highlight-end highlight-color)
+                        (cons (highlight-range highlight-begin highlight-end (get-highlight-color))
                               clear-highlight-thunks))
                   (set! highlight-begin #f))))]
            ;; mflatt: MAJOR HACK - this setting needs to come from the language
@@ -283,7 +300,8 @@
     
     (super-instantiate ())
     (let ([before-error-msg (last-position)])
-      (change-style (send (get-style-list) find-named-style "Standard"))
+      (change-style (send (get-style-list) find-named-style
+                          (f:editor:get-default-color-style-name)))
       (auto-wrap #t)
       (insert error-msg)
       (change-style error-delta before-error-msg (last-position)))))
@@ -304,7 +322,7 @@
 ;; the enclosed editor.
 
 (define stepper-canvas%
-  (class editor-canvas% 
+  (class f:canvas:color%
     (inherit get-editor)
     (override*
      [on-size
@@ -397,17 +415,17 @@
     
     ;; attach the editors to the snips, and populate those editors.
     
-    (define (setup-editor-snip snip error-or-exps highlight-color)
+    (define (setup-editor-snip snip error-or-exps get-highlight-color)
       (send snip set-editor 
             (cond [(string? error-or-exps) 
                    (make-object stepper-sub-error-text% error-or-exps)]
                   [else 
                    (make-object stepper-sub-text%
-                     error-or-exps highlight-color show-inexactness?
+                     error-or-exps get-highlight-color show-inexactness?
                      print-boolean-long-form?)])))
     
-    (setup-editor-snip before-snip left-side redex-highlight-color)
-    (setup-editor-snip after-snip right-side reduct-highlight-color)
+    (setup-editor-snip before-snip left-side get-redex-highlight-color)
+    (setup-editor-snip after-snip right-side get-reduct-highlight-color)
     
     
     
