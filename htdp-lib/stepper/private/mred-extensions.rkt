@@ -146,7 +146,8 @@
     (public* [reset-pretty-print-width
               (lambda (inner-width canvas)
                 (begin-edit-sequence)
-                (let* ([style (send (get-style-list) find-named-style "Standard")]
+                (let* ([style (send (get-style-list) find-named-style
+                                    (f:editor:get-default-color-style-name))]
                        [char-width (send style get-text-width (send canvas get-dc))]
                        [width (floor (/ (- inner-width 18) char-width))])
                   (reformat-sexp width)
