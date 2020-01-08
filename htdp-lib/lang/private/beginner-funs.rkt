@@ -609,7 +609,7 @@
  @interaction[#:eval (bsl) (caadr (cons 1 (cons (cons 'a '()) (cons (cons 'd '()) '()))))]
 }
   @defproc[(caaar [x list?]) any/c]{
- LISP-style selector: @racket[(car (car (car (car x))))].
+ LISP-style selector: @racket[(car (car (car x)))].
  @interaction[#:eval (bsl) w (caaar w)]
 }
   @defproc[(cdaar [x list?]) any/c]{
