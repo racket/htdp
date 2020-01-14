@@ -5,6 +5,7 @@
          racket/port
          racket/list
          deinprogramm/quickcheck/quickcheck
+	 (except-in deinprogramm/signature/signature signature-violation)
          "print.ss")
 
 (provide (all-defined-out))
@@ -37,6 +38,7 @@
 ;;Wishes
 (define-struct (unimplemented-wish check-fail) (name args))
 
+(define-struct (violated-signature check-fail) (obj signature blame))
 
 (define-struct signature-got (value format))
 
@@ -159,6 +161,13 @@
       "check-expect encountered the following error instead of the expected value, ~F. \n   :: ~a"
       (unexpected-error-expected fail)
       (unexpected-error-message fail))]
+    [(violated-signature? fail)
+     (do-printing
+      "signature violation :: ~a violated ~a"
+      (violated-signature-obj fail)
+      (signature-name (violated-signature-signature fail))
+      ; don't know what to do with this here:
+      #;(violated-signature-blame fail))]
     [(satisfied-failed? fail)
      (do-printing "Actual value ~F does not satisfy ~F.\n"
                   (satisfied-failed-actual fail)

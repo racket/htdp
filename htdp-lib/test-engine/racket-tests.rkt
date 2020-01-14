@@ -14,6 +14,7 @@
 	 setup/collects
          lang/private/rewrite-error-message
          (for-syntax #;"requiring from" lang/private/firstorder #;"avoids load cycle")
+	 (except-in deinprogramm/signature/signature signature-violation)
          "test-engine.rkt"
          "test-info.scm")
 
@@ -410,6 +411,14 @@
                                   (define name (exn:fail:wish-name e))
                                   (define args (exn:fail:wish-args e))
                                   (list (unimplemented-wish src (test-format) name args) 'error #f))]
+			       [exn:fail:contract:signature?
+				(lambda (e)
+				  (list
+				   (make-violated-signature src (test-format)
+							    (exn:fail:contract:signature-obj e)
+							    (exn:fail:contract:signature-signature e)
+							    (exn:fail:contract:signature-blame e))
+				   'error e))]
                                [exn:fail?
                                 (lambda (e)
                                   (define msg (get-rewriten-error-message e))
