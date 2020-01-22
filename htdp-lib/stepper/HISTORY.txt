@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 7.6:
+
+Stepper uses color preferences for display (including white-on-black)
+
 Changes for 7.5:
 
 New button layout.
