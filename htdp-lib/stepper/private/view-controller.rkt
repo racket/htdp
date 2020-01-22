@@ -25,6 +25,7 @@
          images/compile-time
          images/gui
          mrlib/switchable-button
+         mrlib/panel-wob
          framework
          (for-syntax racket/base
                      images/icons/control
@@ -276,7 +277,7 @@
 
   ;; this text box counts the steps for the user
   (define status-text
-    (new text%))
+    (new text:hide-caret/selection%))
 
   (define status-canvas
     (new editor-canvas%
@@ -345,6 +346,10 @@
     ;; updated to yield 1-based step numbering rather than 0-based numbering.
     (send status-text insert 
           (format "~a/~a" (if view (+ 1 view) "none") (length view-history)))
+    (when (white-on-black-panel-scheme?)
+      (define sd (new style-delta%))
+      (send sd set-delta-foreground "white")
+      (send status-text change-style sd 0 (send status-text last-position)))
     (send status-text lock #t)
     (send status-text end-edit-sequence))
   

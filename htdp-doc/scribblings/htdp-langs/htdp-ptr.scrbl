@@ -1,7 +1,7 @@
 #lang scribble/base
 @(require scribble/core
           net/url
-          scribble/html-properties))
+          scribble/html-properties)
 
 @(define redirect
    (style #f (list (part-link-redirect (string->url "http://www.htdp.org/")))))
