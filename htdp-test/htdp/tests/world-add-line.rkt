@@ -1,5 +1,5 @@
 #lang scheme/base
-(require htdp/image test-engine/scheme-tests)
+(require htdp/image test-engine/racket-tests)
 
 (define plain (empty-scene 100 100))
 

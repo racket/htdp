@@ -12,10 +12,8 @@
          racket/contract
          racket/file
          mzlib/pconvert-prop ;; so it can be attached.
-         test-engine/racket-tests
-         "language-level-model.rkt"
-         (only-in test-engine/racket-tests
-                  reset-tests))
+         test-engine/test-engine
+         "language-level-model.rkt")
 
 ;; framework for simulating DrS for running stepper test cases.
 ;; this file currently supports two different testing setups; one
@@ -216,7 +214,7 @@
                    (printf "  using language level ~v\n" namespace-spec))
                  (namespace-require 'test-engine/racket-tests)
                  ;; this triggers the creation of a test~object (so tests actually run)
-                 (get-test-engine)
+                 (initialize-test-object!)
                  (match-define (list input-port filename done-thunk)
                    (prepare-filesystem exp-str extra-files))
                  (define provider-thunk
@@ -322,7 +320,7 @@
         (expand
          (with-module-reading-parameterization
              (lambda ()
-               (read-syntax "ignored..." input-port)))))))))
+               (read-syntax (string->path filename) input-port)))))))))
 
 ;; produce a thunk that returns elements from a list, then ever after
 ;; returns #<eof>
@@ -406,10 +404,8 @@
                          'test-engine/racket-tests
                          test-namespace)
 (parameterize ([current-namespace test-namespace])
-  (namespace-require 'test-engine/racket-tests)
-  ;; make the test engine happy by adding a binding for test~object:
-  (get-test-engine)
-  (void))
+  (namespace-require 'test-engine/test-engine)
+  (initialize-test-object!))
 
 ;; call-iter-on-each : (-> syntax?) (syntax? (-> 'a) -> 'a) -> void/c
 ;; call the given iter on each syntax in turn (iter bounces control

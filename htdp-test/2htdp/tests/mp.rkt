@@ -1,4 +1,4 @@
-#lang scheme (require test-engine/scheme-tests)
+#lang scheme (require test-engine/racket-tests)
 (require 2htdp/universe)
 (require htdp/image)
 

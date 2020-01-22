@@ -1,5 +1,4 @@
 #lang racket
-(require (only-in test-engine/racket-tests)) ;; only for effect to attach (below)
 
 ;; now, the rest:
 (require "through-tests.rkt" 

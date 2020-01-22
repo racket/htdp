@@ -51,7 +51,8 @@
          "model-settings.rkt"
          "macro-unwind.rkt"
          "lifting.rkt"
-         (prefix-in test-engine: test-engine/scheme-tests)
+         (only-in test-engine/racket-tests test-silence)
+         
          ;; for breakpoint display
          ;; (commented out to allow nightly testing)
          #;"display-break-stuff.rkt"
@@ -496,7 +497,7 @@
     (define annotated (a:annotate expanded break show-lambdas-as-lambdas?))
     (log-stepper-debug "expression successfully annotated")
     (parameterize (;; I think this parameterization is pointless in the #lang world
-                   [test-engine:test-silence #t])
+                   [test-silence #t])
       (eval-syntax annotated)))
 
   ;; given a message and an exception, notify the output to display
