@@ -1,8 +1,8 @@
+; Hook test engine into DrRacket
 #lang scheme/base
-
 (require scheme/file scheme/class scheme/unit scheme/contract drscheme/tool framework mred
-         string-constants lang/htdp-langs-interface)
-(require "test-display.scm")
+         string-constants lang/htdp-langs-interface
+         test-engine/test-display-gui)
 (provide tool@)
 
 (preferences:set-default 'test-engine:test-dock-size 
@@ -22,13 +22,8 @@
       (class* % ()
         (inherit get-top-level-window get-definitions-text)
 
-        (define/public (display-test-results test-display)
-          (let* ([dr-frame (get-top-level-window)]
-                 [ed-def (get-definitions-text)]
-                 [tab (and ed-def (send ed-def get-tab))])
-            (when (and dr-frame ed-def tab)
-              (send test-display display-settings dr-frame tab ed-def)
-              (send test-display display-results))))
+        (define/public (display-test-results test-display-callback)
+	  (test-display-callback (get-definitions-text)))
 
         (super-instantiate ())))
 
@@ -221,6 +216,59 @@
           (inner (void) on-close))
 
         (super-instantiate ())))
+
+    (define test-panel%
+      (class* vertical-panel% ()
+
+        (inherit get-parent)
+
+        (super-instantiate ())
+
+        (define content (make-object canvas:color% this #f '()))
+        (define button-panel (make-object horizontal-panel% this
+                                          '() #t 0 0 0 0 '(right bottom) 0 0 #t #f))
+        (define (hide)
+          (let ([current-tab (send frame get-current-tab)])
+            (send frame deregister-test-window 
+                  (send current-tab get-test-window))
+            (send current-tab current-test-window #f)
+            (send current-tab current-test-editor #f))
+          (remove))
+
+        (make-object button%
+                     (string-constant hide)
+                     button-panel
+                     (lambda (b c)
+                       (when (eq? 'button (send c get-event-type))
+                         (hide))))
+        #;(make-object button%
+                       (string-constant profj-test-results-hide-and-disable)
+                       button-panel
+                       (lambda (b c)
+                         (when (eq? 'button (send c get-event-type))
+                           (hide)
+                           (send (send frame get-current-tab)
+                                 update-test-preference #f))))
+        (make-object button%
+                     (string-constant undock)
+                     button-panel
+                     (lambda (b c)
+                       (when (eq? 'button (send c get-event-type))
+                         (preferences:set 'test-engine:test-window:docked? #f)
+                         (send frame undock-tests))))
+
+        (define/public (update-editor e)
+          (send content set-editor e))
+
+        (define frame #f)
+        (define/public (update-frame f)
+          (set! frame f))
+
+        (define/public (remove)
+          (let ([parent (get-parent)])
+            (preferences:set 'test-engine:test-dock-size (send parent get-percentages))
+            (send parent delete-child this)))))
+
 
     (drscheme:get/extend:extend-definitions-text test-definitions-text%-mixin)
     (drscheme:get/extend:extend-interactions-text test-interactions-text%-mixin)

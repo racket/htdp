@@ -158,7 +158,7 @@ substring consumes 2 or 3 arguments
 ;; -----------------------------------------------------------------------------
 ;; -----------------------------------------------------------------------------
 
-(require test-engine/scheme-tests)
+(require test-engine/racket-tests)
 
 (check-expect (beginner-string-ith "hell" 0) "h")
 (check-error

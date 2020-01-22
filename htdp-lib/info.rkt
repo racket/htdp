@@ -18,6 +18,7 @@
     "sandbox-lib"
     "scheme-lib"
     "scribble-lib"
+    "simple-tree-text-markup-lib"
     "slideshow-lib"
     "snip-lib"
     "srfi-lite-lib"

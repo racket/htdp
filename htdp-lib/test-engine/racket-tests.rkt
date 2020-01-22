@@ -1,41 +1,33 @@
+; Surface syntax for check-expect & friends in Racket-like languages.
 #lang racket/base
 
-;; *****************************************
-;; SEE todo.txt FOR HOW TO ADD A NEW FEATURE
-;; *****************************************
+(provide test ; run tests and display results
+         test-execute ; boolean parameter, says if the tests run
+         test-silence ; boolean parameter, says if the test results are printed
+         check-expect ;; syntax : (check-expect <expression> <expression>)
+         check-random ;; syntax : (check-random <expression> <expression>)
+         check-within ;; syntax : (check-within <expression> <expression> <expression>)
+         check-member-of ;; syntax : (check-member-of <expression> <expression>)
+         check-range ;; syntax : (check-range <expression> <expression> <expression>)
+         check-error  ;; syntax : (check-error <expression> [<expression>])
+         check-satisfied ;; syntax : (check-satisfied <expression> <expression>)
+         (for-syntax check-expect-maker) ; helper syntax for creating the above
+         exn:fail:wish ; raise for unfulfilled wish
+         report-signature-violation!) ; call for signature violation
 
 (require lang/private/teachprims
-         (for-syntax racket/base lang/private/rewrite-error-message)
-         racket/class
          racket/match
          ; racket/function
          htdp/error
-         lang/private/continuation-mark-key
-	 setup/collects
-         lang/private/rewrite-error-message
-         (for-syntax #;"requiring from" lang/private/firstorder #;"avoids load cycle")
+         (for-syntax racket/base
+                     #;"requiring from" lang/private/firstorder #;"avoids load cycle")
 	 (except-in deinprogramm/signature/signature signature-violation)
-         "test-engine.rkt"
-         "test-info.scm")
+         test-engine/test-engine
+         test-engine/test-markup
+	 test-engine/srcloc)
 
 (require (for-syntax stepper/private/syntax-property))
 (require  syntax/macro-testing)
-
-(provide
- check-expect ;; syntax : (check-expect <expression> <expression>)
- check-random ;; syntax : (check-random <expression> <expression>)
- check-within ;; syntax : (check-within <expression> <expression> <expression>)
- check-member-of ;; syntax : (check-member-of <expression> <expression>)
- check-range ;; syntax : (check-range <expression> <expression> <expression>)
- check-error  ;; syntax : (check-error <expression> [<expression>])
- check-satisfied ;; syntax : (check-satisfied <expression> <expression>)
- )
-
-; for other modules implementing check-expect-like forms
-(provide
- (for-syntax check-expect-maker)
- get-test-engine
- exn:fail:wish)
 
 (define INEXACT-NUMBERS-FMT
   "check-expect cannot compare inexact numbers. Try (check-within test ~a range).")
@@ -70,417 +62,330 @@
 
 ;; check-expect-maker : syntax? syntax? (listof syntax?) symbol? -> syntax?
 ;; the common part of all three test forms
-;; examples
-#;
-(_ stx #'check-values-expected #`test (list #`actual) 'comes-from-check-expect)
-#;
-(_ stx #'check-values-within #`test (list #`actual #`within) 'comes-from-check-within)
-#;
-(_ stx #'check-values-error #`test (list #`error) 'comes-from-check-error)
+
+; NB: typed/test-engine/type-env-ext KNOWS THE STRUCTURE OF THE GENERATED SYNTAX.
+; TREAD CAREFULLY.
 
 (define-for-syntax (check-expect-maker stx checker-proc-stx test-expr embedded-stxes hint-tag)
   (define bogus-name
     (stepper-syntax-property #`#,(gensym 'test) 'stepper-hide-completed #t))
   (define src-info
     (with-stepper-syntax-properties (['stepper-skip-completely #t])
-      #`(list #,@(list #`(quote #,(syntax-source stx))
-                       (syntax-line stx)
-                       (syntax-column stx)
-                       (syntax-position stx)
-                       (syntax-span stx)))))
+      #`(srcloc #,@(list #`(quote #,(syntax-source stx))
+                         (syntax-line stx)
+                         (syntax-column stx)
+                         (syntax-position stx)
+                         (syntax-span stx)))))
   (define test-expr-checked-for-syntax-error #`(convert-compile-time-error #,test-expr))
   (if (eq? 'module (syntax-local-context))
       #`(define #,bogus-name
           #,(stepper-syntax-property
-             #`(let* ([ns (current-namespace)]
-                      [test-engine (namespace-variable-value 'test~object #f builder ns)])
-                 (when test-engine
-                   (insert-test test-engine
-                                (lambda ()
-                                  #,(with-stepper-syntax-properties
-                                        (['stepper-hint hint-tag]
-                                         ['stepper-hide-reduction #t]
-                                         ['stepper-use-val-as-final #t])
-                                      (quasisyntax/loc stx
-                                        (#,checker-proc-stx
-                                         #,(with-stepper-syntax-properties
-                                               (['stepper-hide-reduction #t])
-                                             #`(car
-                                                #,(with-stepper-syntax-properties
-                                                      (['stepper-hide-reduction #t])
-                                                    #`(list
-                                                       (lambda () #,test-expr-checked-for-syntax-error)
-                                                       #,(with-stepper-syntax-properties
-                                                             (['stepper-hide-reduction #t])
-                                                           (syntax/loc stx (void)))))))
-                                         #,@embedded-stxes
-                                         #,src-info
-                                         #,(with-stepper-syntax-properties
-                                               (['stepper-no-lifting-info #t]
-                                                ['stepper-hide-reduction #t])
-                                             #'test-engine))))))))
+             #`(add-check-expect-test!
+                (lambda ()
+                  #,(with-stepper-syntax-properties
+                      (['stepper-hint hint-tag]
+                       ['stepper-hide-reduction #t]
+                       ['stepper-use-val-as-final #t])
+                      (quasisyntax/loc stx
+                        (#,checker-proc-stx
+                         (lambda () #,test-expr-checked-for-syntax-error)
+                         #,@embedded-stxes
+                         #,src-info)))))
              'stepper-skipto
-             (append skipto/third ;; first let* binding
-                     skipto/third ;; second let* binding
-                     skipto/third skipto/second
-                     ;; something funny going on here; I can't see how Mike's 
-                     ;; fix could ever have worked.  Possibly related: this
-                     ;; file is still written in the mzscheme language?
-                     ;; ... no, that doesn't seem to pan out.
-                     ;; okay, I really don't understand why, but it appears 
-                     ;; that in this context, 'when' is still expanding
-                     ;; into a begin, rather than a (let-values () ...)
-                     skipto/cdr skipto/third ;; application of insert-test
-                     '(syntax-e cdr cdr syntax-e car) ;; lambda
+             (append skipto/cdr
+                     skipto/second ;; outer lambda
+                     '(syntax-e cdr cdr syntax-e car) ;; inner lambda
                      )))
-      #`(let ([test-engine (namespace-variable-value 'test~object #f builder (current-namespace))])
-          (when test-engine
-            (insert-test test-engine
-                         (lambda ()
-                           #,(with-stepper-syntax-properties
-                                 (['stepper-hint hint-tag]
-                                  ['stepper-hide-reduction #t]
-                                  ['stepper-use-val-as-final #t])
-                               (quasisyntax/loc stx
-                                 (#,checker-proc-stx
-                                  #,(with-stepper-syntax-properties
-                                        (['stepper-hide-reduction #t])
-                                      #`(car 
-                                         #,(with-stepper-syntax-properties
-                                               (['stepper-hide-reduction #t])
-                                             #`(list
-                                                (lambda () #,test-expr-checked-for-syntax-error)
-                                                #,(syntax/loc stx (void))))))
-                                  #,@embedded-stxes
-                                  #,src-info
-                                  #,(with-stepper-syntax-properties
-                                        (['stepper-no-lifting-info #t]
-                                         ['stepper-hide-reduction #t])
-                                      #'test-engine))))))))))
+      #`(add-check-expect-test!
+         (lambda ()
+           #,(with-stepper-syntax-properties
+               (['stepper-hint hint-tag]
+                ['stepper-hide-reduction #t]
+                ['stepper-use-val-as-final #t])
+               (quasisyntax/loc stx
+                 (#,checker-proc-stx
+                  (lambda () #,test-expr-checked-for-syntax-error)
+                  #,@embedded-stxes
+                  #,src-info)))))))
 
-(define-for-syntax (check-context?)
+; this wrapper is necessary because add-test! has a contract which confuses the stepper
+(define (add-check-expect-test! thunk)
+  (add-test! thunk))
+
+(define-for-syntax (check-context! kind message stx)
   (let ([c (syntax-local-context)])
-    (memq c '(module top-level module-begin))))
+    (unless (memq c '(module top-level module-begin))
+      (raise-syntax-error kind message stx))))
 
+; note that rewrite-error-message might be sensitive to the exact format here
 (define-for-syntax (argcount-error-message/stx arity stx [at-least #f])
-  (define ls (syntax->list stx))
-  (argcount-error-message #f arity (if ls (sub1 (length ls)) 0) at-least))
+  (let* ((ls (syntax->list stx))
+         (found (if ls (sub1 (length ls)) 0))
+         (fn-is-large (> arity found)))
+    (format "expects ~a~a~a argument~a, but found ~a~a"
+            (if at-least "at least " "")
+            (if (or (= arity 0) fn-is-large) "" "only ")
+            (if (= arity 0) "no" arity) (if (> arity 1) "s" "")
+            (if (and (not (= found 0)) fn-is-large) "only " "")
+            (if (= found 0) "none" found))))
 
-;; check-expect
+(define (make-exn->unexpected-error src expected)
+  (lambda (exn)
+    (unexpected-error src expected exn)))
+
 (define-syntax (check-expect stx)
-  (unless (check-context?)
-    (raise-syntax-error 'check-expect CHECK-EXPECT-DEFN-STR stx))
+  (check-context! 'check-expect CHECK-EXPECT-DEFN-STR stx)
   (syntax-case stx ()
-    [(_ test actual)
-     (check-expect-maker stx #'check-values-expected #`test (list #`actual) 'comes-from-check-expect)]
+    [(_ test expected)
+     (check-expect-maker stx #'do-check-expect #`test (list #`expected) 'comes-from-check-expect)]
     [_ (raise-syntax-error 'check-expect (argcount-error-message/stx 2 stx) stx)]))
 
-;; checking random values 
+(define (do-check-expect test expected src)
+  (error-check (lambda (v) (if (number? v) (exact? v) #t))
+               expected INEXACT-NUMBERS-FMT #t)
+  (error-check (lambda (v) (not (procedure? v)))
+               expected FUNCTION-FMT #f)
+  (execute-test
+   src
+   (lambda ()
+     (let ((actual (test)))
+       (if (teach-equal? actual expected)
+           #t
+           (unequal src actual expected))))
+   (make-exn->unexpected-error src expected)))
+
 (define-syntax (check-random stx)
   (syntax-case stx ()
     [(check-random e1 e2)
      (let ([test #`(lambda () e1)]
-           [actuals (list #`(lambda () e2))])
-       (check-expect-maker stx #'check-random-values test actuals 'comes-from-check-expect))]
+           [expected (list #`(lambda () e2))])
+       (check-expect-maker stx #'do-check-random test expected 'comes-from-check-random))]
     [_ (raise-syntax-error 'check-random (argcount-error-message/stx 2 stx) stx)]))
+
+(define (do-check-random test expected-thunk src)
+  (let ((rng (make-pseudo-random-generator))
+        (k (modulo (current-milliseconds) (sub1 (expt 2 31)))))
+    (let ((expected (parameterize ([current-pseudo-random-generator rng])
+                          (random-seed k)
+                          (expected-thunk))))
+      (error-check (lambda (v) (if (number? v) (exact? v) #t))
+                   expected INEXACT-NUMBERS-FMT #t)
+      (execute-test
+       src
+       (lambda ()
+         (let ((actual (parameterize ([current-pseudo-random-generator rng])
+                         (random-seed k)
+                         ((test)))))
+           (if (teach-equal? actual expected)
+               #t
+               (unequal src actual expected))))
+       (make-exn->unexpected-error src expected)))))
 
 (define-syntax (check-satisfied stx)
   (syntax-case stx ()
-    [(_ actual:exp expected-property:id)
-     (identifier? #'expected-property:id)
-     (let* ([prop1 (first-order->higher-order #'expected-property:id)]
-            [name (symbol->string (syntax-e  #'expected-property:id))]
+    [(_ actual:exp expected-predicate:id)
+     (identifier? #'expected-predicate:id)
+     (let* ([prop1 (first-order->higher-order #'expected-predicate:id)]
+            [name (symbol->string (syntax-e  #'expected-predicate:id))]
             [code #`(lambda (x)
                       (with-handlers ([exn:fail:contract:arity?
-                                       (lambda (xn)
-                                         (define msg (exn-message xn))
-                                         (define msg1 (regexp-match #px"(.*): arity mismatch" msg))
-                                         (cond
-                                           [msg1
-                                            (define raised-name (cadr msg1))
-                                            ;; I am comparing strings here. Can this go wrong?
-                                            (if (equal? #,name raised-name)
-                                                (error-check (lambda (v) #f) #,name SATISFIED-FMT #t)
-                                                (raise xn))]
-                                           [else (raise xn)]))])
+                                       (lambda (exn)
+                                         (let* ((msg (exn-message exn))
+                                                (msg1 (regexp-match #px"(.*): arity mismatch" msg)))
+                                           (cond
+                                             [msg1
+                                              (let ((raised-name (cadr msg1)))
+                                                (if (equal? #,name raised-name)
+                                                    (error-check (lambda (v) #f) #,name SATISFIED-FMT #t)
+                                                    (raise exn)))]
+                                             [else (raise exn)])))])
                         (#,prop1 x)))])
        (check-expect-maker stx 
-                           #'check-values-property 
+                           #'do-check-satisfied 
                            #'actual:exp
                            (list code name)
                            'comes-from-check-satisfied))]
-    [(_ actual:exp expected-property:exp)
-     (let* ([prop #`(let ([p? expected-property:exp])
-                      (define name (object-name p?))
-                      (unless (and (procedure? p?) (procedure-arity-includes? p? 1))
-                        (if name  ;; this produces the BSL/ISL name 
-                            (error-check (lambda (v) #f) name SATISFIED-FMT #t)
-                            (error-check (lambda (v) #f) p? SATISFIED-FMT #t)))
-                      p?)])
+    [(_ actual:exp expected-predicate:exp)
+     (let ([pred #`(let ([p? expected-predicate:exp])
+                     (let ((name (object-name p?)))
+                       (unless (and (procedure? p?) (procedure-arity-includes? p? 1))
+                         (if name  ;; this produces the BSL/ISL name 
+                             (error-check (lambda (v) #f) name SATISFIED-FMT #t)
+                             (error-check (lambda (v) #f) p? SATISFIED-FMT #t))))
+                     p?)])
        (check-expect-maker stx 
-                           #'check-values-property 
+                           #'do-check-satisfied
                            #'actual:exp
-                           (list prop "unknown name")
+                           (list pred "unknown name")
                            'comes-from-check-satisfied))]
-    [(_ actual:exp expected-property:exp) 
+    [(_ actual:exp expected-predicate:exp) 
      (raise-syntax-error 'check-satisfied "expects named function in second position." stx)]
     [_ (raise-syntax-error 'check-satisfied (argcount-error-message/stx 2 stx) stx)]))
 
-(define (check-values-property produce-v actual name src test-engine)
-  ;; it is okay if actual is a procedure because property testing may use
-  ;; it, but it is possibly weird for students
-  (send (send test-engine get-info) add-check)
-  (run-and-check
-   ;; check
-   (lambda (p? v _what-is-this?)
+(define (do-check-satisfied test p? name src)
+  (execute-test
+   src
+   (lambda ()
      (unless (and (procedure? p?) (procedure-arity-includes? p? 1))
        (error-check (lambda (v) #f) name SATISFIED-FMT #t))
-     (define r (p? v))
-     (cond
-       [(boolean? r) r]
-       [else 
-        ; (error-check (lambda (v) #f) name "expected a boolean" #t)
-        (check-result (format "~a [as predicate in check-satisfied]" name) boolean? "boolean" r)]))
-   ;; maker
-   (lambda (src format v1 _v2 _) (make-satisfied-failed src format v1 name))
-   ;; test 
-   produce-v
-   ;; expect 
-   actual
-   #f
-   src
-   test-engine
-   (list 'check-satisfied name)))
+     (let* ((actual (test))
+            (ok? (p? actual)))
+       (cond
+         [(not (boolean? ok?))
+          ;; (error-check (lambda (v) #f) name "expected a boolean" #t)
+          (check-result (format "~a [as predicate in check-satisfied]" name) boolean? "boolean" ok?)]
+         [(not ok?)
+          (satisfied-failed src actual name)]
+         [else #t])))
+   (lambda (exn)
+     (unsatisfied-error src name exn))))
 
-;; check-random-expected: (-> scheme-val) (-> scheme-val) src test-engine -> boolean
-(define (check-random-values test-maker actual-maker src test-engine)
-  (define rng (make-pseudo-random-generator))
-  (define k (modulo (current-milliseconds) (sub1 (expt 2 31))))
-  (define actual (parameterize ([current-pseudo-random-generator rng])
-                   (random-seed k)
-                   (actual-maker)))
-  (error-check (lambda (v) (if (number? v) (exact? v) #t))
-               actual INEXACT-NUMBERS-FMT #t)
-  (send (send test-engine get-info) add-check)
-  (run-and-check (lambda (v1 v2 _) (teach-equal? v1 v2))
-                 (lambda (src format v1 v2 _) (make-unequal src format v1 v2))
-                 (lambda () (parameterize ([current-pseudo-random-generator rng])
-                              (random-seed k)
-                              ((test-maker))))
-                 actual
-                 #f
-                 src
-                 test-engine
-                 'check-expect))
-
-;; check-values-expected: (-> scheme-val) scheme-val src test-engine -> boolean
-(define (check-values-expected test actual src test-engine)
-  (error-check (lambda (v) (if (number? v) (exact? v) #t))
-               actual INEXACT-NUMBERS-FMT #t)
-  (error-check (lambda (v) (not (procedure? v))) actual FUNCTION-FMT #f)
-  (send (send test-engine get-info) add-check)
-  (run-and-check (lambda (v1 v2 _) (teach-equal? v1 v2))
-                 (lambda (src format v1 v2 _) (make-unequal src format v1 v2))
-                 test actual #f src test-engine 'check-expect))
-
-;;check-within
 (define-syntax (check-within stx)
-  (unless (check-context?)
-    (raise-syntax-error 'check-within CHECK-WITHIN-DEFN-STR stx))
+  (check-context! 'check-within CHECK-WITHIN-DEFN-STR stx)
   (syntax-case stx ()
-    [(_ test actual within)
-     (check-expect-maker stx #'check-values-within #`test (list #`actual #`within) 
+    [(_ test expected within)
+     (check-expect-maker stx #'do-check-within #`test (list #`expected #`within) 
                          'comes-from-check-within)]
     [_ (raise-syntax-error 'check-within (argcount-error-message/stx 3 stx) stx)]))
 
-;; check-values-within: (-> scheme-val) scheme-val number src test-engine -> boolean
-(define (check-values-within test actual within src test-engine)
+(define (do-check-within test expected within src)
   (error-check number? within CHECK-WITHIN-INEXACT-FMT #t)
-  (error-check (lambda (v) (not (procedure? v))) actual CHECK-WITHIN-FUNCTION-FMT #f)
-  (send (send test-engine get-info) add-check)
-  (run-and-check beginner-equal~? make-outofrange test actual within src
-                 test-engine
-                 'check-within))
+  (error-check (lambda (v) (not (procedure? v))) expected CHECK-WITHIN-FUNCTION-FMT #f)
+  (execute-test
+   src
+   (lambda ()
+     (let ((actual (test)))
+       (if (beginner-equal~? actual expected within)
+           #t
+           (not-within src actual expected within))))
+   (make-exn->unexpected-error src expected)))
 
-;; check-error
 (define-syntax (check-error stx)
-  (unless (check-context?)
-    (raise-syntax-error 'check-error CHECK-ERROR-DEFN-STR stx))
+  (check-context! 'check-error CHECK-ERROR-DEFN-STR stx)
   (syntax-case stx ()
     [(_ test error)
-     (check-expect-maker stx #'check-values-error #`test (list #`error)
+     (check-expect-maker stx #'do-check-error #`test (list #`error)
                          'comes-from-check-error)]
     [(_ test)
-     (check-expect-maker stx #'check-values-error/no-string #`test null
+     (check-expect-maker stx #'do-check-error/no-message #`test '()
                          'comes-from-check-error)]
     [(_) (raise-syntax-error 'check-error (argcount-error-message/stx 1 stx #t) stx)]
     [_ (raise-syntax-error 'check-error (argcount-error-message/stx 2 stx) stx)]))
 
-;; check-values-error: (-> scheme-val) scheme-val src test-engine -> boolean
-(define (check-values-error test error src test-engine)
+(define (do-check-error test error src)
   (error-check string? error CHECK-ERROR-STR-FMT #t)
-  (send (send test-engine get-info) add-check)
-  (let ([result (with-handlers ([exn?
-                                 (lambda (e)
-                                   (define msg 
-                                     (rewrite-contract-error-message (exn-message e)))
-                                   (or (equal? msg error)
-                                       (make-incorrect-error src (test-format) error
-                                                             msg e)))])
-                  (let ([test-val (test)])
-                    (make-expected-error src (test-format) error test-val)))])
-    (if (check-fail? result)
-        (begin
-          (send (send test-engine get-info) check-failed
-                result (check-fail-src result)
-                (and (incorrect-error? result) (incorrect-error-exn result))
-		#f)
-          #f)
-        #t)))
+  (execute-test
+   src
+   (lambda ()
+     (with-handlers ([exn?
+                      (lambda (exn)
+                        (let ((msg (get-rewritten-error-message exn)))
+                          (if (equal? msg error)
+                              #t
+                              (incorrect-error src error exn))))])
+       (let ([actual (test)])
+         (expected-error src error actual))))
+   (make-exn->unexpected-error src error))) ; probably can't happen
 
-;; check-values-error/no-string: (-> scheme-val) src test-engine -> boolean
-(define (check-values-error/no-string test src test-engine)
-  (send (send test-engine get-info) add-check)
-  (let ([result (with-handlers ([exn?
-                                 (lambda (e) #t)])
-                  (let ([test-val (test)])
-                    (make-expected-an-error src (test-format) test-val)))])
-    (if (check-fail? result)
-        (begin
-          (send (send test-engine get-info) check-failed
-                result (check-fail-src result)
-                #f #f)
-          #f)
-        #t)))
+(define (do-check-error/no-message test error src)
+  (error-check string? error CHECK-ERROR-STR-FMT #t)
+  (execute-test
+   src
+   (lambda ()
+     (with-handlers ([exn?
+                      (lambda (exn) #t)])
+       (let ([actual (test)])
+         (expected-error src error actual))))))
 
-;;error-check: (any -> boolean) any format-string boolean) -> void : raise exn:fail:contract
-(define (error-check pred? actual fmt fmt-act?)
-  (unless (pred? actual)
-    (define msg (if fmt-act? (format fmt actual) fmt))
-    (raise (make-exn:fail:contract msg (current-continuation-marks)))))
-
-;;check-member-of
 (define-syntax (check-member-of stx)
-  (unless (check-context?)
-    (raise-syntax-error 'check-member-of CHECK-EXPECT-DEFN-STR stx))
+  (check-context! 'check-member-of CHECK-EXPECT-DEFN-STR stx)
   (syntax-case stx ()
-    [(_ test actual actuals ...)
+    [(_ test expected expecteds ...)
      (check-expect-maker stx
-                         #'check-member-of-values-expected
+                         #'do-check-member-of
                          #`test
-                         (list #`actual #`(list actuals ...))
+                         (list #`(list expected expecteds ...))
                          'comes-from-check-member-of)]
     [_ (raise-syntax-error 'check-member-of (argcount-error-message/stx 2 stx #t) stx)]))
 
-;; check-member-of-values-expected: (-> scheme-val) scheme-val src test-engine -> boolean
-(define (check-member-of-values-expected test first-actual actuals src test-engine)
-  (error-check (lambda (v) (not (procedure? v))) first-actual CHECK-MEMBER-OF-FUNCTION-FMT #f)
-  (send (send test-engine get-info) add-check)
-  (run-and-check (lambda (v2 v1 _) (memf (lambda (i) (teach-equal? v1 i)) v2))
-                 (lambda (src format v1 v2 _) (make-not-mem src format v1 v2))
-                 test (cons first-actual actuals) #f src test-engine 'check-member-of))
-
-;;check-range
+(define (do-check-member-of test expecteds src)
+  (for-each
+   (lambda (expected)
+     (error-check (lambda (v) (not (procedure? v))) expected CHECK-MEMBER-OF-FUNCTION-FMT #f))
+   expecteds)
+  (execute-test
+   src
+   (lambda ()
+     (let ((actual (test)))
+       (if (memf (lambda (expected) (teach-equal? actual expected)) expecteds)
+           #t
+           (not-mem src actual expecteds))))
+   (make-exn->unexpected-error src expecteds)))
+       
 (define-syntax (check-range stx)
-  (unless (check-context?)
-    (raise-syntax-error 'check-member-of CHECK-EXPECT-DEFN-STR stx))
+  (check-context! 'check-member-of CHECK-EXPECT-DEFN-STR stx)
   (syntax-case stx ()
     [(_ test min max)
-     (check-expect-maker stx #'check-range-values-expected #`test (list #`min #`max)
+     (check-expect-maker stx #'do-check-range #`test (list #`min #`max)
                          'comes-from-check-range)]
     [_ (raise-syntax-error 'check-range (argcount-error-message/stx 3 stx) stx)]))
 
-;; check-range-values-expected: (-> scheme-val) scheme-val src test-engine -> boolean
-(define (check-range-values-expected test min max src test-engine)
+(define (do-check-range test min max src)
   (error-check number? min RANGE-MIN-FMT #t)
   (error-check number? max RANGE-MAX-FMT #t) 
   (error-check (lambda (v) (not (procedure? v))) min CHECK-RANGE-FUNCTION-FMT #f)
   (error-check (lambda (v) (not (procedure? v))) max CHECK-RANGE-FUNCTION-FMT #f)
-  (send (send test-engine get-info) add-check)
-  (run-and-check (lambda (v2 v1 v3) (and (number? v1) (and (<= v2 v1) (<= v1 v3))))
-                 (lambda (src format v1 v2 v3) (make-not-range src format v1 v2 v3))
-                 test min max src test-engine 'check-range))
+  (execute-test
+   src
+   (lambda ()
+     (let ((val (test)))
+       (if (and (number? val)
+                (<= min val max))
+           #t
+           (not-range src val min max))))
+   (make-exn->unexpected-error src (format "[~a, ~a]" min max))))
 
-;; run-and-check: (scheme-val scheme-val scheme-val -> boolean)
-;;                (src format scheme-val scheme-val scheme-val -> check-fail)
-;;                ( -> scheme-val) scheme-val scheme-val test-engine symbol? -> boolean
-(define (run-and-check check maker test expect range src test-engine kind)
-  (match-let ([(list result result-val exn)
-               (with-handlers ([exn:fail:wish?
-                                (lambda (e)
-                                  (define name (exn:fail:wish-name e))
-                                  (define args (exn:fail:wish-args e))
-                                  (list (unimplemented-wish src (test-format) name args) 'error #f))]
-			       [exn:fail:contract:signature?
-				(lambda (e)
-				  (list
-				   (make-violated-signature src (test-format)
-							    (exn:fail:contract:signature-obj e)
-							    (exn:fail:contract:signature-signature e)
-							    (exn:fail:contract:signature-blame e))
-				   'error e))]
-                               [exn:fail?
-                                (lambda (e)
-                                  (define msg (get-rewriten-error-message e))
-                                  (cons (if (and (pair? kind) (eq? 'check-satisfied (car kind)))
-                                            (unsatisfied-error src (test-format) (cadr kind) msg e)
-                                            (unexpected-error src (test-format) expect msg e))
-                                        (list 'error e)))])
-                 (define test-val (test))
-                 (define passes?  (check expect test-val range))
-                 (cons (or passes? (maker src (test-format) test-val expect range)) (list test-val #f)))])
-    (define failed? (check-fail? result))
-    (cond [(not failed?) #t]
-          [else (define c (send test-engine get-info))
-                (send c check-failed result (check-fail-src result) exn (and (exn? exn) (exn-srcloc exn)))
-                #f])))
+(define (error-check pred? actual fmt fmt-act?)
+  (unless (pred? actual)
+    (raise
+     (make-exn:fail:contract (if fmt-act? (format fmt actual) fmt)
+                             (current-continuation-marks)))))
 
-; return srcloc associated with exception, in user program, or #f
-(define (exn-srcloc exn)
-  (if (exn:srclocs? exn)
-      (let ([srclocs ((exn:srclocs-accessor exn) exn)])
-	(and (pair? srclocs)
-	     (car srclocs)))
-      (continuation-marks-srcloc (exn-continuation-marks exn))))
-    
-(define (continuation-marks-srcloc marks)
-  (let ([cms (continuation-mark-set->list marks teaching-languages-continuation-mark-key)])
-    (cond
-     [(not cms) '()]
-     [(findf (lambda (mark)
-	       (and mark
-		    (let ([ppath (car mark)])
-		      (or (and (path? ppath)
-			       (not (let ([rel (path->collects-relative ppath)])
-				      (and (pair? rel)
-					   (eq? 'collects (car rel))
-					   (or (equal? #"lang" (cadr rel))
-					       (equal? #"deinprogramm" (cadr rel)))))))
-			  (symbol? ppath)))))
-	     cms)
-      => (lambda (mark)
-	   (apply (lambda (source line col pos span)
-		    (make-srcloc source line col pos span))
-		  mark))]
-     (else #f))))
+(define (execute-test src thunk exn:fail->reason)
+  (let-values (((test-result exn)
+                 (with-handlers ([exn:fail:wish?
+                                  (lambda (e)
+                                    (define name (exn:fail:wish-name e))
+                                    (define args (exn:fail:wish-args e))
+                                    (values (unimplemented-wish src name args) e))]
+                                 [exn:fail:contract:signature?
+                                  (lambda (e)
+                                    (values
+                                     (violated-signature src
+                                                         (exn:fail:contract:signature-obj e)
+                                                         (exn:fail:contract:signature-signature e)
+                                                         (exn:fail:contract:signature-blame e))
+                                     e))]
+                                 [exn:fail?
+                                  (lambda (e)
+                                    (values (exn:fail->reason e) e))])
+                   (values (thunk) #f))))
+    (if (fail-reason? test-result)
+        (begin
+          (add-failed-check! (failed-check test-result (and (exn? exn) (exn-srcloc exn))))
+          #f)
+        #t)))
 
-;;Wishes
 (struct exn:fail:wish exn:fail (name args))
 
-(define (reset-tests)
-  (let ([test-engine (namespace-variable-value
-                      'test~object #f builder (current-namespace))])
-    (when test-engine
-      (send test-engine reset-info))))
+(define (report-signature-violation! obj signature message blame)
+  (let* ([srcloc (continuation-marks-srcloc (current-continuation-marks))]
+         [message
+          (or message
+              (signature-got obj))])
+    (add-signature-violation! (signature-violation obj signature message srcloc blame))))
 
-(define (builder)
-  (let ([te (build-test-engine)])
-    (namespace-set-variable-value! 'test~object te (current-namespace))
-    te))
-
-(define (get-test-engine)
-  (namespace-variable-value 'test~object #f builder (current-namespace)))
-
+; typed/test-engine/typen-env-ext knows what this expands into
 (define-syntax (test stx) 
   (syntax-case stx ()
     [(_)
@@ -488,117 +393,12 @@
       #'(test*)
       'test-call #t)]))
 
+(define test-execute (make-parameter #t))
+(define test-silence (make-parameter #f))
+
 (define (test*)
-  (dynamic-wind
-   values
-   (lambda () (run-tests))
-   (lambda () (display-results))))
+  (when (test-execute)
+    (run-tests!))
+  (unless (test-silence)
+    (display-test-results! (test-object->markup (current-test-object) (not (test-execute))))))
 
-(define-syntax (run-tests stx)
-  (syntax-case stx ()
-    [(_)
-     (syntax-property
-      #'(run)
-      'test-call #t)]))
-
-(define (run) 
-  (let ([test-engine
-         (namespace-variable-value 'test~object #f builder (current-namespace))]) 
-    (and test-engine (send test-engine run))))
-
-(define (display-results*)
-  (let ([test-engine (namespace-variable-value 'test~object #f builder (current-namespace))])
-    (and test-engine
-         (let ([display-data (scheme-test-data)])
-           (when (caddr display-data)
-             (send test-engine refine-display-class (caddr display-data)))
-           (send test-engine setup-display (car display-data) (cadr display-data))
-           (send test-engine summarize-results (current-output-port))))))
-
-(define-syntax (display-results stx) 
-  (syntax-case stx ()
-    [(_)
-     (syntax-property
-      #'(display-results*)
-      'test-call #t)]))
-
-(provide run-tests display-results test builder reset-tests)
-
-(define (build-test-engine)
-  (let ([engine (make-object scheme-test%)])
-    (send engine setup-info 'test-check)
-    engine))
-
-(define (insert-test test-engine test) (send test-engine add-test test))
-
-(define scheme-test-data (make-parameter (list #f #f #f)))
-
-(define signature-test-info%
-  (class* test-info-base% ()
-    
-    (define signature-violations '())
-    
-    (inherit report-failure)
-    
-    (define/pubment (signature-failed obj signature message blame)
-      
-      (let* ([srcloc (continuation-marks-srcloc (current-continuation-marks))]
-             [message
-              (or message
-                  (make-signature-got obj (test-format)))])
-        
-        (set! signature-violations
-              (cons (make-signature-violation obj signature message srcloc blame)
-                    signature-violations)))
-      (report-failure)
-      (inner (void) signature-failed obj signature message))
-    
-    (define/public (failed-signatures) (reverse signature-violations))
-    
-    (inherit add-check-failure)
-    (define/pubment (property-failed result src-info)
-      (report-failure)
-      (add-check-failure (make-property-fail src-info (test-format) result) #f #f))
-    
-    (define/pubment (property-error exn src-info)
-      (report-failure)
-      (add-check-failure (make-property-error src-info (test-format) (exn-message exn) exn) exn (exn-srcloc exn)))
-    
-    (super-instantiate ())))
-
-(define wish-test-info%
-  (class* test-info-base% ()
-    (inherit add-check-failure)
-    
-    (super-instantiate ())))
-
-(define scheme-test%
-  (class* test-engine% ()
-    (super-instantiate ())
-    (inherit-field test-info test-display)
-    (inherit setup-info)
-    
-    (field [tests null]
-           [test-objs null])
-    
-    (define/override (info-class) signature-test-info%)
-    
-    (define/public (add-test tst)
-      (set! tests (cons tst tests)))
-    (define/public (get-info)
-      (unless test-info (send this setup-info 'check-require))
-      test-info)
-    (define/public (reset-info)
-      (set! tests null)
-      #;(send this setup-info 'check-require))
-    
-    (define/augment (run)
-      (inner (void) run)
-      (for ([t (reverse tests)]) (run-test t)))
-    
-    (define/augment (run-test test)
-      (test)
-      (inner (void) run-test test))))
-
-(provide scheme-test-data test-format test-execute test-silence error-handler 
-         signature-test-info% build-test-engine)

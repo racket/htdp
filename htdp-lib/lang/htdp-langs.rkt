@@ -17,7 +17,6 @@
          mred
          mrlib/cache-image-snip
          (prefix-in ic: mrlib/image-core)
-         test-engine/racket-tests
 
          ;; this module is shared between the drracket namespace (so loaded here) 
          ;; and the user's namespace in the teaching languages
@@ -34,11 +33,11 @@
          "htdp-langs-save-file-prefix.rkt"
          "htdp-langs-interface.rkt"
 
-         (only-in test-engine/scheme-gui make-formatter)
          (only-in test-engine/racket-tests
-                  scheme-test-data error-handler test-format test-execute display-results
-                  build-test-engine)
-         (lib "test-engine/test-display.scm")
+                  report-signature-violation! test-execute test)
+	 (except-in test-engine/test-engine signature-violation)
+         test-engine/test-markup
+         test-engine/test-display-gui
          deinprogramm/signature/signature)
 
 (require setup/collects
@@ -162,21 +161,24 @@
                (namespace-require scheme-test-module-name)
                (namespace-attach-module drs-namespace scheme-signature-module-name)
                (namespace-require scheme-signature-module-name)
-               ;; hack: the test-engine code knows about the test~object name; we do, too
-               (namespace-set-variable-value! 'test~object (build-test-engine))
+               (initialize-test-object!)
                ;; record signature violations with the test engine
                (signature-violation-proc
                 (lambda (obj signature message blame)
-                  (cond
-                    ((namespace-variable-value 'test~object #f (lambda () #f))
-                     => (lambda (engine)
-                          (send (send engine get-info) signature-failed
-                                obj signature message blame))))))
-               (scheme-test-data (list (drscheme:rep:current-rep) drs-eventspace test-display%))
+                  (report-signature-violation! obj signature message blame)))
+               (display-test-results-parameter
+                (lambda (markup)
+                  (test-display-results! (drscheme:rep:current-rep)
+                                         drs-eventspace
+                                         markup)))
+               (get-rewritten-error-message-parameter get-rewriten-error-message)
                (test-execute tests-on?)
                (signature-checking-enabled?
                 (get-preference 'signatures:enable-checking? (lambda () #t)))
-               (test-format (make-formatter (λ (v o) (render-value/format v settings o 40)))))))
+               (render-value-parameter (λ (v)
+                                         (let ([o (open-output-string)])
+                                           (render-value/format v settings o 40)
+                                           (get-output-string o)))))))
           (super on-execute settings run-in-user-thread)
             
           ;; set the global-port-print-handler after the super class because the super sets it too
@@ -188,7 +190,7 @@
               (λ (value port [depth 0])
                 (teaching-language-render-value/format my-setup-printing-parameters
                                                        value settings port 'infinity))))))
-          
+
         (define/private (teaching-languages-error-value->string settings v len)
           (let ([sp (open-output-string)])
             (set-printing-parameters settings (λ () (print v sp)))
@@ -577,23 +579,23 @@
           
         (define/override (front-end/interaction port settings)
           (let ([t (super front-end/interaction port settings)]
-                [start? #t]
-                [done? #f])
+                [done? #f]
+                [test-object (test-object-copy (current-test-object))])
             (λ ()
               (cond
-                [start?
-                 (set! start? #f)
-                 #'(#%plain-app reset-tests)]
                 [done? eof]
                 [else
                  (let ([ans (parameterize ([read-accept-lang #f])
                               (t))])
                    (cond
                      [(eof-object? ans)
-                      (set! done? #t)
-                      #`(test)]
-                     [else
-                      ans]))]))))
+                      (if (test-object=? test-object (current-test-object))
+                          eof
+                          (begin
+                            ; only retest if something has changed
+                            (set! done? #t)
+                            #`(test)))]
+                     [else ans]))]))))
 
         ;; obtain the list of modules that requested to be
         ;; searchable for HtDP

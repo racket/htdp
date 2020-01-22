@@ -16,76 +16,41 @@
       #:context #'ce:test
       [(_ ce-t:id) #'ce-t])
     (-> -Void)]
-   ;; insert-test
    [(syntax-parse (local-expand #'(ce:check-expect 1 1) 'module #f)
-      #:literals (let* when define-values)
+      #:literals (define-values)
       [(define-values _
-         (let* ((_ _) (_ _))
-           (when _
-             (insert-test _ (lambda () (check-values-expected _ _ _ _))))))
-       #'insert-test])
-    (Univ (-> Univ) . -> . -Void)]
-   ;; builder
-   [(syntax-parse (local-expand #'(ce:check-expect 1 1) 'module #f)
-      #:literals (let* when define-values)
-      [(define-values _
-         (let* ((_ _) (_ (nvv _ _ builder _)))
-           _))
-       #'builder])
-    (-> Univ)]
-   ;; check-values-expected
-   [(syntax-parse (local-expand #'(ce:check-expect 1 1) 'module #f)
-      #:literals (let* when define-values)
-      [(define-values _
-         (let* ((_ _) (_ _))
-           (when _
-             (insert-test _ (lambda () (check-values-expected _ _ _ _))))))
-       #'check-values-expected])
-    ((-> Univ) Univ Univ Univ . -> . -Boolean)]
-   ;; check-values-within
+         (add-check-expect-test! (lambda () (do-check-expect _ _ _))))
+       #'do-check-expect])
+    ((-> Univ) Univ Univ . -> . -Boolean)]
    [(syntax-parse (local-expand #'(ce:check-within 1 1 1) 'module #f)
-      #:literals (let* when define-values)
+      #:literals (define-values)
       [(define-values _
-         (let* ((_ _) (_ _))
-           (when _
-             (insert-test _ (lambda () (check-values-within _ _ _ _ _))))))
-       #'check-values-within])
-    ((-> Univ) Univ -Real Univ Univ . -> . -Boolean)]
-   ;; check-values-error
+         (add-check-expect-test! (lambda () (do-check-within _ _ _ _))))
+       #'do-check-within])
+    ((-> Univ) Univ -Real Univ . -> . -Boolean)]
    [(syntax-parse (local-expand #'(ce:check-error 1 "foo") 'module #f)
-      #:literals (let* when define-values)
+      #:literals (define-values)
       [(define-values _
-         (let* ((_ _) (_ _))
-           (when _
-             (insert-test _ (lambda () (check-values-error _ _ _ _))))))
-       #'check-values-error])
-    ((-> Univ) -String Univ Univ . -> . -Boolean)]
-   ;; check-range-values-expected
+         (add-check-expect-test! (lambda () (do-check-error _ _ _))))
+       #'do-check-error])
+    ((-> Univ) -String Univ . -> . -Boolean)]
    [(syntax-parse (local-expand #'(ce:check-range 1 1 1) 'module #f)
-      #:literals (let* when define-values)
+      #:literals (define-values)
       [(define-values _
-         (let* ((_ _) (_ _))
-           (when _
-             (insert-test _ (lambda () (check-range-values-expected _ _ _ _ _))))))
-       #'check-range-values-expected])
-    ((-> -Real) -Real -Real Univ Univ . -> . -Boolean)]
-   ;; check-member-of-values-expected
+         (add-check-expect-test! (lambda () (do-check-range _ _ _ _))))
+       #'do-check-range])
+    ((-> -Real) -Real -Real Univ . -> . -Boolean)]
    [(syntax-parse (local-expand #'(ce:check-member-of 1 1) 'module #f)
-      #:literals (let* when define-values)
+      #:literals (define-values)
       [(define-values _
-         (let* ((_ _) (_ _))
-           (when _
-             (insert-test _ (lambda () (check-member-of-values-expected _ _ _ _ _))))))
-       #'check-member-of-values-expected])
-    ((-> Univ) Univ (-lst Univ) Univ Univ . -> . -Boolean)]
-   ;; check-random-values
+         (add-check-expect-test! (lambda () (do-check-member-of _ _ _))))
+       #'do-check-member-of])
+    ((-> Univ) (-lst Univ) Univ . -> . -Boolean)]
    [(syntax-parse (local-expand #'(ce:check-random 1 1) 'module #f)
-      #:literals (let* when define-values)
+      #:literals (define-values)
       [(define-values _
-         (let* ((_ _) (_ _))
-           (when _
-             (insert-test _ (lambda () (check-random-values _ _ _ _))))))
-       #'check-random-values])
-    ((-> Univ) (-> Univ) (-lst Univ) Univ . -> . -Boolean)]))
+         (add-check-expect-test! (lambda () (do-check-random _ _ _))))
+       #'do-check-random])
+    ((-> Univ) (-> Univ) Univ . -> . -Boolean)]))
 
 (begin-for-syntax (initialize-type-env ce-env))

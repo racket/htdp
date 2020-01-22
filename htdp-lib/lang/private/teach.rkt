@@ -49,7 +49,12 @@
          (rename lang/private/signature-syntax signature:property property)
          (all-except deinprogramm/quickcheck/quickcheck property)
          (rename deinprogramm/quickcheck/quickcheck quickcheck:property property)
-         test-engine/racket-tests
+         (only test-engine/racket-tests exn:fail:wish check-expect-maker)
+         (only test-engine/test-engine
+               add-wish! add-wish-call! add-failed-check!
+               property-error property-fail
+               failed-check)
+         test-engine/srcloc
          scheme/class
          "../posn.rkt"
          (only lang/private/teachprims
@@ -705,21 +710,26 @@
   
   (define (define-wish/proc stx)
     (syntax-case stx ()
-      [(_ name) 
-       (define/proc #t #f 
-         #`(define (#,#'name x) 
-             (begin 
-               (send (send (get-test-engine) get-info) add-wish-call (quote #,#'name))
-               (raise (exn:fail:wish 
-                       (format "wished for function ~a not implemented" (quote #,#'name))
-                       (current-continuation-marks) (quote #,#'name) x)))) #'lambda)]
+      [(_ name)
+       #`(begin
+           (add-wish! (quote #,#'name))
+           #,(define/proc #t #f 
+               #`(define (#,#'name x) 
+                   (begin
+                     (add-wish-call! (quote #,#'name))
+                     (raise (exn:fail:wish 
+                             (format "wished for function ~a not implemented" (quote #,#'name))
+                             (current-continuation-marks) (quote #,#'name) x))))
+               #'lambda))]
       [(_ name default-value)
-       (define/proc #t #f
-         #`(define (#,#'name x) 
-             (begin 
-               (send (send (get-test-engine) get-info) add-wish-call (quote #,#'name))
-               #,#'default-value))
-         #'lambda)]))               
+       #`(begin
+           (add-wish! (quote #,#'name))
+           #,(define/proc #t #f
+               #`(define (#,#'name x) 
+                   (begin
+                     (add-wish-call! (quote #,#'name))
+                     #,#'default-value))
+               #'lambda))]))
   
   (define (intermediate-define/proc stx)
     (define/proc #f #f stx #'intermediate-pre-lambda))
@@ -3239,33 +3249,31 @@
     (_ (raise-syntax-error #f "`check-property' expects a single operand"
                            stx))))
 
-(define (check-property-error test src-info test-info)
-  (let ((info (send test-info get-info)))
-    (send info add-check)
-    (with-handlers ((exn:fail?
-                     (lambda (e)
-                       (send info property-error e src-info)
-                       (raise e))))
-      (call-with-values
-       (lambda ()
-         (with-handlers
-             ((exn:assertion-violation?
-               (lambda (e)
-                 ;; minor kludge to produce comprehensible error message
-                 (if (eq? (exn:assertion-violation-who e) 'coerce->result-generator)
-                     (raise (make-exn:fail (string-append "Value must be property or boolean: "
-                                                          ((error-value->string-handler)
-                                                           (car (exn:assertion-violation-irritants e))
-                                                           100))
-                                           (exn-continuation-marks e)))
-                     (raise e)))))
-           (quickcheck-results (test))))
-       (lambda (ntest stamps result)
-         (if (check-result? result)
-             (begin
-               (send info property-failed result src-info)
-               #f)
-             #t))))))
+(define (check-property-error test srcloc)
+  (with-handlers ((exn:fail?
+                   (lambda (e)
+                     (add-failed-check! (failed-check (property-error srcloc e)
+                                                      (exn-srcloc e))))))
+    (call-with-values
+     (lambda ()
+       (with-handlers
+           ((exn:assertion-violation?
+             (lambda (e)
+               ;; minor kludge to produce comprehensible error message
+               (if (eq? (exn:assertion-violation-who e) 'coerce->result-generator)
+                   (raise (make-exn:fail (string-append "Value must be property or boolean: "
+                                                        ((error-value->string-handler)
+                                                         (car (exn:assertion-violation-irritants e))
+                                                         100))
+                                         (exn-continuation-marks e)))
+                   (raise e)))))
+         (quickcheck-results (test))))
+     (lambda (ntest stamps result)
+       (if (check-result? result)
+           (begin
+             (add-failed-check! (failed-check (property-fail srcloc result) #f))
+             #f)
+           #t)))))
 
 (define (expect v1 v2)
   (quickcheck:property () (teach-equal? v1 v2)))

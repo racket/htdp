@@ -7,7 +7,7 @@
          mzlib/pretty
          syntax/docprovide
          scheme/promise
-         test-engine/scheme-tests
+         test-engine/racket-tests
          "posn.rkt")
 
 (require "private/provide-and-scribble.rkt")

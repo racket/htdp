@@ -143,16 +143,6 @@
        (quasisyntax/loc stx
          (module name lang
            (#%plain-module-begin 
-            #,@(if enable-testing?
-                   (if (null? body-exps)
-                       '()
-                       ;; this definition pulls the test~object binding from the user's namespace
-                       ;; over to the one that is used in the REPL when module->namepsace
-                       ;; grabs a hold of this module to make a namespace for the REPL
-                       `(,(syntax-property
-                           #`(define #,(datum->syntax #'lang 'test~object) (namespace-variable-value 'test~object))
-                           'test-call #t)))
-                  '())
             rewritten-bodies ...))))]
     [else
      (raise-syntax-error 'htdp-languages "internal error .1")]))
