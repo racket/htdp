@@ -527,7 +527,7 @@
     (inherit get-area-container)
     
     (define content
-      (make-object editor-canvas% (get-area-container) #f '(auto-vscroll)))
+      (make-object canvas:color% (get-area-container) #f '(auto-vscroll)))
 
     (define button-panel
       (make-object horizontal-panel% (get-area-container)
