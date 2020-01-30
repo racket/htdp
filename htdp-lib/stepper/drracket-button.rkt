@@ -1,6 +1,6 @@
 #lang scheme/base
 (require scheme/class string-constants/string-constant
-         (prefix-in x: "private/mred-extensions.rkt"))
+         (prefix-in x: "private/step-img.rkt"))
 (provide stepper-button-callback stepper-drracket-button)
 (define-local-member-name stepper-button-callback)
 
