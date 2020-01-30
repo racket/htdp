@@ -10,7 +10,6 @@
          (for-syntax images/icons/control images/icons/style))
 
 (provide
- step-img
  stepper-canvas%
  stepper-text%
  snip?
@@ -534,9 +533,6 @@
     )
   
   (strip-regular stx))
-
-;; the bitmap to use in a horizontal or vertical toolbar:
-(define step-img (compiled-bitmap (step-icon #:color run-icon-color #:height (toolbar-icon-height))))
 
 ;; testing code
 

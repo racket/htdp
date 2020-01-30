@@ -12,6 +12,7 @@
          lang/stepper-language-interface
          (only-in racket/list last)
          (prefix-in x: "private/mred-extensions.rkt")
+         "private/step-img.rkt"
          "private/shared.rkt"
          "private/xml-sig.rkt"
          "drracket-button.rkt") ;; get the stepper-button-callback private-member-name
@@ -237,7 +238,7 @@
       (new switchable-button%
            [parent stepper-button-parent-panel]
            [label (string-constant stepper-button-label)]
-           [bitmap x:step-img]
+           [bitmap step-img]
            [callback (lambda (dont-care) (send (get-current-tab)
                                                stepper-button-callback))]))
 
