@@ -178,7 +178,7 @@
 }
   @defproc[((intermediate-foldl foldl) [f (X ... Y -> Y)] [base Y] [l (listof X)] ...) Y]{
  @codeblock{(foldl f base (list x-1 ... x-n)) = (f x-n ... (f x-1 base))}
- @codeblock{(foldl f base (list x-1 ... x-n) (list x-1 ... x-n))
+ @codeblock{(foldl f base (list x-1 ... x-n) (list y-1 ... y-n))
   = (f x-n y-n ... (f x-1 y-1 base))}
  @interaction[#:eval ev-isl (foldl + 0 '(0 1 2 3 4 5 6 7 8 9))]
  
