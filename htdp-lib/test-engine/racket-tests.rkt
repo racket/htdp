@@ -25,6 +25,7 @@
  check-expect ;; syntax : (check-expect <expression> <expression>)
  check-random ;; syntax : (check-random <expression> <expression>)
  check-within ;; syntax : (check-within <expression> <expression> <expression>)
+ check-random-within ;; syntax : (check-random-within <expression> <expression> <expression>)
  check-member-of ;; syntax : (check-member-of <expression> <expression>)
  check-range ;; syntax : (check-range <expression> <expression> <expression>)
  check-error  ;; syntax : (check-error <expression> [<expression>])
@@ -184,6 +185,16 @@
        (check-expect-maker stx #'check-random-values test actuals 'comes-from-check-expect))]
     [_ (raise-syntax-error 'check-random (argcount-error-message/stx 2 stx) stx)]))
 
+(define-syntax (check-random-within stx)
+  (syntax-case stx ()
+    [(check-random-within e1 e2 e3)
+     (let ([test #`(lambda () e1)]
+           [actuals (list #`(lambda () e2) #'e3)])
+       (check-expect-maker stx #'check-values-within test actuals 'comes-from-check-within)
+       #;
+       (check-expect-maker stx #'check-random-values test actuals within 'comes-from-check-expect))]
+    [_ (raise-syntax-error 'check-random (argcount-error-message/stx 2 stx) stx)]))
+
 (define-syntax (check-satisfied stx)
   (syntax-case stx ()
     [(_ actual:exp expected-property:id)
@@ -253,22 +264,24 @@
    (list 'check-satisfied name)))
 
 ;; check-values-expected: (-> scheme-val) (-> scheme-val) src test-engine -> void
-(define (check-random-values test-maker actual-maker src test-engine)
+(define (check-random-values test-maker actual-maker src test-engine #:within [within #f])
+  (when within (error-check number? within CHECK-WITHIN-INEXACT-FMT #t))
   (define rng (make-pseudo-random-generator))
   (define k (modulo (current-milliseconds) (sub1 (expt 2 31))))
   (define actual (parameterize ([current-pseudo-random-generator rng])
                    (random-seed k)
                    (actual-maker)))
-  (error-check (lambda (v) (if (number? v) (exact? v) #t))
-               actual INEXACT-NUMBERS-FMT #t)
+  (unless within
+    (error-check (lambda (v) (if (number? v) (exact? v) #t))
+                 actual INEXACT-NUMBERS-FMT #t))
   (send (send test-engine get-info) add-check)
-  (run-and-check (lambda (v1 v2 _) (teach-equal? v1 v2))
+  (run-and-check (if within beginner-equal~? (lambda (v1 v2 _) (teach-equal? v1 v2)))
                  (lambda (src format v1 v2 _) (make-unequal src format v1 v2))
                  (lambda () (parameterize ([current-pseudo-random-generator rng])
                               (random-seed k)
                               ((test-maker))))
                  actual
-                 #f
+                 within
                  src
                  test-engine
                  'check-expect))
