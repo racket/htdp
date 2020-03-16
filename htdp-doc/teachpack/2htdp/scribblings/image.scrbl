@@ -950,7 +950,7 @@ the @racket[point-count] argument determines how many points the star has.
   Constructs an image by overlaying @racket[i1] on top of @racket[i2].
   The images are initially lined up on their upper-left corners and 
   then @racket[i2] is shifted to the right 
-  by @racket[x] pixels to and down by @racket[y] pixels.
+  by @racket[x] pixels and down by @racket[y] pixels.
   
   This is the same as @racket[(underlay/xy i2 (- x) (- y) i1)].
 
