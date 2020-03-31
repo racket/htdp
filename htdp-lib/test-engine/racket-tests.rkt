@@ -252,7 +252,7 @@
    test-engine
    (list 'check-satisfied name)))
 
-;; check-values-expected: (-> scheme-val) (-> scheme-val) src test-engine -> void
+;; check-random-expected: (-> scheme-val) (-> scheme-val) src test-engine -> boolean
 (define (check-random-values test-maker actual-maker src test-engine)
   (define rng (make-pseudo-random-generator))
   (define k (modulo (current-milliseconds) (sub1 (expt 2 31))))
@@ -273,7 +273,7 @@
                  test-engine
                  'check-expect))
 
-;; check-values-expected: (-> scheme-val) scheme-val src test-engine -> void
+;; check-values-expected: (-> scheme-val) scheme-val src test-engine -> boolean
 (define (check-values-expected test actual src test-engine)
   (error-check (lambda (v) (if (number? v) (exact? v) #t))
                actual INEXACT-NUMBERS-FMT #t)
@@ -293,7 +293,7 @@
                          'comes-from-check-within)]
     [_ (raise-syntax-error 'check-within (argcount-error-message/stx 3 stx) stx)]))
 
-;; check-values-within: (-> scheme-val) scheme-val number src test-engine -> void
+;; check-values-within: (-> scheme-val) scheme-val number src test-engine -> boolean
 (define (check-values-within test actual within src test-engine)
   (error-check number? within CHECK-WITHIN-INEXACT-FMT #t)
   (error-check (lambda (v) (not (procedure? v))) actual CHECK-WITHIN-FUNCTION-FMT #f)
@@ -316,7 +316,7 @@
     [(_) (raise-syntax-error 'check-error (argcount-error-message/stx 1 stx #t) stx)]
     [_ (raise-syntax-error 'check-error (argcount-error-message/stx 2 stx) stx)]))
 
-;; check-values-error: (-> scheme-val) scheme-val src test-engine -> void
+;; check-values-error: (-> scheme-val) scheme-val src test-engine -> boolean
 (define (check-values-error test error src test-engine)
   (error-check string? error CHECK-ERROR-STR-FMT #t)
   (send (send test-engine get-info) add-check)
@@ -338,7 +338,7 @@
           #f)
         #t)))
 
-;; check-values-error/no-string: (-> scheme-val) src test-engine -> void
+;; check-values-error/no-string: (-> scheme-val) src test-engine -> boolean
 (define (check-values-error/no-string test src test-engine)
   (send (send test-engine get-info) add-check)
   (let ([result (with-handlers ([exn?
@@ -372,7 +372,7 @@
                          'comes-from-check-member-of)]
     [_ (raise-syntax-error 'check-member-of (argcount-error-message/stx 2 stx #t) stx)]))
 
-;; check-member-of-values-expected: (-> scheme-val) scheme-val src test-engine -> void
+;; check-member-of-values-expected: (-> scheme-val) scheme-val src test-engine -> boolean
 (define (check-member-of-values-expected test first-actual actuals src test-engine)
   (error-check (lambda (v) (not (procedure? v))) first-actual CHECK-MEMBER-OF-FUNCTION-FMT #f)
   (send (send test-engine get-info) add-check)
@@ -390,7 +390,7 @@
                          'comes-from-check-range)]
     [_ (raise-syntax-error 'check-range (argcount-error-message/stx 3 stx) stx)]))
 
-;; check-range-values-expected: (-> scheme-val) scheme-val src test-engine -> void
+;; check-range-values-expected: (-> scheme-val) scheme-val src test-engine -> boolean
 (define (check-range-values-expected test min max src test-engine)
   (error-check number? min RANGE-MIN-FMT #t)
   (error-check number? max RANGE-MAX-FMT #t) 
