@@ -6,10 +6,12 @@
 (provide (struct-out Step)
          application-step?
          finished-stepping-step?
-         ;; WIP:
-         (struct-out Step-Repository)
+         Step-Repository
          new-step-repository
-         add-step!
+         make-add-step!
+         make-num-steps
+         make-step-ref
+         find-first-step
          find-later-step
          find-earlier-step
          )
@@ -34,68 +36,114 @@
     ['finished-or-error #t]
     [else #f]))
 
-;; WIP
+;; steps come in one at a time. Steps cannot be removed.
+;; all calls are made in the same thread, so I believe
+;; race conditions (double add, e.g.) cannot occur.
 
-(struct Step-Repository ([view-history : (Listof Step)] [num-steps-available : Natural])
-  #:mutable)
+(define-type Step-Repository (Mutable-HashTable Natural Step))
 
-(define (new-step-repository) : Step-Repository (Step-Repository '() 0))
+(define (new-step-repository) : Step-Repository (make-hash))
 
-(define (add-step! [repo : Step-Repository] [new-step : Step]) : Void
-  (set-Step-Repository-view-history! repo
-                                     (append (Step-Repository-view-history repo)
-                                             (list new-step)))
-  (set-Step-Repository-num-steps-available! repo (length (Step-Repository-view-history repo))))
+(define ((make-add-step! [repo : Step-Repository]) [new-step : Step]) : Void
+  ;; assuming single-threading, not worrying about race conditions here:
+  (hash-set! repo (hash-count repo) new-step))
+
+(define ((make-num-steps [repo : Step-Repository])) : Natural
+  (hash-count repo))
+
+(define ((make-step-ref [repo : Step-Repository]) [n : Natural]) : Step
+  (hash-ref repo n
+            (λ () (error 'step-ref "repo contains no step numbered ~v" n))))
 
 
 
 
-  ;; find-later-step : given a predicate on history-entries, search through
-  ;; the history for the first step that satisfies the predicate and whose
-  ;; number is greater than n (or -1 if n is #f), return # of step on success,
-  ;; on failure return (list 'nomatch last-step) or (list 'nomatch/seen-final
-  ;; last-step) if we went past the final step
-  #;(: find-later-step ((step -> Boolean) (U Number False) (U Natural
-                                                            (List 'nomatch Natural)
-                                                            (List 'nomatch/seen-final Natural))))
-(define (find-later-step [repo : Step-Repository] [p : (Step -> Boolean)] [n : (U False Integer)])
-  (let* ([n-as-num (or n -1)])
-    (let loop
-      : (U Integer (List 'nomatch Integer) (List 'nomatch/seen-final Integer))
-      ([step : Integer 0]
-       [remaining (Step-Repository-view-history repo)]
-       [seen-final? : Boolean #f])
-      (cond [(null? remaining)
-             (cond [seen-final? (list `nomatch/seen-final (- step 1))]
-                   [else (list `nomatch (- step 1))])]
-            [(and (> step n-as-num) (p (car remaining))) step]
-            [else (loop (+ step 1)
-                        (cdr remaining)
-                        (or seen-final? (finished-stepping-step? (car remaining))))]))))
+;; find-later-step : given a predicate on history-entries and the # of the
+;; current step, search through
+;; the history for the first step that satisfies the predicate and whose
+;; number is greater than n, return # of step on success,
+;; on failure return 'nomatch if there are no matches,
+(: find-later-step (All (S) (-> (S -> Boolean) Natural
+                                Natural (Natural -> S)
+                                (U Natural 'nomatch))))
+(define (find-later-step pred? n num-steps step-ref)
+  (loop-forward/helper pred? (add1 n) num-steps step-ref))
 
-;; find-earlier-step : like find-later-step, but searches backward from
-;; the given step.
-(define (find-earlier-step [repo : Step-Repository] [p : (Step -> Boolean)] [n : (U False Integer)])
-  (unless (number? n)
-    (error 'find-earlier-step
-           "can't find earlier step when no step is displayed."))
-  (let* ([to-search (reverse (take (Step-Repository-view-history repo) n))])
-    (let loop
-      : (U Integer 'nomatch (List 'nomatch/seen-final Integer))
-      ([step (- n 1)]
-       [remaining to-search])
-      (cond [(null? remaining) `nomatch]
-            [(p (car remaining)) step]
-            [else (loop (- step 1) (cdr remaining))]))))
+;; find the first step that satisfies the predicate.
+(: find-first-step (All (S) (-> (S -> Boolean)
+                                Natural (Natural -> S)
+                                (U Natural 'nomatch))))
+(define (find-first-step pred? num-steps step-ref)
+  (loop-forward/helper pred? 0 num-steps step-ref))
+
+(: loop-forward/helper (All (S) (-> (S -> Boolean) Natural
+                                    Natural (Natural -> S)
+                                    (U Natural 'nomatch))))
+(define (loop-forward/helper pred? n num-steps step-ref)
+  (let loop ([i : Natural n])
+    (cond [(<= num-steps i) 'nomatch]
+          [else (cond [(pred? (step-ref i)) i]
+                      [else (loop (add1 i))])])))
+
+
+
+(: find-earlier-step (All (S) (-> (S -> Boolean)
+                                Natural (Natural -> S)
+                                (U Natural 'nomatch))))
+(define (find-earlier-step pred? n step-ref)
+  (let loop ([i : Integer (sub1 n)])
+    (cond [(< i 0) 'nomatch]
+          [else (cond [(pred? (step-ref i)) i]
+                      [else (loop (sub1 i))])])))
+
+
 
 (module+ test
   (require typed/rackunit)
 
   (define repo (new-step-repository))
+  (define step-ref (make-step-ref repo))
+  (define num-steps (make-num-steps repo))
+  (define add-step! (make-add-step! repo))
 
-  ;; there simply is no good answer for this in the current design.
-  (check-equal? (find-later-step repo (λ (s) #t) #f)
-                'abc))
+  (check-equal? (num-steps) 0)
+  (check-exn #px"no step numbered 0"
+             (λ () (step-ref 0)))
+
+  (add-step! (Step 'abc 'normal '(abc)))
+
+  (check-equal? (num-steps) 1)
+  (check-equal? (step-ref 0) (Step 'abc 'normal '(abc)))
+
+  (add-step! (Step 'def 'normal '(abc)))
+
+  (check-equal? (num-steps) 2)
+  (check-equal? (step-ref 0) (Step 'abc 'normal '(abc)))
+  (check-equal? (step-ref 1) (Step 'def 'normal '(abc)))
+  (check-exn #px"no step numbered 2" (λ () (step-ref 2)))
+
+
+  (define l '(4 2 -3 4 2 1 2 2 2 1 -3 4 3 4))
+  (define (l-ref [i : Integer]) (list-ref l i))
+
+  (check-equal? (find-later-step (λ ([x : Integer]) (< x 0)) 2 (length l) l-ref)
+                10)
+  (check-equal? (find-later-step (λ ([x : Integer]) (< x 0)) 1 (length l) l-ref)
+                2)
+  (check-equal? (find-later-step (λ ([x : Integer]) (< x 0)) 10 (length l) l-ref)
+                'nomatch)
+  (check-equal? (find-later-step (λ ([x : Integer]) (< x 0)) 100 (length l) l-ref)
+                'nomatch)
+  (check-equal? (find-first-step (λ ([x : Integer]) (< x 0)) (length l) l-ref)
+                2)
+  (check-equal? (find-first-step (λ ([x : Integer]) (= x 10000)) (length l) l-ref)
+                'nomatch)
+
+  (check-equal? (find-earlier-step (λ ([x : Integer]) (< x 0)) 2 l-ref)
+                'nomatch)
+  (check-equal? (find-earlier-step (λ ([x : Integer]) (< x 0)) 3 l-ref)
+                2)
+  )
 
 
 

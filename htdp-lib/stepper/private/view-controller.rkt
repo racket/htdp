@@ -94,8 +94,14 @@
   (define first-step-sema (make-semaphore 0))
 
   (define step-repository (new-step-repository))
+  (define add-step! (make-add-step! step-repository))
+  (define num-steps (make-num-steps step-repository))
+  (define step-ref (make-step-ref step-repository))
 
-  ;; the view in the stepper window
+  ;; the view in the stepper window. All buttons should
+  ;; be disabled until the first step is added, so any
+  ;; code triggered by a button should be able to assume
+  ;; that view is a number
   #;(: view (U False Natural))
   (define view #f)
 
@@ -124,7 +130,7 @@
            (parameterize ([current-eventspace stepper-frame-eventspace])
              (queue-callback
               (lambda ()
-                (add-step! step-repository new-step)
+                (add-step! new-step)
                 ;; this is only necessary the first time, but it's cheap:
                 (semaphore-post first-step-sema)
                 (update-status-bar))))]))
@@ -144,41 +150,28 @@
   ;; next-of-specified-kind : starting at the current view, search forward for the
   ;; desired step or wait for it if not found
   (define (next-of-specified-kind right-kind? msg)
-    (next-of-specified-kind/helper right-kind? view msg))
+    (maybe-update-view (find-later-step right-kind? view (num-steps) step-ref) msg))
 
   ;; first-of-specified-kind : similar to next-of-specified-kind, but
   ;; always start at zero
   (define (first-of-specified-kind right-kind? msg)
-    (next-of-specified-kind/helper right-kind? #f msg))
+    (maybe-update-view (find-first-step right-kind? (num-steps) step-ref) msg))
+
+  ;; previous-of-specified-kind: if the desired step is already in the list, display
+  ;; it; otherwise, put up a dialog
+  (define (previous-of-specified-kind right-kind? msg)
+    (maybe-update-view (find-earlier-step right-kind? view step-ref) msg))
 
   ;; next-of-specified-kind/helper : if the desired step
   ;; is already in the list, display it; otherwise, give up.
-  (define (next-of-specified-kind/helper right-kind? starting-step msg)
-    (match (find-later-step step-repository right-kind? starting-step)
+  (define (maybe-update-view maybe-step msg)
+    (match maybe-step
       [(? number? n)
        (update-view/existing n)]
-      [(list `nomatch step)
-       (message-box (string-constant stepper-no-such-step/title) msg)
-       (when (>= (Step-Repository-num-steps-available step-repository) 0)
-         (update-view/existing step))]
-      [(list `nomatch/seen-final step)
-       (message-box (string-constant stepper-no-such-step/title) msg)
-       (when (>= (Step-Repository-num-steps-available step-repository) 0)
-         (update-view/existing step))]))
-
-  ;; previous-of-specified-kind: if the desired step is already in the list, display
-  ;; it; otherwise, put up a dialog and jump to the first step.
-  (define (previous-of-specified-kind right-kind? msg)
-    (match (find-earlier-step step-repository right-kind? view)
-      [(? number? found-step)
-       (update-view/existing found-step)]
-      [`nomatch
-       (message-box (string-constant stepper-no-such-step/title) msg)
-       (when (>= (Step-Repository-num-steps-available step-repository) 0)
-         (update-view/existing 0))]))
+      ['nomatch
+       (message-box (string-constant stepper-no-such-step/title) msg)]))
 
   ;; BUTTON/CHOICE BOX PROCEDURES
-
 
   ;; respond to a click on the "next" button
   (define (next)
@@ -262,7 +255,8 @@
            [parent button-panel]
            [label label]
            [bitmap bitmap]
-           [callback (λ (_1) (callback))]))
+           [callback (λ (_1) (callback))]
+           [enabled #f]))
 
   (define beginning-button
     (stepper-button "Beginning" to-beginning-img jump-to-beginning))
@@ -291,7 +285,7 @@
   ;; frame
   (define (update-view/existing new-view)
     (set! view new-view)
-    (let ([e (Step-text (list-ref (Step-Repository-view-history step-repository) view))])
+    (let ([e (Step-text (step-ref view))])
       (send e begin-edit-sequence)
       (send canvas set-editor e)
       (send e reset-width canvas)
@@ -305,7 +299,7 @@
     (send status-text delete 0 (send status-text last-position))
     ;; updated to yield 1-based step numbering rather than 0-based numbering.
     (send status-text insert
-          (format "~a/~a" (if view (+ 1 view) "none") (length (Step-Repository-view-history step-repository))))
+          (format "~a/~a" (if view (+ 1 view) "none") (num-steps)))
     (when (white-on-black-panel-scheme?)
       (define sd (new style-delta%))
       (send sd set-delta-foreground "white")
@@ -451,7 +445,7 @@
          ([current-eventspace stepper-frame-eventspace])
        (queue-callback
         (lambda ()
-          (jump-to-beginning)
+          (update-view/existing 0)
           (enable-all-buttons))))))
 
   s-frame)
