@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 7.7:
+
+Refactor and cleanup of step storage, repair of early-stepping bug
+
 Changes for 7.6:
 
 Stepper uses color preferences for display (including white-on-black)
