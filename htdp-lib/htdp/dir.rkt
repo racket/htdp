@@ -63,8 +63,8 @@
 (define-primitive create-dir create-dir/proc)
 
 ;; Data:
-;; Directory  = (make-dir Symbol (listof Dir) (listof File))
-;; File       = (make-file Symbol Number Nat (union '() X))
+;; Directory  = (make-dir (U String Symbol) (listof Dir) (listof File))
+;; File       = (make-file (U String Symbol) Number Nat (union '() X))
 
 (define (create-dir/proc a-path)
   (check-arg 'create-dir (string? a-path) "string" "first" a-path)
@@ -79,7 +79,7 @@
          (let-values ([(fs ds) (pushd d directory-files&directories)]) 
            (define files (map (lambda (x) (build-path d x)) fs))
            (make-dir
-            (string->symbol (path->string (my-split-path d)))
+            #;string->symbol #;path->string (my-split-path d)
             (explore (map (lambda (x) (build-path d x)) ds))
             (map make-file
                  (map path->string fs)
@@ -88,10 +88,14 @@
                  (map (lambda (x) "") fs)))))
        dirs))
 
-;; String -> String
+;; Path -> String
 (define (my-split-path d)
   (let-values ([(base name mbd?) (split-path d)])
-    (if (string? base) name d)))
+    (cond
+      [(symbol? name) (symbol->string name)]
+      [(string? name) name]
+      [(path? name) (path->string name)]
+      [else d])))
 
 ;; pushd : String[directory-name] (-> X) -> X
 (define (pushd d f)
