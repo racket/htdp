@@ -58,18 +58,11 @@
            (function-with-arity
             1
             #:except
-            [(_ f rate)
-             #'(list
-                (proc> 'on-tick (f2h f) 1)
-                (num> 'on-tick rate (lambda (x) (and (real? x) (positive? x)))
-                      "positive number" "rate"))]
-            [(_ f rate limit)
-             #'(list
-                (proc> 'on-tick (f2h f) 1)
-                (num> 'on-tick rate (lambda (x) (and (real? x) (positive? x)))
-                      "positive number" "rate")
-                (num> 'on-tick limit (lambda (x) (and (integer? x) (positive? x)))
-                      "positive integer" "limit"))])]
+            [(f    (proc> 'on-tick (f2h f) 1))
+	     (rate (num> 'on-tick rate (lambda (x) (and (real? x) (positive? x))) "positive number" "rate"))]
+            [(f     (proc> 'on-tick (f2h f) 1))
+	     (rate  (num> 'on-tick rate (lambda (x) (and (real? x) (positive? x))) "positive number" "rate"))
+	     (limit (num> 'on-tick limit (lambda (x) (and (integer? x) (positive? x))) "positive integer" "limit"))])]
   ;; -- state specifies whether to display the current state 
   [state DEFAULT #'#f (expr-with-check any> "expected a boolean or a string")]
   ;; Any -> Boolean 
@@ -78,6 +71,8 @@
   ;; Natural
   ;; -- port: specify the port to use
   [port DEFAULT #'SQPORT (expr-with-check port> "expected a port number")])
+
+(require racket/stxparam-exptime)
 
 ;  (create-world world0)
 (define-keywords WldSpec AllSpec create-world
@@ -88,10 +83,9 @@
            (function-with-arity
             1
             #:except
-            [(_ f width height)
-             #'(list (proc> 'to-draw (f2h f) 1)
-                     (nat> 'to-draw width "width")
-                     (nat> 'to-draw height "height"))])]
+            [(f (proc> 'to-draw (f2h f) 1))
+	     (width (nat> 'to-draw width "width"))
+	     (height (nat> 'to-draw height "height"))])]
   ;; World Nat Nat MouseEvent -> World 
   ;; on-mouse must specify a mouse event handler 
   [on-mouse DEFAULT #f (function-with-arity 4)]
@@ -113,15 +107,14 @@
              (function-with-arity
               1
               #:except
-              [(_ stop? last-picture)
-               #'(list (proc> 'stop-when (f2h stop?) 1)
-                       (proc> 'stop-when (f2h last-picture) 1 #:place "second"))])]
+              [(stop? (proc> 'stop-when (f2h stop?) 1))
+	       (last-picture (proc> 'stop-when (f2h last-picture) 1 #:place "second"))])]
   [display-mode DEFAULT #''normal
                 (expr-with-check display-mode> "expected a display mode ('normal, 'fullscreen)"
-                                 #:except
-                                 [(_ mode f)
-                                  #'(list (display-mode> "expected a display mode ('normal, 'fullscreen)" mode)
-                                          (proc> 'display-mode (f2h f) 3 #:place "second"))])]
+		  #:except
+		  [(_ mode f)
+		   #'(list (display-mode> "expected a display mode ('normal, 'fullscreen)" mode)
+		       (proc> 'display-mode (f2h f) 3 #:place "second"))])]
   ;; (U #f Any)
   ;; -- should the session be recorded and turned into PNGs and an animated GIF
   ;; -- if the value is a string and is the name of a local directory, use it! 
@@ -298,13 +291,15 @@
 (define-syntax (pad-handler stx)
   (syntax-case stx ()
     [(pad1 clause ...)
-     (let* ([args (->args 'pad-one-player stx #'w #'(clause ...) Pad1Specs void)]
-            ; [_ (displayln args)]
-            [keys (map (lambda (x) 
-                         (syntax-case x () 
-                           [(proc> (quote s) _f _d) (symbol->string (syntax-e #'s))]
-                           [else "not present"]))
-                       (filter values args))]
+     (let* ([args  (->args 'pad-one-player stx #'w #'(clause ...) Pad1Specs void)]
+            [keys  (map (lambda (x) 
+			      (syntax-case x () 
+				[(let ([tag (quote s)] [_x _y] ...) _b ...)
+				 (symbol->string (syntax-e #'s))]
+				[else "not present"]))
+			 (filter values args)
+			 #;
+			 (syntax->list #'(clause ...)))]
             [doms (map (lambda (x) (car (syntax->list x))) (syntax->list #'(clause ...)))])
        (syntax-property 
         (stepper-syntax-property
