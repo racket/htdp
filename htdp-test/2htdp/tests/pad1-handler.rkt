@@ -9,14 +9,18 @@
 (define (i-add1 x) (+ x 0+1i))
 
 (define handler 
-  (pad-handler (left sub1) (right add1)
-               (up i-sub1) (down i-add1)
+  (pad-handler (left sub1)
+               (right add1)
+               (up i-sub1)
+               (down i-add1)
                (shift (lambda (w) 0))
                (space stop-with)))
 
 (define-syntax-rule 
-  (tst (=-fun (handler _1 s) _2))
-  (unless (=-fun (handler _1 s) _2) (error 'test "~a failed" s)))
+  (tst (=-fun (handler in s) expe))
+  (let* ((actual (handler in s)))
+    (unless (=-fun actual expe)
+      (error 'test "~a failed [in: ~a expected: ~a actual: ~a]" s in expe actual))))
 
 (tst (= (handler 9 "left")  8))
 (tst (= (handler 8 "right") 9))
