@@ -4,7 +4,7 @@
 
 (check-true (xexpr? (cons 'html empty)))
 
-(define url "http://www.ccs.neu.edu/home/matthias/HtDP2e/Files/")
+(define url "https://felleisen.org/matthias/HtDP2e/Files/")
 
 (define local-machine-configuration "batch-io-xexpr-machine.xml")
 (define remote-machine-configuration (string-append url "machine-configuration.xml"))
