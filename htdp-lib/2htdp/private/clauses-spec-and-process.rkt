@@ -39,21 +39,25 @@
              extra ...
              [_ (err tag p msg)])))]))
 
-(define-syntax function-with-arity
-  (syntax-rules ()
+(define-syntax (function-with-arity stx)
+  (syntax-case stx ()
     [(_ arity)
-     (lambda (tag)
-       (lambda (p [tag tag])
-         (syntax-case p ()
-           [(_ x) #`(proc> #,tag (f2h x) arity)]
-           [_ (err tag p)])))]
+     (syntax/loc
+       stx
+       (lambda (tag)
+	 (lambda (p [tag tag])
+	   (syntax-case p ()
+	     [(_ x) (quasisyntax/loc p (proc> #,tag (f2h x) arity))]
+	     [_ (err tag p)]))))]
     [(_ arity #:except extra ...)
-     (lambda (tag)
-       (lambda (p [tag tag])
-         (syntax-case p ()
-           [(_ x) #`(proc> #,tag (f2h x) arity)]
-           extra ...
-           [_ (err tag p)])))]))
+     (syntax/loc
+       stx
+       (lambda (tag)
+	 (lambda (p [tag tag])
+	   (syntax-case p ()
+	     [(_ x) (quasisyntax/loc p (proc> #,tag (f2h x) arity))]
+	     extra ...
+	     [_ (err tag p)]))))]))
 
 (define (err spec p . xtras)
   (define x (cadr spec))

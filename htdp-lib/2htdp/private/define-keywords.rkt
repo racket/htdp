@@ -15,12 +15,14 @@
 (define-syntax (define-keywords stx)
   (syntax-parse stx #:literals (DEFAULT) 
     [(_ the-list super-list define-create
-        (kw:identifier 
+       (kw:identifier 
          (~optional kw-alt:identifier #:defaults ((kw-alt #'kw)))
          (~optional (~seq DEFAULT default:expr))
          coerce:expr) ...)
      (let* ([defs (attribute default)])
-       #`(begin
+       (syntax/loc
+	 stx
+	 (begin
            ;; define and create list of keywords and associated values 
            (define-for-syntax the-list
              (list* (list #'kw #'kw-alt (coerce ''kw) default) ... super-list))
@@ -29,8 +31,8 @@
            (provide kw ...) 
            (define-syntaxes (kw ...)
              (values
-              (lambda (x) 'kw (raise-syntax-error #f "used out of context" x))
-              ...))
+	       (lambda (x) 'kw (raise-syntax-error #f "used out of context" x))
+	       ...))
            
            ;; a macro for creating functions that instantiate the proper object
            ;; (define-create para ...) :: additional parameters for the new func
@@ -38,13 +40,15 @@
              (syntax-case stx ()
                [(_ para (... ...))
                 (let*-values
-                    ([(kwds defs)
-                      (values (map car the-list) '())]
-                     ;; the defaults list defs is no longer needed
-                     [(args) (lambda (para*) (append para* (foldr cons '() kwds)))]
-                     [(body) (lambda (para*) (map (lambda (x) `(,x ,x)) (append para* kwds)))])
+		  ([(kwds defs)
+		    (values (map car the-list) '())]
+		   ;; the defaults list defs is no longer needed
+		   [(args) (lambda (para*) (append para* (foldr cons '() kwds)))]
+		   [(body) (lambda (para*) (map (lambda (x) `(,x ,x)) (append para* kwds)))])
                   (let ([para* (syntax->list #'(para (... ...)))])
-                    #`(lambda (%)
+                    (quasisyntax/loc
+		      stx
+		      (lambda (%)
                         (lambda #,(args para*)
                           (lambda ()
-                            (new % #,@(body para*)))))))]))))]))
+                            (new % #,@(body para*))))))))])))))]))
