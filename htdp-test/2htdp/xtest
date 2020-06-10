@@ -33,8 +33,6 @@ run image-too-large.rkt
 run image-equality-performance-htdp.rkt
 run image-equality-performance.rkt
 run on-tick-defined.rkt
-run perform-robby.rkt
-run profile-robby.rkt
 run stop.rkt
 run test-image.rkt
 run ufo-rename.rkt
@@ -58,3 +56,5 @@ run error-messages.rkt
 run two-ports.rkt
 run web-io-automatic.rkt
 run world-dies-while-receiving.rkt
+run perform-robby.rkt
+run profile-robby.rkt
