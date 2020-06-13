@@ -16,7 +16,7 @@
 @; -----------------------------------------------------------------------------
 (define dots (bold "..."))
 
-(define htdp "http://www.ccs.neu.edu/home/matthias/HtDP2e/")
+(define htdp "https://htdp.org/2020-5-6/Book/")
 (define i1-2 (string-append htdp "i1-2.html"))
 (define i2-3 (string-append htdp "i2-3.html"))
 
