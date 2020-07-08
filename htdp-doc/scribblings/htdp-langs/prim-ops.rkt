@@ -510,8 +510,13 @@ And yes, the results of @racket[htdp-sort] satisfy the @racket[sorted?] predicat
 (define-struct roots (x sqrt))
 ;; RT is [List-of (make-roots Number Number)]
 
+(define (root-of a)
+  (make-roots a (sqrt a)))
+
 (define (roots-table xs)
-  (map (lambda (a) (make-roots a (sqrt a))) xs))
+  (cond
+    [(empty? xs) '()]
+    [else (cons (root-of (first xs)) (roots-table (rest xs)))]))
 ))
 @;%
 
