@@ -128,6 +128,15 @@
 ;    Determines whether some value is a list. 
 ;    In ASL, @racket[list?] also deals with cyclic lists. 
 ;    } 
+
+     @defproc[(for-each [f (any ... -> any)] [l (listof any)] ...) void?]{
+     Applies a function to each item on one or more lists for effect only:
+     @codeblock{(for-each f (list x-1 ... x-n)) = (begin (f x-1) ... (f x-n))}
+     @interaction[#:eval (asl-eval)
+              (for-each (lambda (x) (begin (display x) (newline))) '(1 2 3))
+              ]
+}
+
     @defproc[((advanced-list* list*) [x any] ... [l (listof any)]) (listof any)]{
     Constructs a list by adding multiple items to a list.
     In ASL, @racket[list*] also deals with cyclic lists. 
