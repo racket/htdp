@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 7.8:
+
+None
+
 Changes for 7.7:
 
 Refactor and cleanup of step storage, repair of early-stepping bug
