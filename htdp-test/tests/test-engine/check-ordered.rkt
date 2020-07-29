@@ -7,7 +7,8 @@
 ;; 1. it passes
 ;; 2. it is f that is called before defined not g 
 
-;; OUCH :: I can't figure out how to run DrRacket's older than 7. but I am pretty sure I had gotten this right. 
+;; OUCH :: expected to fail, get your work done
+;; This is issue #87, which you never chased down 
 
 (check-expect (g 30) "goodbye")
 (f 40)
