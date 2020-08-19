@@ -6,7 +6,6 @@
                      lang/posn
                      (except-in racket/gui/base make-color make-pen)
                      (only-in racket/base path-string?))
-          (only-in scribblings/draw/common colorName)
           lang/posn
           "shared.rkt"
           teachpack/2htdp/scribblings/img-eval
@@ -243,7 +242,7 @@ inside the curve.
   @image-examples[(text "Hello" 24 "olive")
                   (text "Goodbye" 36 "indigo")]
 
-  If the string contains newlines, the result pict will have multiple lines.
+  If the string contains newlines, the result image will have multiple lines.
 
   @image-examples[(text "Hello and\nGoodbye" 24 "orange")]
   
@@ -1793,11 +1792,16 @@ This section lists predicates for the basic structures provided by the image lib
          [(= i last-one) (list ", and " s)]
          [else (list ", " s)]))).
  @(tabular
+   #:sep (hspace 1)
+   #:cell-properties '((vcenter))
    (for/list ([clr-str (in-list sorted-color-names)])
      (define clr (nice-color-name->color clr-str))
      (define clr-bytes (string->bytes/utf-8 clr-str))
-     (list
-      (list @colorName[clr-bytes clr-bytes (send clr red) (send clr green) (send clr blue)]))))
+     (list @(img-eval `(above
+                        (rectangle 1 2 'solid "transparent")
+                        (rectangle 60 20 'solid ,clr-str)
+                        (rectangle 1 2 'solid "transparent")))
+           @tt{@clr-str})))
 }
 
 @defstruct[color ([red (integer-in 0 255)]
