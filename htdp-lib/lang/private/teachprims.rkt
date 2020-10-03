@@ -1,4 +1,4 @@
-#lang scheme 
+#lang racket
 
 #| tests are at htdp/htdp-test/tests/htdp-lang:
 collects/tests/mzscheme/beginner.rkt
@@ -126,6 +126,20 @@ namespace.
 (define-teach beginner random 
   (lambda (a)
     (random a)))
+
+(define-teach beginner number->string-digits 
+  (lambda (n d)
+    (unless (number? n)
+      (raise
+       (make-exn:fail:contract
+        (format "number->string-digits: expected a number as first argument; given ~e" n)
+        (current-continuation-marks))))
+    (unless (and (integer? d) (> d 0))
+      (raise
+       (make-exn:fail:contract
+        (format "number->string-digits: expected a positive integer as second argument; given ~e" d)
+        (current-continuation-marks))))
+    (~r n #:precision d)))
 
 (define-teach beginner +
   (lambda (a b . args)
@@ -494,6 +508,7 @@ namespace.
  beginner-not
  beginner-boolean->string
  beginner-random
+ beginner-number->string-digits 
  beginner-+
  beginner-/
  beginner-*

@@ -388,7 +388,15 @@
  Converts a number to a string. 
  @interaction[#:eval (bsl) (number->string 42)]
 }
-  @defproc[(integer->char [x exact-integer?]) char]{
+
+  @defproc[((beginner-number->string-digits number->string-digits) [x number] [p posint]) string]{
+ Converts a number @tt{x} to a string with the specified number of digits.
+ @interaction[#:eval (bsl) 
+  (number->string-digits .90 2)
+  (number->string-digits pi 4)]
+}
+
+@defproc[(integer->char [x exact-integer?]) char]{
  Looks up the character that corresponds to the given exact integer in the ASCII table (if any).
  @interaction[#:eval (bsl) (integer->char 42)]
 }
