@@ -708,44 +708,44 @@ namespace.
     (apply  string-append s t args)))
 
 (define-teach beginner string=?
-  (lambda (s t . args)
-    (apply  string=? s t args)))
+  (lambda (s t)
+    (string=? s t)))
 
 (define-teach beginner string<?
-  (lambda (s t . args)
-    (apply  string<? s t args)))
+  (lambda (s t)
+    ( string<? s t)))
 
 (define-teach beginner string>?
-  (lambda (s t . args)
-    (apply  string>? s t args)))
+  (lambda (s t)
+    (string>? s t)))
 
 (define-teach beginner string<=?
-  (lambda (s t . args)
-    (apply  string<=? s t args)))
+  (lambda (s t)
+    (string<=? s t)))
 
 (define-teach beginner string>=?
   (lambda (s t . args)
-    (apply  string>=? s t args)))
+    (string>=? s t)))
 
 (define-teach beginner string-ci=?
-  (lambda (s t . args)
-    (apply  string-ci=? s t args)))
+  (lambda (s t)
+    (string-ci=? s t)))
 
 (define-teach beginner string-ci<?
-  (lambda (s t . args)
-    (apply  string-ci<? s t args)))
+  (lambda (s t)
+    (string-ci<? s t)))
 
 (define-teach beginner string-ci>?
-  (lambda (s t . args)
-    (apply  string-ci>? s t args)))
+  (lambda (s t)
+    (string-ci>? s t)))
 
 (define-teach beginner string-ci<=?
-  (lambda (s t . args)
-    (apply  string-ci<=? s t args)))
+  (lambda (s t)
+    (string-ci<=? s t)))
 
 (define-teach beginner string-ci>=?
-  (lambda (s t . args)
-    (apply  string-ci>=? s t args)))
+  (lambda (s t)
+    (string-ci>=? s t)))
 
 (provide
  beginner-string-append
