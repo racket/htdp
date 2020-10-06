@@ -155,8 +155,7 @@
                                        failed total)])))
                 (send editor insert
                       (cond
-                       ((null? violated-signatures)
-                        (string-append (string-constant test-engine-no-signature-violations) "\n\n"))
+                       ((null? violated-signatures) "")
                        ((null? (cdr violated-signatures))
                         (string-append (string-constant test-engine-1-signature-violation) "\n\n"))
                        (else
