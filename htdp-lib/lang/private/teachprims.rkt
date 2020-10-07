@@ -724,7 +724,7 @@ namespace.
     (string<=? s t)))
 
 (define-teach beginner string>=?
-  (lambda (s t . args)
+  (lambda (s t)
     (string>=? s t)))
 
 (define-teach beginner string-ci=?
