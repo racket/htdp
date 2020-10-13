@@ -16,7 +16,10 @@
 
 (provide/contract
  [step-program-file (-> path-string? handler-ctct any/c)]
- [step-program-string (-> string? string? handler-ctct any/c)])
+ [step-program-string (-> string? string? handler-ctct any/c)]
+ [path->stx (-> path-string? syntax?)]
+ [expand-and-print (-> syntax? void?)]
+ )
 
 
 (define (step-program-file path handler)
@@ -28,6 +31,14 @@
   (expand-annotate-and-run stx handler))
 
 (define-namespace-anchor here-anchor)
+
+(define (expand-and-print stx)
+  (define expanded
+    ;; should this be a blank namespace instead?
+    (parameterize ([current-namespace 
+                    (namespace-anchor->namespace here-anchor)])
+      (expand stx)))
+  (printf "~s\n" expanded))
 
 (define (expand-annotate-and-run stx handler)
   (define expanded
