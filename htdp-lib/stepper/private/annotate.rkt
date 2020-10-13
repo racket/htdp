@@ -842,6 +842,11 @@
                 
                 [(quote-syntax _)
                  (normal-bundle null exp)]
+
+                ;; we're going to try to handle (#%variable-reference) as an opaque datum:
+
+                [(#%variable-reference . _)
+                 (normal-bundle null exp)]
                 
                 
                 ;  @@@ @@@         $@+@        @@+-$: 

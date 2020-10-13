@@ -28,4 +28,7 @@
 
 ;; the file interface:
 (define-runtime-path bobby "./bobby.rkt")
+
+(expand-and-print (path->stx bobby))
+
 (step-program-file bobby handler)
