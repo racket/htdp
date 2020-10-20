@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 7.9:
+
+pass through uses of #%variable-reference in expnded code
+
 Changes for 7.8:
 
 None
