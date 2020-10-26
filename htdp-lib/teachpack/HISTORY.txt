@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------
-Version 7.9				  []
+Version 7.9				  [Mon Oct 26 09:06:42 EDT 2020]
 
 * restrict string comparison function at the BSL and BSL+ level to two
   arguments. The relaxed versions allow for making bad mistakes.
