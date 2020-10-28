@@ -5,14 +5,14 @@ on: [push, pull_request]
 jobs:
   build-test:
     runs-on: ubuntu-18.04
-
+    container: racket/racket-ci:latest
+    
     strategy:
       fail-fast: false
       matrix:
         vm: ['regular', 'CS']
 
     steps:
-    - run: apt-get update && apt-get install -y libglib2.0-dev
     - uses: actions/checkout@master
     - uses: Bogdanp/setup-racket@v0.10
       with:
