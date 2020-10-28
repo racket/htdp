@@ -1,0 +1,31 @@
+name: Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-18.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        vm: ['regular', 'CS']
+
+    steps:
+    - run: apt-get update && apt-get install -y libglib2.0-dev
+    - uses: actions/checkout@master
+    - uses: Bogdanp/setup-racket@v0.10
+      with:
+        architecture: 'x64'
+        distribution: 'minimal'
+        variant: ${{ matrix.vm }}
+        version: 'current'
+    - name: Setup local catalog
+      run: |
+        racket -l- pkg/dirs-catalog --immediate $PWD/local-catalog $PWD/htdp $PWD/htdp-lib $PWD/htdp-test $PWD/htdp-doc
+        raco pkg config --set catalogs $PWD/local-catalog $(echo $(raco pkg config catalogs) | tr '\n' ' ')
+    - name: Install htdp-test (depends on htdp-lib)
+      run: raco pkg install --auto htdp-test
+    - name: Run tests
+      run: raco test htdp-test
+    
