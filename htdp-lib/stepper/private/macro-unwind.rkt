@@ -332,7 +332,7 @@
 
 (define (unwind-check-expect stx settings)
   (kernel-syntax-case (fall-through stx settings) #f
-    [(c-e (lambda () a1) a2 a3 a4)
+    [(c-e (lambda () a1) a2 a3)
      #`(check-expect a1 a2)]
     [(dots1 actual dots2) 
      (and (eq? (syntax->datum #'dots1) '...)
@@ -343,7 +343,7 @@
 
 (define (unwind-check-within stx settings)
   (kernel-syntax-case (fall-through stx settings) #f
-    [(c-e (lambda () a1) a2 a3 a4 a5)
+    [(c-e (lambda () a1) a2 a3 a4)
      #`(check-within a1 a2 a3)]
     [(dots1 actual dots2)
      (and (eq? (syntax->datum #'dots1) '...)
@@ -356,7 +356,7 @@
 
 (define (unwind-check-error stx settings)
   (kernel-syntax-case (fall-through stx settings) #f
-    [(c-e (lambda () a1) a2 a3 a4)
+    [(c-e (lambda () a1) a2 a3)
      #`(check-error a1 a2)]
     [(dots1 actual dots2)
      (and (eq? (syntax->datum #'dots1) '...)

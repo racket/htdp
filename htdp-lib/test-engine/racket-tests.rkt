@@ -63,7 +63,8 @@
 ;; check-expect-maker : syntax? syntax? (listof syntax?) symbol? -> syntax?
 ;; the common part of all three test forms
 
-; NB: typed/test-engine/type-env-ext KNOWS THE STRUCTURE OF THE GENERATED SYNTAX.
+; NB: typed/test-engine/type-env-ext and stepper/private/macro-unwind.rkt
+;     KNOW THE STRUCTURE OF THE GENERATED SYNTAX.
 ; TREAD CAREFULLY.
 
 (define-for-syntax (check-expect-maker stx checker-proc-stx test-expr embedded-stxes hint-tag)
