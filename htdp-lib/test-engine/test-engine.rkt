@@ -220,9 +220,6 @@
 (struct expected-error fail-reason (message value)
   #:transparent)
 
-(struct expected-an-error fail-reason (value)
-  #:transparent)
-
 (struct not-mem fail-reason (actual set)
   #:transparent)
 
