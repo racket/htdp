@@ -9,7 +9,7 @@
 ;; a bad error message from the check-satsified
 ;; implementation)
 (check-regexp-match
- #rx"check-satisfied encountered an error instead of the expected kind of value"
+ #rx"check-satisfied.*encountered an error"
  (let ([sp (open-output-string)])
      (string-append
       (with-handlers ([exn:fail? exn-message])

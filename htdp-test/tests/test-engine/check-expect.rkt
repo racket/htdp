@@ -21,6 +21,6 @@
            (define ,#'name (get-output)))))]))
 
 (run ch1 (check-expect "hello" "world"))
-(check-regexp-match (regexp-quote "Actual value: \"hello\"") ch1)
-(check-regexp-match (regexp-quote "Expected value: \"world\"") ch1)
+(check-regexp-match #rx"Actual value.*\"hello\"" ch1)
+(check-regexp-match #rx"(\"world\".*expected value)|(Expected value.\"world\")" ch1)
 
