@@ -14,7 +14,13 @@
     (memq h *hidden)))
 
 (check-docs (quote htdp/world))
-(check-docs (quote htdp/testing))
+(check-docs (quote htdp/testing)
+            #:skip (lambda (h)
+                     (memq h
+                           ;; probably obsolete
+                           '(exn:fail:wish
+                             ;; internal, likely to be refactored somewhere else
+                             report-signature-violation!))))
 (check-docs (quote htdp/show-queen))
 (check-docs (quote htdp/servlet2) #:skip legacy-module)
 (check-docs (quote htdp/servlet) #:skip legacy-module)
