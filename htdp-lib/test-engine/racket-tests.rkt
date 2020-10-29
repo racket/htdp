@@ -400,5 +400,6 @@
   (when (test-execute)
     (run-tests!))
   (unless (test-silence)
-    (display-test-results! (test-object->markup (current-test-object) (not (test-execute))))))
-
+    (display-test-results! (test-object->markup (current-test-object) (not (test-execute)))))
+  ;; make sure we return void - anything else might get printed in the REPL
+  (void))
