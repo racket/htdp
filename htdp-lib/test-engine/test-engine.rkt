@@ -60,7 +60,7 @@
           ; we expected an error, but a value came out instead
           (struct (expected-error fail-reason)
             ((srcloc srcloc?)
-             (message string?)
+             (message (or/c #f string?))
              (value any/c)))
 
           ; result was not member of the expected set
@@ -218,6 +218,9 @@
   #:transparent)
 
 (struct expected-error fail-reason (message value)
+  #:transparent)
+
+(struct expected-an-error fail-reason (value)
   #:transparent)
 
 (struct not-mem fail-reason (actual set)

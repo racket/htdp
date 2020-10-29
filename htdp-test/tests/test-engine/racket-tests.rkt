@@ -145,6 +145,14 @@
 (check-error (error 'test "hi") "test: hi")
 (check-success)
 
+(check-error (error 'test "not hi") "test: hi")
+(check-failure incorrect-error?
+               incorrect-error-expected "test: hi"
+               incorrect-error-exn exn:fail?)
+
+(check-error (error 'test "hi"))
+(check-success)
+
 (check-error (/ 1 0) "/: division by zero")
 (check-success)
 

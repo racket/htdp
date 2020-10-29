@@ -239,9 +239,15 @@
                      (incorrect-error-expected fail)
                      (get-rewritten-error-message (incorrect-error-exn fail)))]
     [(expected-error? fail)
-     (format->markup (string-constant test-engine-expected-error-error)
-                     (expected-error-value fail)
-                     (expected-error-message fail))]
+     (cond
+       ((expected-error-message fail)
+        => (lambda (message)
+             (format->markup (string-constant test-engine-expected-error-error)
+                             (expected-error-value fail)
+                             message)))
+       (else
+        (format->markup (string-constant test-engine-expected-an-error-error)
+                        (expected-error-value fail))))]
     [(not-mem? fail)
      (horizontal
       (format->markup (string-constant test-engine-not-mem-error)
@@ -393,6 +399,14 @@
   (define fail-incorrect-error
     (failed-check
      (incorrect-error (srcloc 'source 1 0 10 20) "expected" (exn "not expected" (current-continuation-marks)))
+     #f))
+  (define fail-expected-error
+    (failed-check
+     (expected-error (srcloc 'source 1 0 10 20) "error message" (exn "some other error message" (current-continuation-marks)))
+     #f))
+  (define fail-an-expected-error
+    (failed-check
+     (expected-error (srcloc 'source 1 0 10 20) #f (exn "some error message" (current-continuation-marks)))
      #f))
   (define fail-not-mem
     (failed-check

@@ -287,15 +287,15 @@
          (expected-error src error actual))))
    (make-exn->unexpected-error src error))) ; probably can't happen
 
-(define (do-check-error/no-message test error src)
-  (error-check string? error CHECK-ERROR-STR-FMT #t)
+(define (do-check-error/no-message test src)
   (execute-test
    src
    (lambda ()
      (with-handlers ([exn?
                       (lambda (exn) #t)])
        (let ([actual (test)])
-         (expected-error src error actual))))))
+         (expected-error src #f actual))))
+   (make-exn->unexpected-error src "any error"))) ; probably can't happen
 
 (define-syntax (check-member-of stx)
   (check-context! 'check-member-of CHECK-EXPECT-DEFN-STR stx)
