@@ -27,5 +27,4 @@ jobs:
     - name: Install htdp-test (depends on htdp-lib)
       run: raco pkg install --auto htdp-test
     - name: Run tests
-      run: raco test htdp-test
-    
+      run: xvfb-run raco test htdp-test

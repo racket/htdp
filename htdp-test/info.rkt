@@ -3,7 +3,10 @@
 (define collection 'multi)
 (define deps '("base"
                "htdp-lib"))
-(define build-deps '("scheme-lib"
+(define build-deps '("pict-lib"
+                     "redex-lib"
+                     "racket-index"
+                     "scheme-lib"
                      "srfi-lite-lib"
                      "compatibility-lib"
                      "gui-lib"
