@@ -177,7 +177,7 @@
     ;; way to easily re-run them, so so don't reset them here
     (for-each (lambda (thunk)
                 (thunk))
-              (test-object-tests test-object))
+              (reverse (test-object-tests test-object)))
     test-object))
 
 (define (add-failed-check! failed-check)
