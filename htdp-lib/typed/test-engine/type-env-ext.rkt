@@ -19,6 +19,12 @@
    [(syntax-parse (local-expand #'(ce:check-expect 1 1) 'module #f)
       #:literals (define-values)
       [(define-values _
+          (add-check-expect-test! _))
+       #'add-check-expect-test!])
+      ((-> Univ) . -> . -Void)]
+   [(syntax-parse (local-expand #'(ce:check-expect 1 1) 'module #f)
+      #:literals (define-values)
+      [(define-values _
          (add-check-expect-test! (lambda () (do-check-expect _ _ _))))
        #'do-check-expect])
     ((-> Univ) Univ Univ . -> . -Boolean)]
