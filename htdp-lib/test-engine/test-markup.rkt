@@ -106,7 +106,7 @@
 
      empty-line
      
-     (check-failures->markup (test-object-failed-checks test-object))
+     (check-failures->markup failed-checks)
      (signature-violations->markup signature-violations))))
 
 (define (format-list l)
