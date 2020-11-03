@@ -12,6 +12,7 @@
          check-error  ;; syntax : (check-error <expression> [<expression>])
          check-satisfied ;; syntax : (check-satisfied <expression> <expression>)
          (for-syntax check-expect-maker) ; helper syntax for creating the above
+         execute-test ; helper for creating the above
          exn:fail:wish ; raise for unfulfilled wish
          report-signature-violation!) ; call for signature violation
 
