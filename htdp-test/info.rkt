@@ -21,4 +21,4 @@
 
 (define pkg-desc "tests for \"htdp\"")
 
-(define pkg-authors '(matthias mflatt robby))
+(define pkg-authors '(matthias mflatt robby "sperber@deinprogramm.de"))

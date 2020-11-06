@@ -36,6 +36,6 @@
 
 (define pkg-desc "implementation (no documentation) part of \"htdp\"")
 
-(define pkg-authors '(matthias mflatt robby))
+(define pkg-authors '(matthias mflatt robby "sperber@deinprogramm.de"))
 
 (define version "1.7")

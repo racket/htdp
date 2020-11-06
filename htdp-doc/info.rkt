@@ -26,4 +26,4 @@
 
 (define pkg-desc "documentation part of \"htdp\"")
 
-(define pkg-authors '(matthias mflatt robby))
+(define pkg-authors '(matthias mflatt robby "sperber@deinprogramm.de"))
