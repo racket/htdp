@@ -1007,6 +1007,15 @@
       =>
       (ellipse (* 30 3) (* 60 4) 'outline 'purple))
 
+;; the old, broken version of `rotate` use to make rotate followed
+;; by scale be the same as scale followed by rotate (but we needed
+;; a `rotate 0` to get the bounding box to match)
+(test
+ (equal? (rotate 60 (scale/xy 2 1 (ellipse 40 60 "solid" "green")))
+         (rotate 0 (scale/xy 2 1 (rotate 60 (ellipse 40 60 "solid" "green")))))
+ =>
+ #f)
+
 
 ;; test scaling of bitmaps with alpha (in this case, a completely blank one)
 (let ()
