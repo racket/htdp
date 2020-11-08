@@ -20,7 +20,8 @@
                            ;; probably obsolete
                            '(exn:fail:wish
                              ;; internal, likely to be refactored somewhere else
-                             report-signature-violation!))))
+                             report-signature-violation!
+                             execute-test))))
 (check-docs (quote htdp/show-queen))
 (check-docs (quote htdp/servlet2) #:skip legacy-module)
 (check-docs (quote htdp/servlet) #:skip legacy-module)
