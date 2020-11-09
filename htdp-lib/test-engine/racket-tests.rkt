@@ -133,7 +133,11 @@
 
 (define (make-exn->unexpected-error src expected)
   (lambda (exn)
-    (unexpected-error src expected exn)))
+    (cond
+      ((exn:fail:wish? exn)
+       (unimplemented-wish src (exn:fail:wish-name exn) (exn:fail:wish-args exn)))
+      (else
+       (unexpected-error src expected exn)))))
 
 (define-syntax (check-expect stx)
   (check-context! 'check-expect CHECK-EXPECT-DEFN-STR stx)
@@ -240,7 +244,11 @@
           (satisfied-failed src actual name)]
          [else #t])))
    (lambda (exn)
-     (unsatisfied-error src name exn))))
+     (cond
+       ((exn:fail:wish? exn)
+        (unimplemented-wish src (exn:fail:wish-name exn) (exn:fail:wish-args exn)))
+       (else
+        (unsatisfied-error src name exn))))))
 
 (define-syntax (check-within stx)
   (check-context! 'check-within CHECK-WITHIN-DEFN-STR stx)
@@ -355,12 +363,7 @@
 
 (define (execute-test src thunk exn:fail->reason)
   (let-values (((test-result exn)
-                 (with-handlers ([exn:fail:wish?
-                                  (lambda (e)
-                                    (define name (exn:fail:wish-name e))
-                                    (define args (exn:fail:wish-args e))
-                                    (values (unimplemented-wish src name args) e))]
-                                 [exn:fail:contract:signature?
+                 (with-handlers ([exn:fail:contract:signature?
                                   (lambda (e)
                                     (values
                                      (violated-signature src
