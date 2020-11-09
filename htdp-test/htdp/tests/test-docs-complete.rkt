@@ -18,10 +18,7 @@
             #:skip (lambda (h)
                      (memq h
                            ;; probably obsolete
-                           '(exn:fail:wish
-                             ;; internal, likely to be refactored somewhere else
-                             report-signature-violation!
-                             execute-test))))
+                           '(exn:fail:wish exn:fail:wish-args exn:fail:wish-name exn:fail:wish? struct:exn:fail:wish))))
 (check-docs (quote htdp/show-queen))
 (check-docs (quote htdp/servlet2) #:skip legacy-module)
 (check-docs (quote htdp/servlet) #:skip legacy-module)

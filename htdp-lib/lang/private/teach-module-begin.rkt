@@ -10,7 +10,7 @@
 
 (require deinprogramm/signature/signature
          lang/private/signature-syntax
-         test-engine/racket-tests)
+         (only-in test-engine/syntax test))
 
 (require (for-syntax scheme/base)
          (for-syntax racket/list)

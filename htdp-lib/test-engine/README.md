@@ -9,6 +9,8 @@ teaching languages.
 - `info.rkt`: package information
 - `test-engine.rkt`: register tests, run them, collect & inspect results
 - `racket-tests.rkt`: surface syntax for the teaching languages
+- `syntax.rkt`: utilities for defining surface syntax in a way that
+  works with the stepper
 - `markup-gui.rkt`: graphical rendering for markup in a `text%` object
 - `test-markup.rkt`: convert test results into markup
 - `srcloc.rkt`: extract source location from the stack trace in an exception

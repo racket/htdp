@@ -51,7 +51,7 @@
          "model-settings.rkt"
          "macro-unwind.rkt"
          "lifting.rkt"
-         (only-in test-engine/racket-tests test-silence)
+         (only-in test-engine/syntax test-silence)
          
          ;; for breakpoint display
          ;; (commented out to allow nightly testing)

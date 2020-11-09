@@ -1,20 +1,17 @@
 ; Surface syntax for check-expect & friends in Racket-like languages.
 #lang racket/base
 
-(provide test ; run tests and display results
-         test-execute ; boolean parameter, says if the tests run
-         test-silence ; boolean parameter, says if the test results are printed
-         check-expect ;; syntax : (check-expect <expression> <expression>)
+(provide check-expect ;; syntax : (check-expect <expression> <expression>)
          check-random ;; syntax : (check-random <expression> <expression>)
          check-within ;; syntax : (check-within <expression> <expression> <expression>)
          check-member-of ;; syntax : (check-member-of <expression> <expression>)
          check-range ;; syntax : (check-range <expression> <expression> <expression>)
          check-error  ;; syntax : (check-error <expression> [<expression>])
          check-satisfied ;; syntax : (check-satisfied <expression> <expression>)
-         (for-syntax check-expect-maker) ; helper syntax for creating the above
-         execute-test ; helper for creating the above
-         exn:fail:wish ; raise for unfulfilled wish
-         report-signature-violation!) ; call for signature violation
+         (struct-out exn:fail:wish) ; probably legacy
+         ;; re-exports from test-engine/syntax
+         test-execute test-silence
+         test) 
 
 (require lang/private/teachprims
          racket/match
@@ -22,13 +19,9 @@
          htdp/error
          (for-syntax racket/base
                      #;"requiring from" lang/private/firstorder #;"avoids load cycle")
-	 (except-in deinprogramm/signature/signature signature-violation)
          test-engine/test-engine
-         test-engine/test-markup
-	 test-engine/srcloc)
-
-(require (for-syntax stepper/private/syntax-property))
-(require  syntax/macro-testing)
+         (only-in test-engine/test-markup get-rewritten-error-message)
+         test-engine/syntax)
 
 (define INEXACT-NUMBERS-FMT
   "check-expect cannot compare inexact numbers. Try (check-within test ~a range).")
@@ -60,59 +53,6 @@
   CHECK-EXPECT-DEFN-STR)
 (define-for-syntax CHECK-ERROR-DEFN-STR
   CHECK-EXPECT-DEFN-STR)
-
-;; check-expect-maker : syntax? syntax? (listof syntax?) symbol? -> syntax?
-;; the common part of all three test forms
-
-; NB: typed/test-engine/type-env-ext and stepper/private/macro-unwind.rkt
-;     KNOW THE STRUCTURE OF THE GENERATED SYNTAX.
-; TREAD CAREFULLY.
-
-(define-for-syntax (check-expect-maker stx checker-proc-stx test-expr embedded-stxes hint-tag)
-  (define bogus-name
-    (stepper-syntax-property #`#,(gensym 'test) 'stepper-hide-completed #t))
-  (define src-info
-    (with-stepper-syntax-properties (['stepper-skip-completely #t])
-      #`(srcloc #,@(list #`(quote #,(syntax-source stx))
-                         (syntax-line stx)
-                         (syntax-column stx)
-                         (syntax-position stx)
-                         (syntax-span stx)))))
-  (define test-expr-checked-for-syntax-error #`(convert-compile-time-error #,test-expr))
-  (if (eq? 'module (syntax-local-context))
-      #`(define #,bogus-name
-          #,(stepper-syntax-property
-             #`(add-check-expect-test!
-                (lambda ()
-                  #,(with-stepper-syntax-properties
-                      (['stepper-hint hint-tag]
-                       ['stepper-hide-reduction #t]
-                       ['stepper-use-val-as-final #t])
-                      (quasisyntax/loc stx
-                        (#,checker-proc-stx
-                         (lambda () #,test-expr-checked-for-syntax-error)
-                         #,@embedded-stxes
-                         #,src-info)))))
-             'stepper-skipto
-             (append skipto/cdr
-                     skipto/second ;; outer lambda
-                     '(syntax-e cdr cdr syntax-e car) ;; inner lambda
-                     )))
-      #`(add-check-expect-test!
-         (lambda ()
-           #,(with-stepper-syntax-properties
-               (['stepper-hint hint-tag]
-                ['stepper-hide-reduction #t]
-                ['stepper-use-val-as-final #t])
-               (quasisyntax/loc stx
-                 (#,checker-proc-stx
-                  (lambda () #,test-expr-checked-for-syntax-error)
-                  #,@embedded-stxes
-                  #,src-info)))))))
-
-; this wrapper is necessary because add-test! has a contract which confuses the stepper
-(define (add-check-expect-test! thunk)
-  (add-test! thunk))
 
 (define-for-syntax (check-context! kind message stx)
   (let ([c (syntax-local-context)])
@@ -361,50 +301,4 @@
      (make-exn:fail:contract (if fmt-act? (format fmt actual) fmt)
                              (current-continuation-marks)))))
 
-(define (execute-test src thunk exn:fail->reason)
-  (let-values (((test-result exn)
-                 (with-handlers ([exn:fail:contract:signature?
-                                  (lambda (e)
-                                    (values
-                                     (violated-signature src
-                                                         (exn:fail:contract:signature-obj e)
-                                                         (exn:fail:contract:signature-signature e)
-                                                         (exn:fail:contract:signature-blame e))
-                                     e))]
-                                 [exn:fail?
-                                  (lambda (e)
-                                    (values (exn:fail->reason e) e))])
-                   (values (thunk) #f))))
-    (if (fail-reason? test-result)
-        (begin
-          (add-failed-check! (failed-check test-result (and (exn? exn) (exn-srcloc exn))))
-          #f)
-        #t)))
-
 (struct exn:fail:wish exn:fail (name args))
-
-(define (report-signature-violation! obj signature message blame)
-  (let* ([srcloc (continuation-marks-srcloc (current-continuation-marks))]
-         [message
-          (or message
-              (signature-got obj))])
-    (add-signature-violation! (signature-violation obj signature message srcloc blame))))
-
-; typed/test-engine/typen-env-ext knows what this expands into
-(define-syntax (test stx) 
-  (syntax-case stx ()
-    [(_)
-     (syntax-property
-      #'(test*)
-      'test-call #t)]))
-
-(define test-execute (make-parameter #t))
-(define test-silence (make-parameter #f))
-
-(define (test*)
-  (when (test-execute)
-    (run-tests!))
-  (unless (test-silence)
-    (display-test-results! (test-object->markup (current-test-object) (not (test-execute)))))
-  ;; make sure we return void - anything else might get printed in the REPL
-  (void))

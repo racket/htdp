@@ -7,7 +7,7 @@
          racket/snip
          racket/class
          (only-in test-engine/test-markup get-rewritten-error-message-parameter)
-         (only-in test-engine/racket-tests report-signature-violation!)
+         (only-in test-engine/syntax report-signature-violation!)
          (only-in deinprogramm/signature/signature signature-violation-proc)
          "print-width.rkt")
 

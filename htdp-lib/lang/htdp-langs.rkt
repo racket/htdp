@@ -33,7 +33,7 @@
          "htdp-langs-save-file-prefix.rkt"
          "htdp-langs-interface.rkt"
 
-         (only-in test-engine/racket-tests
+         (only-in test-engine/syntax
                   report-signature-violation! test-execute test)
 	 (except-in test-engine/test-engine signature-violation)
          test-engine/test-markup

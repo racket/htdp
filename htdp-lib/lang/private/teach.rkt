@@ -49,7 +49,8 @@
          (rename lang/private/signature-syntax signature:property property)
          (all-except deinprogramm/quickcheck/quickcheck property)
          (rename deinprogramm/quickcheck/quickcheck quickcheck:property property)
-         (only test-engine/racket-tests exn:fail:wish check-expect-maker)
+         (only test-engine/racket-tests)
+         (only test-engine/syntax check-expect-maker)
          (only test-engine/test-engine
                add-wish! add-wish-call! add-failed-check!
                property-error property-fail
