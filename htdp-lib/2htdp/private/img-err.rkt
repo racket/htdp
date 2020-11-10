@@ -86,7 +86,7 @@
                [args body] ...)))]
       [(define/chk (fn-name . args) body ...)
        (with-syntax ([(args body) (adjust-case #'fn-name #'args #'(body ...))])
-         #`(define (fn-name . args) body))])))
+         (quasisyntax/loc stx (define (fn-name . args) body)))])))
 
 ;; check/normalize : symbol symbol any number -> any
 ;; based on the name of the argument, checks to see if the input
@@ -168,7 +168,7 @@
                 'real\ number
                 i arg)
      arg]
-    [(factor x-factor y-factor)
+    [(factor x-factor y-factor non-zero-radius)
      (check-arg fn-name
                 (and (real? arg)
                      (positive? arg))
@@ -193,6 +193,24 @@
                 'angle\ in\ degrees
                 i arg)
      (angle->proper-range arg)]
+    [(angle-between-0-and-360)
+     (check-arg fn-name
+                (angle? arg)
+                'angle\ in\ degrees
+                i arg)
+     (check-arg fn-name
+                (<= 0 arg 360)
+                '|angle between 0 and 360|
+                i arg)
+     (check-arg fn-name
+                (not (= 0 arg))
+                '|angle that is not 0|
+                i arg)
+     (check-arg fn-name
+                (not (= 360 arg))
+                '|angle that is not 360|
+                i arg)
+     arg]
     [(color-only)
      (check-arg fn-name (image-color? arg) 'image-color i arg)
      (cond
@@ -383,27 +401,3 @@
        (not (or (= arg +inf.0)
                 (= arg -inf.0)
                 (equal? arg +nan.0)))))
-
-(define/contract (angle->proper-range α)
-  (-> real? (between/c 0 360))
-  (let loop ([θ (- α (* 360 (floor (/ α 360))))])
-    (cond [(negative? θ) (+ θ 360)]
-          [(>= θ 360)    (- θ 360)]
-          [else θ])))
-
-(module+ test
-  (require rackunit)
-  (check-equal? (angle->proper-range 1) 1)
-  (check-equal? (angle->proper-range 361) 1)
-  (check-equal? (angle->proper-range 1/2) 1/2)
-  (check-equal? (angle->proper-range -1) 359)
-  (check-equal? (angle->proper-range #e-1.5) #e358.5)
-  (check-equal? (angle->proper-range #e-.1) #e359.9)
-  
-  (check-equal? (angle->proper-range 1.0) 1.0)
-  (check-equal? (angle->proper-range 361.0) 1.0)
-  (check-equal? (angle->proper-range 0.5) 0.5)
-  (check-equal? (angle->proper-range -1.0) 359.0)
-  (check-equal? (angle->proper-range -1.5) 358.5)
-  (check-equal? (angle->proper-range -.1) 359.9)
-  (check-equal? (angle->proper-range #i-7.347880794884119e-016) 0.0))

@@ -15,6 +15,9 @@
                      racket/list)
          lang/posn
          net/url)
+(module+ test (require rackunit))
+
+(define 2pi (* 2 pi))
 
 ;; for testing
 ; (require racket/gui/base)
@@ -703,15 +706,51 @@
   (-> np-atomic-shape? (values number? number? number? number?))
   (cond
     [(ellipse? atomic-shape)
-     (let ([θ (ellipse-angle atomic-shape)])
-       (let-values ([(w h) (ellipse-rotated-size (ellipse-width atomic-shape)
-                                                 (ellipse-height atomic-shape)
-                                                 (degrees->radians θ))])
+     (define ew (ellipse-width atomic-shape))
+     (define eh (ellipse-height atomic-shape))
+     (define wedge (ellipse-wedge atomic-shape))
+     (define θ (degrees->radians (ellipse-angle atomic-shape)))
+     (cond
+       [wedge
+        ;; this code assumes that ew and eh are never zero,
+        ;; something that should be guaranteed by the way
+        ;; ellipses are constructed
+        (define (point-on-ellipse t)
+          (list (ellipse-t->x ew eh θ t)
+                (ellipse-t->y ew eh θ t)))
+        (define (in-range-point-on-ellipse t)
+          (and (is-between? 0 t wedge-θ)
+               (point-on-ellipse t)))
+        (define out-θ-x (ellipse-outermost-point-x ew eh θ))
+        (define out-θ-y (ellipse-outermost-point-y ew eh θ))
+        (define wedge-θ (degrees->radians wedge))
+        (define points-to-consider
+          (combine-points-to-consider
+           (list 0 0)                 ;; center point
+           (point-on-ellipse wedge-θ) ;; end of wedge
+           (point-on-ellipse (degrees->radians 0)) ;; start of wedge
+
+           ;; widest points on the ellipse (but only if they are in range)
+           (in-range-point-on-ellipse out-θ-x)
+           (in-range-point-on-ellipse out-θ-y)
+           (in-range-point-on-ellipse (+ pi out-θ-x))
+           (in-range-point-on-ellipse (+ pi out-θ-y))
+           ))
+        (define xs (map car points-to-consider))
+        (define ys (map cadr points-to-consider))
+        (define l (apply min xs))
+        (define r (apply max xs))
+        (define t (apply min ys))
+        (define b (apply max ys))
+        (values l t r b)]
+       [else
+        (define-values (w h)
+          (ellipse-rotated-size ew eh θ))
          
-         (values (- (/ w 2))
-                 (- (/ h 2))
-                 (/ w 2)
-                 (/ h 2))))]
+        (values (- (/ w 2))
+                (- (/ h 2))
+                (/ w 2)
+                (/ h 2))])]
     [(text? atomic-shape)
      (let-values ([(w h a d) (send text-sizing-bm get-text-extent 
                                    (text-string atomic-shape) 
@@ -729,6 +768,37 @@
      (eprintf "using bad bounding box for ~s\n" atomic-shape)
      (values 0 0 100 100)]))
 
+;; returns #true if θ2 is between θ1 and θ3
+;; θ1 =/= θ3 (as angles)
+(define (is-between? θ1 θ2 θ3)
+  (define (bring-in-range θ)
+    (cond
+      [(and (<= 0 θ) (< θ 2pi)) θ]
+      [(< θ 0)
+       (bring-in-range (+ θ 2pi))]
+      [else
+       (bring-in-range (- θ 2pi))]))
+  (define θ1r (bring-in-range θ1))
+  (define θ2r (bring-in-range θ2))
+  (define θ3r (bring-in-range θ3))
+  (cond
+    [(<= θ1r θ3r) (<= θ1r θ2r θ3r)]
+    [else (not (<= θ3r θ2r θ1r))]))
+(module+ test
+  (check-equal? (is-between? 0 pi (* 3/2 pi)) #t)
+  (check-equal? (is-between? 0 pi (* 1/2 pi)) #f)
+  (check-equal? (is-between? (* 1/6 pi) (* 3/6 pi) (* 5/6 pi)) #t)
+  (check-equal? (is-between? (* 1/6 pi) (* 7/6 pi) (* 5/6 pi)) #f)
+  (check-equal? (is-between? (* 5/6 pi) (* 3/6 pi) (* 1/6 pi)) #f)
+  (check-equal? (is-between? (* 5/6 pi) (* 7/6 pi) (* 1/6 pi)) #t)
+  (check-equal? (is-between? (* 1/2 pi) pi 2pi) #t)
+  (check-equal? (is-between? (* 1/2 pi) (* 1/4 pi) 2pi) #f))
+
+;; combine-points-to-consider : (or/c #f (cons/c number? number?)) -> (listof (cons/c number? number?))
+(define (combine-points-to-consider . xs)
+  (for/fold ([l '()]) ([x (in-list xs)])
+    (if x (cons x l) l)))
+
 (define (rotated-rectangular-bounding-box w h θ)
   (let*-values ([(ax ay) (rotate-xy (- (/ w 2)) (- (/ h 2)) θ)]
                 [(bx by) (rotate-xy (- (/ w 2)) (/ h 2) θ)]
@@ -738,42 +808,6 @@
             (min ay by cy dy)
             (max ax bx cx dx)
             (max ay by cy dy))))
-
-(define (rotate-points in-points θ)
-  (define cs (map pp->c in-points))
-  (define vectors (points->vectors cs))
-  (define rotated-vectors (map (λ (c) (rotate-c c θ)) vectors))
-  (define rotated-points (vectors->points rotated-vectors))
-  (for/list ([orig-point (in-list in-points)]
-             [rotated-point (in-list rotated-points)])
-    (cond
-      [(pulled-point? orig-point)
-       (make-pulled-point (pulled-point-lpull orig-point)
-                          (pulled-point-langle orig-point)
-                          (point-x rotated-point)
-                          (point-y rotated-point)
-                          (pulled-point-rpull orig-point)
-                          (pulled-point-rangle orig-point))]
-      [else rotated-point])))
-
-(define (points->vectors orig-points)
-  (let loop ([points (cons 0 orig-points)])
-    (cond
-      [(null? (cdr points)) '()]
-      [else
-       (cons (- (cadr points) (car points))
-             (loop (cdr points)))])))
-
-(define (vectors->points vecs)
-  (let loop ([vecs vecs]
-             [p 0])
-    (cond
-      [(null? vecs) '()]
-      [else 
-       (let ([next-p (+ (car vecs) p)])
-         (cons (c->point next-p)
-               (loop (cdr vecs)
-                     next-p)))])))
 
 (define (center-point np-atomic-shape)
   (let-values ([(l t r b) (np-atomic-bb np-atomic-shape)])
@@ -786,24 +820,35 @@
   (cond
     [(ellipse? atomic-shape)
      (cond
-       [(= (ellipse-width atomic-shape)
-           (ellipse-height atomic-shape))
-        atomic-shape]
+       [(ellipse-wedge atomic-shape)
+        ;; we don't have the symmetry in the case below when we are a wedge
+        (define new-angle (bring-between (+ θ (ellipse-angle atomic-shape)) 360))
+        (make-ellipse (ellipse-width atomic-shape)
+                      (ellipse-height atomic-shape)
+                      new-angle
+                      (ellipse-mode atomic-shape)
+                      (ellipse-color atomic-shape)
+                      (ellipse-wedge atomic-shape))]
        [else
-        (let ([new-angle (bring-between (+ θ (ellipse-angle atomic-shape)) 180)])
-          (cond
-            [(< new-angle 90)
-             (make-ellipse (ellipse-width atomic-shape)
-                           (ellipse-height atomic-shape)
-                           new-angle
-                           (ellipse-mode atomic-shape)
-                           (ellipse-color atomic-shape))]
-            [else
-             (make-ellipse (ellipse-height atomic-shape)
-                           (ellipse-width atomic-shape)
-                           (- new-angle 90)
-                           (ellipse-mode atomic-shape)
-                           (ellipse-color atomic-shape))]))])]
+        (define new-angle (bring-between (+ θ (ellipse-angle atomic-shape)) 180))
+        (cond
+          [(= (ellipse-width atomic-shape)
+              (ellipse-height atomic-shape))
+           atomic-shape]
+          [(< new-angle 90)
+           (make-ellipse (ellipse-width atomic-shape)
+                         (ellipse-height atomic-shape)
+                         new-angle
+                         (ellipse-mode atomic-shape)
+                         (ellipse-color atomic-shape)
+                         (ellipse-wedge atomic-shape))]
+          [else
+           (make-ellipse (ellipse-height atomic-shape)
+                         (ellipse-width atomic-shape)
+                         (- new-angle 90)
+                         (ellipse-mode atomic-shape)
+                         (ellipse-color atomic-shape)
+                         (ellipse-wedge atomic-shape))])])]
     [(text? atomic-shape)
      (make-text (text-string atomic-shape)
                 (bring-between (+ θ (text-angle atomic-shape)) 360)
@@ -832,36 +877,9 @@
   (let-values ([(x y) (rotate-xy (point-x p) (point-y p) θ)])
     (make-point x y)))
 
-(define (rotate-c c θ)
-  (* (degrees->complex θ) c))
-
-(define (degrees->complex θ) 
-  (unless (and (<= 0 θ)
-               (< θ 360))
-    (error 'degrees->complex "~s" θ))
-  (case (and (integer? θ) (modulo θ 360))
-    [(0)    1+0i]
-    [(90)   0+1i]
-    [(180) -1+0i]
-    [(270)  0-1i]
-    [else (make-polar 1 (degrees->radians θ))]))
-
 ;; rotate-xy : x,y angle -> x,y
 (define (rotate-xy x y θ)
   (c->xy (rotate-c (xy->c x y) θ)))
-
-(define (xy->c x y) (make-rectangular x (- y)))
-(define (c->xy c) 
-  (values (real-part c)
-          (- (imag-part c))))
-(define (pp->c p)
-  (cond
-    [(pulled-point? p) (xy->c (pulled-point-x p) (pulled-point-y p))]
-    [else (xy->c (point-x p) (point-y p))]))
-(define (c->point c) 
-  (let-values ([(x y) (c->xy c)])
-    (make-point x y)))
-
 
 ;; bring-between : rational integer -> rational
 ;; returns a number that is much like the modulo of 'x' and 'upper-bound',
@@ -871,6 +889,14 @@
          [fraction (- x x-floor)])
     (+ (modulo x-floor upper-bound) 
        fraction)))
+(module+ test
+  (check-equal? (bring-between 30 180) 30)
+  (check-equal? (bring-between 210 180) 30)
+  (check-equal? (bring-between 30.5 180) 30.5)
+  (check-equal? (bring-between 210.5 180) 30.5)
+  (check-equal? (bring-between 180.5 180) .5)
+  (check-equal? (bring-between 179.9 180) 179.9))
+  
 
 (define/chk (flip-horizontal image)
   (rotate 90 (flip-vertical (rotate -90 image))))
@@ -937,10 +963,20 @@
   (-> np-atomic-shape? np-atomic-shape?)
   (cond
     [(ellipse? atomic-shape)
+     (define wedge (ellipse-wedge atomic-shape))
      (cond
-       [(= (ellipse-width atomic-shape)
-           (ellipse-height atomic-shape))
+       [(and (= (ellipse-width atomic-shape)
+                (ellipse-height atomic-shape))
+             (not wedge))
         atomic-shape]
+       [wedge
+        (define angle (ellipse-angle atomic-shape))
+        (make-ellipse (ellipse-width atomic-shape)
+                      (ellipse-height atomic-shape)
+                      (bring-between (- 0 wedge angle) 360)
+                      (ellipse-mode atomic-shape)
+                      (ellipse-color atomic-shape)
+                      (ellipse-wedge atomic-shape))]
        [else
         (let ([new-angle (bring-between (- 180 (ellipse-angle atomic-shape)) 180)])
           (cond
@@ -949,13 +985,15 @@
                            (ellipse-height atomic-shape)
                            new-angle
                            (ellipse-mode atomic-shape)
-                           (ellipse-color atomic-shape))]
+                           (ellipse-color atomic-shape)
+                           (ellipse-wedge atomic-shape))]
             [else
              (make-ellipse (ellipse-height atomic-shape)
                            (ellipse-width atomic-shape)
                            (- new-angle 90)
                            (ellipse-mode atomic-shape)
-                           (ellipse-color atomic-shape))]))])]
+                           (ellipse-color atomic-shape)
+                           (ellipse-wedge atomic-shape))]))])]
     [(text? atomic-shape)
      (error 'flip "cannot flip shapes that contain text")]
     [(flip? atomic-shape)
@@ -1380,25 +1418,45 @@
       [(= i side-count) '()]
       [else (cons (build-pulled-point pull angle (real-part p) (imag-part p) pull (- angle))
                   (loop (+ p (make-polar side-length
-                                         (* -1 (* 2 pi) (/ i side-count))))
+                                         (* -1 2pi (/ i side-count))))
                         (+ i 1)))])))
 
 (define/chk (ellipse width height mode color)
   (check-mode/color-combination 'ellipse 4 mode color)
-  (make-image (make-translate (/ width 2) (/ height 2)
-                              (make-ellipse width height 
-                                            0
-                                            mode
-                                            color))
-              (make-bb width height height)
+  (cond
+    [(or (zero? width) (zero? height))
+     (make-a-polygon (rectangle-points width height) mode color)]
+    [else
+     (make-image (make-translate (/ width 2) (/ height 2)
+                                 (make-ellipse width height 
+                                               0
+                                               mode
+                                               color
+                                               #f))
+                 (make-bb width height height)
+                 #f)]))
+
+(define/chk (wedge non-zero-radius angle-between-0-and-360 mode color)
+  (check-mode/color-combination 'ellipse 4 mode color)
+  (define width (* 2 non-zero-radius))
+  (define the-wedge (make-ellipse width width 0 mode color angle-between-0-and-360))
+  (define-values (l t r b) (np-atomic-bb the-wedge))
+  (define w (- r l))
+  (define h (- b t))
+  (make-image (make-translate (- l) (- t) the-wedge)
+              (make-bb w h h)
               #f))
 
 (define/chk (circle radius mode color)
   (check-mode/color-combination 'circle 3 mode color)
-  (let ([w/h (* 2 radius)])
-    (make-image (make-translate radius radius (make-ellipse w/h w/h 0 mode color))
-                (make-bb w/h w/h w/h)
-                #f)))
+  (cond
+    [(zero? radius)
+     (make-a-polygon (rectangle-points 0 0) mode color)]
+    [else
+     (define w/h (* 2 radius))
+     (make-image (make-translate radius radius (make-ellipse w/h w/h 0 mode color #f))
+                 (make-bb w/h w/h w/h)
+                 #f)]))
 
 (define empty-image (rectangle 0 0 'solid 'black))
 
@@ -1652,6 +1710,7 @@
          
          circle
          ellipse
+         wedge
          rectangle
          empty-scene
          square

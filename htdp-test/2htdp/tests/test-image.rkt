@@ -41,7 +41,7 @@
                   render-image)
          (only-in 2htdp/private/image-more
                   bring-between
-                  swizzle)
+                  swizzle np-atomic-bb)
          mrlib/private/image-core-bitmap
          lang/posn
          racket/math
@@ -84,10 +84,6 @@
            #,(quasisyntax/loc stx (check-regexp-match 
                                    reg
                                    (with-handlers ((exn:fail? exn-message)) a "NO EXN!")))))]))
-
-;; test case: (beside (text "a"...) (text "b" ...)) vs (text "ab")
-
-;(show-image (frame (rotate 30 (ellipse 200 400 'solid 'purple))))
 
 (define-simple-check (check-close a b)
   (and (number? a)
@@ -157,6 +153,24 @@
       =>
       (circle 30 'solid 'red))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; wedges
+;;
+
+(test (image-width (wedge 100 30 "solid" "black")) => 100)
+(test (image-height (rotate 90 (wedge 100 30 "solid" "black"))) => 100)
+
+(define (flipped-wedge-identity angle wedge-size)
+  (define i0 (rotate angle (wedge 100 wedge-size "solid" "lightblue")))
+  (test (flip-horizontal i0)
+        =>
+        (rotate (- 180 wedge-size angle angle) i0)))
+
+(flipped-wedge-identity 0 30)
+(flipped-wedge-identity 0 210)
+(flipped-wedge-identity 60 30)
+(flipped-wedge-identity 45 210)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -820,7 +834,7 @@
 
 (test (normalize-shape (image-shape (ellipse 50 100 'solid 'red)))
       =>
-      (make-translate 25 50 (make-ellipse 50 100 0 255 "red")))
+      (make-translate 25 50 (make-ellipse 50 100 0 255 "red" #f)))
 
 (test (normalize-shape (make-overlay (image-shape (ellipse 50 100 'solid 'red))
                                      (image-shape (ellipse 50 100 'solid 'blue))))
@@ -834,9 +848,9 @@
                         (image-shape (ellipse 50 100 'solid 'green))))
       =>
       (make-overlay 
-       (make-overlay (make-translate 25 50 (make-ellipse 50 100 0 255 "red"))
-                     (make-translate 25 50 (make-ellipse 50 100 0 255 "blue")))
-       (make-translate 25 50 (make-ellipse 50 100 0 255 "green"))))
+       (make-overlay (make-translate 25 50 (make-ellipse 50 100 0 255 "red" #f))
+                     (make-translate 25 50 (make-ellipse 50 100 0 255 "blue" #f)))
+       (make-translate 25 50 (make-ellipse 50 100 0 255 "green" #f))))
 
 (test (normalize-shape (make-overlay
                         (image-shape (ellipse 50 100 'solid 'green))
@@ -844,18 +858,18 @@
                                       (image-shape (ellipse 50 100 'solid 'blue)))))
       =>
       (make-overlay 
-       (make-overlay (make-translate 25 50 (make-ellipse 50 100 0 255 "green"))
-                     (make-translate 25 50 (make-ellipse 50 100 0 255 "red")))
-       (make-translate 25 50 (make-ellipse 50 100 0 255 "blue"))))
+       (make-overlay (make-translate 25 50 (make-ellipse 50 100 0 255 "green" #f))
+                     (make-translate 25 50 (make-ellipse 50 100 0 255 "red" #f)))
+       (make-translate 25 50 (make-ellipse 50 100 0 255 "blue" #f))))
 
 (test (normalize-shape (make-translate 100 100 (image-shape (ellipse 50 100 'solid 'blue))))
       =>
-      (make-translate 125 150 (make-ellipse 50 100 0 255 "blue")))
+      (make-translate 125 150 (make-ellipse 50 100 0 255 "blue" #f)))
 
 (test (normalize-shape 
        (make-translate 10 20 (make-translate 100 100 (image-shape (ellipse 50 100 'solid 'blue)))))
       =>
-      (make-translate 135 170 (make-ellipse 50 100 0 255 "blue")))
+      (make-translate 135 170 (make-ellipse 50 100 0 255 "blue" #f)))
 
 (test (normalize-shape (image-shape
                         (beside/align 'top
@@ -1016,6 +1030,31 @@
  =>
  #f)
 
+(check-within
+ (call-with-values
+  (λ () (np-atomic-bb (make-ellipse 100 100 0 "solid" "blue" 90)))
+  list)
+ (list 0 -50 50 0)
+ 0.001)
+(check-within
+ (call-with-values
+  (λ () (np-atomic-bb (make-ellipse 100 100 0 "solid" "blue" 60)))
+  list)
+ (list 0 (* -50 (sin (degrees->radians 60))) 50 0)
+ 0.001)
+(check-within
+ (call-with-values
+  (λ () (np-atomic-bb (make-ellipse 100 100 0 "solid" "blue" 180)))
+  list)
+ (list -50 -50 50 0)
+ 0.001)
+(check-within
+ (call-with-values
+  (λ () (np-atomic-bb (make-ellipse 50 50 60 "solid" "blue" 60)))
+  list)
+ '(-12.5 -25 12.5 0)
+ 0.001)
+
 
 ;; test scaling of bitmaps with alpha (in this case, a completely blank one)
 (let ()
@@ -1052,6 +1091,26 @@
 (test (image? (rotate -0.0000000000000001 (rectangle 10 10 'solid 'blue)))
       =>
       #t)
+
+;; make sure that drawing a rotated, scaled 0-dimension ellipse doesn't crash
+(test (let ()
+        (define i0 (ellipse 0 60 "solid" "lightblue"))
+        (define i2 (rotate 10 i0))
+        (define i3 (scale/xy 1.01 1.01 i2))
+        (render-image i3 (make-object bitmap-dc% (make-object bitmap% 1 1)) 0 0)
+        (void))
+      =>
+      (void))
+
+(test (let ()
+        (define i0 (ellipse 60 0 "solid" "lightblue"))
+        (define i2 (rotate 10 i0))
+        (define i3 (scale/xy 1.01 1.01 i2))
+        (render-image i3 (make-object bitmap-dc% (make-object bitmap% 1 1)) 0 0)
+        (void))
+      =>
+      (void))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;

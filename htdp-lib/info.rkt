@@ -27,7 +27,7 @@
     "typed-racket-more"
     "web-server-lib"
     "wxme-lib"
-    ("gui-lib" #:version "1.36")
+    ("gui-lib" #:version "1.52")
     "deinprogramm-signature"
     "pict-lib"))
 (define build-deps '("racket-index"
