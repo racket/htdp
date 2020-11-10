@@ -73,7 +73,7 @@ come about via the @onscreen{Insert Image...} menu item in DrRacket}
 Existing images can be rotated, scaled, flipped, and overlaid on top of each other.
 
 In some situations images are rendered into bitmaps (e.g. when being shown in
-the DrRacket Interactions window) In order to avoid bad performance
+the DrRacket Interactions window). In order to avoid bad performance
 penalties, the rendering process limits the area of the images to
 about 25,000,000 pixels (which requires about 100 MB of storage).
 
@@ -114,6 +114,25 @@ about 25,000,000 pixels (which requires about 100 MB of storage).
   @image-examples[(ellipse 60 30 "outline" "black")
                   (ellipse 30 60 "solid" "blue")
                   (ellipse 30 60 100 "blue")] 
+}
+
+@defproc*[([(wedge [radius (and/c real? positive?)]
+                   [angle angle?]
+                   [mode mode?]
+                   [color image-color?])
+            image?]
+           [(wedge [radius (and/c real? positive?)]
+                   [angle angle?]
+                   [mode (or/c 'outline "outline")] 
+                   [pen-or-color (or/c image-color? pen?)])
+            image?])]{
+  Constructs a wedge of a circle with the given radius, angle, mode, and color. The angle
+  must be between 0 and 360 (but not equal to either 0 or 360).
+
+  @mode/color-and-nitty-text
+
+  @image-examples[(wedge 60 60 "outline" "purple")
+                  (rotate 30 (wedge 30 300 "solid" "gold"))]
 }
 
 @defproc[(line [x1 real?] [y1 real?] [pen-or-color (or/c pen? image-color?)]) image?]{
