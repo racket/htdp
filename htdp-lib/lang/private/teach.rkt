@@ -52,7 +52,7 @@
          (only test-engine/racket-tests)
          (only test-engine/syntax check-expect-maker)
          (only test-engine/test-engine
-               add-wish! add-wish-call! add-failed-check!
+               add-failed-check!
                property-error property-fail
                failed-check)
          test-engine/srcloc

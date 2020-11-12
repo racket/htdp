@@ -64,7 +64,6 @@ A quoted @racket[name] is a symbol. A symbol is a value, just like
              define 
              lambda
              define-struct []
-             define-wish
              cond
              else
              if

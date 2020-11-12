@@ -59,9 +59,7 @@
   (let* ([test-count (length (test-object-tests test-object))]
          [failed-checks (reverse (test-object-failed-checks test-object))]
          [failed-check-count (length failed-checks)]
-         [signature-violations (test-object-signature-violations test-object)]
-         [wishes (reverse (test-object-wishes test-object))]
-         [wish-count (length wishes)])
+         [signature-violations (test-object-signature-violations test-object)])
          
     (vertical
      (cond
@@ -71,16 +69,6 @@
         (string-constant test-engine-ran-1-test)]
        [else
         (format (string-constant test-engine-ran-n-tests) test-count)])
-
-     (cond 
-       [(null? wishes) empty-markup]
-       [(= 1 wish-count)
-        (format "Wished for function ~a has not been implemented." (car wishes))]
-       [(= 2 wish-count)
-        (format "Wished for functions ~a and ~a have not been implemented."
-                (car wishes) (cadr wishes))]
-       [else (format "Wished for functions ~a have not been implemented."
-                     (format-list wishes))])
 
      (if (> test-count 0)
          (vertical
@@ -262,10 +250,6 @@
                      (not-range-actual fail)
                      (not-range-min fail)
                      (not-range-max fail))]
-    [(unimplemented-wish? fail)
-     (format->markup "Test relies on a call to wished for function ~F that has not been implemented, with arguments ~F."
-                     (symbol->string (unimplemented-wish-name fail))
-                     (unimplemented-wish-args fail))]
     [(property-fail? fail)
      (horizontal 
       (string-constant test-engine-property-fail-error)
@@ -378,7 +362,7 @@
   (check-pred
    markup?
    (test-object->markup
-    (test-object '() '() '() '() '())))
+    (empty-test-object)))
 
   (define fail-unexpected-error
     (failed-check
@@ -420,10 +404,6 @@
     (failed-check
      (satisfied-failed (srcloc 'source 1 0 10 20) 'actual "string?")
      #f))
-  (define fail-unimplemented-wish
-    (failed-check
-     (unimplemented-wish (srcloc 'source 1 0 10 20) 'wish '(1 2 3))
-     #f))
   (define fail-property-fail
     (failed-check
      (property-fail (srcloc 'source 1 0 10 20)
@@ -448,38 +428,38 @@
   (define signature-violation-3
     (signature-violation 'obj-3 integer (signature-got 'got-3) (srcloc 'signature 4 5 25 335) #f))
 
+  (define (make-test-object tests failed-checks signature-violations)
+    (let ((test-object (empty-test-object)))
+      (set-test-object-tests! test-object tests)
+      (set-test-object-failed-checks! test-object failed-checks)
+      (set-test-object-signature-violations! test-object signature-violations)
+      test-object))
+  
   ; there are special cases for 1 and 2
   (check-pred
    markup?
    (test-object->markup
-    (test-object (list void)
-                 (list fail-unexpected-error)
-                 '(wish-1)
-                 '(wish-1)
-                 (list signature-violation-1))))
+    (make-test-object (list void)
+                      (list fail-unexpected-error)
+                      (list signature-violation-1))))
 
   (check-pred
    markup?
    (test-object->markup
-    (test-object (list void void)
-                 (list fail-unexpected-error fail-unsatisfied-error)
-                 '(wish-1 wish-2)
-                 '(wish-1 wish-2)
-                 (list signature-violation-1 signature-violation-2))))
+    (make-test-object (list void void)
+                      (list fail-unexpected-error fail-unsatisfied-error)
+                      (list signature-violation-1 signature-violation-2))))
 
   (check-pred
    markup?
    (test-object->markup
-    (test-object (list void void)
-                 (list fail-unexpected-error fail-unsatisfied-error
-                       fail-unequal fail-not-within fail-incorrect-error
-                       fail-not-mem fail-not-range fail-satisfied-failed
-                       fail-unimplemented-wish
-                       fail-property-fail fail-property-error
-                       fail-violated-signature)
-                 '(wish-1 wish-2 wish-3)
-                 '(wish-1 wish-2 wish-3)
-                 (list signature-violation-1 signature-violation-2 signature-violation-3))))
+    (make-test-object (list void void)
+                      (list fail-unexpected-error fail-unsatisfied-error
+                            fail-unequal fail-not-within fail-incorrect-error
+                            fail-not-mem fail-not-range fail-satisfied-failed
+                            fail-property-fail fail-property-error
+                            fail-violated-signature)
+                      (list signature-violation-1 signature-violation-2 signature-violation-3))))
 
   
   )

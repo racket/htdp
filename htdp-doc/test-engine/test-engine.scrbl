@@ -155,15 +155,17 @@ test object associated with the current namespace.
 @defstruct*[test-object
             ((tests (listof (-> any)))
              (failed-checks (listof failed-check?))
-             (signature-violations (listof signature-violation?)))]{
+             (signature-violations (listof signature-violation?)))
+	     #:omit-constructor]{
 The three components of a @racket[test-object] are all in reverse order:
 
 The first one is the list of tests (each represented by a thunk), the
 others are failed checks and signature violations, respectively.
-
-Do not use the constructor of @racket[test-object] directly.
 }
 
+@defproc[(empty-test-object) test-object?]{
+Creates an empty test object.
+}
 
 @defproc[(current-test-object) test-object?]{
 Returns the current test object.

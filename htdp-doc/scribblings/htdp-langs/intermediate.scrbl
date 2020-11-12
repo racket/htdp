@@ -82,7 +82,6 @@ did in the @secref["beginner-abbr"] level.
                      define 
                      lambda
                      define-struct []
-                     define-wish
                      cond
                      else
                      if

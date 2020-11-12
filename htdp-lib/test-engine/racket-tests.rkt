@@ -8,7 +8,6 @@
          check-range ;; syntax : (check-range <expression> <expression> <expression>)
          check-error  ;; syntax : (check-error <expression> [<expression>])
          check-satisfied ;; syntax : (check-satisfied <expression> <expression>)
-         (struct-out exn:fail:wish) ; probably legacy
          ;; re-exports from test-engine/syntax
          test-execute test-silence
          test) 
@@ -73,11 +72,7 @@
 
 (define (make-exn->unexpected-error src expected)
   (lambda (exn)
-    (cond
-      ((exn:fail:wish? exn)
-       (unimplemented-wish src (exn:fail:wish-name exn) (exn:fail:wish-args exn)))
-      (else
-       (unexpected-error src expected exn)))))
+    (unexpected-error src expected exn)))
 
 (define-syntax (check-expect stx)
   (check-context! 'check-expect CHECK-EXPECT-DEFN-STR stx)
@@ -184,11 +179,7 @@
           (satisfied-failed src actual name)]
          [else #t])))
    (lambda (exn)
-     (cond
-       ((exn:fail:wish? exn)
-        (unimplemented-wish src (exn:fail:wish-name exn) (exn:fail:wish-args exn)))
-       (else
-        (unsatisfied-error src name exn))))))
+     (unsatisfied-error src name exn))))
 
 (define-syntax (check-within stx)
   (check-context! 'check-within CHECK-WITHIN-DEFN-STR stx)
@@ -301,4 +292,4 @@
      (make-exn:fail:contract (if fmt-act? (format fmt actual) fmt)
                              (current-continuation-marks)))))
 
-(struct exn:fail:wish exn:fail (name args))
+

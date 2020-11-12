@@ -160,7 +160,6 @@
                      define 
                      lambda
                      define-struct [ds-extra ...]
-                     define-wish
                      cond
                      else
                      if
@@ -239,23 +238,6 @@
    otherwise @define-struct-elem reports an error.
 
    @ds-extras}
-
-  #|
-
-  @defform*[[(define-wish name)]]{                           
-                           
-  Defines a function called @racket[name] that we wish exists but have not
-  implemented yet. The wished-for function can be called with one argument, and
-  are reported in the test report for the current program.
-
-  The name of the function cannot be the same as another function or variable.}
-
-
-  @defform/none[#:literals (define-wish)
-                (define-wish name expression)]{
-  Similar to the above form, defines a wished-for function named @racket[name]. If the 
-  wished-for function is called with one value, it returns the values of @racket[expression]. }
-  |#
 
   @; ----------------------------------------------------------------------
 

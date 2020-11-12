@@ -14,11 +14,7 @@
     (memq h *hidden)))
 
 (check-docs (quote htdp/world))
-(check-docs (quote htdp/testing)
-            #:skip (lambda (h)
-                     (memq h
-                           ;; probably obsolete
-                           '(exn:fail:wish exn:fail:wish-args exn:fail:wish-name exn:fail:wish? struct:exn:fail:wish))))
+(check-docs (quote htdp/testing))
 (check-docs (quote htdp/show-queen))
 (check-docs (quote htdp/servlet2) #:skip legacy-module)
 (check-docs (quote htdp/servlet) #:skip legacy-module)

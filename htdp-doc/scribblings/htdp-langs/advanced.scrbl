@@ -300,7 +300,6 @@ level as they did in the @secref["intermediate-lam"] level.
                @item{@racketidfont{set-}@racket[_structure-name]@racketidfont{-}@racket[_field-name]@racketidfont{!}
                 : takes an instance of the structure and a value, and
                 mutates the instance's field to the given value.}]}
-             define-wish
              cond
              else
              if

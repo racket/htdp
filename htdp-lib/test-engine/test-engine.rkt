@@ -6,17 +6,15 @@
           (struct test-object
             ((tests (listof (-> any)))
              (failed-checks (listof failed-check?))
-             (wishes (listof symbol?))
-             (wish-calls (listof symbol?))
-             (signature-violations (listof signature-violation?))))
+             (signature-violations (listof signature-violation?)))
+            #:omit-constructor)
+          (empty-test-object (-> test-object?))
           (current-test-object (-> test-object?))
           (test-object-copy (test-object? . -> . test-object?))
           (test-object=? (test-object? test-object? . -> . boolean?))
           (initialize-test-object! (-> any))
           (add-test! ((-> any) . -> . any))
           (add-failed-check! (failed-check? . -> . any))
-          (add-wish! (symbol? . -> . any))
-          (add-wish-call! (symbol? . -> . any))
           (add-signature-violation! (signature-violation? . -> . any))
           (run-tests! (-> test-object?))
 
@@ -82,12 +80,6 @@
              (actual any/c)
              (name string?)))
 
-          ; somebody tried to call a wish
-          (struct (unimplemented-wish fail-reason)
-            ((srcloc srcloc?)
-             (name symbol?)
-             (args (listof any/c))))
-
           ; unhandled violated signature
           (struct (violated-signature fail-reason)
             ((srcloc srcloc?)
@@ -125,22 +117,18 @@
 (struct test-object
 	(tests ; reverse list of thunks
 	 failed-checks ; reverse list of failed-check structs
-	 wishes ; reverse list of the names of define-wish forms
-	 wish-calls ; reverse list of the names of calls to these forms
 	 signature-violations ; reverse list of signature-violation structs
 	 )
 	#:mutable #:transparent)
 
 (define (empty-test-object)
-  (test-object '() '() '() '() '()))
+  (test-object '() '() '()))
 
 (define *test-object* (empty-test-object))
 
 (define (initialize-test-object)
   (set-test-object-tests! *test-object* '())
   (set-test-object-failed-checks! *test-object* '())
-  (set-test-object-wishes! *test-object* '())
-  (set-test-object-wish-calls! *test-object* '())
   (set-test-object-signature-violations! *test-object* '())
   *test-object*)
 
@@ -157,12 +145,6 @@
 (define (test-object=? test-object-1 test-object-2)
   (equal? test-object-1 test-object-2))
 
-(define (add-wish! wish)
-  (let ((test-object (current-test-object)))
-    (set-test-object-wishes! test-object
-			     (cons wish
-				   (test-object-wishes test-object)))))
-
 (define (add-test! thunk)
   (let ((test-object (current-test-object)))
     (set-test-object-tests! test-object
@@ -172,7 +154,6 @@
   (let ((test-object (current-test-object)))
     ; in case we're re-running
     (set-test-object-failed-checks! test-object '())
-    (set-test-object-wish-calls! test-object '())
     ;; signature violations come before running tests, and there's no
     ;; way to easily re-run them, so so don't reset them here
     (for-each (lambda (thunk)
@@ -184,11 +165,6 @@
   (let ((test-object (current-test-object)))
     (set-test-object-failed-checks! test-object
 				    (cons failed-check (test-object-failed-checks test-object)))))
-
-(define (add-wish-call! wish)
-  (let ((test-object (current-test-object)))
-    (set-test-object-wish-calls! test-object
-                                 (cons wish (test-object-wish-calls test-object)))))
 
 (define (add-signature-violation! signature-violation)
   (let ((test-object (current-test-object)))
@@ -227,9 +203,6 @@
   #:transparent)
 
 (struct satisfied-failed fail-reason (actual name)
-  #:transparent)
-
-(struct unimplemented-wish fail-reason (name args)
   #:transparent)
 
 ; Usually, a language should install a handler for signature violations

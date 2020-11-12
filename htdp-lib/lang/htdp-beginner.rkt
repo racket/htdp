@@ -49,7 +49,6 @@
          check-error
          check-member-of
          check-range
-         ;; define-wish
          #%datum
          #%top-interaction
          empty

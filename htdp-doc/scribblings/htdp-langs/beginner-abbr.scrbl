@@ -70,7 +70,6 @@ Abbreviations} level as they did in the @secref["beginner"] level.
             define 
             lambda
             define-struct []
-            define-wish
             cond
             else
             if
