@@ -59,7 +59,7 @@
   (let* ([test-count (length (test-object-tests test-object))]
          [failed-checks (reverse (test-object-failed-checks test-object))]
          [failed-check-count (length failed-checks)]
-         [signature-violations (test-object-signature-violations test-object)])
+         [signature-violations (reverse (test-object-signature-violations test-object))])
          
     (vertical
      (cond
