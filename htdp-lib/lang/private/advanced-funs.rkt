@@ -1,5 +1,11 @@
 #lang at-exp scheme/base
   (require "teachprims.rkt"
+           (only-in "teach.rkt"
+                    Integer Number Rational Real Natural
+                    Boolean True False
+                    String Char Symbol
+                    EmptyList ConsOf
+                    Any)
            mzlib/etc
            mzlib/list
            mzlib/pretty
@@ -405,4 +411,48 @@
       heqv
       (hash-eqv? heqv)
       ]
+    })
+
+   ("Signatures"
+    @defthing[Number signature?]{
+    Signature for arbitrary numbers.
+    }
+    @defthing[Natural signature?]{
+    Signature for natural numbers.
+    }
+    @defthing[Integer signature?]{
+    Signature for integers.
+    }
+    @defthing[Rational signature?]{
+    Signature for rational numbers.
+    }
+    @defthing[Real signature?]{
+    Signature for real numbers.
+    }
+    @defthing[Boolean signature?]{
+    Signature for booleans.
+    }
+    @defthing[True signature?]{
+    Signature for just true.
+    }
+    @defthing[False signature?]{
+    Signature for just false.
+    }
+    @defthing[String signature?]{
+    Signature for strings.
+    }
+    @defthing[Char signature?]{
+    Signature for chararacters.
+    }
+    @defthing[Symbol signature?]{
+    Signature for symbols.
+    }
+    @defthing[EmptyList signature?]{
+    Signature for the empty list.
+    }
+    @defproc[(ConsOf [first-sig signature?] [rest-sig signature?]) signature?]{
+    Signature for a cons pair.
+    }
+    @defthing[Any signature?]{
+    Signature for any value.
     }))
