@@ -62,9 +62,9 @@
 
     ;; Symbol Any Boolean -> Any : ok?
     ;; ensure that nw is an ok? value; otherwise signal an error from tag, with say-evaluated-to
-    (define bool-fmt "the test function ~a is expected to return a boolean, but it returned ~v")
-    (define ok-fmt   "~a ~a ~v, which fails to pass check-with's ~a test")
     (define/private (coerce tag nw [say-evaluated-to #f])
+      (define bool-fmt "the test function ~a is expected to return a boolean, but it returned ~v")
+      (define ok-fmt   "~a ~a ~v, which fails to pass check-with's ~a test")
       (define name   (symbol->string (object-name ok?)))
       (define ok?-nw (ok? nw))
       (unless (boolean? ok?-nw) (tp-error 'check-with bool-fmt name ok?-nw))
