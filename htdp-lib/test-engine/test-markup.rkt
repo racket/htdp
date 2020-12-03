@@ -87,12 +87,12 @@
      (cond
        ((null? signature-violations) empty-markup)
        ((null? (cdr signature-violations))
-        (string-constant test-engine-1-signature-violation))
+        (vertical (string-constant test-engine-1-signature-violation)
+                  empty-line))
        (else
-        (format (string-constant test-engine-n-signature-violations)
-                (length signature-violations))))
-
-     empty-line
+        (vertical (format (string-constant test-engine-n-signature-violations)
+                          (length signature-violations))
+                  empty-line)))
      
      (check-failures->markup failed-checks)
      (signature-violations->markup signature-violations))))
@@ -106,8 +106,7 @@
   (if (pair? checks)
       (vertical (string-constant test-engine-check-failures)
                 (apply vertical
-                       (map  failed-check->markup
-                             checks)))
+                       (map failed-check->markup checks)))
       empty-markup))
 
 (define (signature-violations->markup violations)
