@@ -310,14 +310,10 @@
                 'list-of-posns-with-real-valued-x-and-y-coordinates
                 i arg)
      arg]
-    [(int0-255-1 int0-255-2 int0-255-3 int0-255-4)
+    [(int-0-255 int0-255-1 int0-255-2 int0-255-3 int0-255-4)
      (check-arg fn-name (and (integer? arg) (<= 0 arg 255)) 
                 'integer\ between\ 0\ and\ 255 i arg)
-     arg]
-    [(int-0-255)
-     (check-arg fn-name (and (integer? arg) (<= 0 arg 255)) 
-                'integer\ between\ 0\ and\ 255 i arg)
-     arg]
+     (inexact->exact arg)]
     
     [(pen-style)
      (check-arg fn-name (pen-style? arg) 'pen-style i arg)
