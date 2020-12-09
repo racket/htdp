@@ -161,7 +161,7 @@
                      (>= arg 2))
                 'integer\ greater\ than\ or\ equal\ to\ 2
                 i arg)
-     arg]
+     (inexact->exact arg)]
     [(dx dy x y x1 y1 x2 y2 pull pull1 pull2)
      (check-arg fn-name
                 (real? arg)
@@ -180,13 +180,13 @@
                 (side-count? arg)
                 'side-count
                 i arg)
-     arg]
+     (inexact->exact arg)]
     [(step-count)
      (check-arg fn-name
                 (step-count? arg)
                 'step-count
                 i arg)
-     arg]
+     (inexact->exact arg)]
     [(angle angle1 angle2 angle-a angle-b angle-c)
      (check-arg fn-name
                 (angle? arg)
@@ -239,9 +239,7 @@
      arg]
     [(font-size)
      (check-arg fn-name (and (integer? arg) (<= 1 arg 255)) 'font-size i arg)
-     (if (exact? arg)
-         arg
-         (inexact->exact arg))]
+     (inexact->exact arg)]
     [(face)
      (check-arg fn-name (or (not arg) (string? arg)) 'face i arg)
      arg]
