@@ -276,7 +276,7 @@
          [else
           (syntax-property 
            (stepper-syntax-property
-            #`(run-it ((new-world (if #,rec? aworld% world%)) w #,@args))
+            (quasisyntax/loc stx (send [((new-world (if #,rec? aworld% world%)) w #,@args)] last))
             'stepper-skip-completely #t)
            'disappeared-use (map (lambda (x) (car (syntax->list x))) dom))]))]))
 
@@ -411,7 +411,7 @@
           (raise-syntax-error #f "expects a on-msg clause, but found none" stx)]
          [else ; (and (memq #'on-new dom) (memq #'on-msg dom))
           (syntax-property 
-           #`(run-it ((new-universe universe%) u #,@args))
+           (quasisyntax/loc stx (send [((new-universe universe%) u #,@args)] last))
            'disappeared-use (map (lambda (x) (car (syntax->list x))) dom))]))]))
 
 ;                                          
@@ -429,10 +429,6 @@
 ;                                          
 ;                                          
 ;                                          
-
-;; (-> Object) -> Any
-(define (run-it o)
-  (send (o) last))
 
 #;
 (define (run-it o)
