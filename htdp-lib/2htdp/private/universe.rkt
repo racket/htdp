@@ -172,9 +172,11 @@
                    (handle-evt (tcp-accept-evt tcp-listener) add-iworld)
                    (map (lambda (p) (handle-evt (iworld-in p) (process-message p))) iworlds))
             (loop))
-          ;;; WHERE 
+          ;;; WHERE
+          (define listener-msg
+            "the universe could not be created (possiblue because another universe is running)")
           (define tcp-listener 
-            (with-handlers ((exn:fail:network? (lambda (x) (stop! x))))
+            (with-handlers ((exn:fail:network? (lambda (x) (stop! x) (tp-error 'start listener-msg))))
               (tcp-listen port 4 #t)))
           ;; [list IPort OPort] -> Void 
           (define (add-iworld in-out)
@@ -191,6 +193,7 @@
                 (pmsg p (tcp-receive in)))))
           ;; --- go universe go ---
           (set! iworlds '())
+          (send gui show #t)
           (send universe set "initial expression" universe0)
           (send gui log "a new universe is up and running")
           (thread loop)))
@@ -217,7 +220,6 @@
       
       ;; -----------------------------------------------------------------------
       ;; initialize the universe and run 
-      (send gui show #t)
       (start!)))))
 
 

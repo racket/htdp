@@ -58,3 +58,4 @@ run web-io-automatic.rkt
 run world-dies-while-receiving.rkt
 run perform-robby.rkt
 run profile-robby.rkt
+run two-universes-running.rkt
