@@ -174,7 +174,7 @@
             (loop))
           ;;; WHERE
           (define listener-msg
-            "the universe could not be created (possiblue because another universe is running)")
+            "the universe could not be created (possibly because another universe is running)")
           (define tcp-listener 
             (with-handlers ((exn:fail:network? (lambda (x) (stop! x) (tp-error 'start listener-msg))))
               (tcp-listen port 4 #t)))
