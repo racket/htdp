@@ -9,6 +9,8 @@
 
 @(define note-scene @margin-note*{See @secref{scene} for @racket[scene?].})
 
+@(define htdp2e "https://htdp.org/2020-8-1/Book/part_prologue.html")
+
 @(define (table* . stuff)
   ;; (list paragraph paragraph) *-> Table
    (define (flow* x) (make-flow (list x)))
@@ -55,7 +57,7 @@ The purpose of this documentation is to give experienced Racketeers and HtDP
  communicating worlds.
 
 @emph{Note}: For a quick and educational introduction to just worlds, see
- @link["http://www.ccs.neu.edu/home/matthias/HtDP2e/part_prologue.html"]{How
+ @link[htdp2e]{How
  to Design Programs, Second Edition: Prologue}. As of August 2008, we also
  have a series of projects available as a small booklet on
  @link["http://world.cs.brown.edu/"]{How to Design Worlds}.
