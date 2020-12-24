@@ -38,7 +38,14 @@
             [(null? (cdr x)) (error 'make-dir "expects 3 arguments, but found only 1")]
             [(null? (cddr x)) (error 'make-dir "expects 3 arguments, but found only 2")]
             [(> (length x) 3) (error 'make-dir "expects 3 arguments, but found ~a" (length x))]
-            [else (apply old x)]))))
+            [else
+             (define name  (car x))
+             (define dirs  (cadr x))
+             (define files (caddr x))
+             (check-arg 'make-dir (or (string? name) (symbol? name)) "string or symbol" "first" name)
+             (check-arg 'make-dir (and (list? dirs)  (andmap dir? dirs)) "list of dir-s" "second" dirs)
+             (check-arg 'make-dir (and (list? files) (andmap file? files)) "list of file-s" "third" files)
+             (apply old x)]))))
 
 ;; FilePath -> Date 
 (define (create-date x)

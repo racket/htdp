@@ -36,6 +36,15 @@
 (check-error (make-file "a" -1 2) "make-file: expects a natural number as second argument, given -1")
 (check-error (make-file "a" 1 2 3) "make-file: expects a date (or 0) as third argument, given 2")
 
+(check-error (make-dir 1 2) "make-dir: expects 3 arguments, but found only 2")
+(check-error (make-dir 1 2 3 4) "make-dir: expects 3 arguments, but found 4")
+(check-error (make-dir 1 2 3) "make-dir: expects a string or symbol as first argument, given 1")
+(check-error (make-dir 'a 2 3) "make-dir: expects a list of dir-s as second argument, given 2")
+(check-error (make-dir "a" 2 3) "make-dir: expects a list of dir-s as second argument, given 2")
+(check-error (make-dir "a" '[] 3) "make-dir: expects a list of file-s as third argument, given 3")
+(check-error (make-dir "a" `[] 3) "make-dir: expects a list of file-s as third argument, given 3")
+(check-error (make-dir "a" `[,current] 3) "make-dir: expects a list of file-s as third argument, given 3")
+
 #| ---------------------------------------------------------------------------------------------------
 
 RELEVANT EXCERPT FROM HTDP/2e
