@@ -920,7 +920,10 @@
                               [(getter-id ...)     getter-names])
                   (define defns
                     (quasisyntax/loc stx
-                      (define-values (#,signature-name #,parametric-signature-name def-proc-name ...)
+                      ;; The temporaries are a hack to avoid a coverage annotation on the fields.
+                      ;; Search for "Coverage hack" to understand how that's done.
+                      (define-values (#,signature-name #,parametric-signature-name #,@(generate-temporaries fields)
+                                      def-proc-name ...)
                         (let ()
                           (define-values (type-descriptor
                                           raw-constructor
@@ -1050,7 +1053,14 @@
                                                   arbs))))
                                       sig))))
                           
-                          (values #,signature-name #,parametric-signature-name proc-name ...)))))
+                          (values #,signature-name #,parametric-signature-name
+                                  ;; Coverage hack: This sticks a bunch of calls to void in the expansion, each
+                                  ;; one with the location of one field.  This marks the fields in
+                                  ;; define-struct as covered.
+                                  #,@(map (lambda (field)
+                                            (syntax/loc field (void)))
+                                          (syntax->list #'(field_ ...)))
+                                  proc-name ...)))))
                   ;; --- IN ---
                   (stepper-syntax-property defns 'stepper-black-box-expr stx)))))
            ;; --------------------------------------------------------------------------------
