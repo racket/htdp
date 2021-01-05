@@ -143,7 +143,8 @@
                 [scheme-signature-module-name
                  ((current-module-name-resolver) 
                   '(lib "deinprogramm/signature/signature-english.rkt") #f #f #t)]
-                [tests-on? (preferences:get 'test-engine:enable?)])
+                [tests-on? (with-handlers ([exn:unknown-preference? (λ (e) #f)])
+                             (preferences:get 'test-engine:enable?))])
             (run-in-user-thread
              (lambda ()
                (when (getenv "PLTDRHTDPNOCOMPILED") (use-compiled-file-paths '()))
@@ -168,9 +169,10 @@
                   (report-signature-violation! obj signature message blame)))
                (display-test-results-parameter
                 (lambda (markup)
-                  (test-display-results! (drscheme:rep:current-rep)
-                                         drs-eventspace
-                                         markup)))
+                  (when (test-execute)
+                    (test-display-results! (drscheme:rep:current-rep)
+                                           drs-eventspace
+                                           markup))))
                (get-rewritten-error-message-parameter get-rewriten-error-message)
                (test-execute tests-on?)
                (signature-checking-enabled?
