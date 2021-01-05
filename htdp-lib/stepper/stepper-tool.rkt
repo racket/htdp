@@ -239,8 +239,12 @@
            [parent stepper-button-parent-panel]
            [label (string-constant stepper-button-label)]
            [bitmap step-img]
-           [callback (lambda (dont-care) (send (get-current-tab)
-                                               stepper-button-callback))]))
+           [callback (lambda (dont-care)
+                       (let* ([tab (get-current-tab)]
+                              [language-settings (send (send tab get-defs) get-next-settings)])
+                         (send tab stepper-button-callback
+                               (drracket:language-configuration:language-settings-language language-settings)
+                               (drracket:language-configuration:language-settings-settings language-settings))))]))
 
     (register-toolbar-button stepper-button #:number 59)
 
@@ -347,29 +351,28 @@
 
 
     ;; called from drracket-button.rkt, installed via the #lang htdp/bsl (& co) reader into drracket
-    (define/public (stepper-button-callback)
+    (define/public (stepper-button-callback language settings)
       (cond
         [stepper-frame (send stepper-frame show #t)]
-        [else (create-new-stepper)]))
+        [else (create-new-stepper language settings)]))
 
     ;; open a new stepper window, start it running
-    (define (create-new-stepper)
-      (let* ([language-level
-              (extract-language-level (get-defs))])
-        (if (or (stepper-works-for? language-level)
-                (is-a? language-level drracket:module-language:module-language<%>))
-            (parameterize ([current-directory (or (get-directory) (current-directory))])
-              (set! stepper-frame
-                    (vc-go this
-                           program-expander
-                           dynamic-requirer
-                           (+ 1 (send (get-defs) get-start-position))
-                           (+ 1 (send (get-defs) get-end-position)))))
-            (message-box
-             (string-constant stepper-name)
-             (format (string-constant stepper-language-level-message)
-                     (last (send language-level get-language-position)))))))
-
+    (define (create-new-stepper language settings)
+      (if (or (stepper-works-for? language)
+              (is-a? language drracket:module-language:module-language<%>))
+          (parameterize ([current-directory (or (get-directory) (current-directory))])
+            (set! stepper-frame
+                  (vc-go this
+                         program-expander
+                         dynamic-requirer
+                         language 
+                         settings
+                         (+ 1 (send (get-defs) get-start-position))
+                         (+ 1 (send (get-defs) get-end-position)))))
+          (message-box
+           (string-constant stepper-name)
+           (format (string-constant stepper-language-level-message)
+                   (last (send language get-language-position))))))
     (define/override (enable-evaluation)
       (super enable-evaluation)
       (send (send (get-frame) get-stepper-button) enable #t))
