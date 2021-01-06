@@ -143,7 +143,7 @@
                 [scheme-signature-module-name
                  ((current-module-name-resolver) 
                   '(lib "deinprogramm/signature/signature-english.rkt") #f #f #t)]
-                [tests-on? (with-handlers ([exn:unknown-preference? (λ (e) #f)])
+                [tests-on? (with-handlers ([exn:unknown-preference? (λ (e) 'uninstalled)])
                              (preferences:get 'test-engine:enable?))])
             (run-in-user-thread
              (lambda ()
@@ -167,9 +167,13 @@
                (signature-violation-proc
                 (lambda (obj signature message blame)
                   (report-signature-violation! obj signature message blame)))
-               (display-test-results-parameter
-                (lambda (markup)
-                  (when (test-execute)
+               ;; It the test engine plugin (test-engine/test-tool) is not
+               ;; installed, still run the tests but don't connect to the
+               ;; graphical interface. Instead, let the existing textual
+               ;; interface do the work.
+               (unless (eq? tests-on? 'uninstalled)
+                 (display-test-results-parameter
+                  (lambda (markup)
                     (test-display-results! (drscheme:rep:current-rep)
                                            drs-eventspace
                                            markup))))
