@@ -171,6 +171,7 @@
                ;; installed, still run the tests but don't connect to the
                ;; graphical interface. Instead, let the existing textual
                ;; interface do the work.
+               (test-execute (and tests-on? #t))
                (unless (eq? tests-on? 'uninstalled)
                  (display-test-results-parameter
                   (lambda (markup)
@@ -178,7 +179,6 @@
                                            drs-eventspace
                                            markup))))
                (get-rewritten-error-message-parameter get-rewriten-error-message)
-               (test-execute tests-on?)
                (signature-checking-enabled?
                 (get-preference 'signatures:enable-checking? (lambda () #t)))
                (render-value-parameter (λ (v)
