@@ -108,10 +108,6 @@
       #'(test*)
       'test-call #t)]))
 
-;; test-execute : (parameter/c (or/c #f #t 'uninstalled))
-;;   #f = Tests are disabled
-;;   #t = Tests are enabled and the Test Engine plugin is loaded in DrRacket
-;;   'uninstalled = Tests are enabled but the Test Engine plugin is not loaded
 (define test-execute (make-parameter #t))
 (define test-silence (make-parameter #f))
 
