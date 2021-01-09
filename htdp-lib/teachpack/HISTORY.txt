@@ -1,3 +1,15 @@
+Version 8.0				  [Sat Jan  9 10:34:07 EST 2021]
+
+* new: add wedge to `2htdp/images`
+* bug fix: integers in `2htdp/images`
+* bug fix: properly report error when a second universe tries to run
+  on a port where another one is already running
+* bug fix: check-with 
+* protection: functions in `dir` more systematically
+
+* Mike Sperber added signature support to ASL. TODO: push it into *SL. 
+* Mike Sperber rewrote the test-engine and eliminated the bug-report window
+
 ------------------------------------------------------------------------
 Version 7.9				  [Mon Oct 26 09:06:42 EDT 2020]
 
