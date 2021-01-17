@@ -21,7 +21,7 @@
 
 (define (try-annotating/hashlang str)
   (define expanded 
-    (car (string->expanded-syntax-list/hashlang intermediate/h str)))
+    (car (string->expanded-syntax-list intermediate/h str)))
   ;(printf "expanded: ~s\n" expanded)
   (annotate expanded (lambda (a b c) 'bogus) #f))
 

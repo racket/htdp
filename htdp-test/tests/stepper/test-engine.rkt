@@ -27,8 +27,6 @@
  (contract-out
   [string->expanded-syntax-list
    (-> ll-ll-model? string? (listof syntax?))]
-  [string->expanded-syntax-list/hashlang
-   (-> ll-hashlang-model? string? (listof syntax?))]
   [run-one-test (-> symbol? stepper-test? boolean?)]
   [struct stepper-test ([models (listof ll-model?)]
                         [string string?]
@@ -154,39 +152,41 @@
 
 ;; given a model and a string, return the fully expanded source.
 (define (string->expanded-syntax-list ll-model exp-str)
-  (run-with-testing-namespace
-   (λ ()
-     (match-define (list input-port filename done-thunk)
-       (prepare-filesystem exp-str null))
-     (define expander-thunk-thunk
-       (create-provider-thunk (ll-ll-model-namespace-spec ll-model)
-                              (ll-ll-model-enable-testing? ll-model)
-                              input-port))
-     (define expander-thunk (expander-thunk-thunk))
-     (let loop ()
-       (define next (expander-thunk))
-       (cond [(eof-object? next) (begin (done-thunk) '())]
-             [else (cons next (loop))])))))
+  (cond
+    [(ll-ll-model? ll-model)
+     (run-with-testing-namespace
+      (λ ()
+        (match-define (list input-port filename done-thunk)
+          (prepare-filesystem exp-str null))
+        (define expander-thunk-thunk
+          (create-provider-thunk (ll-ll-model-namespace-spec ll-model)
+                                 (ll-ll-model-enable-testing? ll-model)
+                                 input-port))
+        (define expander-thunk (expander-thunk-thunk))
+        (let loop ()
+          (define next (expander-thunk))
+          (cond [(eof-object? next) (begin (done-thunk) '())]
+                [else (cons next (loop))]))))]
+    [(ll-hashlang-model? ll-model)
+     (parameterize ([current-directory test-directory])
+       (run-with-testing-namespace
+        (λ ()
+          (match-define (list input-port filename done-thunk)
+            (prepare-filesystem (add-hashlang-line
+                                 (ll-hashlang-model-name ll-model)
+                                 exp-str)
+                                null))
+          (define expander-thunk-thunk
+            (create-hashlang-provider-thunk
+             filename
+             (ll-hashlang-model-enable-testing? ll-model)
+             input-port))
+          (define expander-thunk (expander-thunk-thunk))
+          (let loop ()
+            (define next (expander-thunk))
+            (cond [(eof-object? next) (begin (done-thunk) '())]
+                  [else (cons next (loop))])))))]))
 
-(define (string->expanded-syntax-list/hashlang ll-model exp-str)
-  (parameterize ([current-directory test-directory])
-    (run-with-testing-namespace
-     (λ ()
-       (match-define (list input-port filename done-thunk)
-         (prepare-filesystem (add-hashlang-line
-                              (ll-hashlang-model-name ll-model)
-                              exp-str)
-                             null))
-       (define expander-thunk-thunk
-         (create-hashlang-provider-thunk
-          filename
-          (ll-hashlang-model-enable-testing? ll-model)
-          input-port))
-       (define expander-thunk (expander-thunk-thunk))
-       (let loop ()
-         (define next (expander-thunk))
-         (cond [(eof-object? next) (begin (done-thunk) '())]
-               [else (cons next (loop))]))))))
 
 ;; run the thunk with a fresh base namespace with testing modules attached
 (define (run-with-testing-namespace thunk)
@@ -488,3 +488,4 @@
       (begin (warn error-box 'not-equal?
                    "~.s:\nactual:   ~e =/= \nexpected: ~e\n  here's the diff: ~e" name actual expected (sexp-diff actual expected))
              #f)))
+

@@ -81,6 +81,12 @@
 
 ; go starts a stepper instance
 ; see provide stmt for contract
+;; a program-expander is called with an init function and an "iter" function
+;; that gets called with an expression and with a continuation that it may
+;; choose to invoke to continue expanding. The dynamic-requirer is used
+;; to dynamically require the user's module; this is required when using a
+;; #lang-based program, where the user's program expands into a single module
+;; definition.
 (define (go program-expander dynamic-requirer receive-result render-settings
             #:disable-error-handling? [disable-error-handling? #f]
             #:raw-step-receiver [raw-step-receiver #f])
