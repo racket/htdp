@@ -50,7 +50,7 @@
 ;; check : tst tst tst -> void
 (define (check tag f color)
   (check-proc tag f 1 '1st "one argument")
-  (check-arg tag (symbol? color) 'symbol '2nd color))
+  (check-arg tag (symbol? color) 'symbol "2nd" color))
 
 ;; tabulate : (num -> num) num num num -> (list-of (make-posn num num))
 (define (tabulate f left right delta)
