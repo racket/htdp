@@ -67,6 +67,16 @@
 
   (define sixlib-canvas%
     (class mred:canvas% 
+      ;; were public
+      (define viewport (void))
+      (define height 0)
+      (define width 0)
+      (define label 0)
+      (define current-pen 'uninitialized-pen)
+      (define current-brush 'uninitialized-brush)
+      (define bitmap 'uninitalized-bitmap)
+      (define dc 'uninitialized-dc)
+      (define buffer-dc 'uninitialized-buffer-dc)
       (super-new)
       (inherit get-parent
 	       min-client-width min-client-height
@@ -138,18 +148,7 @@
                (send buffer-dc set-font f)))
            (send buffer-dc clear)
            (send dc clear))])
-      
-      ;; were public
-      (define viewport (void))
-      (define height 0)
-      (define width 0)
-      (define label 0)
-      (define current-pen 'uninitialized-pen)
-      (define current-brush 'uninitialized-brush)
-      (define bitmap 'uninitalized-bitmap)
-      (define dc 'uninitialized-dc)
-      (define buffer-dc 'uninitialized-buffer-dc)
-      
+
       (public*
         [get-viewport (lambda () viewport)]
 	[set-viewport (lambda (x) (set! viewport x))]
@@ -166,8 +165,10 @@
       (override*
        [on-paint
 	(lambda ()
-	  (let ([bm (send buffer-dc get-bitmap)])
-	    (send dc draw-bitmap bm 0 0)))]
+          (when (object? buffer-dc)
+            (define bm (send buffer-dc get-bitmap))
+            (when bm
+              (send dc draw-bitmap bm 0 0))))]
        
        [on-event 
 	(lambda (mouse-event)
