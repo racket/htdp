@@ -57,21 +57,9 @@
   (send dlg show #t))
 
 ;; create a new view-controller, start the model
-(define (vc-go drracket-tab program-expander dynamic-requirer selection-start
-               selection-end)
-
-  ;; get the language-level:
-  (define language-settings
-    (definitions-text->settings
-      (send drracket-tab get-defs)))
-
-  (define language-level
-    (drracket:language-configuration:language-settings-language
-     language-settings))
-
-  (define simple-settings
-    (drracket:language-configuration:language-settings-settings
-     language-settings))
+(define (vc-go drracket-tab program-expander dynamic-requirer
+               language-level simple-settings
+               selection-start selection-end)
 
   ;; VALUE CONVERSION CODE:
 

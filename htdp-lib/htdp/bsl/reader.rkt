@@ -26,7 +26,7 @@
 (define ((make-info options) key default use-default)
   (case key
     [(drscheme:toolbar-buttons)
-     (list (dynamic-require 'stepper/drracket-button 'stepper-drracket-button)
+     (list ((dynamic-require 'lang/private/sl-stepper-button 'sl-stepper-drracket-button) options)
            (dynamic-require 'drracket/syncheck-drracket-button 'syncheck-drracket-button))]
 
     [(drscheme:opt-out-toolbar-buttons)
