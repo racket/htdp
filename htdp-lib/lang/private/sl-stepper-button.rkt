@@ -16,7 +16,8 @@
          stepper/drracket-button)
 
 (define (sl-stepper-drracket-button options)
-  (stepper-drracket-button (new sl-stepper-language%) (options->settings options)))
+  (let ([settings (options->settings options)])
+    (stepper-drracket-button (new sl-stepper-language% [settings settings]) settings)))
 
 (define-logger stepper)
 
@@ -37,6 +38,9 @@
    
 (define sl-stepper-language%
   (class* object% (stepper-language<%>)
+
+    (init-field settings)
+    
     (public stepper:supported?)
     (define (stepper:supported?) #t)
 
@@ -47,7 +51,7 @@
     ;; the language definition to match the way that the language
     ;; wants these values printed.
     (public stepper:show-lambdas-as-lambdas?)
-    (define (stepper:show-lambdas-as-lambdas?) #t)
+    (define (stepper:show-lambdas-as-lambdas?) (simple-settings-use-function-output-syntax? settings))
 
     (public stepper:show-inexactness?)
     (define (stepper:show-inexactness?) #t)
