@@ -1166,7 +1166,8 @@
 				 (format "internal error in graphics library: ~a"
 					 (if (exn? x)
 					     (exn-message x)
-					     (format "~e" x))))
+					     (format "~e" x)))
+                                 x)
 				((error-escape-handler)))])
 		(mred:make-eventspace))))
       (letrec ([open-viewport
