@@ -20,7 +20,6 @@
          "shared-typed.rkt"
          "syntax-hider.rkt"
          "model-settings.rkt"
-         "xml-sig.rkt"
          "view-controller-typed.rkt"
          images/compile-time
          images/gui
@@ -35,7 +34,7 @@
                      pict))
 
 
-(import drracket:tool^ xml^ stepper-frame^)
+(import  stepper-frame^)
 (export view-controller^)
 
 (define drracket-eventspace (current-eventspace))
