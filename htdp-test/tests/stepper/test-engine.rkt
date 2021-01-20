@@ -213,7 +213,6 @@
                  (unless (display-only-errors)
                    (printf "  using language level ~v\n" namespace-spec))
                  (namespace-require 'test-engine/racket-tests)
-                 ;; this triggers the creation of a test~object (so tests actually run)
                  (initialize-test-object!)
                  (match-define (list input-port filename done-thunk)
                    (prepare-filesystem exp-str extra-files))
@@ -229,6 +228,7 @@
          [(struct ll-hashlang-model (name render-settings enable-testing?))
           (unless (display-only-errors)
             (printf "  using language level ~v\n" name))
+          (initialize-test-object!)
           (match-define (list input-port filename done-thunk)
             (prepare-filesystem (add-hashlang-line
                                  name
