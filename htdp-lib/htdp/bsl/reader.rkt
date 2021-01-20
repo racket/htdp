@@ -26,8 +26,10 @@
 (define ((make-info options) key default use-default)
   (case key
     [(drscheme:toolbar-buttons)
-     (list ((dynamic-require 'lang/private/sl-stepper-button 'sl-stepper-drracket-button) options)
-           (dynamic-require 'drracket/syncheck-drracket-button 'syncheck-drracket-button))]
+     (append (if (memq 'disable-stepper options)
+                 '()
+                 (list ((dynamic-require 'lang/private/sl-stepper-button 'sl-stepper-drracket-button) options)))
+             (list (dynamic-require 'drracket/syncheck-drracket-button 'syncheck-drracket-button)))]
 
     [(drscheme:opt-out-toolbar-buttons)
      ;; opt-out of all of the extra buttons b/c 
