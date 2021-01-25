@@ -1811,7 +1811,13 @@
        
        (syntax-case stx (set!)
          [(set! form expr) (dots-error stx (syntax form))]
-         [(form . rest) (dots-error stx (syntax form))]
+         [(form . rest)
+	  ;; this (+ ... ...) is a kludge to get `rest` expanded too
+	  ;; I couldn't think of anything better. 
+	  (quasisyntax/loc stx
+	    (+ (error (quote form)
+		 "expected a finished expression, but found a template")
+	       . rest))]
          [form (dots-error stx stx)]))))
   
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
