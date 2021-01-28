@@ -25,6 +25,12 @@
           (send display-rep display-test-results
                 (lambda (src-editor)
                   (popup-test-display! markup src-editor))))))]
+    ;; this happens when called from the stepper
+    [display-event-space
+     (queue-callback
+      (lambda ()
+        ;; poor man's substitute, links don't work
+        (popup-test-display! markup #f)))]
     [else
      (error "no connection to test display")]))
 

@@ -502,9 +502,7 @@
   (define (step-through-expression expanded)
     (define annotated (a:annotate expanded break show-lambdas-as-lambdas?))
     (log-stepper-debug "expression successfully annotated")
-    (parameterize (;; I think this parameterization is pointless in the #lang world
-                   [test-silence #t])
-      (eval-syntax annotated)))
+    (eval-syntax annotated))
 
   ;; given a message and an exception, notify the output to display
   ;; the error (along with the held "before" step if present
