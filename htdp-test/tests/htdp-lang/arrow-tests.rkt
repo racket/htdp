@@ -78,7 +78,7 @@
 ;; The programs define `foo` with parameter `bar` either via `lambda` or `(define (foo bar)`. 
 ;; They also contain a `(lambda (bar) bar)` and `(local ((define bar 0)` to check nested scope.
 ;; ASSUME1 Use only `foo` in application position.
-;; ASSUME2 USE only `0` as literal data. 
+;; ASSUME2 Use only `0` as literal data.
 
 (module+ test
 
@@ -94,96 +94,79 @@
   (define dots-px    #px"\\.\\.\\.")
   (define lambda-px  #px"lambda")
   (define data-px    #px"0")      ;; ASSUME2 
-  (define foo-app-px #px"\\(foo") ;; ASSUME1 
-
-  (define (make-program lang-line body)
-    (string-append lang-line body))
-
-  (define (cons->list x) (match x [(cons a b) (list a b)]))
-
-  #; "lang htdp/*sl*"
-  #; (define (foo bar) (... (foo bar)))
-  (define ((test1 app-selector) lang-line)
-    (define program-body
-      @string-append{
- (define (foo bar)
- (... (foo bar))) })
-    (define program (make-program lang-line program-body))
-    (define expected (standard-arrows lang-line app-selector program))
-    (check-equal? (get-binding-arrows program) expected lang-line))
-
-  #; "lang htdp/*sl*"
-  #; (define foo (lambda (bar) (... (foo bar))))
-  (define ((test2 app-selector) lang-line)
-    (define program-body
-      @string-append{
- (define foo
- (lambda (bar)
- (... (foo bar))))})
-    (define program (make-program lang-line program-body))
-    (define expected (standard-arrows lang-line app-selector program))
-    (check-equal? (get-binding-arrows program) expected (string-append "lambda" lang-line)))
-
-  #; "lang htdp/isl+"
-  #; (define foo (lambda (bar) (... (foo bar (lambda (bar) bar)))))
-  (define (test3 app-selector)
-    (define program-body
-      @string-append{
- (define foo
- (lambda (bar)
- (... (foo bar (lambda (bar) bar)))))})
-    (define program (make-program isl+-line program-body))
-    (define standard-expected (standard-arrows isl+-line app-selector program))
+  (define foo-app-px #px"\\(foo") ;; ASSUME1
   
+  #; {type Bindings = [Setof [List [List N N] [List N N]]]}
+
+  #; {String Bindings [#:scoped String Bindings -> Bindings] -> Void}
+  (define (test program-body app-selector #:scoped (scoped (λ (_ se) se)))
+    (λ (lang-line)
+      (define program (string-append lang-line (~a program-body)))
+      (define expected (scoped program (standard-arrows lang-line app-selector program)))
+      (check-equal? (get-binding-arrows program) expected program)))
+
+  #; {String Bindings -> Bindings}
+  (define (nested-scope program standard-expected)
     (define bar-> (drop (map cons->list (regexp-match-positions* #px"bar" program)) 2))
-    (define expected (set-add standard-expected bar->))
+    (set-add standard-expected bar->))
   
-    (check-equal? (get-binding-arrows program) expected "test 3"))
-
-  #; "lang htdp/isl+"
-  #; (define foo (lambda (bar) (... (foo bar (lambda (bar) bar)))))
-  (define ((test4 app-selector) isl+-line)
-    (define program-body
-      @string-append{
- (define foo
- (lambda (bar)
- (... (foo bar (local ((define bar 0)) bar)))))})
-    (define program (make-program isl+-line program-body))
-    (define standard-expected (standard-arrows isl+-line app-selector program))
-  
-    (define bar-> (drop (map cons->list (regexp-match-positions* #px"bar" program)) 2))
-    (define expected (set-add standard-expected bar->))
-  
-    (check-equal? (get-binding-arrows program) expected "test 4"))
-
-  #; {String [ [Listof X] -> X ] String -> [Setof [List [List N N] [List N N]]]}
+  #; {String [ [Listof X] -> X ] String -> Bindings}
   ;; arrows from #lang to app, lambbda, dots; 
   ;; arrows from first occurrence of foo and bar to themselves, respectively
   (define (standard-arrows lang-line app-selector program)
-    ;; positions
-    (define lang (first (map cons->list (regexp-match-positions lang-px program))))
-    (define defi (map cons->list (regexp-match-positions* define-px program)))
-    (define loca (map cons->list (regexp-match-positions* local-px program)))
-    (define dots (map cons->list (regexp-match-positions dots-px program)))
-    (define lamb (map cons->list (regexp-match-positions* lambda-px program)))
-    (define apps (app-selector (regexp-match-positions* foo-app-px program)))
-    (define data (regexp-match-positions* data-px program))
+    (define lang (cons->list (first (regexp-match-positions lang-px program))))
+    
+    (define posn->arrow-list (posn->arrow lang list))
+    (define ->def (map posn->arrow-list (regexp-match-positions* define-px program)))
+    (define ->loc (map posn->arrow-list (regexp-match-positions* local-px  program)))
+    (define ->lam (map posn->arrow-list (regexp-match-positions* lambda-px program)))
+    (define ->dot (map posn->arrow-list (regexp-match-positions* dots-px   program)))
+
+    (define posn->arrow-0span (posn->arrow lang 0span))
+    (define ->data (map posn->arrow-0span (regexp-match-positions* data-px program)))
+    ;; function applications in BSL* are actually macro uses; eliminate `(define (foo x)` too
+    (define apps  (app-selector (regexp-match-positions* foo-app-px program)))
+    (define ->app (if (regexp-match #px"bsl" lang-line) '[] (map posn->arrow-0span apps)))
+
+    (define lang-> (append ->dot ->loc ->lam ->def ->data ->app))
+
+    ;; positions as arrows (first two occurrences; let specific examples deal with others)
+    (define foo-> (map cons->list (take (regexp-match-positions* #px"foo" program) 2)))
+    (define bar-> (map cons->list (take (regexp-match-positions* #px"bar" program) 2)))
+    
+    (apply set (list* foo-> bar-> lang->)))
   
-    ;; positions as arrows (two occurrences)
-    (define foo-> (take (map cons->list (regexp-match-positions* #px"foo" program)) 2))
-    (define bar-> (take (map cons->list (regexp-match-positions* #px"bar" program)) 2))
+  (define ((posn->arrow lang sel) x) (list lang (cons->list x sel)))
+  (define (0span l _r) (list l l))
+  (define (cons->list x (sel list)) (sel (car x) (cdr x)))
 
-    (define ->lamb (map (curry list lang) lamb))
-    (define ->defi (map (curry list lang) defi))
-    (define ->loca (map (curry list lang) loca))
-    (define ->dots (cons lang dots))
-    (define ->app  (map (λ (a) (list lang (list (car a) (car a)))) apps))
-    (define ->data (map (λ (a) (list lang (list (car a) (car a)))) data))
+  ;; now test:
 
-    (define the-list (list* ->dots foo-> bar-> (append ->loca ->lamb ->defi ->data)))
-    (apply set (append the-list (if (regexp-match #px"bsl" lang-line) '[] ->app))))
+  (define program-body0
+    '(define (foo bar)
+       (... (foo bar))))
+  
+  (define program-body1
+    '(define (foo bar)
+       (... (foo bar))))
 
-  (for-each (test1 rest) all-langs)
-  (for-each (test2 values) all-langs)
-  (test3 values)
-  (for-each (test4 values) (list isl-line isl+-line)))
+  (define program-body2
+    '(define foo
+       (lambda (bar)
+         (... (foo bar)))))
+
+  (define program-body3
+    '(define foo
+       (lambda (bar)
+         (... (foo bar (lambda (bar) bar))))))
+
+  (define program-body4
+    '(define foo
+       (lambda (bar)
+         (... (foo bar (local ((define bar 0)) bar))))))
+  
+  (for-each (test program-body0 rest) all-langs)
+  (for-each (test program-body1 rest) all-langs)
+  (for-each (test program-body2 values) all-langs)
+  ((test program-body3 values #:scoped nested-scope) isl+-line)
+  (for-each (test program-body4 values #:scoped nested-scope) (list isl-line isl+-line)))

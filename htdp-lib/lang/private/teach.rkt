@@ -1791,6 +1791,10 @@
   ;; dots (.. and ... and .... and ..... and ......)
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
+
+  ;; The tests for dots are in ../../../htdp-test/tests/htdp-lang/arrow-tests.rkt
+
+
   ;; Syntax Identifier -> Expression
   ;; Produces an expression which raises an error reporting unfinished code.
   (define (dots-error stx name)
