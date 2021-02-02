@@ -16,7 +16,9 @@
                      "rackunit-lib"
                      "profile-lib"
                      "wxme-lib"
-                     "pconvert-lib"))
+                     "pconvert-lib"
+                     "at-exp-lib"
+                     "drracket-tool-lib"))
 (define update-implies '("htdp-lib"))
 
 (define pkg-desc "tests for \"htdp\"")
