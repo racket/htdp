@@ -1836,7 +1836,7 @@
 	  ;; this (+ ... ...) is a kludge to get `rest` expanded too
 	  ;; I couldn't think of anything better.
           
-	  (quasisyntax/loc stx (+ #,(dots-error stx `(syntax form)) . rest))]
+	  (quasisyntax/loc stx (+ #,(dots-error stx (syntax form)) . rest))]
          [form (dots-error stx stx)]))))
   
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
