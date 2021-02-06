@@ -1804,7 +1804,7 @@
 
   #; {Syntax -> Syntax}
   ;; collect all identifiers from `stx` and put them into the disappeared-use property 
-  (define (disappeared-everything stx)
+  (define (disappeared-everything err stx)
     (define ids '())
     (let loop ([stx stx])
       (cond
@@ -1815,7 +1815,10 @@
         [(pair? stx)
          (loop (car stx))
          (loop (cdr stx))]))
-    (syntax-property #'(void) 'disappeared-use (reverse ids)))
+    #`(begin err
+             #,ids))
+
+  #;(syntax-property #'(void) 'disappeared-use (reverse ids))
   
   ;; Expression -> Expression
   ;; Transforms unfinished code (... and the like) to code
@@ -1831,11 +1834,17 @@
        (syntax-case stx (set!)
          [(set! form expr) (dots-error stx (syntax form))]
          [(form . rest)
-          #;
-          (disappeared-everything stx)
+
+	  (quasisyntax/loc stx
+            (begin
+              #,(dots-error stx (syntax form))
+	      (quote-syntax
+		#,(syntax-property #'rest 'identifiers-as-disappeared-uses? #t)
+		 #:local)))
+
 	  ;; this (+ ... ...) is a kludge to get `rest` expanded too
 	  ;; I couldn't think of anything better.
-          
+          #;
 	  (quasisyntax/loc stx (+ #,(dots-error stx (syntax form)) . rest))]
          [form (dots-error stx stx)]))))
   
