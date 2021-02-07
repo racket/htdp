@@ -75,6 +75,7 @@ and they all have good sample contracts. (It is amazing what we can do with kids
          place-image/align
          place-images
          place-images/align
+         put-image
          
          scale
          scale/xy

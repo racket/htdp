@@ -1954,6 +1954,14 @@
                                   (place-image image3 spot spot
                                                background)))))
 
+(test (put-image (circle 5 "solid" "blue") 4 4 (empty-scene 30 30))
+      =>
+      (place-image (circle 5 "solid" "blue") 4 (- 30 4) (empty-scene 30 30)))
+(test (put-image (circle 5 "solid" "blue") 28 24 (empty-scene 30 30))
+      =>
+      (place-image (circle 5 "solid" "blue") 28 6 (empty-scene 30 30)))
+
+
 
 ;; this test case checks to make sure the number of crops doesn't 
 ;; grow when normalizing shapes.

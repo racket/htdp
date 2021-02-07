@@ -1332,6 +1332,26 @@ a black outline.
                   "right" "bottom"
                   (rectangle 64 64 "solid" "mediumgoldenrod"))]
 }
+
+@defproc[(put-image [image image?] [x real?] [y real?] [scene image?]) image?]{
+
+ Places @racket[image] onto @racket[scene] with its center at the coordinates
+ (@racket[x],@racket[y]) and crops the resulting image so that it has the
+ same size as @racket[scene]. The coordinates are relative to the bottom-left
+ of @racket[scene] and @racket[y] increasing goes upwards, not downwards.
+
+ @crop-warning
+
+ @image-examples[(put-image
+                  (ellipse 20 30 "solid" "red")
+                  40 15
+                  (rectangle 50 50 "solid" "gray"))
+                 (place-image
+                  (ellipse 20 30 "solid" "red")
+                  40 15
+                  (rectangle 50 50 "solid" "gray"))]
+}
+
 @defproc[(scene+line [scene image?]
                      [x1 real?] [y1 real?]
                      [x2 real?] [y2 real?]
