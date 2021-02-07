@@ -1,6 +1,7 @@
 #lang at-exp racket
 
-;; This module tests binding arrows for code involving "template dots". 
+;; This module tests binding arrows for code involving "template dots"
+;; in the spirit of HtDP templates. 
 
 (require drracket/check-syntax)
 
@@ -77,7 +78,7 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; The programs define `foo` with parameter `bar` either via `lambda` or `(define (foo bar)`. 
 ;; They also contain a `(lambda (bar) bar)` and `(local ((define bar 0)` to check nested scope.
-;; ASSUME1 Use only `foo` in application position.
+;; ASSUME1 Use only `foo` in application position and only once. 
 ;; ASSUME2 Use only `0` as literal data.
 
 (module+ test
@@ -93,6 +94,9 @@
   (define local-px   #px"local")
   (define dots-px    #px"\\.\\.\\.")
   (define lambda-px  #px"lambda")
+  (define cond-px    #px"cond")
+  (define else-px    #px"else")
+  (define empty?-px  #px"empty\\?")
   (define data-px    #px"0")      ;; ASSUME2 
   (define foo-app-px #px"\\(foo") ;; ASSUME1
   
@@ -120,15 +124,18 @@
     (define ->def (map posn->arrow-list (regexp-match-positions* define-px program)))
     (define ->loc (map posn->arrow-list (regexp-match-positions* local-px  program)))
     (define ->lam (map posn->arrow-list (regexp-match-positions* lambda-px program)))
+    (define ->con (map posn->arrow-list (regexp-match-positions* cond-px program)))
+    (define ->els (map posn->arrow-list (regexp-match-positions* else-px program)))
+    (define ->mt? (map posn->arrow-list (regexp-match-positions* empty?-px program)))
     (define ->dot (map posn->arrow-list (regexp-match-positions* dots-px   program)))
 
     (define posn->arrow-0span (posn->arrow lang 0span))
     (define ->data (map posn->arrow-0span (regexp-match-positions* data-px program)))
     ;; function applications in BSL* are actually macro uses; eliminate `(define (foo x)` too
-    (define apps  (app-selector (regexp-match-positions* foo-app-px program)))
+    (define apps (app-selector (regexp-match-positions* foo-app-px program)))
     (define ->app (if (regexp-match #px"bsl" lang-line) '[] (map posn->arrow-0span apps)))
 
-    (define lang-> (append ->dot ->loc ->lam ->def ->data ->app))
+    (define lang-> (append ->dot ->loc ->lam ->mt? ->els ->con ->def #;->data ->app))
 
     ;; positions as arrows (first two occurrences; let specific examples deal with others)
     (define foo-> (map cons->list (take (regexp-match-positions* #px"foo" program) 2)))
@@ -142,31 +149,39 @@
 
   ;; now test:
 
-  (define program-body0
+  (define program-body0 ;; the most basic example 
     '(define (foo bar)
        (... (foo bar))))
   
-  (define program-body1
+  (define program-body1 ;; Sam's "broken syntax for templates" example
     '(define (foo bar)
-       (... (foo bar))))
+       (... 
+        (cond
+          [(empty? l) ... (foo bar) ...]
+          [else 0]))))
 
-  (define program-body2
+  (define program-body2 ;; even in BSL, instructors can use `lambda` 
     '(define foo
        (lambda (bar)
          (... (foo bar)))))
 
-  (define program-body3
+  ;; TO DEMONSTRATE THE FAILURES OF THE CURRENT APPROACH:
+  ;; expected to fail because turning syntax-arrows into binding arrows
+  ;; is going to overlook nested scope.
+  
+  (define program-body3 ;; using `lambda` to create a nested scope 
     '(define foo
        (lambda (bar)
          (... (foo bar (lambda (bar) bar))))))
 
-  (define program-body4
+  (define program-body4 ;; using `local` to create a nested scope
     '(define foo
        (lambda (bar)
          (... (foo bar (local ((define bar 0)) bar))))))
   
-  (for-each (test program-body0 rest) all-langs)
-  (for-each (test program-body1 rest) all-langs)
-  (for-each (test program-body2 values) all-langs)
-  ((test program-body3 values #:scoped nested-scope) isl+-line)
+  (for-each (test program-body0 (λ _ '[])) all-langs)
+  (for-each (test program-body1 (λ _ '[]) #;(compose list first)) all-langs)
+  (for-each (test program-body2 rest) all-langs)
+  
+  ((test program-body3 rest #:scoped nested-scope) isl+-line)
   (for-each (test program-body4 values #:scoped nested-scope) (list isl-line isl+-line)))
