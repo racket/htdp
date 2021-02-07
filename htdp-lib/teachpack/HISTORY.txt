@@ -1,3 +1,16 @@
+version 8.XYZ
+
+* *SL: ellipses no longer "swallow" code but allow drracket to show
+   some basic binding arrows. The approach is broken because it
+   quote-syntax-es an ellipsis's body and then turns probabilistic
+   syntax-arrows into firm binding arrows.
+
+   The mistaken arrows are probably tolerable because nobody will
+   write templates with complex nested scope (except perhaps me).
+   
+
+
+------------------------------------------------------------------------
 Version 8.0				  [Sat Jan  9 10:34:07 EST 2021]
 
 * new: add wedge to `2htdp/images`
