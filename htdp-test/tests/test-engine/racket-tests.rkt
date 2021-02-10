@@ -221,23 +221,25 @@
   (list (random 10) (random 20)))
 
 (define (g _x)
-  (list (random 10) (random 20)))
+  (list (random 10) (random 20) (random 30) (random 40)))
 
 (check-random (f 0) (list (random 10) (random 20)))
 (check-success)
 
 (check-random (g 0)
-              (let* ((x2 (random 20))
-                     (x1 (random 10)))
-                (list x1 x2)))
+              (let* ((x4 (random 40))
+                     (x3 (random 30))
+                       (x2 (random 20))
+                       (x1 (random 10)))
+                (list x1 x2 x3 x4)))
 (check-failure unequal?)
 
-(define (h _x) (car (list (random 50) (random 20))))
+(define (h _x) (car (list (random 50) (random 20) (random 100) (random 70))))
 
-(check-random (h 0) (begin0 (random 50) (random 20)))
+(check-random (h 0) (begin0 (random 50) (random 20) (random 100) (random 70)))
 (check-success)
 
-(check-random (h 0) (begin (random 20) (random 50))) ;; fails 
+(check-random (h 0) (begin (random 20) (random 50) (random 70) (random 100))) ;; fails
 (check-failure unequal?)
 
 (check-property
