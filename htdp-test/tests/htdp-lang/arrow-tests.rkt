@@ -1,7 +1,8 @@
 #lang at-exp racket
 
 ;; This module tests binding arrows for code involving "template dots"
-;; in the spirit of HtDP templates. 
+;; in the spirit of HtDP templates. ~~ See bottom for illustrations of
+;; flaws in the current implementation. 
 
 (require drracket/check-syntax)
 
@@ -54,26 +55,6 @@
                       _actual? 
                       _phase-level)
   (list (list start-left start-right) (list end-left end-right)))
-
-;; This is not needed.
-#;
-(define-get-arrows get-binding-arrows/pxpy
-  (syncheck:add-arrow/name-dup/pxpy start-source-obj    
-                                    start-left  
-                                    start-right
-                                    start-px
-                                    start-py
-                                    end-source-obj      
-                                    end-left    
-                                    end-right
-                                    end-px
-                                    end-py
-                                    actual?     
-                                    phase-level
-                                    require-arrows?
-                                    name-dup?)
-  (list (list start-left start-right start-px start-py)
-        (list end-left end-right end-px end-py)))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; The programs define `foo` with parameter `bar` either via `lambda` or `(define (foo bar)`. 
@@ -181,7 +162,12 @@
   
   (for-each (test program-body0 (λ _ '[])) all-langs)
   (for-each (test program-body1 (λ _ '[]) #;(compose list first)) all-langs)
-  (for-each (test program-body2 rest) all-langs)
-  
+  (for-each (test program-body2 rest) all-langs))
+
+;; The following tests are expected to fail. They represent cases where the current implementation
+;; goes wrong for the sake of backwards compatibility for teaching material.
+
+#; 
+(module+ test
   ((test program-body3 rest #:scoped nested-scope) isl+-line)
   (for-each (test program-body4 values #:scoped nested-scope) (list isl-line isl+-line)))

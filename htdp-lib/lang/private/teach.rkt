@@ -1792,8 +1792,7 @@
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   
 
-  ;; The tests for dots are in ../../../htdp-test/tests/htdp-lang/arrow-tests.rkt
-
+  ;; The tests for dots are in ../../../htdp-test/tests/htdp-lang/arrow-*.rkt
 
   ;; Syntax Identifier -> Expression
   ;; Produces an expression which raises an error reporting unfinished code.
@@ -1802,24 +1801,6 @@
       (error (quote (unsyntax name))
              "expected a finished expression, but found a template")))
 
-  #; {Syntax -> Syntax}
-  ;; collect all identifiers from `stx` and put them into the disappeared-use property 
-  (define (disappeared-everything err stx)
-    (define ids '())
-    (let loop ([stx stx])
-      (cond
-        [(identifier? stx)
-         (set! ids (cons (syntax-local-introduce stx) ids))]
-        [(syntax? stx)
-         (loop (syntax-e stx))]
-        [(pair? stx)
-         (loop (car stx))
-         (loop (cdr stx))]))
-    #`(begin err
-             #,ids))
-
-  #;(syntax-property #'(void) 'disappeared-use (reverse ids))
-  
   ;; Expression -> Expression
   ;; Transforms unfinished code (... and the like) to code
   ;; raising an appropriate error.
@@ -1842,10 +1823,12 @@
 		#,(syntax-property #'rest 'identifiers-as-disappeared-uses? #t)
 		 #:local)))
 
-	  ;; this (+ ... ...) is a kludge to get `rest` expanded too
-	  ;; I couldn't think of anything better.
+	  ;; The solution below enforces that `rest` is syntactically
+	  ;; correct, and as a result, it displays _correct_ binding arrows.
+	  ;; BUT, Sam says that this may affect existing teaching material. 
+	  ;; So we went with the above solution for now. 
           #;
-	  (quasisyntax/loc stx (+ #,(dots-error stx (syntax form)) . rest))]
+	  (quasisyntax/loc stx (begin #,(dots-error stx (syntax form)) . rest))]
          [form (dots-error stx stx)]))))
   
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
