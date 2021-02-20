@@ -14,14 +14,27 @@
          test-engine/test-engine
          simple-tree-text-markup/construct
          simple-tree-text-markup/text
+         simple-tree-text-markup/port
          (except-in deinprogramm/signature/signature signature-violation) ; clashes with test-engine
          deinprogramm/quickcheck/quickcheck)
 
 (define render-value-parameter (make-parameter
                                 (lambda (v)
                                   (format "~V" v))))
-(define (render-value v)
-  ((render-value-parameter) v))
+(define render-value
+  (case-lambda
+    ((value)
+     (let ((proc (render-value-parameter)))
+       (if (procedure-arity-includes? proc 2)
+           (let ((port (open-output-string)))
+             (proc value port)
+             (get-output-string))
+           (proc value))))
+    ((value port)
+     (let ((proc (render-value-parameter)))
+       (if (procedure-arity-includes? proc 2)
+           (proc value port)
+           (display (proc value) port))))))
 
 (define get-rewritten-error-message-parameter
   (make-parameter exn-message))
@@ -188,9 +201,11 @@
              (inner-loop (cdr chars) (cons (car chars) rev-seen))))))))
 
 (define (value->markup value)
-  (let* ((text (render-value value))
-         (lines (string-split text "\n")))
-    (apply vertical lines)))
+  (let-values (((port get-markup)
+                (make-markup-output-port/unsafe (lambda (special)
+                                                  (image-markup special "#<image>" #f #f)))))
+    (render-value value port)
+    (get-markup)))
 
 (define (reason->markup fail)
   (cond
