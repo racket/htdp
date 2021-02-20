@@ -181,10 +181,8 @@
                (get-rewritten-error-message-parameter get-rewriten-error-message)
                (signature-checking-enabled?
                 (get-preference 'signatures:enable-checking? (lambda () #t)))
-               (render-value-parameter (λ (v)
-                                         (let ([o (open-output-string)])
-                                           (render-value/format v settings o 40)
-                                           (get-output-string o)))))))
+               (render-value-parameter (λ (value port)
+                                         (render-value/format value settings port 40))))))
           (super on-execute settings run-in-user-thread)
             
           ;; set the global-port-print-handler after the super class because the super sets it too
