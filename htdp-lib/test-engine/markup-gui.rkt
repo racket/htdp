@@ -75,7 +75,27 @@
     ((srcloc-markup? markup)
      (insert-srcloc-markup markup text src-editor))
     ((framed-markup? markup)
-     (insert-framed (framed-markup-markup markup) text src-editor))))
+     (insert-framed (framed-markup-markup markup) text src-editor))
+    ((image-markup? markup)
+     (let ((data (image-markup-data markup)))
+       (cond
+         ((is-a? data snip%)
+          (send text insert data))
+         ((is-a? data bitmap%)         ;; works in other places, so include it here too
+          (send text insert (make-object image-snip% data)))
+         ((record-dc-datum->bitmap data (image-markup-width markup) (image-markup-height markup))
+          => (lambda (bitmap)
+               (send text insert (make-object image-snip% bitmap))))
+         (else
+          (insert-markup (image-markup-alt-markup markup) text src-editor)))))))
+               
+(define (record-dc-datum->bitmap datum width height)
+  (with-handlers ((exn? (lambda (e) #f)))
+    (let ((proc (recorded-datum->procedure datum))
+          (bitmap (make-object bitmap% width height)))
+      (let ((dc (new bitmap-dc% [bitmap bitmap] )))
+        (proc dc)
+        bitmap))))          
 
 (define framed-text%
   (text:wide-snip-mixin
