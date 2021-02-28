@@ -40,10 +40,11 @@
      (lambda ()
        (send display-rep display-test-results
              (lambda (src-editor)
-               (let* ([current-tab (definitions-tab src-editor)]
-                      [curr-win (and current-tab (send current-tab get-test-window))]
-                      [window (or curr-win (make-object test-window%))])
-                 (send window clear))))))))
+               (define current-tab (definitions-tab src-editor))
+               (cond
+                 [(and current-tab (send current-tab get-test-window))
+                  => (lambda (window)
+                       (send window clear))])))))))
 
 (define (popup-test-display! markup src-editor)
   (let* ([current-tab (definitions-tab src-editor)]
