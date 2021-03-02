@@ -110,11 +110,6 @@
      (check-failures->markup failed-checks)
      (signature-violations->markup signature-violations))))
 
-(define (format-list l)
-  (cond
-   [(null? (cdr l)) (format "and ~a" (car l))]
-   [else (format "~a, ~a" (car l) (format-list (cdr l)))]))
-
 (define (check-failures->markup checks)
   (if (pair? checks)
       (vertical (string-constant test-engine-check-failures)
