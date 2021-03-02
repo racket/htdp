@@ -57,7 +57,7 @@
                                   (editor:basic-mixin text%)))))])
     ;; prevent the framed boxes from messing up the style
     (send content set-styles-sticky #f)
-    (insert-markup markup content src-editor)
+    (insert-markup markup content src-editor #f)
     (send content lock #t)
     (send window update-editor content)
     (when current-tab

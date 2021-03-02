@@ -2,7 +2,7 @@
 #lang racket/base
 (require racket/contract)         
 (provide (contract-out
-          (insert-markup (markup? (is-a?/c text%) (or/c #f (is-a?/c text%)) . -> . any))))
+          (insert-markup ((markup? (is-a?/c text%) (or/c #f (is-a?/c text%))) (boolean?) . ->* . any))))
 
 (require (only-in racket/class send make-object is-a? new is-a?/c)
          simple-tree-text-markup/data
@@ -55,10 +55,13 @@
                   (loop (cdr tabs) (add1 i))))))
         (send frame show #t)))))
 
-; It's advisable to (send text set-styles-sticky #t) on text% editors
+; It's advisable to (send text set-styles-sticky #f) on text% editors
 ; that have editor:standard-style-list-mixin.
 ; Otherwise, framed boxes mess up the formatting.
-(define (insert-markup markup text src-editor)
+
+; inline? means there might be stuff around the insert-markup, so if
+; it's #t, we need to use a snip for vertical markup
+(define (insert-markup markup text src-editor (inline? #t))
   (cond
     ((string? markup)
      (send text insert markup))
@@ -68,10 +71,14 @@
                  (insert-markup markup text src-editor))
                (horizontal-markup-markups markup)))
     ((vertical-markup? markup)
-     (for-each (lambda (markup)
-                 (insert-markup markup text src-editor)
-                 (send text insert #\newline))
-               (vertical-markup-markups markup)))
+     (define (insert-vertical text)
+       (for-each/between
+        (lambda (markup) (insert-markup markup text src-editor #f))
+        (lambda () (send text insert #\newline))
+        (vertical-markup-markups markup)))
+     (if inline?
+         (send text insert (make-snip insert-vertical))
+         (insert-vertical text)))
     ((srcloc-markup? markup)
      (insert-srcloc-markup markup text src-editor))
     ((framed-markup? markup)
@@ -88,36 +95,53 @@
                (send text insert (make-object image-snip% bitmap))))
          (else
           (insert-markup (image-markup-alt-markup markup) text src-editor)))))))
-               
+
+(define (for-each/between proc between list)
+  (let loop ((list list))
+    (cond
+      ((null? list) (values))
+      ((null? (cdr list))
+       (proc (car list)))
+      (else
+       (proc (car list))
+       (between)
+       (loop (cdr list))))))
+
+(define (make-snip insert)
+  (let* ([text (new framed-text%)]
+         [snip (new editor-snip% [editor text] [with-border? #f])])
+    (send text set-styles-sticky #f)
+    (send snip use-style-background #t)
+    (insert text)
+    (send text lock #t)
+    snip))
+         
 (define (record-dc-datum->bitmap datum width height)
   (with-handlers ((exn? (lambda (e) #f)))
     (let ((proc (recorded-datum->procedure datum))
           (bitmap (make-object bitmap% width height)))
-      (let ((dc (new bitmap-dc% [bitmap bitmap] )))
+      (let ((dc (new bitmap-dc% [bitmap bitmap])))
         (proc dc)
         bitmap))))          
 
 (define framed-text%
-  (text:wide-snip-mixin
-   (text:basic-mixin
-    (editor:standard-style-list-mixin
-     (editor:basic-mixin
-      text%)))))
-
-(define (border-style-delta)
-  (let ((delta (new style-delta%)))
-    (send delta set-delta-foreground 
-          (color-prefs:lookup-in-color-scheme 'framework:default-text-color))
-    delta))
+  (text:foreground-color-mixin
+   (text:wide-snip-mixin
+    (text:basic-mixin
+     (editor:standard-style-list-mixin
+      (editor:basic-mixin
+       text%))))))
 
 (define (insert-framed markup text src-editor)
   (let* ([framed-text (new framed-text%)]
          [snip (new editor-snip% [editor framed-text])])
+    (send text set-styles-sticky #f)
     (send snip use-style-background #t)
+    (insert-markup markup framed-text src-editor #f)
     (when (color-prefs:known-color-scheme-name? 'drracket:read-eval-print-loop:value-color)
       (send framed-text change-style
-            (color-prefs:lookup-in-color-scheme 'drracket:read-eval-print-loop:value-color)))
-    (insert-markup markup framed-text src-editor)
+            (color-prefs:lookup-in-color-scheme 'drracket:read-eval-print-loop:value-color)
+            0 (send text get-end-position)))
     (send framed-text lock #t)
 
     (let ((before (send text get-end-position)))
@@ -132,17 +156,15 @@
   (let* ((frame (new frame%
                      [label "Markup"]
                      [width 600] [height 400]))
-         (text (new (text:foreground-color-mixin
-                     (editor:standard-style-list-mixin
-                      (text:basic-mixin
-                       (editor:basic-mixin text%))))))
+         (text (new (editor:standard-style-list-mixin
+                     (text:basic-mixin
+                      (editor:basic-mixin text%)))))
          (canvas (new editor-canvas% [parent frame])))
-    (send text set-styles-sticky #f)
+    (send text set-styles-sticky #t)
     (send canvas set-editor text)
-    (insert-markup markup text text)
+    (insert-markup markup text text #f)
     (send text lock #t)
     (send frame show #t)))
-
 
 (module+ test
   (require rackunit
@@ -158,4 +180,8 @@
                 "String via text")
   (check-equal? (render-markup-via-text (horizontal "foo" (framed-markup "bar") "baz"))
                 "foobarbaz"
+                "Framed via text")
+
+  (check-equal? (render-markup-via-text (horizontal "foo" (vertical "bar" "baz") "bam"))
+                "foobar\nbazbam"
                 "Framed via text"))

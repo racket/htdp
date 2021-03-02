@@ -129,18 +129,16 @@
       empty-markup))
 
 (define (failed-check->markup failed-check)
-  (horizontal
-   "        "
-   (if (failed-check-srcloc? failed-check)
-       (error-link->markup (failed-check-reason failed-check)
-                           (failed-check-srcloc? failed-check)
-                           (fail-reason-srcloc (failed-check-reason failed-check)))
-       (link->markup (failed-check-reason failed-check)
-                     (fail-reason-srcloc (failed-check-reason failed-check))))))
+  (if (failed-check-srcloc? failed-check)
+      (error-link->markup (failed-check-reason failed-check)
+                          (failed-check-srcloc? failed-check)
+                          (fail-reason-srcloc (failed-check-reason failed-check)))
+      (link->markup (failed-check-reason failed-check)
+                    (fail-reason-srcloc (failed-check-reason failed-check)))))
 
 (define (link->markup reason srcloc)
   (vertical
-   (reason->markup reason)
+   (horizontal "        " (reason->markup reason))
    (srcloc-markup srcloc (format-srcloc srcloc))))
 
 (define (format-srcloc srcloc)
@@ -286,8 +284,8 @@
 
 (define (error-link->markup reason srcloc check-srcloc)
   (vertical
-   (reason->markup reason)
-   (horizontal   
+   (horizontal "        " (reason->markup reason))
+   (horizontal
     (srcloc-markup srcloc (format-srcloc check-srcloc))
     (if srcloc
         (horizontal
