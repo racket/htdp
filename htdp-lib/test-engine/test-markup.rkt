@@ -19,8 +19,9 @@
          deinprogramm/quickcheck/quickcheck)
 
 (define render-value-parameter (make-parameter
-                                (lambda (v)
-                                  (format "~V" v))))
+                                (lambda (v port)
+                                  (fprintf port "~V" v))))
+
 (define render-value
   (case-lambda
     ((value)
