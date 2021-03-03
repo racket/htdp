@@ -26,7 +26,7 @@
 (provide
  (contract-out
   [string->expanded-syntax-list
-   (-> ll-ll-model? string? (listof syntax?))]
+   (-> (or/c ll-ll-model? ll-hashlang-model?)  string? (listof syntax?))]
   [run-one-test (-> symbol? stepper-test? boolean?)]
   [struct stepper-test ([models (listof ll-model?)]
                         [string string?]
