@@ -90,12 +90,16 @@
           (send text insert data))
          ((is-a? data bitmap%)         ;; works in other places, so include it here too
           (send text insert (make-object image-snip% data)))
-         ((record-dc-datum->bitmap data (image-markup-width markup) (image-markup-height markup))
-          => (lambda (bitmap)
-               (send text insert (make-object image-snip% bitmap))))
+         ((record-dc-datum? data)
+          (cond
+            ((record-dc-datum->bitmap data (record-dc-datum-width data) (record-dc-datum-height markup))
+             => (lambda (bitmap)
+                  (send text insert (make-object image-snip% bitmap))))
+            (else
+             (insert-markup (image-markup-alt-markup markup) text src-editor))))
          (else
           (insert-markup (image-markup-alt-markup markup) text src-editor)))))))
-
+     
 (define (for-each/between proc between list)
   (let loop ((list list))
     (cond
@@ -117,7 +121,7 @@
     snip))
          
 (define (record-dc-datum->bitmap datum width height)
-  (with-handlers ((exn? (lambda (e) #f)))
+  (with-handlers ((exn:fail? (lambda (e) #f)))
     (let ((proc (recorded-datum->procedure datum))
           (bitmap (make-object bitmap% width height)))
       (let ((dc (new bitmap-dc% [bitmap bitmap])))
