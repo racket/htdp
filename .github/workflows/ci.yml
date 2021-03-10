@@ -20,6 +20,7 @@ jobs:
         variant: ${{ matrix.racket-variant }}
         version: ${{ matrix.racket-version }}
         sudo: never
+        dest: '${HOME}/racket'
     - name: Setup local catalog
       run: |
         racket -l- pkg/dirs-catalog --immediate $PWD/local-catalog $PWD/htdp $PWD/htdp-lib $PWD/htdp-test $PWD/htdp-doc
