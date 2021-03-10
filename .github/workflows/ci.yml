@@ -4,22 +4,22 @@ on: [push, pull_request]
 
 jobs:
   build-test:
-    runs-on: ubuntu-18.04
-    container: racket/racket-ci:latest
-    
+    runs-on: ubuntu-20.04
     strategy:
       fail-fast: false
       matrix:
-        vm: ['regular', 'CS']
+        racket-variant: ["BC", "CS"]
+        racket-version: [ stable, current ]
 
     steps:
-    - uses: actions/checkout@master
-    - uses: Bogdanp/setup-racket@v0.10
+    - uses: actions/checkout@v2
+    - uses: Bogdanp/setup-racket@v1.1
       with:
         architecture: 'x64'
         distribution: 'minimal'
-        variant: ${{ matrix.vm }}
-        version: 'current'
+        variant: ${{ matrix.racket-variant }}
+        version: ${{ matrix.racket-version }}
+        sudo: never
     - name: Setup local catalog
       run: |
         racket -l- pkg/dirs-catalog --immediate $PWD/local-catalog $PWD/htdp $PWD/htdp-lib $PWD/htdp-test $PWD/htdp-doc
