@@ -21,6 +21,8 @@ jobs:
         version: ${{ matrix.racket-version }}
         sudo: never
         dest: '${HOME}/racket'
+    - name: Add racket to PATH
+      run: echo "${HOME}/racket/bin" >> $GITHUB_PATH
     - name: Setup local catalog
       run: |
         racket -l- pkg/dirs-catalog --immediate $PWD/local-catalog $PWD/htdp $PWD/htdp-lib $PWD/htdp-test $PWD/htdp-doc
