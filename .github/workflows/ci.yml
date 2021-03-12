@@ -9,7 +9,6 @@ jobs:
       fail-fast: false
       matrix:
         racket-variant: ["BC", "CS"]
-        racket-version: [ stable, current ]
 
     steps:
     - uses: actions/checkout@v2
@@ -18,7 +17,7 @@ jobs:
         architecture: 'x64'
         distribution: 'minimal'
         variant: ${{ matrix.racket-variant }}
-        version: ${{ matrix.racket-version }}
+        version: current
         sudo: never
         dest: '${HOME}/racket'
     - name: Add racket to PATH
