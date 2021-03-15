@@ -50,6 +50,7 @@
 (htdp-syntax-test #'(define (y and) 12) "define: expected a variable, but found a keyword")
 (htdp-syntax-test #'(define (y or) 12) "define: expected a variable, but found a keyword")
 (htdp-syntax-test #'(define (y empty) 12) "define: expected a variable, but found a keyword")
+(htdp-syntax-test #'(define (y quote) 'y) "define: expected a variable, but found a keyword")
 
 (htdp-syntax-test #'define-struct "define-struct: expected an open parenthesis before define-struct, but found none")
 (htdp-syntax-test #'(define-struct) "define-struct: expected the structure name after define-struct, but nothing's there")

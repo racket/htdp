@@ -466,7 +466,9 @@
                            (#%datum
                             #%top
                             empty true false
-                            )))))
+                            beginner-quote
+                            intermediate-quote
+                            intermediate-quasiquote)))))
   
   (define (identifier/non-kw? stx)
     (and (identifier? stx)

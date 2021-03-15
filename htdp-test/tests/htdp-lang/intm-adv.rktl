@@ -141,3 +141,5 @@
 
 (htdp-test '(2 1) 'local (local [(multi x y)]
                            (list y x)))
+
+(htdp-syntax-test #'(define (y quasiquote) `(0 1 2)) "define: expected a variable, but found a keyword")
