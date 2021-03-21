@@ -31,6 +31,8 @@
   (let* ((test-object (run-tests!))
          (failed-checks (test-object-failed-checks test-object)))
     (check-equal? (length failed-checks) 1)
+    (when (null? failed-checks)
+      (error 'check-failure "expected failed check, none failed"))
     (apply assert-failed-check (car failed-checks) reason? selector+value-list))
   (initialize-test-object!))
 
