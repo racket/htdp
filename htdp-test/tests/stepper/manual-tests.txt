@@ -12,6 +12,19 @@ warning when the program window disappears.
 Try stepping backward and forward through programs with correct and erroneous
 (syntax errors, runtime errors) executions, incl. jumping to end.
 
+Here's one to try:
+
+(define (f x)
+  (if (empty? x)
+      (cons 13 '())
+      (cons 4 (f (rest x)))))
+
+(f (list 7 7 7 7))
+
+For a syntax error, delete a close paren.
+
+For a runtime error, change (cons 13 '()) into 13
+
 Try programs which print snips (print-convert-test.ss)
 
 try programs that contain test cases; make sure that the popups behave sensibly.
