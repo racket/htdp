@@ -5,7 +5,7 @@
 (require racket/class
          racket/gui/base
          framework
-         (only-in simple-tree-text-markup/data empty-markup?)
+         (only-in simple-tree-text-markup/data empty-markup? empty-markup)
          test-engine/markup-gui
          test-engine/test-markup
          test-engine/test-engine
@@ -35,16 +35,23 @@
      (error "no connection to test display")]))
 
 (define (clear-test-display! display-rep display-event-space)
-  (parameterize ([current-eventspace display-event-space])
-    (queue-callback
-     (lambda ()
-       (send display-rep display-test-results
-             (lambda (src-editor)
-               (define current-tab (definitions-tab src-editor))
-               (cond
-                 [(and current-tab (send current-tab get-test-window))
-                  => (lambda (window)
-                       (send window clear))])))))))
+  (cond
+    [(and display-rep display-event-space)
+      (parameterize ([current-eventspace display-event-space])
+        (queue-callback
+         (lambda ()
+           (send display-rep display-test-results
+                 (lambda (src-editor)
+                   (define current-tab (definitions-tab src-editor))
+                   (cond
+                     [(and current-tab (send current-tab get-test-window))
+                      => (lambda (window)
+                           (send window clear))]))))))]
+    [display-event-space
+     (queue-callback
+      (lambda ()
+        ;; poor man's substitute, links don't work
+        (popup-test-display! empty-markup #f)))]))
 
 (define (popup-test-display! markup src-editor)
   (let* ([current-tab (definitions-tab src-editor)]
