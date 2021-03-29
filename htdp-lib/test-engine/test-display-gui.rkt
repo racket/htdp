@@ -18,42 +18,36 @@
     [(string? markup)
      (clear-test-display! display-rep display-event-space)
      (display markup)]
-    [(and display-rep display-event-space)
+    [display-event-space
      (parameterize ([current-eventspace display-event-space])
        (queue-callback
         (lambda ()
-          (send display-rep display-test-results
-                (lambda (src-editor)
-                  (popup-test-display! markup src-editor))))))]
-    ;; this happens when called from the stepper
-    [display-event-space
-     (queue-callback
-      (lambda ()
-        ;; poor man's substitute, links don't work
-        (popup-test-display! markup #f)))]
+          (if display-rep
+              (send display-rep display-test-results
+                    (lambda (src-editor)
+                      (popup-test-display! markup src-editor)))
+              ;; this happens when called from the stepper
+              ;; poor man's substitute, links don't work
+              (popup-test-display! markup #f #t)))))]
     [else
      (error "no connection to test display")]))
 
 (define (clear-test-display! display-rep display-event-space)
-  (cond
-    [(and display-rep display-event-space)
-      (parameterize ([current-eventspace display-event-space])
-        (queue-callback
-         (lambda ()
-           (send display-rep display-test-results
-                 (lambda (src-editor)
-                   (define current-tab (definitions-tab src-editor))
-                   (cond
-                     [(and current-tab (send current-tab get-test-window))
-                      => (lambda (window)
-                           (send window clear))]))))))]
-    [display-event-space
-     (queue-callback
-      (lambda ()
-        ;; poor man's substitute, links don't work
-        (popup-test-display! empty-markup #f)))]))
+  (when display-event-space
+    (parameterize ([current-eventspace display-event-space])
+      (queue-callback
+       (lambda ()
+         (if display-rep
+             (send display-rep display-test-results
+                   (lambda (src-editor)
+                     (define current-tab (definitions-tab src-editor))
+                     (cond
+                       [(and current-tab (send current-tab get-test-window))
+                        => (lambda (window)
+                             (send window clear))])))
+             (popup-test-display! (empty-markup) #f #f)))))))
 
-(define (popup-test-display! markup src-editor)
+(define (popup-test-display! markup src-editor show?)
   (let* ([current-tab (definitions-tab src-editor)]
          [drscheme-frame (definitions-frame src-editor)]
          [curr-win (and current-tab (send current-tab get-test-window))]
@@ -84,7 +78,7 @@
     (if (and drscheme-frame
              (preferences:get 'test-engine:test-window:docked?))
         (send drscheme-frame display-test-panel content)
-        (send window show #t))))
+        (send window show show?))))
 
 (define (definitions-tab definitions-text)
   (and definitions-text (send definitions-text get-tab)))
