@@ -25,7 +25,7 @@
           (if display-rep
               (send display-rep display-test-results
                     (lambda (src-editor)
-                      (popup-test-display! markup src-editor)))
+                      (popup-test-display! markup src-editor #t)))
               ;; this happens when called from the stepper
               ;; poor man's substitute, links don't work
               (popup-test-display! markup #f #t)))))]
