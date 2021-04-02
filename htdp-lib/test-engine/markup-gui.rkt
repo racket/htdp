@@ -145,7 +145,7 @@
     (when (color-prefs:known-color-scheme-name? 'drracket:read-eval-print-loop:value-color)
       (send framed-text change-style
             (color-prefs:lookup-in-color-scheme 'drracket:read-eval-print-loop:value-color)
-            0 (send text get-end-position)))
+            0 (send framed-text get-end-position)))
     (send framed-text lock #t)
 
     (let ((before (send text get-end-position)))
