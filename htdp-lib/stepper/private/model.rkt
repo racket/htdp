@@ -52,6 +52,7 @@
          "macro-unwind.rkt"
          "lifting.rkt"
          (only-in test-engine/syntax test-silence)
+         test-engine/test-markup
          
          ;; for breakpoint display
          ;; (commented out to allow nightly testing)
@@ -506,7 +507,8 @@
 
   ;; given a message and an exception, notify the output to display
   ;; the error (along with the held "before" step if present
-  (define (err-display-handler message exn)
+  (define (err-display-handler _message exn)
+    (define message (get-rewritten-error-message exn))
     (match maybe-held-exp
       [(struct skipped-step ())
        (receive-result (Error-Result message))]
