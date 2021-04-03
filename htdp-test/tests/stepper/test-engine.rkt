@@ -12,6 +12,8 @@
          racket/contract
          racket/file
          mzlib/pconvert-prop ;; so it can be attached.
+         test-engine/test-markup
+         lang/private/rewrite-error-message
          test-engine/test-engine
          "language-level-model.rkt")
 
@@ -377,7 +379,8 @@
                     ;; to this escape continuation.
                     (λ ()
                       (semaphore-post test-finished-semaphore)
-                      (escape (void)))])
+                      (escape (void)))]
+                   [get-rewritten-error-message-parameter get-rewriten-error-message])
       (go iter-caller dynamic-requirer receive-result render-settings
           #:disable-error-handling? (disable-stepper-error-handling))))
   (match (sync/timeout MAX-TEST-WAIT test-finished-semaphore)
