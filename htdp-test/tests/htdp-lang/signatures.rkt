@@ -56,6 +56,13 @@
 (check-eq? (failed-signature-name (apply-signature (DilloOf Boolean Integer) (make-dillo #f #f)))
            'Integer)
 
+(advanced-define-struct Snake (length width))
+
+(define s1 (make-Snake 300 5))
+
+(check-eq? (say-no (apply-signature Snake s1)) s1)
+(check-eq? (say-no (apply-signature Snake #f)) 'no)
+
 (beginner-define-struct empty-list ())
 
 (define nil (make-empty-list))

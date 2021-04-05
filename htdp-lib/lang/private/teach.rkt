@@ -821,17 +821,10 @@
   ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (define (struct-name->signature-name loc-name struct-name)
-    (define signature-name
-      (string->symbol
-       (string-replace (string-titlecase (symbol->string struct-name))
-		       "-" "")))
-    (when (eq? signature-name struct-name)
-      (teach-syntax-error
-       'define-struct
-       loc-name
-       loc-name
-       "the struct name must start with a lower-case letter"))
-    (datum->syntax loc-name signature-name))
+    (datum->syntax loc-name
+                   (string->symbol
+                    (string-replace (string-titlecase (symbol->string struct-name))
+                                    "-" ""))))
   
   (define (do-define-struct stx first-order? setters?)
     
@@ -1142,33 +1135,35 @@
            (define defn2 
              (quasisyntax/loc stx
                (begin
-                 #,(stepper-syntax-property
-                    (quasisyntax/loc stx
-                      (define-syntaxes (name_) 
-                        (let ()
-                          (racket:define-struct info ()
-                                                #:super struct:struct-info
-                                                ;; support `signature'
-                                                #:property 
-                                                prop:procedure
-                                                (lambda (_ stx)
-                                                  (syntax-case stx ()
-                                                    [(self . args)
-                                                     (raise-syntax-error
-                                                      #f
-                                                      (format EXPECTED-FUNCTION-NAME (format "make-~a" (syntax-e #'name_)))
-                                                      stx
-                                                      #'self)]
-                                                    [else
-                                                     (raise-syntax-error
-                                                      #f
-                                                      (format "structure type; do you mean make-~a" (syntax-e #'name_))
-                                                      stx
-                                                      stx)])))
-                          ;; support `shared'
-                          (make-info (lambda () compile-info)))))
-                    'stepper-skip-completely
-                    #t)
+                 #,(if (free-identifier=? signature-name name)
+                       #'(begin)
+                       (stepper-syntax-property
+                        (quasisyntax/loc stx
+                          (define-syntaxes (name_) 
+                            (let ()
+                              (racket:define-struct info ()
+                                                    #:super struct:struct-info
+                                                    ;; support `signature'
+                                                    #:property 
+                                                    prop:procedure
+                                                    (lambda (_ stx)
+                                                      (syntax-case stx ()
+                                                        [(self . args)
+                                                         (raise-syntax-error
+                                                          #f
+                                                          (format EXPECTED-FUNCTION-NAME (format "make-~a" (syntax-e #'name_)))
+                                                          stx
+                                                          #'self)]
+                                                        [else
+                                                         (raise-syntax-error
+                                                          #f
+                                                          (format "structure type; do you mean make-~a" (syntax-e #'name_))
+                                                          stx
+                                                          stx)])))
+                              ;; support `shared'
+                              (make-info (lambda () compile-info)))))
+                        'stepper-skip-completely
+                        #t))
                  #,defn1)))
            (define defn3
              (check-definitions-new 'define-struct
