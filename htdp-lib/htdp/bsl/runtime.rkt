@@ -8,7 +8,9 @@
          racket/class
          (only-in test-engine/test-markup get-rewritten-error-message-parameter)
          (only-in test-engine/syntax report-signature-violation!)
-         (only-in deinprogramm/signature/signature signature-violation-proc)
+         (only-in deinprogramm/signature/signature
+                  signature? signature-name
+                  signature-violation-proc)
          "print-width.rkt")
 
 (provide configure)
@@ -26,6 +28,9 @@
        (cond
          [(equal? val '()) ''()]
          [(equal? val set!-result) '(void)]
+         [(signature? val)
+          (or (signature-name val)
+              '<signature>)]
          [(is-image? val) val]
          [else (ph val basic sub)]))))
   (use-named/undefined-handler
