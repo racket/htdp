@@ -399,7 +399,7 @@ Example:
 (: same (%a -> %a))
 
 (define (same x) x)
-]}
+]
 
 @defform[#:id -> (input-signature-form ... -> output-signature-form)]{
 This signature form describes a function with inputs described by the
@@ -441,11 +441,16 @@ This signature describes a list where the elements are described by
 
 A @racket[define-struct] form defines two additional names that can be
 used in signatures.  For a struct called @racketvalfont{struct}, these
-are @racketvalfont{Struct} and @racketvalfont{StructOf}.
-Note that these names are capitalized.
+are @racketvalfont{Struct} and @racketvalfont{StructOf}.  Note that
+these names are capitalized.  In particular, a struct called
+@racketvalfont{Struct}, will also define @racketvalfont{Struct} and
+@racketvalfont{StructOf}.  Moreover, when forming the additional
+names, hyphens are removed, and each letter following a hyphen is
+capitalized - so a struct called @racketvalfont{foo-bar} will define
+@racketvalfont{FooBar} and @racketvalfont{FooBarOf}.
 
 @racketvalfont{Struct} is a signature that describes struct values
-from this structure type .  @racketvalfont{StructOf} is a function
+from this structure type.  @racketvalfont{StructOf} is a function
 that takes as input a signature for each field.  It returns a
 signature describing values of this structure type, additionally
 describing the values of the fields of the value.
