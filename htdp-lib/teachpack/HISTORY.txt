@@ -1,4 +1,4 @@
-version 8.XYZ
+version 8.1				  [Fri Apr  9 19:39:50 EDT 2021]
 
 * *SL: ellipses no longer "swallow" code but allow drracket to show
    some basic binding arrows. The approach is broken because it
@@ -7,8 +7,6 @@ version 8.XYZ
 
    The mistaken arrows are probably tolerable because nobody will
    write templates with complex nested scope (except perhaps me).
-   
-
 
 ------------------------------------------------------------------------
 Version 8.0				  [Sat Jan  9 10:34:07 EST 2021]
