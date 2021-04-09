@@ -197,7 +197,7 @@
 (define (value->markup value)
   (let-values (((port get-markup)
                 (make-markup-output-port/unsafe (lambda (special)
-                                                  (image-markup special "#<image>" #f #f)))))
+                                                  (image-markup special "#<image>")))))
     (render-value value port)
     (get-markup)))
 
