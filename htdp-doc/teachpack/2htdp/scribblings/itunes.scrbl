@@ -99,7 +99,7 @@ In this context, we introduce the following data definitions:
 @;%
 
 @; ---------------------------------------------------------------------------------------------------
-@section[#:tag-prefix "itunes-api"]{Exported Funcions}
+@section[#:tag-prefix "itunes-api"]{Exported Functions}
 
 @defproc[(read-itunes-as-lists [file-name string?]) #, @llists[]]{
 @;
