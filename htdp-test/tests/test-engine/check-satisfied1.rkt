@@ -5,7 +5,6 @@
 
 (define (id x) x)
 
-;; *** UNCOMMENT THIS ***
 (check-satisfied 9 (id odd?))
 ;; expected syntax error, can also trigger this with check-syntax
 "odd?: expected a function call, but there is no open parenthesis before this function"
