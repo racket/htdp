@@ -2,5 +2,5 @@
 lang/htdp-advanced
 '(abbreviate-cons-as-list
   read-accept-quasiquote
-  show-sharing,
+  show-sharing
   disable-stepper)
