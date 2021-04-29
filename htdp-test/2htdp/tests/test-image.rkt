@@ -2216,6 +2216,15 @@
                      (rectangle 1 1 'solid (color 5 5 5))
                      (rectangle 1 1 'solid (color 6 6 6)))))
 
+(test (equal? (color-list->bitmap (list "MediumGreen") 1 1)
+              (color-list->bitmap (list "black") 1 1))
+      =>
+      #f)
+(test (equal? (color-list->bitmap (list "DarkPink") 1 1)
+              (color-list->bitmap (list "black") 1 1))
+      =>
+      #f)
+
 (test (color-list->bitmap '() 0 0) => (empty-scene 0 0))
 (test (color-list->bitmap '() 0 10) => (empty-scene 0 10))
 (test (color-list->bitmap '() 4 0) => (empty-scene 4 0))

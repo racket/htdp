@@ -1584,7 +1584,7 @@
           (bytes-set! bytes (+ j 3) (color-blue c))]
          [else
           (define str (if (string? c) c (symbol->string c)))
-          (define clr (or (send the-color-database find-color str)
+          (define clr (or (string->color-object/f str)
                           (send the-color-database find-color "black")))
           (bytes-set! bytes j 255)  ;; this should probably (send clr alpha) when that's possible
           (bytes-set! bytes (+ j 1) (send clr red))
