@@ -4,10 +4,14 @@
          (prefix-in ce: test-engine/racket-tests)
          (for-syntax
           racket/base syntax/parse
-          (utils tc-utils)
-          (env init-envs)
-          (rep filter-rep object-rep type-rep)
-          (types abbrev numeric-tower union)))
+          typed-racket/utils/tc-utils
+          typed-racket/env/init-envs
+          typed-racket/rep/filter-rep
+          typed-racket/rep/object-rep
+          typed-racket/rep/type-rep
+          typed-racket/types/abbrev
+          typed-racket/types/numeric-tower
+          typed-racket/types/union))
 
 (define-for-syntax ce-env
   (make-env
