@@ -33,11 +33,11 @@
          "htdp-langs-save-file-prefix.rkt"
          "htdp-langs-interface.rkt"
 
-         (only-in test-engine/syntax
-                  report-signature-violation! test-execute test)
+         (only-in test-engine/syntax test-execute test)
 	 (except-in test-engine/test-engine signature-violation)
          test-engine/test-markup
          test-engine/test-display-gui
+         htdp/bsl/runtime
          deinprogramm/signature/signature)
 
 (require setup/collects
@@ -133,8 +133,10 @@
                  get-accept-quasiquote? get-read-accept-dot)
         (define/override (config-panel parent)
           (sharing/not-config-panel (get-allow-sharing?) (get-accept-quasiquote?) parent))
-          
+
         (define/override (on-execute settings run-in-user-thread)
+          ;; do this first so we can overide global-port-print-handler
+          (super on-execute settings run-in-user-thread)
           (let ([drs-namespace (current-namespace)]
                 [set-result-module-name 
                  ((current-module-name-resolver) '(lib "lang/private/set-result.ss") #f #f #t)]
@@ -163,10 +165,6 @@
                (namespace-attach-module drs-namespace scheme-signature-module-name)
                (namespace-require scheme-signature-module-name)
                (initialize-test-object!)
-               ;; record signature violations with the test engine
-               (signature-violation-proc
-                (lambda (obj signature message blame)
-                  (report-signature-violation! obj signature message blame)))
                ;; It the test engine plugin (test-engine/test-tool) is not
                ;; installed, still run the tests but don't connect to the
                ;; graphical interface. Instead, let the existing textual
@@ -178,128 +176,35 @@
                     (test-display-results! (drscheme:rep:current-rep)
                                            drs-eventspace
                                            markup))))
-               (get-rewritten-error-message-parameter get-rewriten-error-message)
+
                (signature-checking-enabled?
                 (get-preference 'signatures:enable-checking? (lambda () #t)))
-               (render-value-parameter (λ (value port)
-                                         (render-value/format value settings port 40))))))
-          (super on-execute settings run-in-user-thread)
-            
-          ;; set the global-port-print-handler after the super class because the super sets it too
-          (run-in-user-thread
-           (lambda ()
-             (define my-setup-printing-parameters 
-               (drscheme:language:make-setup-printing-parameters))
-             (global-port-print-handler
-              (λ (value port [depth 0])
-                (teaching-language-render-value/format my-setup-printing-parameters
-                                                       value settings port 'infinity))))))
+
+               (configure/settings (sl-runtime-settings (drscheme:language:simple-settings-printing-style settings)
+                                                        (drscheme:language:simple-settings-fraction-style settings)
+                                                        (drscheme:language:simple-settings-show-sharing settings)
+                                                        (drscheme:language:simple-settings-insert-newlines settings)
+                                                        (htdp-lang-settings-tracing? settings)
+                                                        (htdp-lang-settings-true/false/empty-as-ids? settings)
+                                                        (get-abbreviate-cons-as-list)
+                                                        (get-use-function-output-syntax?)))))))
 
         (define/private (teaching-languages-error-value->string settings v len)
           (let ([sp (open-output-string)])
-            (set-printing-parameters settings (λ () (print v sp)))
+            (print v sp)
             (flush-output sp)
             (let ([s (get-output-string sp)])
               (cond
                 [(<= (string-length s) len) s]
                 [else (string-append (substring s 0 (- len 3)) "...")]))))
 
-        ;; set-printing-parameters : settings ( -> TST) -> TST
-        ;; is implicitly exposed to the stepper.  watch out!  --  john
-        (define/public (set-printing-parameters settings thunk)
-          (define img-str "#<image>")
-          (define (is-image? val)
-            (or (is-a? val ic:image%)         ;; 2htdp/image
-                (is-a? val cache-image-snip%) ;; htdp/image
-                (is-a? val image-snip%)       ;; literal image constant
-                (is-a? val bitmap%)))         ;; works in other places, so include it here too
-          (define tfe-ids? (htdp-lang-settings-true/false/empty-as-ids? settings))
-          (parameterize ([pc:booleans-as-true/false tfe-ids?]
-                         [pc:add-make-prefix-to-constructor #t]
-                         [print-boolean-long-form #t]
-                         [pc:abbreviate-cons-as-list (get-abbreviate-cons-as-list)]
-                         [pc:current-print-convert-hook
-                          (let ([ph (pc:current-print-convert-hook)])
-                            (lambda (val basic sub)
-                              (cond
-                                [(and (not tfe-ids?) (equal? val '())) ''()]
-                                [(equal? val set!-result) '(void)]
-                                [(signature? val)
-                                 (or (signature-name val)
-                                     '<signature>)]
-				[(bytes? val)
-				 (if (< (bytes-length val) 100)
-				     val
-				     (bytes-append (subbytes val 0 99) #"... truncated"))]
-                                [else (ph val basic sub)])))]
-                         [pretty-print-show-inexactness #t]
-                         [pretty-print-exact-as-decimal #t]
-                         [pretty-print-print-hook
-                          (let ([oh (pretty-print-print-hook)])
-                            (λ (val display? port)
-                              (if (and (not (port-writes-special? port))
-                                       (is-image? val))
-                                  (begin (display img-str port)
-                                         (string-length img-str))
-                                  (oh val display? port))))]
-                         [pretty-print-size-hook
-                          (let ([oh (pretty-print-size-hook)])
-                            (λ (val display? port)
-                              (if (and (not (port-writes-special? port))
-                                       (is-image? val))
-                                  (string-length img-str)
-                                  (oh val display? port))))]
-                         [pc:use-named/undefined-handler
-                          (lambda (x)
-                            (and (get-use-function-output-syntax?)
-                                 (procedure? x)
-                                 (object-name x)))]
-                         [pc:named/undefined-handler
-                          (lambda (x)
-                            (string->symbol
-                             (format "function:~a" (object-name x))))])
-            (thunk)))
-          
         (define/override (render-value/format value settings port width)
-          (teaching-language-render-value/format drscheme:language:setup-printing-parameters
-                                                 value settings port width))
+          (sl-render-value/format value port width))
         (define/override (render-value value settings port)
-          (teaching-language-render-value/format drscheme:language:setup-printing-parameters
-                                                 value settings port 'infinity))
-          
-        (define/private (teaching-language-render-value/format setup-printing-parameters 
-                                                               value settings port width)
-          ;; set drscheme's printing parameters
-          (setup-printing-parameters
-           (λ ()
-             ;; then adjust the settings for the teaching languages
-             (set-printing-parameters
-              settings
-              (λ ()
-                (let*-values ([(converted-value write?)
-                               (call-with-values
-                                (lambda ()
-                                  (drscheme:language:simple-module-based-language-convert-value
-                                   value settings))
-                                (case-lambda
-                                  [(converted-value) (values converted-value #t)]
-                                  [(converted-value write?) (values converted-value write?)]))])
-                  (let ([pretty-out (if write? pretty-write pretty-print)])
-                    (cond
-                      [(drscheme:language:simple-settings-insert-newlines settings)
-                       (if (number? width)
-                           (parameterize ([pretty-print-columns width])
-                             (pretty-out converted-value port))
-                           (pretty-out converted-value port))]
-                      [else
-                       (parameterize ([pretty-print-columns 'infinity])
-                         (pretty-out converted-value port))
-                       (newline port)]))))))
-           settings
-           width))
+          (sl-render-value/format value port 'infinity))
           
         (super-new)))
-      
+
     ;; sharing/not-config-panel :  boolean boolean parent 
     ;;                         -> (case-> (-> settings) (settings -> void))
     ;; constructs the config-panel for a language without a sharing option.
@@ -573,7 +478,7 @@
         (define/override (get-style-delta)
           (get-htdp-style-delta))
           
-        (inherit get-reader set-printing-parameters)
+        (inherit get-reader)
           
         (define/override (front-end/complete-program port settings)
           (expand-teaching-program port  

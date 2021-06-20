@@ -98,7 +98,13 @@
             (else
              (insert-markup (image-markup-alt-markup markup) text src-editor))))
          (else
-          (insert-markup (image-markup-alt-markup markup) text src-editor)))))))
+          (insert-markup (image-markup-alt-markup markup) text src-editor)))))
+    [(number-markup? markup)
+     (send text insert
+           (number-snip:number->string/snip (number-markup-number markup)
+                                            #:exact-prefix (number-markup-exact-prefix markup)
+                                            #:inexact-prefix (number-markup-inexact-prefix markup)
+                                            #:fraction-view (number-markup-fraction-view markup)))]))
      
 (define (for-each/between proc between list)
   (let loop ((list list))

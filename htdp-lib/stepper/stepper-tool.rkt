@@ -56,56 +56,7 @@
            (log-stepper-debug "render-to-sexp got a boolean: ~v\n" val))
          (or (and (procedure? val)
                   (object-name val))
-             (parameterize ([pretty-print-show-inexactness (stepper:show-inexactness?)]
-                            [current-print-convert-hook stepper-print-convert-hook])
-               (call-with-values
-                (lambda ()
-                  ;; I'm not sure that these print settings actually need to be set...
-                  ;; or... that they need to be set *here*. They might need to be set
-                  ;; when the pretty-print to the actual width occurs. That is, when
-                  ;; they get converted to strings...
-                  ;; try removing this wrapper when things are working. (2015-10-22)
-                  (call-with-print-settings
-                   language-level
-                   settings
-                   (lambda ()
-                     (drracket:language:simple-module-based-language-convert-value
-                      val
-                      settings))))
-                (lambda args
-                  (match args
-                    [(list value should-be-written?)
-                     (cond [should-be-written?
-                            ;; warning, don't know if this happens in the stepper:
-                            (log-stepper-debug "print-convert returned writable: ~v\n" value)
-                            value]
-                           [else
-                            ;; apparently some values should be written and some should be printed.
-                            ;; Since we formulate a single value to send to the output, this is hard
-                            ;; for us.
-                            ;; A cheap hack is to print the value and then read it again.
-                            ;; Unfortunately, this fails on images. To layer a second hack on
-                            ;; the first one, we intercept this failure and just return the
-                            ;; value.
-                            (with-handlers ([exn:fail:read?
-                                             (λ (exn)
-                                               (log-stepper-debug
-                                                "read fail, print convert returning: ~s\n"
-                                                value)
-                                               value)])
-                              (define result-value
-                                (let ([os-port (open-output-string)])
-                                  (print value os-port)
-                                  (when (boolean? val)
-                                    (log-stepper-debug "string printed by print: ~v\n" (get-output-string os-port)))
-                                  ;; this 'read' is somewhat scary. I'd like to
-                                  ;; get rid of this:
-                                  (read (open-input-string (get-output-string os-port)))))
-                              (log-stepper-debug "print-convert returned string that read mapped to: ~s\n" result-value)
-                              result-value)])]
-                    [(list value)
-                     (log-stepper-debug "render-to-sexp: value returned from convert-value: ~v\n" value)
-                     value]))))))
+             (print-convert val)))
 
        (super-instantiate ())))))
 
