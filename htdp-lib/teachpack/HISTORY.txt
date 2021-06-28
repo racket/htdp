@@ -1,3 +1,12 @@
+------------------------------------------------------------------------
+version 8.2				  [Mon Jun 28 11:02:00 EDT 2021]
+
+* The test-engine has undergone additional repairs in preparation of
+  getting the #lang teaching languages right. This should not cause
+  any major observable regression in the menu-based languages or uses
+  of the test-engine package.
+  
+------------------------------------------------------------------------
 version 8.1				  [Fri Apr  9 19:39:50 EDT 2021]
 
 * *SL: ellipses no longer "swallow" code but allow drracket to show
