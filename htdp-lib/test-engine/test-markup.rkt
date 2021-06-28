@@ -286,7 +286,7 @@
   (vertical
    (horizontal "        " (reason->markup reason))
    (horizontal
-    (srcloc-markup srcloc (format-srcloc check-srcloc))
+    (srcloc-markup check-srcloc (format-srcloc check-srcloc))
     (if srcloc
         (horizontal
          " "
