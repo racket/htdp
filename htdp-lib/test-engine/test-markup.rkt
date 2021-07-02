@@ -333,7 +333,7 @@
 
 (module+ test
   (require rackunit
-           (only-in simple-tree-text-markup/data markup?)
+           (only-in simple-tree-text-markup/data markup? srcloc-markup? srcloc-markup-srcloc markup-folder)
            (only-in deinprogramm/signature/signature-german make-predicate-signature))
 
   (parameterize
@@ -469,7 +469,18 @@
                             fail-violated-signature)
                       (list signature-violation-1 signature-violation-2 signature-violation-3))))
 
+  (define markup-srclocs
+    (markup-folder append '()
+                   `((,srcloc-markup? . ,(lambda (markup)
+                                           (list (srcloc-markup-srcloc markup)))))))
   
+  (check-equal?
+   (markup-srclocs
+    (test-object->markup
+     (make-test-object (list void)
+                       (list fail-unexpected-error)
+                       '())))
+   (list (srcloc 'exn 2 1 30 40) (srcloc 'source 1 0 10 20)))
   )
 
 
