@@ -3,7 +3,7 @@
 #reader(lib "htdp-beginner-reader.ss" "lang")((modname check-failed-bsl) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 
 ;; MUST BE IN BSL 
-;; expect the two errors to be reported as two failed tests
+;; expect the two errors to be reported as four failed tests
 ;; f: expects only 1 argument, but found 2
 
 (define (f x) x)
