@@ -1,7 +1,8 @@
 #lang scheme/base
 (require scheme/class string-constants/string-constant
          (prefix-in x: "private/step-img.rkt")
-         (for-syntax racket/base))
+         (for-syntax racket/base)
+         (only-in htdp/bsl/runtime configure/settings))
 (provide stepper-drracket-button stepper-button-callback)
 
 ; hack to make sure the key gets generated once at compile time, and
@@ -17,4 +18,6 @@
   (list 
    (string-constant stepper-button-label)
    x:step-img
-   (λ (drs-frame) (send (send drs-frame get-current-tab) stepper-button-callback language settings))))
+   (λ (drs-frame)
+     (configure/settings settings)
+     (send (send drs-frame get-current-tab) stepper-button-callback language settings))))
