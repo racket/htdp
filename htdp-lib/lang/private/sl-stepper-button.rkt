@@ -18,7 +18,8 @@
 
 (define (sl-stepper-drracket-button options)
   (let ([settings (options->sl-runtime-settings options)])
-    (stepper-drracket-button (new sl-stepper-language% [settings settings]) settings)))
+    (stepper-drracket-button (new sl-stepper-language% [settings settings]) settings
+                             (lambda () (configure/settings settings)))))
 
 (define-logger stepper)
 
