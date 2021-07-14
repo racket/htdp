@@ -1,4 +1,4 @@
 #lang info
 
 (define test-responsibles '(("test-image.rkt" robby)))
-(define test-timeouts '(("test-htdp.rkt" 1000)))
+(define test-timeouts '(("test-htdp.rkt" 1500)))
