@@ -135,8 +135,6 @@
           (sharing/not-config-panel (get-allow-sharing?) (get-accept-quasiquote?) parent))
 
         (define/override (on-execute settings run-in-user-thread)
-          ;; do this first so we can overide global-port-print-handler
-          (super on-execute settings run-in-user-thread)
           (let ([drs-namespace (current-namespace)]
                 [set-result-module-name 
                  ((current-module-name-resolver) '(lib "lang/private/set-result.ss") #f #f #t)]
@@ -147,12 +145,14 @@
                   '(lib "deinprogramm/signature/signature-english.rkt") #f #f #t)]
                 [tests-on? (with-handlers ([exn:unknown-preference? (λ (e) 'uninstalled)])
                              (preferences:get 'test-engine:enable?))])
+
+            ;; first we attach some modules and set up some basic configuration
             (run-in-user-thread
              (lambda ()
                (when (getenv "PLTDRHTDPNOCOMPILED") (use-compiled-file-paths '()))
                (read-accept-quasiquote (get-accept-quasiquote?))
                (namespace-attach-module drs-namespace ''drscheme-secrets)
-               (namespace-attach-module drs-namespace set-result-module-name)                 
+               (namespace-attach-module drs-namespace set-result-module-name)
                (error-display-handler teaching-languages-error-display-handler)
                (error-value->string-handler 
                 (λ (x y) (teaching-languages-error-value->string settings x y)))
@@ -163,7 +163,15 @@
                (namespace-attach-module drs-namespace scheme-test-module-name)
                (namespace-require scheme-test-module-name)
                (namespace-attach-module drs-namespace scheme-signature-module-name)
-               (namespace-require scheme-signature-module-name)
+               (namespace-require scheme-signature-module-name)))
+
+            ;; the super method might require some modules in the user's namespace
+            ;; so make sure that we do it after we've shared the modules above
+            (super on-execute settings run-in-user-thread)
+
+            ;; now we're in a position to override the global-port-print-handler
+            (run-in-user-thread
+             (lambda ()
                (initialize-test-object!)
                ;; It the test engine plugin (test-engine/test-tool) is not
                ;; installed, still run the tests but don't connect to the
