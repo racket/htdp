@@ -197,12 +197,19 @@
 (define (value->markup value)
   (let-values (((port get-markup)
                 (make-markup-output-port/unsafe (lambda (special)
-                                                  (image-markup special "#<image>")))))
+                                                  (if (markup? special) ; number-markup, typically
+                                                      special
+                                                      (image-markup special "#<image>"))))))
     (render-value value port)
     (get-markup)))
 
 (define (reason->markup fail)
   (cond
+    [(unexpected-error/markup? fail)
+     (format->markup (string-constant test-engine-check-encountered-error)
+                     (unexpected-error-expected fail)
+                     (unexpected-error/markup-error-markup fail))]
+
     [(unexpected-error? fail)
      (format->markup (string-constant test-engine-check-encountered-error)
                      (unexpected-error-expected fail)
