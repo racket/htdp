@@ -12,6 +12,7 @@
          (only-in racket/list append-map)
          string-constants
          test-engine/test-engine
+         (only-in simple-tree-text-markup/data markup?)
          simple-tree-text-markup/construct
          simple-tree-text-markup/text
          simple-tree-text-markup/port
