@@ -206,11 +206,6 @@
 
 (define (reason->markup fail)
   (cond
-    [(unexpected-error/markup? fail)
-     (format->markup (string-constant test-engine-check-encountered-error)
-                     (unexpected-error-expected fail)
-                     (unexpected-error/markup-error-markup fail))]
-
     [(unexpected-error? fail)
      (format->markup (string-constant test-engine-check-encountered-error)
                      (unexpected-error-expected fail)
