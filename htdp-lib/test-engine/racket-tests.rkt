@@ -20,7 +20,10 @@
                      #;"requiring from" lang/private/firstorder #;"avoids load cycle")
          test-engine/test-engine
          (only-in test-engine/test-markup get-rewritten-error-message)
-         test-engine/syntax)
+         test-engine/syntax
+         racket/class
+         simple-tree-text-markup/construct
+         simple-tree-text-markup/port)
 
 (define INEXACT-NUMBERS-FMT
   "check-expect cannot compare inexact numbers. Try (check-within test ~a range).")
@@ -70,9 +73,25 @@
             (if (and (not (= found 0)) fn-is-large) "only " "")
             (if (= found 0) "none" found))))
 
+(define (exn->markup exn)
+  (let-values (([port get-markup] (make-markup-output-port/unsafe (lambda (special)
+                                                                    (cond
+                                                                      [(and (object? special)
+                                                                            (is-a? special srclocs-special<%>)
+                                                                            (send special get-srclocs))
+                                                                       => (lambda (srclocs)
+                                                                            (if (and (pair? srclocs)
+                                                                                     (srcloc? (car srclocs)))
+                                                                                (srcloc-markup (car srclocs) (srcloc->string (car srclocs)))
+                                                                                empty-markup))]
+                                                                      [else empty-markup])))))
+    (parameterize ([current-error-port port])
+      ((error-display-handler) (exn-message exn) exn)
+      (get-markup))))
+
 (define (make-exn->unexpected-error src expected)
   (lambda (exn)
-    (unexpected-error src expected exn)))
+    (unexpected-error/markup src expected exn (exn->markup exn))))
 
 (define-syntax (check-expect stx)
   (check-context! 'check-expect CHECK-EXPECT-DEFN-STR stx)
@@ -179,7 +198,7 @@
           (satisfied-failed src actual name)]
          [else #t])))
    (lambda (exn)
-     (unsatisfied-error src name exn))))
+     (unsatisfied-error/markup src name exn (exn->markup exn)))))
 
 (define-syntax (check-within stx)
   (check-context! 'check-within CHECK-WITHIN-DEFN-STR stx)
@@ -223,7 +242,7 @@
                         (let ((msg (get-rewritten-error-message exn)))
                           (if (equal? msg error)
                               #t
-                              (incorrect-error src error exn))))])
+                              (incorrect-error/markup src error exn (exn->markup exn)))))])
        (let ([actual (test)])
          (expected-error src error actual))))
    (make-exn->unexpected-error src error))) ; probably can't happen

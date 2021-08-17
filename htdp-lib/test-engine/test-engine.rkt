@@ -1,6 +1,7 @@
 ; Manage the running and recording of tests and their failures
 #lang racket/base
-(require racket/contract)
+(require racket/contract
+         (only-in simple-tree-text-markup/data markup?))
 
 (provide (contract-out
           (struct test-object
@@ -24,17 +25,29 @@
           ; srcloc the source location of the actual check
           (struct fail-reason ((srcloc srcloc?)))
 
-          ; an error happened instead of an expected valuee
+          ; an error happened instead of an expected value
           (struct (unexpected-error fail-reason)
             ((srcloc srcloc?)
              (expected any/c)
              (exn exn?)))
+
+          (struct (unexpected-error/markup unexpected-error)
+            ((srcloc srcloc?)
+             (expected any/c)
+             (exn exn?)
+             (error-markup markup?)))
 
           ; wanted to satisfy a predicate, but error happend
           (struct (unsatisfied-error fail-reason)
             ((srcloc srcloc?)
              (name string?)
              (exn exn?)))
+
+          (struct (unsatisfied-error/markup unsatisfied-error)
+            ((srcloc srcloc?)
+             (name string?)
+             (exn exn?)
+             (error-markup markup?)))
 
           ; some result came out, but not the one we expected
           (struct (unequal fail-reason)
@@ -54,6 +67,12 @@
             ((srcloc srcloc?)
              (expected string?)
              (exn exn?)))
+
+          (struct (incorrect-error/markup incorrect-error)
+            ((srcloc srcloc?)
+             (expected string?)
+             (exn exn?)
+             (error-markup markup?)))
 
           ; we expected an error, but a value came out instead
           (struct (expected-error fail-reason)
@@ -181,7 +200,13 @@
 (struct unexpected-error fail-reason (expected exn)
   #:transparent)
 
+(struct unexpected-error/markup unexpected-error (error-markup)
+  #:transparent)
+
 (struct unsatisfied-error fail-reason (name exn)
+  #:transparent)
+
+(struct unsatisfied-error/markup unsatisfied-error (error-markup)
   #:transparent)
 
 (struct unequal fail-reason (actual expected)
@@ -191,6 +216,9 @@
   #:transparent)
 
 (struct incorrect-error fail-reason (expected exn)
+  #:transparent)
+
+(struct incorrect-error/markup incorrect-error (error-markup)
   #:transparent)
 
 (struct expected-error fail-reason (message value)

@@ -12,7 +12,10 @@
          (only-in racket/list append-map)
          string-constants
          test-engine/test-engine
-         (only-in simple-tree-text-markup/data markup?)
+         (only-in simple-tree-text-markup/data
+                  markup?
+                  srcloc-markup? srcloc-markup-srcloc
+                  transform-markup)
          simple-tree-text-markup/construct
          simple-tree-text-markup/text
          simple-tree-text-markup/port
@@ -161,6 +164,12 @@
         (format (string-constant test-engine-at-line-column)
                 line col))))
 
+; provide properly translated text for srclocs
+(define (markup-reformat-srcloc markup)
+  (transform-markup `((,srcloc-markup? . ,(lambda (srcloc _markup)
+                                            (srcloc-markup srcloc (format-srcloc srcloc)))))
+                    markup))
+
 (define (format->markup format-string . vals)
   (let loop ((chars (string->list format-string))
              (vals vals)
@@ -182,6 +191,14 @@
                 (cdr vals)
                 (cons (framed-markup (value->markup (car vals))) rev-markups)
                 rev-lines))
+         ((#\a #\A)
+          (let ((val (car vals)))
+            (loop (cddr chars)
+                  (cdr vals)
+                  (if (markup? val)
+                      (cons (markup-reformat-srcloc val) rev-markups)
+                      (cons (format "~a" (car vals)) rev-markups))
+                  rev-lines)))
          (else
           (loop (cddr chars)
                 (cdr vals)
@@ -206,15 +223,27 @@
 
 (define (reason->markup fail)
   (cond
+    [(unexpected-error/markup? fail)
+     (format->markup (string-constant test-engine-check-encountered-error)
+                     (unexpected-error-expected fail)
+                     (unexpected-error/markup-error-markup fail))]
+     
     [(unexpected-error? fail)
      (format->markup (string-constant test-engine-check-encountered-error)
                      (unexpected-error-expected fail)
                      (get-rewritten-error-message (unexpected-error-exn fail)))]
+
+    [(unsatisfied-error/markup? fail)
+     (format->markup
+      "check-satisfied for ~a encountered an error.\n  :: ~a"
+      (unsatisfied-error-name fail)
+      (unsatisfied-error/markup-error-markup fail))]
     [(unsatisfied-error? fail)
      (format->markup
       "check-satisfied for ~a encountered an error.\n  :: ~a"
       (unsatisfied-error-name fail)
       (get-rewritten-error-message (unsatisfied-error-exn fail)))]
+
     [(unequal? fail)
      (format->markup (string-constant test-engine-actual-value-differs-error)
                      (unequal-actual fail)
@@ -233,10 +262,16 @@
                          (not-within-actual fail)
                          (not-within-expected fail)
                          (not-within-range fail)))]
+    
+    [(incorrect-error/markup? fail)
+     (format->markup (string-constant test-engine-encountered-error-error)
+                     (incorrect-error-expected fail)
+                     (incorrect-error/markup-error-markup fail))]
     [(incorrect-error? fail)
      (format->markup (string-constant test-engine-encountered-error-error)
                      (incorrect-error-expected fail)
                      (get-rewritten-error-message (incorrect-error-exn fail)))]
+    
     [(expected-error? fail)
      (cond
        ((expected-error-message fail)
@@ -379,9 +414,19 @@
     (failed-check
      (unexpected-error (srcloc 'source 1 0 10 20) 'expected (exn "not expected" (current-continuation-marks)))
      (srcloc 'exn 2 1 30 40)))
+  (define fail-unexpected-error/markup
+    (failed-check
+     (unexpected-error/markup (srcloc 'source 1 0 10 20) 'expected (exn "not expected" (current-continuation-marks))
+                              (vertical "line1" "line2"))
+     (srcloc 'exn 2 1 30 40)))
   (define fail-unsatisfied-error
     (failed-check
      (unsatisfied-error (srcloc 'source 1 0 10 20) "zero?" (exn "not expected" (current-continuation-marks)))
+     #f))
+  (define fail-unsatisfied-error/markup
+    (failed-check
+     (unsatisfied-error/markup (srcloc 'source 1 0 10 20) "zero?" (exn "not expected" (current-continuation-marks))
+                               (vertical "line1" "line2"))
      #f))
   (define fail-unequal
     (failed-check
@@ -394,6 +439,11 @@
   (define fail-incorrect-error
     (failed-check
      (incorrect-error (srcloc 'source 1 0 10 20) "expected" (exn "not expected" (current-continuation-marks)))
+     #f))
+  (define fail-incorrect-error/markup
+    (failed-check
+     (incorrect-error/markup (srcloc 'source 1 0 10 20) "expected" (exn "not expected" (current-continuation-marks))
+                             (vertical "line1" "line2"))
      #f))
   (define fail-expected-error
     (failed-check
@@ -465,8 +515,10 @@
    markup?
    (test-object->markup
     (make-test-object (list void void)
-                      (list fail-unexpected-error fail-unsatisfied-error
-                            fail-unequal fail-not-within fail-incorrect-error
+                      (list fail-unexpected-error fail-unexpected-error/markup
+                            fail-unsatisfied-error fail-unsatisfied-error/markup
+                            fail-unequal fail-not-within
+                            fail-incorrect-error fail-incorrect-error/markup
                             fail-not-mem fail-not-range fail-satisfied-failed
                             fail-property-fail fail-property-error
                             fail-violated-signature)
