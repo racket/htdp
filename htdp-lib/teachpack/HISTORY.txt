@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+
+* supplied (and fixed) documentation for functions in Intermediate
+  with Lambda 
+
+------------------------------------------------------------------------
 version 8.2				  [Mon Jun 28 11:02:00 EDT 2021]
 
 * The test-engine has undergone additional repairs in preparation of
