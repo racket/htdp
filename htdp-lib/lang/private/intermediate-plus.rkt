@@ -16,19 +16,21 @@
  (begin
    (require scribble/manual scribble/examples (except-in scribble/eval examples) "sl-eval.rkt")
    (define (isl)
-     (define *bsl
-       (isl-eval
+     (define eve
+       (isl+-eval
         [(define i 3)
          (define a-list '(0 1 2 3 4 5 6 7 8 9))
          (define threshold 3)]))
-     (set! isl (lambda () *bsl))
-     *bsl)
+     (set! isl (lambda () eve))
+     eve)
  
   @(define ev-isl (isl)))
-
- (all-from-except beginner:
-                  (submod lang/private/beginner-funs without-wrapper)
-                  procedures + * / append
+ 
+ (all-from-except intermediate:
+                  lang/private/intermediate-funs
+                  procedures
+                  + * /
+                  append
                   string-append
                   string=? 
                   string<?  
@@ -40,14 +42,25 @@
                   string-ci>?   
                   string-ci<=?  
                   string-ci>=?
-
                   andmap
+                  apply
+                  argmax
+                  argmin
+                  build-list
+                  build-string
+                  compose
                   filter
+                  foldl
+                  foldr
+                  posn
                   map
+                  memf
                   ormap
-                  ) 
+                  sort
+                  quicksort
+                  procedure?)
  
- ("Numbers (relaxed conditions)"
+ ("Numbers (relaxed conditions plus)"
   @defproc[(+ [x number] ...) number]{
  Adds all given numbers.
  In ISL and up: @racket[+] works when applied to only one number or none. 
@@ -127,7 +140,7 @@
               (append)]}
   )
  
- ("Higher-Order Functions"
+ ("Higher-Order Functions (with Lambda)"
   @defproc[((intermediate-map map) [f (X ... -> Z)] [l (listof X)] ...) (listof Z)]{
  Constructs a new list by applying a function to each item on one or
  more existing lists:
