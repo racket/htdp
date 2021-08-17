@@ -28,7 +28,9 @@
 
  (all-from-except beginner:
                   (submod lang/private/beginner-funs without-wrapper)
-                  procedures + * / append
+                  procedures
+                  + * /
+                  append
                   string-append
                   string=? 
                   string<?  

@@ -66,10 +66,4 @@
 (provide-and-scribble 
  procedures
  (begin)
- (all-from beginner: lang/private/intermediate-funs procedures))
-
-#;
-(provide
- (rename-out
-  [beginner-list? list?]))
-
+ (all-from intermediate: lang/private/intermediate-funs procedures))
