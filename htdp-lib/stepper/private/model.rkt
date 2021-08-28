@@ -52,6 +52,7 @@
          "macro-unwind.rkt"
          "lifting.rkt"
          (only-in test-engine/syntax test-silence)
+         (only-in test-engine/racket-tests test-engine-is-using-error-display-handler?)
          test-engine/test-markup
          
          ;; for breakpoint display
@@ -509,18 +510,19 @@
   ;; the error (along with the held "before" step if present
   (define (err-display-handler _message exn)
     (define message (get-rewritten-error-message exn))
-    (match maybe-held-exp
-      [(struct skipped-step ())
-       (receive-result (Error-Result message))]
-      [(struct no-sexp ())
-        (receive-result (Error-Result message))]
-      [(struct held (exps dc posn-info))
-       (begin
-         (receive-result
-          (Before-Error-Result (map sstx (append held-finished-list exps))
-                               message
-                               posn-info))
-         (set-maybe-held-exp! the-no-sexp))]))
+    (unless (test-engine-is-using-error-display-handler?)
+      (match maybe-held-exp
+        [(struct skipped-step ())
+         (receive-result (Error-Result message))]
+        [(struct no-sexp ())
+         (receive-result (Error-Result message))]
+        [(struct held (exps dc posn-info))
+         (begin
+           (receive-result
+            (Before-Error-Result (map sstx (append held-finished-list exps))
+                                 message
+                                 posn-info))
+           (set-maybe-held-exp! the-no-sexp))])))
 
   (program-expander
    (lambda () ; init

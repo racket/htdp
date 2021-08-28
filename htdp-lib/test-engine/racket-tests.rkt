@@ -10,7 +10,8 @@
          check-satisfied ;; syntax : (check-satisfied <expression> <expression>)
          ;; re-exports from test-engine/syntax
          test-execute test-silence
-         test) 
+         test
+         test-engine-is-using-error-display-handler?) 
 
 (require lang/private/teachprims
          racket/match
@@ -73,6 +74,11 @@
             (if (and (not (= found 0)) fn-is-large) "only " "")
             (if (= found 0) "none" found))))
 
+; The stepper needs this: it binds error-display-handler to get notified of an error.
+; However, we call (error-display-handler) just to generate markup, and the stepper
+; needs to ignore that.
+(define test-engine-is-using-error-display-handler? (make-parameter #f))
+
 (define (exn->markup exn)
   (let-values (([port get-markup] (make-markup-output-port/unsafe (lambda (special)
                                                                     (cond
@@ -85,9 +91,10 @@
                                                                                 (srcloc-markup (car srclocs) (srcloc->string (car srclocs)))
                                                                                 empty-markup))]
                                                                       [else empty-markup])))))
-    (parameterize ([current-error-port port])
-      ((error-display-handler) (exn-message exn) exn)
-      (get-markup))))
+    (parameterize ([current-error-port port]
+                   [test-engine-is-using-error-display-handler? #t])
+        ((error-display-handler) (exn-message exn) exn)
+        (get-markup))))
 
 (define (make-exn->unexpected-error src expected)
   (lambda (exn)
