@@ -14,7 +14,7 @@
     (memq h *hidden)))
 
 (check-docs (quote htdp/world))
-(check-docs (quote htdp/testing))
+(check-docs (quote htdp/testing) #:skip (lambda (h) (eq? h 'test-engine-is-using-error-display-handler?))) ; will hopefully go away again
 (check-docs (quote htdp/show-queen))
 (check-docs (quote htdp/servlet2) #:skip legacy-module)
 (check-docs (quote htdp/servlet) #:skip legacy-module)
