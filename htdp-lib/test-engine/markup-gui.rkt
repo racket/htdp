@@ -146,6 +146,8 @@
   (let* ([framed-text (new framed-text%)]
          [snip (new editor-snip% [editor framed-text])])
     (send text set-styles-sticky #f)
+    ;; seems to prevent number-snip% from setting rogue style
+    (send framed-text set-styles-fixed #t)
     (send snip use-style-background #t)
     (insert-markup markup framed-text src-editor #f)
     (when (color-prefs:known-color-scheme-name? 'drracket:read-eval-print-loop:value-color)
