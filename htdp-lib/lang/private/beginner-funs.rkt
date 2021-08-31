@@ -833,7 +833,7 @@
   @defproc[(substring [s string][i natural-number][j natural-number]) string]{
  Extracts the substring starting at @racket[i] up to @racket[j] (or the
  end if @racket[j] is not provided). 
- @interaction[#:eval (bsl) (substring "hello world" 1 5) (substring "hello world" 4)]
+ @interaction[#:eval (bsl) (substring "hello world" 1 5) (substring "hello world" 1 8) (substring "hello world" 4)]
 }
   @defproc[(string-copy [s string]) string]{
  Copies a string. @;why is it included? 
@@ -867,7 +867,7 @@
 }
   @defproc[([beginner-string<=? string<=?] [s string][t string]) boolean?]{
  Determines whether the strings are ordered in a lexicographically increasing manner.
- @interaction[#:eval (bsl) (string<=? "hello" "hello" "world")]
+ @interaction[#:eval (bsl) (string<=? "hello" "hello")]
 }
   @defproc[([beginner-string>=? string>=?] [s string][t string]) boolean?]{
  Determines whether the strings are ordered in a lexicographically decreasing manner.
