@@ -1499,6 +1499,25 @@
      -> (begin0 7 {13})
      :: {(begin0 7 13)}
      -> {7})
+
+  ;;;;;;;;;;;;
+  ;;
+  ;; ELLIPSES
+  ;;
+  ;;;;;;;;;;;;
+
+  (t1 'ellipses-unused m:beginner/both
+      "(define (f x) ...) (+ 4 5)"
+      `((before-after ((define (f x) ...) {(+ 4 5)})
+                      ((define (f x) ...) {9}))
+        (finished-stepping)))
+
+  ;; strangely, ellipses in parens expand differently...
+  (t1 'ellipses-unused-parens m:beginner/both
+      "(define (f x) (...)) (+ 4 5)"
+      `((before-after ((define (f x) (...)) {(+ 4 5)})
+                      ((define (f x) (...)) {9}))
+        (finished-stepping)))
   
 
   ;; --------------------------------------------------------------------------
