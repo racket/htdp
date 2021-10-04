@@ -1352,9 +1352,10 @@
 (define (stepper-recertify new-stx old-stx)
   (syntax-rearm new-stx old-stx #t))
 
-;; does this stx have the 'stepper-skip-completely property?
+;; does this stx have the 'stepper-skip-completely or 'stepper-black-box-expr property?
 (define (to-be-skipped? stx)
-  (stepper-syntax-property stx 'stepper-skip-completely))
+  (or (stepper-syntax-property stx 'stepper-skip-completely)
+      (stepper-syntax-property stx 'stepper-black-box-expr)))
 
 ;; given a syntax object, return the largest number that appears as part of
 ;; an identifier of the form .*_[0-9]+

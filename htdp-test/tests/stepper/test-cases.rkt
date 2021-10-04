@@ -1506,18 +1506,24 @@
   ;;
   ;;;;;;;;;;;;
 
-  (t1 'ellipses-unused m:beginner/both
+  (t1 'ellipses-unused m:upto-int/lam
       "(define (f x) ...) (+ 4 5)"
-      `((before-after ((define (f x) ...) {(+ 4 5)})
-                      ((define (f x) ...) {9}))
+      `((before-after ((define (f x) ...) (hilite (+ 4 5)))
+                      ((define (f x) ...) (hilite 9)))
         (finished-stepping)))
 
   ;; strangely, ellipses in parens expand differently...
-  (t1 'ellipses-unused-parens m:beginner/both
+  (t1 'ellipses-unused-parens m:upto-int/lam
       "(define (f x) (...)) (+ 4 5)"
-      `((before-after ((define (f x) (...)) {(+ 4 5)})
-                      ((define (f x) (...)) {9}))
+      `((before-after ((define (f x) (...)) (hilite (+ 4 5)))
+                      ((define (f x) (...)) (hilite 9)))
         (finished-stepping)))
+
+  (t1 'ellipses-used m:upto-int/lam
+      "(define f (+ (+ 3 4) (* 2 ...)))"
+      `((before-after ((define f (+ (hilite (+ 3 4)) (* 2 ...))))
+                      ((define f (+ (hilite 7) (* 2 ...)))))
+        (error "...: expected a finished expression, but found a template")))
   
 
   ;; --------------------------------------------------------------------------
