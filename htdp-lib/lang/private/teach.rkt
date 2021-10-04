@@ -1816,9 +1816,13 @@
 	  (quasisyntax/loc stx
             (begin
               #,(dots-error stx (syntax form))
-	      (quote-syntax
-		#,(syntax-property #'rest 'identifiers-as-disappeared-uses? #t)
-		 #:local)))
+	      #,(stepper-syntax-property
+                 (quasisyntax/loc stx
+                   (quote-syntax
+                    #,(syntax-property #'rest 'identifiers-as-disappeared-uses? #t)
+                    #:local))
+                 'stepper-skip-completely
+                 #t)))
 
 	  ;; The solution below enforces that `rest` is syntactically
 	  ;; correct, and as a result, it displays _correct_ binding arrows.
