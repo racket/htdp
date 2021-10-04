@@ -276,7 +276,7 @@ stepper-args-of-call [ADDED BY RECONSTRUCTOR] :
   used by the check-expect unwinder to figure out the expected values.
 
 stepper-hide-completed : don't show the final top-level expression binding
-  for this identifier.
+  for this identifier or rhs expr.
 
 stepper-hide-reduction : don't show any reductions where this term is 
   associated with the topmost mark

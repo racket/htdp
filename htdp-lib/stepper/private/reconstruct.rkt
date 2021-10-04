@@ -608,6 +608,7 @@
 (define (filter-skipped los)
   (filter (lambda (stx)
             (or (stepper-syntax-property stx 'stepper-prim-name)
+                (stepper-syntax-property stx 'stepper-black-box-expr)
                 (not (stepper-syntax-property stx 'stepper-skip-completely))))
           los))
 

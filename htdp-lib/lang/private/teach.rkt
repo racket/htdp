@@ -1795,10 +1795,12 @@
   ;; Produces an expression which raises an error reporting unfinished code.
   (define (dots-error stx name)
     (stepper-syntax-property
-     (quasisyntax/loc stx
-       (error (quote (unsyntax name))
-              "expected a finished expression, but found a template"))
-     'stepper-black-box-expr stx))
+     (stepper-syntax-property
+      (quasisyntax/loc stx
+        (error (quote (unsyntax name))
+               "expected a finished expression, but found a template"))
+      'stepper-black-box-expr stx)
+     'stepper-skip-completely #t))
 
   ;; Expression -> Expression
   ;; Transforms unfinished code (... and the like) to code

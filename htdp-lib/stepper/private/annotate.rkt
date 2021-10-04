@@ -1354,8 +1354,7 @@
 
 ;; does this stx have the 'stepper-skip-completely or 'stepper-black-box-expr property?
 (define (to-be-skipped? stx)
-  (or (stepper-syntax-property stx 'stepper-skip-completely)
-      (stepper-syntax-property stx 'stepper-black-box-expr)))
+  (stepper-syntax-property stx 'stepper-skip-completely))
 
 ;; given a syntax object, return the largest number that appears as part of
 ;; an identifier of the form .*_[0-9]+
