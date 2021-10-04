@@ -16,20 +16,23 @@
 
 ;; stepper-syntax-property : like syntax property, but adds properties to an association
 ;; list associated with the syntax property 'stepper-properties
-
+;; unfortunately, syntax transformers cons together properties from separate trees,
+;; so instead of an association list, this can be a cons tree of association lists.
 (define stepper-syntax-property
-  (case-lambda 
+  (case-lambda
     [(stx tag)
      (unless (member tag known-stepper-syntax-property-names)
        (raise-type-error 'stepper-syntax-property
                          "known stepper property symbol" 1 stx tag))
      (let ([stepper-props (syntax-property stx 'stepper-properties)])
-       (if stepper-props
-           (let ([table-lookup (assq tag stepper-props)])
-             (if table-lookup
+       (cond [stepper-props
+              (define props-alist
+                (flatten-association-list-ilist stepper-props))
+              (define table-lookup (assq tag stepper-props))
+              (if table-lookup
                  (cadr table-lookup)
-                 #f))
-           #f))]
+                 #f)]
+             [else #f]))]
     [(stx tag new-val) 
      (unless (member tag known-stepper-syntax-property-names)
        (raise-type-error 'stepper-syntax-property
@@ -37,8 +40,49 @@
                          stx tag new-val))
      (syntax-property stx 'stepper-properties
                       (cons (list tag new-val)
-                            (or (syntax-property stx 'stepper-properties)
-                                null)))]))
+                            (flatten-association-list-ilist
+                             (or (syntax-property stx 'stepper-properties)
+                                 null))))]))
+
+;; given an improper list of alists, return a single alist
+;; note that this doesn't try to combine or eliminate multiple
+;; uses of the same key, they just wind up appearing twice in the
+;; result, with one binding shadowing the other
+(define (flatten-association-list-ilist alist-tree)
+  (cond [(pair? alist-tree)
+         (cond [(pair? (car alist-tree))
+                ;; this one is the real check:
+                (cond [(pair? (caar alist-tree))
+                       ;; it must be a cons pair of alists, not
+                       ;; just an alist:
+                       (append (car alist-tree)
+                               (flatten-association-list-ilist (cdr alist-tree)))]
+                      [else
+                       alist-tree])]
+               [else
+                (raise-argument-error 'flatten-association-list-tree
+                                      ;; n.b. improper *should* appear here;
+                                      ;; that is, we are expecting an improper list.
+                                      "improper list of association trees"
+                                      0 alist-tree)])]
+        [(null? alist-tree) alist-tree]
+        [else
+         (raise-argument-error 'flatten-association-list-tree
+                               "improper list of association lists"
+                               0 alist-tree)]))
+
+(module+ test
+  (require rackunit)
+  (check-equal?
+   (flatten-association-list-ilist '()) '())
+  (check-equal?
+   (flatten-association-list-ilist
+    '(((stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or)) (stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or)))
+   '((stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or) (stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or)))
+  (check-equal?
+   (flatten-association-list-ilist
+    '((stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or) (stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or)))
+   '((stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or) (stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or))))
 
 
 
