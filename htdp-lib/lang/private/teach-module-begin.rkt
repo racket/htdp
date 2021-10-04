@@ -22,9 +22,7 @@
 (define-syntax (print-results stx)
   (syntax-case stx ()
     ((_ expr)
-     (not (or (syntax-property #'expr 'stepper-hide-completed)
-	      (syntax-property #'expr 'stepper-skip-completely)
-	      (syntax-property #'expr 'test-call)))
+     (not (syntax-property #'expr 'test-call))
      (syntax-property
       (syntax-property
        #'(#%app call-with-values (lambda () expr)
