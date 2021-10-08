@@ -260,7 +260,7 @@
  (for-all ((a Integer)
            (b Integer))
           (= (/ a b) (/ b a))))
-(check-failure property-error?)
+(check-failure property-fail?)
 
 
 
