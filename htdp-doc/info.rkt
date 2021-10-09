@@ -27,3 +27,6 @@
 (define pkg-desc "documentation part of \"htdp\"")
 
 (define pkg-authors '(matthias mflatt robby "sperber@deinprogramm.de"))
+
+(define license
+  '(Apache-2.0 OR MIT))
