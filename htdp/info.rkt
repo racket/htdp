@@ -8,3 +8,6 @@
 (define pkg-desc "Teaching languages for _How to Design Programs_")
 
 (define pkg-authors '(matthias mflatt robby))
+
+(define license
+  '(Apache-2.0 OR MIT))
