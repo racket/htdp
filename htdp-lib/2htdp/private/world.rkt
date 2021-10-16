@@ -127,7 +127,7 @@
                                    (begin (sleep PAUSE) (try (- n 1)))))))
               (define-values (in out) (tcp-connect register port))
               (tcp-register in out name)
-              (printf "... successful registered and ready to receive\n")
+              (printf "... successfully registered and ready to receive\n")
               (set! *out* out)
               (thread (RECEIVE in))))))
       
