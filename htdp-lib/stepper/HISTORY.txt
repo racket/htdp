@@ -1,5 +1,8 @@
 Stepper
 -------
+Changes for 8.3:
+
+Fixed a number of bugs.
 
 Changes for 8.2:
 
