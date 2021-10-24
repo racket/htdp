@@ -4,7 +4,11 @@
 
 ;; MUST BE IN BSL 
 ;; expect the two errors to be reported as four failed tests
+;; this is about plural/singular
+
 ;; f: expects only 1 argument, but found 2
+;; f: expects 1 argument, but found none
+;; g: expects only 2 arguments, but found 3
 
 (define (f x) x)
 (check-expect (f 1 2) 3)
