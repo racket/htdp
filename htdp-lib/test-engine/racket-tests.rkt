@@ -244,7 +244,7 @@
   (execute-test
    src
    (lambda ()
-     (with-handlers ([exn?
+     (with-handlers ([exn:fail?
                       (lambda (exn)
                         (let ((msg (get-rewritten-error-message exn)))
                           (if (equal? msg error)
@@ -258,7 +258,7 @@
   (execute-test
    src
    (lambda ()
-     (with-handlers ([exn?
+     (with-handlers ([exn:fail?
                       (lambda (exn) #t)])
        (let ([actual (test)])
          (expected-error src #f actual))))
