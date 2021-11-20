@@ -190,7 +190,7 @@
   @defproc[(sgn [x real]) (union 1 #i1.0 0 #i0.0 -1 #i-1.0)]{
  Determines the sign of a real number.
  @interaction[#:eval (bsl) (sgn -12)]
-}		       
+}                      
   
   ;; exponents and logarithms 
   @defproc[(expt [x number][y number]) number]{
@@ -231,8 +231,8 @@
  Computes the arctangent of the given number:  
  @interaction[#:eval (bsl) (atan 0) (atan 0.5)]
 
- Also comes in a two-argument version where @racket[(atan x y)] computes
- @racket[(atan (/ x y))] but the signs of @racket[x] and @racket[y]
+ Also comes in a two-argument version where @racket[(atan y x)] computes
+ @racket[(atan (/ y x))] but the signs of @racket[y] and @racket[x]
  determine the quadrant of the result and the result tends to be more
  accurate than that of the 1-argument version in borderline cases:
  @interaction[#:eval (bsl) (atan 3 4) (atan -2 -1)]
