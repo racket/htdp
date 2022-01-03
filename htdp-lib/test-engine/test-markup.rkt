@@ -112,8 +112,8 @@
                           (length signature-violations))
                   empty-line)))
      
-     (check-failures->markup failed-checks)
-     (signature-violations->markup signature-violations))))
+     (signature-violations->markup signature-violations)
+     (check-failures->markup failed-checks))))
 
 (define (check-failures->markup checks)
   (if (pair? checks)
