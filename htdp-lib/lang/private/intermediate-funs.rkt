@@ -196,7 +196,7 @@
  @codeblock{(build-list n f) = (list (f 0) ... (f (- n 1)))}
  @interaction[#:eval (isl) (build-list 22 add1)]
 
- @examples[#:eval ev-isl #:label "Creating a diagnoal matrix:"
+ @examples[#:eval ev-isl #:label "Creating a diagonal matrix:"
  (define (diagonalize i)
    (local ((define (off j)
              (if (= i j) 1 0)))

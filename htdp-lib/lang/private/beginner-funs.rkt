@@ -460,7 +460,7 @@
  Determines whether some value is the empty list.
  @interaction[#:eval (bsl) (empty? '()) (empty? 42)]
 }
-  @defproc[((beginner-cons cons) [x any/x][y list?]) list?]{
+  @defproc[((beginner-cons cons) [x any/c][y list?]) list?]{
  Constructs a list.
  @interaction[#:eval (bsl-eval) (cons 1 '())]
 }
