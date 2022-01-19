@@ -7,5 +7,5 @@
   (list (list '("htdp-icon.gif" "icons")
               "How to Design Programs"
               (string-constant teaching-languages)
-              (string-constant how-to-design-programs)
-              (string-constant beginning-student))))
+              "How to Design Programs"
+              "Beginning Student")))

@@ -1013,8 +1013,8 @@
          (manual #"advanced")
          (language-position
           (list (string-constant teaching-languages)
-                (string-constant how-to-design-programs)
-                (string-constant advanced-student)))
+                "How to Design Programs"
+                "Advanced Student"))
          (language-id "plt:advanced-student")
          (language-numbers '(-500 -500 5))
          (sharing-printing #t)
@@ -1033,12 +1033,12 @@
          (manual #"intermediate-lambda")
          (language-position
           (list (string-constant teaching-languages)
-                (string-constant how-to-design-programs)
-                (string-constant intermediate-student/lambda)))
+                "How to Design Programs"
+                "Intermediate Student with lambda"))
          (language-id "plt:intermediate-student/lambda")
          (style-delta (let ([match (regexp-match-positions
                                     "lambda"
-                                    (string-constant intermediate-student/lambda))])
+                                    "Intermediate Student with lambda")])
                         (if match
                             (let ([pos (car match)])
                               (list (list (make-object style-delta% 'change-family 'modern)
@@ -1061,8 +1061,8 @@
          (manual #"intermediate")
          (language-position
           (list (string-constant teaching-languages)
-                (string-constant how-to-design-programs)
-                (string-constant intermediate-student)))
+                "How to Design Programs"
+                "Intermediate Student"))
          (language-id "plt:intermediate-student")
          (language-numbers '(-500 -500 3))
          (sharing-printing #f)
@@ -1081,8 +1081,8 @@
          (manual #"beginning-abbr")
          (language-position
           (list (string-constant teaching-languages)
-                (string-constant how-to-design-programs)
-                (string-constant beginning-student/abbrev)))
+                "How to Design Programs"
+                "Beginning Student with List Abbreviations"))
          (language-id "plt:beginning-student/abbrev")
          (language-numbers '(-500 -500 2))
          (sharing-printing #f)
@@ -1100,8 +1100,8 @@
          (manual #"beginning")
          (language-position
           (list (string-constant teaching-languages)
-                (string-constant how-to-design-programs)
-                (string-constant beginning-student)))
+                "How to Design Programs"
+                "Beginning Student"))
          (language-numbers '(-500 -500 1))
          (language-id "plt:beginning-student")
          (sharing-printing #f)
