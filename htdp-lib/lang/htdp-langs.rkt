@@ -1013,7 +1013,7 @@
          (manual #"advanced")
          (language-position
           (list (string-constant teaching-languages)
-                "How to Design Programs"
+                |How to Design Programs|
                 "Advanced Student"))
          (language-id "plt:advanced-student")
          (language-numbers '(-500 -500 5))
@@ -1033,7 +1033,7 @@
          (manual #"intermediate-lambda")
          (language-position
           (list (string-constant teaching-languages)
-                "How to Design Programs"
+                |How to Design Programs|
                 "Intermediate Student with lambda"))
          (language-id "plt:intermediate-student/lambda")
          (style-delta (let ([match (regexp-match-positions
@@ -1061,7 +1061,7 @@
          (manual #"intermediate")
          (language-position
           (list (string-constant teaching-languages)
-                "How to Design Programs"
+                |How to Design Programs|
                 "Intermediate Student"))
          (language-id "plt:intermediate-student")
          (language-numbers '(-500 -500 3))
@@ -1081,7 +1081,7 @@
          (manual #"beginning-abbr")
          (language-position
           (list (string-constant teaching-languages)
-                "How to Design Programs"
+                |How to Design Programs|
                 "Beginning Student with List Abbreviations"))
          (language-id "plt:beginning-student/abbrev")
          (language-numbers '(-500 -500 2))
@@ -1100,7 +1100,7 @@
          (manual #"beginning")
          (language-position
           (list (string-constant teaching-languages)
-                "How to Design Programs"
+                |How to Design Programs|
                 "Beginning Student"))
          (language-numbers '(-500 -500 1))
          (language-id "plt:beginning-student")

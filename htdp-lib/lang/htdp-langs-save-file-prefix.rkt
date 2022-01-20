@@ -2,13 +2,15 @@
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; exports the header for a file saved from a drracket buffer in a menu-selected teaching language 
+;; and also a variable that names the textbook
 
 (require racket/contract 
          racket/port)
 
 (provide/contract
  [htdp-save-file-prefix (listof string?)]
- [htdp-file-prefix? (-> input-port? boolean?)])
+ [htdp-file-prefix? (-> input-port? boolean?)]
+ [|How to Design Programs| string?])
 
 
 (define htdp-save-file-prefix
@@ -38,3 +40,5 @@
        (and (string? l)
             (equal? l (car prefix))
             (loop (cdr prefix)))])))
+
+(define |How to Design Programs| "How to Design Programs")
