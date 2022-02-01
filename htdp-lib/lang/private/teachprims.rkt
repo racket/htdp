@@ -344,6 +344,10 @@ namespace.
   (lambda (a b)
     (equal? a b)))
 
+(define-teach beginner =
+  (lambda (a b . args)
+    (apply = a b args)))
+
 (define-teach beginner =~
   (lambda (a b c)
     (check-three a b c '=~ number? 'number number? 'number positive-real? 'non-negative-real)
@@ -509,6 +513,7 @@ namespace.
  beginner-boolean->string
  beginner-random
  beginner-number->string-digits 
+ beginner-=
  beginner-+
  beginner-/
  beginner-*

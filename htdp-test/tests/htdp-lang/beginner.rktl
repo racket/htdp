@@ -97,4 +97,6 @@
 (htdp-syntax-test #''(1 2) "quote: expected the name of a symbol or () after the quote, but found a part")
 (htdp-syntax-test #'''a "quote: expected the name of a symbol or () after the quote, but found a part")
 
+(htdp-err/rt-test (= 1) "=: expects at least 2 arguments, but found only 1")
+
 (report-errs)

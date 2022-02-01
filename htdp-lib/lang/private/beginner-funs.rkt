@@ -112,7 +112,7 @@
  Determines whether some value is a number:
  @interaction[#:eval (bsl) (number? "hello world") (number? 42)] 
 }
-  @defproc[(= [x number][y number][z number] ...) boolean?]{
+  @defproc[((beginner-= =) [x number][y number][z number] ...) boolean?]{
  Compares numbers for equality.
  @interaction[#:eval (bsl) (= 42 2/5)]
 }
