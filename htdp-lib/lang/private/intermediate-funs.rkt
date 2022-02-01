@@ -29,7 +29,7 @@
  (all-from-except beginner:
                   (submod lang/private/beginner-funs without-wrapper)
                   procedures
-                  + * /
+                  + * / =
                   append
                   string-append
                   string=? 
@@ -44,6 +44,11 @@
                   string-ci>=?) 
  
  ("Numbers (relaxed conditions)"
+  @defproc[(= [x number] ...) number]{
+ Compares numbers for equality.
+ In ISL and up: @racket[=] works when applied to only one number.
+ @interaction[#:eval (isl) (= 10 10) (= 11) (= 0)]
+}
   @defproc[(+ [x number] ...) number]{
  Adds all given numbers.
  In ISL and up: @racket[+] works when applied to only one number or none. 

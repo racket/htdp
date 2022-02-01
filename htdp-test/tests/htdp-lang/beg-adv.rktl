@@ -5,7 +5,6 @@
 (htdp-err/rt-test (add1 'a) "add1: expects a number, given 'a")
 (htdp-err/rt-test (+ 'a 1) "[+]: expects a number(?: as 1st argument)?, given 'a")
 (htdp-err/rt-test (+ 1 'a) "[+]: expects a number(?: as 2nd argument)?, given 'a")
-(htdp-err/rt-test (= 1) "=: expects at least 2 arguments, but found only 1")
 
 (htdp-syntax-test #'() "function call: expected a function after the open parenthesis, but nothing's there")
 
