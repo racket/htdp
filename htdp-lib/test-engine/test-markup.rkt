@@ -51,7 +51,9 @@
   (make-parameter
    (lambda (markup)
      (if (port-writes-special? (current-output-port))
-         (write-special markup)
+         (begin
+           (write-special markup)
+           (newline))
          (display-markup markup)))))
 
 (define (display-test-results! markup)
