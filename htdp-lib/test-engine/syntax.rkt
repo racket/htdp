@@ -6,7 +6,8 @@
          test ; run tests and display results
          test-execute ; boolean parameter, says if the tests run
          test-silence ; boolean parameter, says if the test results are printed
-         report-signature-violation!)
+         report-signature-violation!
+         test-display-results!)
 
 ;; check-expect-maker : syntax? syntax? (listof syntax?) symbol? -> syntax?
 ;; the common part of all three test forms
@@ -114,10 +115,12 @@
 (define (test*)
   (when (test-execute)
     (run-tests!))
-  (unless (test-silence)
-    (display-test-results! (test-object->markup (current-test-object) (not (test-execute)))))
+  (test-display-results!)
   ;; make sure we return void - anything else might get printed in the REPL
   (void))
 
-
+; utility for, say, printing signature violations when program aborts before tests run
+(define (test-display-results!)
+  (unless (test-silence)
+    (display-test-results! (test-object->markup (current-test-object) (not (test-execute))))))
 
