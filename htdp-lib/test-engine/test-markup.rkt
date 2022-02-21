@@ -14,6 +14,7 @@
          test-engine/test-engine
          (only-in simple-tree-text-markup/data
                   markup?
+                  empty-markup?
                   srcloc-markup? srcloc-markup-srcloc
                   transform-markup)
          simple-tree-text-markup/construct
@@ -53,7 +54,8 @@
      (if (port-writes-special? (current-output-port))
          (begin
            (write-special markup)
-           (newline))
+           (unless (empty-markup? markup)
+             (newline))) ; an exception message might be printed after the markup
          (display-markup markup)))))
 
 (define (display-test-results! markup)
