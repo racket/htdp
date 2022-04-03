@@ -20,11 +20,7 @@
   ;; the match expander 
   (lambda (stx)
     (syntax-case stx ()
-      [(_ x y) #'(struct posn (x y))
-
-              #;(and (? posn? the-posn)
-                      (app (first-order->higher-order posn-x) x)
-                      (app (first-order->higher-order posn-y) y))]))
+      [(_ x y) #'(struct posn (x y))]))
   ;; the run-time values
   (lambda (stx)
     (syntax-case stx ()
