@@ -119,7 +119,7 @@
 	    #:mutable
 	    #:transparent
 	    #:extra-constructor-name make-posn 
-	    #:reflection-name 'make-posn
+	    #:reflection-name 'posn
 	    ))
        ;; do not use here: prints the wrong way 
        ;; (interaction-eval #:eval me (require lang/posn))
