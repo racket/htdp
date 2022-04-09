@@ -40,8 +40,9 @@
              (channel-put ch (list i (parameterize ([current-custodian cc]) (th))))))))))
   ;; for all X: (U Exn X) -> X
   (define (handle x)
-    (when (exn? x) (custodian-shutdown-all c*) (raise x))
-    x)
+    (cond
+      [(exn? x) (eprintf "a world raises an exception: ~v\n" (exn-message x)) (raise x)]
+      [else x]))
   ;; [Listof X]
   (define results
      (for/list ((n (in-range (length th*))))
