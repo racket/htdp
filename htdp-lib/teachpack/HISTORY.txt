@@ -1,4 +1,13 @@
 ------------------------------------------------------------------------
+Version 8.5				[???]
+
+* changed the behavior of `launch-many-worlds` so that when an
+  exception gets raised it does _not_ shut down the whole universe but
+  only the concurrent thread that's problematic (unless this uses a
+  handler) 
+
+
+------------------------------------------------------------------------
 version 8.3				  [Fri Oct  8 09:32:25 EDT 2021]
 
 * supplied (and fixed) documentation for functions in Intermediate
