@@ -14,7 +14,8 @@
 
 (define my-custodian (make-custodian))
 
-(parameterize ([current-custodian my-custodian])
+(parameterize ([current-custodian my-custodian]
+               [current-error-port (open-output-string)])
   (check-exn #px"the universe could not be created"
              (λ ()
                (with-output-to-string
