@@ -107,7 +107,7 @@
       The @code{#false} value.}
 
     @section[#:tag (string-append section-prefix " Template Variables")]{Template Variables}
-    @defidform[dots]{A placeholder for indicating that a definition is a template.} ...
+    @defidform[dots]{A placeholder for indicating that a function definition is a template.} ...
     )))
 
 ;; ----------------------------------------
