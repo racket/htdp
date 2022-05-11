@@ -32,7 +32,8 @@
  (rename-out (match0 match)))
 
 ;; ---------------------------------------------------------------------------------------------------
-(require (for-syntax syntax/parse)
+(require (for-syntax syntax/parse
+                     racket/struct-info)
          syntax/parse 
          plai 
          htdp/error
@@ -114,7 +115,33 @@
     [(_ type:id case:expr [variant:id (field:id ...) body:expr] ...)
      #'(type-case type case [variant (field ...) body] ...)]))
 
+(begin-for-syntax
+  (define-syntax-class pattern-cls
+    #:description "pattern"
+    #:attributes (expr)
+    (pattern name:id
+             #:with expr #'name)
+
+    ;; literal-constants
+    (pattern {~or* :string :number :boolean :char :regexp :bytes :byte-regexp}
+             #:with expr this-syntax)
+    (pattern ({~datum quote} x)
+             #:with expr #'(quote x))
+
+    (pattern ({~datum cons} left:pattern-cls right:pattern-cls)
+             #:with expr #'(cons left.expr right.expr))
+    (pattern ({~datum ?} e:id)
+             #:with expr #'(? e))
+    (pattern (st e:pattern-cls ...)
+             #:declare st (static struct-info? "structure type")
+             #:with expr #'(struct st (e.expr ...)))
+
+    ;; for stuff like posn that pretends to be a struct
+    (pattern (st e:pattern-cls ...)
+             #:declare st (static match-expander? "structure type")
+             #:with expr #'(st e.expr ...))))
+
 (define-syntax (match0 stx)
   (syntax-parse stx
-    [(_ case:expr (pattern body:expr) ...)
-     #'(match case (pattern body) ...)]))
+    [(_ case:expr (pat:pattern-cls body:expr) ...)
+     #'(match case (pat.expr body) ...)]))

@@ -122,5 +122,16 @@
 
 (define (undress a-doll)
   (match a-doll
-    [(struct doll (inside)) (undress inside)]
+    [(doll inside) (undress inside)]
     [(? symbol?) a-doll]))
+
+;; -----------------------------------------------------------------------------
+
+;; GitHub Issue #171
+
+(define-struct var (x))
+(define (ee expr)
+  (match expr
+    [(var x) 1]
+    [catch-all 2]))
+(check-expect (ee 10) 2)
