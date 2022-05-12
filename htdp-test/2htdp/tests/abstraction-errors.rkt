@@ -26,4 +26,4 @@
 (exn/msg "expected identifier" (for/list ([x 1][10 x]) 10))
 
 
-(exn/msg "expected structure type" (match 1 [(var x) x]))
+(exn/msg "expected structure definition" (match 1 [(var x) x]))

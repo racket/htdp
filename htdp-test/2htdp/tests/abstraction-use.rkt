@@ -134,4 +134,6 @@
   (match expr
     [(var x) 1]
     [catch-all 2]))
+
 (check-expect (ee 10) 2)
+(check-expect (ee (make-var 11)) 1)
