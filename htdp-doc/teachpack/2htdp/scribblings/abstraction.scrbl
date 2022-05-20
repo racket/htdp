@@ -281,8 +281,9 @@ applicable ideas of program design.
               (match case-expr (pattern body-expr) ...)
               ([pattern 
                  name 
-	         literal-constant
+	             literal-constant
                  (cons pattern pattern)
+                 (list pattern ...)
                  (name pattern ...)
                  (? name)])]{
  dispatches like a @racket[cond], matching the result of @racket[case-expr]
@@ -304,6 +305,8 @@ applicable ideas of program design.
 @item{@racket[(cons pattern_1 pattern_2)], it matches when the value is an
  instance of @racket[cons], and its first/rest fields match @racket[pattern_1] 
  and @racket[pattern_2], respectively;}
+@item{@racket[(list pattern ...)], it matches when the value is a @racket[list],
+ and each element matches its corresponding @racket[pattern];}
 @item{@racket[(name pattern ...)], it matches when the value is an instance of
  the @racket[name] structure type, and its field values match @racket[pattern]
  ...;} 
@@ -318,19 +321,31 @@ The following @racket[match] expression distinguishes @racket[cons]es with
 @racket['()] in the second position from all others: 
 @interaction[#:eval (make-base-eval '(require 2htdp/abstraction))
 (define (last-item l)
-   (match l 
-     [(cons lst '()) lst]
-     [(cons fst rst) (last-item rst)]))
+  (match l
+    [(cons lst '()) lst]
+    [(cons fst rst) (last-item rst)]))
 
 (last-item '(a b c))
 ]
 
-With ?, a @racket[match] can use a predicate to distinguish arbitrary values: 
+The following @racket[match] expression extracts the @racket[title] of an HTML page
+in the nested @racket[list] representation:
+@interaction[#:eval (make-base-eval '(require 2htdp/abstraction))
+(define (get-title page)
+  (match page
+    [(list 'html (list 'head (list 'title title)) body) title]
+    [anything "Untitled"]))
+
+(get-title '(html (head (title "hello")) (body (p "world"))))
+(get-title '(html (head) (body (p "world"))))
+]
+
+With @racket[?], a @racket[match] can use a predicate to distinguish arbitrary values:
 @interaction[#:eval (make-base-eval '(require 2htdp/abstraction))
 (define (is-it-odd-or-even l)
-   (match l 
-     [(? even?) 'even]
-     [(? odd?)  'odd]))
+  (match l
+    [(? even?) 'even]
+    [(? odd?)  'odd]))
 
 (is-it-odd-or-even '1)
 (is-it-odd-or-even '2)

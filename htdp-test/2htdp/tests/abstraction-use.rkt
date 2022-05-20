@@ -137,3 +137,14 @@
 
 (check-expect (ee 10) 2)
 (check-expect (ee (make-var 11)) 1)
+
+(define (test-list xs)
+  (match xs
+    [(list 1 x) x]
+    [(list y 2) y]
+    [(list (list z)) z]))
+
+(check-expect (test-list '(1 2)) 2)
+(check-expect (test-list '(1 3)) 3)
+(check-expect (test-list '(4 2)) 4)
+(check-expect (test-list '((5))) 5)

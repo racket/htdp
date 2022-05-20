@@ -27,3 +27,4 @@
 
 
 (exn/msg "expected structure definition" (match 1 [(var x) x]))
+(exn/msg "... is not supported" (match '(1 2 3) [(list xs ...) 1]))

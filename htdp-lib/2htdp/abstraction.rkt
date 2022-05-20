@@ -119,6 +119,11 @@
   (define-syntax-class pattern-cls
     #:description "pattern"
     #:attributes (match-pattern)
+    (pattern {~datum ...}
+             #:do [(raise-syntax-error 'match
+                                       "... is not supported"
+                                       this-syntax)]
+             #:with match-pattern #'dummy)
     (pattern name:id
              #:with match-pattern #'name)
 
@@ -131,8 +136,12 @@
     (pattern ({~datum cons} left:pattern-cls right:pattern-cls)
              #:with match-pattern #'(cons left.match-pattern
                                           right.match-pattern))
+    (pattern ({~datum list} p:pattern-cls ...)
+             #:with match-pattern #'(list p.match-pattern ...))
+
     (pattern ({~datum ?} e:id)
              #:with match-pattern #'(? e))
+
     (pattern (st e:pattern-cls ...)
              #:declare st (static struct-info? "structure definition")
              #:with match-pattern #'(struct st (e.match-pattern ...)))
