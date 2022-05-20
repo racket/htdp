@@ -24,3 +24,6 @@
 (exn/msg "expected identifier" (for/list ([y 2][(+ 1 1) 10]) 10))
 (exn/msg "expected identifier" (for/list ([x 1] ([(x y) a z])) 10))
 (exn/msg "expected identifier" (for/list ([x 1][10 x]) 10))
+
+
+(exn/msg "expected structure definition" (match 1 [(var x) x]))

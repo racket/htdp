@@ -32,7 +32,8 @@
  (rename-out (match0 match)))
 
 ;; ---------------------------------------------------------------------------------------------------
-(require (for-syntax syntax/parse)
+(require (for-syntax syntax/parse
+                     racket/struct-info)
          syntax/parse 
          plai 
          htdp/error
@@ -114,7 +115,38 @@
     [(_ type:id case:expr [variant:id (field:id ...) body:expr] ...)
      #'(type-case type case [variant (field ...) body] ...)]))
 
+(begin-for-syntax
+  (define-syntax-class pattern-cls
+    #:description "pattern"
+    #:attributes (match-pattern)
+    (pattern name:id
+             #:with match-pattern #'(var name))
+
+    ;; literal-constants
+    (pattern {~or* :string :number :boolean :char :regexp :bytes :byte-regexp}
+             #:with match-pattern this-syntax)
+    (pattern ({~datum quote} x)
+             #:with match-pattern #'(quote x))
+
+    (pattern ({~datum cons} left:pattern-cls right:pattern-cls)
+             #:with match-pattern #'(cons left.match-pattern
+                                          right.match-pattern))
+    (pattern ({~datum list} p:pattern-cls ...)
+             #:with match-pattern #'(list p.match-pattern ...))
+
+    (pattern ({~datum ?} e:id)
+             #:with match-pattern #'(? e))
+
+    (pattern (st e:pattern-cls ...)
+             #:declare st (static struct-info? "structure definition")
+             #:with match-pattern #'(struct st (e.match-pattern ...)))
+
+    ;; for stuff like posn that pretends to be a struct
+    (pattern (st e:pattern-cls ...)
+             #:declare st (static match-expander? "structure definition")
+             #:with match-pattern #'(st e.match-pattern ...))))
+
 (define-syntax (match0 stx)
   (syntax-parse stx
-    [(_ case:expr (pattern body:expr) ...)
-     #'(match case (pattern body) ...)]))
+    [(_ case:expr (pat:pattern-cls body:expr) ...)
+     #'(match case (pat.match-pattern body) ...)]))

@@ -122,5 +122,33 @@
 
 (define (undress a-doll)
   (match a-doll
-    [(struct doll (inside)) (undress inside)]
+    [(doll inside) (undress inside)]
     [(? symbol?) a-doll]))
+
+;; -----------------------------------------------------------------------------
+
+;; GitHub Issue #171
+
+(define-struct var (x))
+(define (ee expr)
+  (match expr
+    [(var x) 1]
+    [catch-all 2]))
+
+(check-expect (ee 10) 2)
+(check-expect (ee (make-var 11)) 1)
+
+(define (test-list xs)
+  (match xs
+    [(list 1 x) x]
+    [(list y 2) y]
+    [(list (list z)) z]))
+
+(check-expect (test-list '(1 2)) 2)
+(check-expect (test-list '(1 3)) 3)
+(check-expect (test-list '(4 2)) 4)
+(check-expect (test-list '((5))) 5)
+
+(check-expect (match 1
+                [_ _])
+              1)
