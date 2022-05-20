@@ -119,13 +119,8 @@
   (define-syntax-class pattern-cls
     #:description "pattern"
     #:attributes (match-pattern)
-    (pattern {~datum ...}
-             #:do [(raise-syntax-error 'match
-                                       "... is not supported"
-                                       this-syntax)]
-             #:with match-pattern #'dummy)
     (pattern name:id
-             #:with match-pattern #'name)
+             #:with match-pattern #'(var name))
 
     ;; literal-constants
     (pattern {~or* :string :number :boolean :char :regexp :bytes :byte-regexp}

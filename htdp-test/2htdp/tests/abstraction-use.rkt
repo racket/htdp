@@ -148,3 +148,7 @@
 (check-expect (test-list '(1 3)) 3)
 (check-expect (test-list '(4 2)) 4)
 (check-expect (test-list '((5))) 5)
+
+(check-expect (match 1
+                [_ _])
+              1)
