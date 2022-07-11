@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version 8.7+				  [??]
+
+* expose arrow images from htdp/arrow
+
+------------------------------------------------------------------------
 Version 8.5				  [Mon Apr 11 20:49:03 EDT 2022]
 
 * changed the behavior of `launch-many-worlds` so that when an
