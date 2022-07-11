@@ -1,5 +1,9 @@
 Stepper
 -------
+Changes for 8.6:
+
+None.
+
 Changes for 8.5:
 
 None.
