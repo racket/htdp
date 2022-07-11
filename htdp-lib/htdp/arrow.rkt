@@ -10,7 +10,11 @@
  control
  control-up-down
  control-left-right
- )
+
+ LEFT-ARROW
+ RIGHT-ARROW
+ UP-ARROW   
+ DOWN-ARROW)
 
 (define-higher-order-primitive control-up-down control-up-down/proc 
   (_ _ up-down draw))
@@ -99,14 +103,14 @@
               ;; DESIGN DECISION:
               ;; by handing over the number first, nesting the moves becomes easier
               (evcase an-item
-                      (UP-ARROW
-                       (set! shape (up-down-action (- delta) shape)))
-                      (DOWN-ARROW
-                       (set! shape (up-down-action delta shape)))
-                      (LEFT-ARROW
-                       (set! shape (left-right-action (- delta) shape)))
-                      (RIGHT-ARROW
-                       (set! shape (left-right-action delta shape))))
+                (UP-ARROW
+                 (set! shape (up-down-action (- delta) shape)))
+                (DOWN-ARROW
+                 (set! shape (up-down-action delta shape)))
+                (LEFT-ARROW
+                 (set! shape (left-right-action (- delta) shape)))
+                (RIGHT-ARROW
+                 (set! shape (left-right-action delta shape))))
               (draw-shape shape))))
     (make-button-table panel control layout)
     (send frame show #t)
