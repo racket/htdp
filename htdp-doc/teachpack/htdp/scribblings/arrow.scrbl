@@ -1,7 +1,7 @@
 #lang scribble/doc
 
 @(require scribble/manual "shared.rkt"
-          (for-label scheme teachpack/htdp/arrow))
+          (for-label scheme 2htdp/image teachpack/htdp/arrow))
 
 @teachpack["arrow"]{Managing Control Arrows}
 
@@ -33,10 +33,10 @@ The teachpack implements a controller for moving shapes across a canvass.
 Moves shape @racket[N] pixels left or right and up or down, respectively.} 
 
 The teachpack also provides four images:
- @racket[LEFT-ARROW],
- @racket[RIGHT-ARROW],
- @racket[UP-ARROW], and
- @racket[DOWN-ARROW].
+ @defthing[LEFT-ARROW image?]{an arrow pointing left.}
+ @defthing[RIGHT-ARROW image?]{an arrow pointing right.}
+ @defthing[UP-ARROW image?]{an arrow pointing up.}
+ @defthing[DOWN-ARROW image?]{an arrow pointing down.}
  
 Example:
 @(begin
