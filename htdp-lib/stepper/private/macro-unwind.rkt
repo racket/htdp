@@ -118,6 +118,7 @@
                           [(comes-from-check-expect) unwind-check-expect]
                           [(comes-from-check-within) unwind-check-within]
                           [(comes-from-check-error) unwind-check-error]
+                          [(cond-rhs-begin) unwind-cond-rhs-begin]
                           ;; holding off on this pending discussion (2015-10-20)
                           ;[(comes-from-true/false) unwind-true/false]
                           ;; unused: the fake-exp begin takes care of this for us...
@@ -329,6 +330,14 @@
                            (syntax->datum stx))])
                  null)))])
       #`(#,label . clauses))))
+
+(define (unwind-cond-rhs-begin stx settings)
+  (kernel-syntax-case (fall-through stx settings) #f
+    [(#%begin content) #'content]
+    ;; this guarantee is enforced in the annotator, which checks there is
+    ;; exactly one element of the begin that is not to be skipped
+    [_ (error 'unwind-cond-rhs-begin
+              "expected exactly one term in reconstructed begin")]))
 
 (define (unwind-check-expect stx settings)
   (kernel-syntax-case (fall-through stx settings) #f

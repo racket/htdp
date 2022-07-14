@@ -1794,13 +1794,12 @@
   ;; Syntax Identifier -> Expression
   ;; Produces an expression which raises an error reporting unfinished code.
   (define (dots-error stx name)
-    (stepper-syntax-property
-     (stepper-syntax-property
+    (with-stepper-syntax-properties
+        (['stepper-black-box-expr stx]
+         ['stepper-skip-completely #t])
       (quasisyntax/loc stx
         (error (quote (unsyntax name))
-               "expected a finished expression, but found a template"))
-      'stepper-black-box-expr stx)
-     'stepper-skip-completely #t))
+               "expected a finished expression, but found a template"))))
 
   ;; Expression -> Expression
   ;; Transforms unfinished code (... and the like) to code
@@ -1818,17 +1817,18 @@
        (syntax-case stx (set!)
          [(set! form expr) (dots-error stx (syntax form))]
          [(form . rest)
-
-	  (quasisyntax/loc stx
-            (begin
-              #,(dots-error stx (syntax form))
-	      #,(stepper-syntax-property
-                 (quasisyntax/loc stx
-                   (quote-syntax
-                    #,(syntax-property #'rest 'identifiers-as-disappeared-uses? #t)
-                    #:local))
-                 'stepper-skip-completely
-                 #t)))
+          (stepper-syntax-property
+           (quasisyntax/loc stx
+             (begin
+               #,(dots-error stx (syntax form))
+               #,(stepper-syntax-property
+                  (quasisyntax/loc stx
+                    (quote-syntax
+                     #,(syntax-property #'rest 'identifiers-as-disappeared-uses? #t)
+                     #:local))
+                  'stepper-skip-completely
+                  #t)))
+           'stepper-skipto '(syntax-e cdr car))
 
 	  ;; The solution below enforces that `rest` is syntactically
 	  ;; correct, and as a result, it displays _correct_ binding arrows.

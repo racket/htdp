@@ -13,6 +13,19 @@
          skipto/fourth
          skipto/firstarg)
 
+;; some tags should not be silently transferred when macro expansion occurs.
+;; Specifically, if
+;; a piece of syntax is labeled with a 'stepper-skipto, then that
+;; should not be applied to some other transformed form, the
+;; stepper-skipto almost certainly won't make any sense.
+(define dont-transfer-these-tags '(stepper-skipto))
+
+;; an alist is (list (list symbol value) ...)
+;; a stepper-stx-prop is either
+;; - an alist, or
+;; - (cons alist stepper-stx-prop)
+;; note that the only way to tell these apart is that in the first form the caar is a symbol,
+;; whereas in the second, the caar is (list symbol value)
 
 ;; stepper-syntax-property : like syntax property, but adds properties to an association
 ;; list associated with the syntax property 'stepper-properties
@@ -28,10 +41,10 @@
        (cond [stepper-props
               (define props-alist
                 (flatten-association-list-ilist stepper-props))
-              (define table-lookup (assq tag stepper-props))
+              (define table-lookup (assq tag props-alist))
               (if table-lookup
-                 (cadr table-lookup)
-                 #f)]
+                             (cadr table-lookup)
+                             #f)]
              [else #f]))]
     [(stx tag new-val) 
      (unless (member tag known-stepper-syntax-property-names)
@@ -56,7 +69,10 @@
                        ;; it must be a cons pair of alists, not
                        ;; just an alist:
                        (append (car alist-tree)
-                               (flatten-association-list-ilist (cdr alist-tree)))]
+                               (filter
+                                (λ (tup) (not (member (car tup)
+                                                      dont-transfer-these-tags)))
+                                (flatten-association-list-ilist (cdr alist-tree))))]
                       [else
                        alist-tree])]
                [else
@@ -82,7 +98,15 @@
   (check-equal?
    (flatten-association-list-ilist
     '((stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or) (stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or)))
-   '((stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or) (stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or))))
+   '((stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or) (stepper-and/or-clauses-consumed 2) (stepper-hint comes-from-or)))
+  (check-equal?
+   (flatten-association-list-ilist
+    '(((e 4) (z 9)) ((a 3) (b 77)) . ((c 4) (d 99))))
+   '((e 4) (z 9) (a 3) (b 77) (c 4) (d 99)))
+  (check-equal?
+   (flatten-association-list-ilist
+    '(((stepper-skip-completely #t)) . ((stepper-skip-completely #t) (stepper-skipto (syntax-e cdr car)))))
+   '((stepper-skip-completely #t) (stepper-skip-completely #t))))
 
 
 
@@ -112,6 +136,7 @@
     stepper-hide-reduction
     stepper-use-val-as-final
     stepper-lifted-name
+    no-further-annotation
     lazy-op
     ;; used temporarily to help locate syntax expressions
     ;; when adding new skipto annotations:

@@ -85,6 +85,12 @@ stepper-skip-completely :
    'define-primitive'.
  - applied to the 'make-generative-lambda' inserted by teach.ss
 
+no-further-annotation :
+ [ #t ] : this code may be wrapped with a pre-break and a normal
+ break, but shouldn't be annotated recursively. This is useful
+ for forms that are introduced by macros and are guaranteed to
+ signal errors.
+
 stepper-hint :
  this is the most generally applied syntax property.  In general, it
  informs the reconstructor what macro this source expression came
@@ -111,6 +117,9 @@ stepper-hint :
 
  [ 'comes-from-true/false ] : this expression was expanded from a use
     of 'true' or 'false'
+
+ [ 'cond-rhs-begin ] : this 'begin' was introduced by the annotator
+    for a cond RHS that didn't have exactly one expression.
 
 stepper-define-type:
  this is attached to the right-hand sides of defines to indicate what
