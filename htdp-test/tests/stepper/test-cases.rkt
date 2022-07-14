@@ -1519,12 +1519,30 @@
                       ((define (f x) (...)) (hilite 9)))
         (finished-stepping)))
 
+  (t1 'ellipses-unused-parens-2 m:upto-int/lam
+      "(define (f x) (+ 2 (...))) (+ 4 5)"
+      `((before-after ((define (f x) (+ 2 (...))) (hilite (+ 4 5)))
+                      ((define (f x) (+ 2 (...))) (hilite 9)))
+        (finished-stepping)))
+
   (t1 'ellipses-used m:upto-int/lam
       "(define f (+ (+ 3 4) (* 2 ...)))"
       `((before-after ((define f (+ (hilite (+ 3 4)) (* 2 ...))))
                       ((define f (+ (hilite 7) (* 2 ...)))))
         (error "...: expected a finished expression, but found a template")))
-  
+
+  (t1 'ellipses-used-parens m:upto-int/lam
+      "(define f (+ (+ 3 4) (* 2 (...))))"
+      `((before-after ((define f (+ (hilite (+ 3 4)) (* 2 (...)))))
+                      ((define f (+ (hilite 7) (* 2 (...))))))
+        (error "...: expected a finished expression, but found a template")))
+
+  ;; sorawee's example
+  (t1 'ellipses-used-parens-2 m:upto-int/lam
+      "(cond [#t (...)] [else 1])"
+      '((before-error ((hilite (cond (true (...)) (else 1))))
+                      "...: expected a finished expression, but found a template")))
+
 
   ;; --------------------------------------------------------------------------
   ;; Lazy Stepper tests
