@@ -32,6 +32,12 @@ The teachpack implements a controller for moving shapes across a canvass.
 	   [draw (-> Shape true)]) true]{
 Moves shape @racket[N] pixels left or right and up or down, respectively.} 
 
+The teachpack also provides four images:
+ @racket[LEFT-ARROW],
+ @racket[RIGHT-ARROW],
+ @racket[UP-ARROW], and
+ @racket[DOWN-ARROW].
+ 
 Example:
 @(begin
 #reader scribble/comment-reader
