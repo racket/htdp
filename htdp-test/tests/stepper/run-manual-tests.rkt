@@ -21,8 +21,8 @@
                  #;[display-only-errors #t]
                  #;[show-all-steps #t]
                  #;[ignore-non-lang-tests? #t])
-    #;(run-test 'simple-if)
-    (run-all-tests)
+    (run-tests '(ellipses-used-parens-2))
+    #;(run-all-tests)
     
     
     #;(syntax-case

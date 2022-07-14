@@ -502,6 +502,7 @@
 
   ;; step through a single expanded expression.
   (define (step-through-expression expanded)
+    ;(printf "expanded: ~v\n"expanded)
     (define annotated (a:annotate expanded break show-lambdas-as-lambdas?))
     (log-stepper-debug "expression successfully annotated")
     (eval-syntax annotated))

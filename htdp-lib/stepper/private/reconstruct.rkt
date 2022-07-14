@@ -427,162 +427,166 @@
 
   (or
    (stepper-syntax-property expr 'stepper-black-box-expr)
-   (skipto/auto
+   (and
+    (stepper-syntax-property expr 'stepper-skipto)
+    (skipto/auto
     expr
     #t
     ;; transformer:
     (lambda (expr)
-      ;; reconstruct the source by attaching the keyword to the result of
-      ;; reconstructing the subexprs. A common abstraction for if, begin,
-      ;; etc.
-      (define (recon-basic)
-        (with-syntax ([(label . bodies) expr])
-          #`(label #,@(map recur (filter-skipped
-                                  (syntax->list (syntax bodies)))))))
-      (define (recon-let/rec rec?)
-        (with-syntax ([(label  ((vars val) ...) body ...) expr])
-          (let* ([bindings (map syntax->list (syntax->list
-                                              (syntax (vars ...))))]
-                 [binding-list (apply append bindings)]
-                 [recur-fn (if rec?
-                               (lambda (expr) (let-recur expr binding-list))
-                               recur)]
-                 [right-sides (map recur-fn (syntax->list (syntax (val ...))))]
-                 [recon-bodies (map (lambda (x) (let-recur x binding-list))
-                                    (syntax->list #`(body ...)))])
-            (with-syntax
-                ([(recon-val ...) right-sides]
-                 [(recon-body ...) recon-bodies]
-                 [(new-vars ...)
-                  (map (lx (map (lx (if (ormap (lambda (binding)
-                                                 (bound-identifier=? binding _))
-                                               use-lifted-names)
-                                        (stepper-syntax-property
-                                         _
-                                         'stepper-lifted-name
-                                         (binding-lifted-name mark-list _))
-                                        _))
-                                _))
-                       bindings)])
-              (syntax (label ((new-vars recon-val) ...) recon-body ...))))))
+      ;; this could have a stepper-black-box-expr, must loop:
+      (recon-source-expr expr mark-list dont-lookup use-lifted-names render-settings))))
+   (let ()
+     ;; reconstruct the source by attaching the keyword to the result of
+     ;; reconstructing the subexprs. A common abstraction for if, begin,
+     ;; etc.
+     (define (recon-basic)
+       (with-syntax ([(label . bodies) expr])
+         #`(label #,@(map recur (filter-skipped
+                                 (syntax->list (syntax bodies)))))))
+     (define (recon-let/rec rec?)
+       (with-syntax ([(label  ((vars val) ...) body ...) expr])
+         (let* ([bindings (map syntax->list (syntax->list
+                                             (syntax (vars ...))))]
+                [binding-list (apply append bindings)]
+                [recur-fn (if rec?
+                              (lambda (expr) (let-recur expr binding-list))
+                              recur)]
+                [right-sides (map recur-fn (syntax->list (syntax (val ...))))]
+                [recon-bodies (map (lambda (x) (let-recur x binding-list))
+                                   (syntax->list #`(body ...)))])
+           (with-syntax
+               ([(recon-val ...) right-sides]
+                [(recon-body ...) recon-bodies]
+                [(new-vars ...)
+                 (map (lx (map (lx (if (ormap (lambda (binding)
+                                                (bound-identifier=? binding _))
+                                              use-lifted-names)
+                                       (stepper-syntax-property
+                                        _
+                                        'stepper-lifted-name
+                                        (binding-lifted-name mark-list _))
+                                       _))
+                               _))
+                      bindings)])
+             (syntax (label ((new-vars recon-val) ...) recon-body ...))))))
      
-      (define (recon-lambda-clause clause)
-        (with-syntax ([(args . bodies-stx) clause])
-          (let* ([arglist (arglist-flatten #'args)]
-                 [bodies (map (lambda (body) (let-recur body arglist))
-                              (filter-skipped (syntax->list (syntax bodies-stx))))])
-            (cons (syntax args) bodies))))
-      (define (recon)
-        (kernel:kernel-syntax-case
-         expr #f
+     (define (recon-lambda-clause clause)
+       (with-syntax ([(args . bodies-stx) clause])
+         (let* ([arglist (arglist-flatten #'args)]
+                [bodies (map (lambda (body) (let-recur body arglist))
+                             (filter-skipped (syntax->list (syntax bodies-stx))))])
+           (cons (syntax args) bodies))))
+     (define (recon)
+       (kernel:kernel-syntax-case
+        expr #f
         
-         ; lambda
-         [(#%plain-lambda . clause-stx)
-          (let* ([clause (recon-lambda-clause (syntax clause-stx))])
-            #`(#%plain-lambda #,@clause))]
+        ; lambda
+        [(#%plain-lambda . clause-stx)
+         (let* ([clause (recon-lambda-clause (syntax clause-stx))])
+           #`(#%plain-lambda #,@clause))]
         
-         ; case-lambda
-         [(case-lambda . clauses-stx)
-          (let* ([clauses (map recon-lambda-clause (syntax->list (syntax clauses-stx)))])
-            #`(case-lambda #,@clauses))]
+        ; case-lambda
+        [(case-lambda . clauses-stx)
+         (let* ([clauses (map recon-lambda-clause (syntax->list (syntax clauses-stx)))])
+           #`(case-lambda #,@clauses))]
         
-         ; if, begin, begin0
-         [(if test then else) (recon-basic)]
-         [(if test then) (recon-basic)]
-         [(begin . bodies) (recon-basic)]
-         [(begin0 . bodies)
-          (if (stepper-syntax-property expr 'stepper-fake-exp)
-              (if (null? (syntax->list #`bodies))
-                  (recon-value (lookup-binding mark-list begin0-temp) render-settings)
-                  ;; prepend the computed value of the first arg:
-                  #`(begin0 #,(recon-value (lookup-binding mark-list begin0-temp) render-settings)
-                            #,@(map recur (filter-skipped (syntax->list #`bodies)))))
-              (recon-basic))]
+        ; if, begin, begin0
+        [(if test then else) (recon-basic)]
+        [(if test then) (recon-basic)]
+        [(begin . bodies) (recon-basic)]
+        [(begin0 . bodies)
+         (if (stepper-syntax-property expr 'stepper-fake-exp)
+             (if (null? (syntax->list #`bodies))
+                 (recon-value (lookup-binding mark-list begin0-temp) render-settings)
+                 ;; prepend the computed value of the first arg:
+                 #`(begin0 #,(recon-value (lookup-binding mark-list begin0-temp) render-settings)
+                           #,@(map recur (filter-skipped (syntax->list #`bodies)))))
+             (recon-basic))]
         
-         ; let-values, letrec-values
-         [(let-values . rest) (recon-let/rec #f)]
-         [(letrec-values . rest) (recon-let/rec #t)]
+        ; let-values, letrec-values
+        [(let-values . rest) (recon-let/rec #f)]
+        [(letrec-values . rest) (recon-let/rec #t)]
         
-         ; set!
-         [(set! var rhs)
-          (let ([rendered-var
-                 (if (and (ormap (lambda (binding)
-                                   (bound-identifier=? binding #`var))
-                                 dont-lookup)
-                          (not (ormap (lambda (binding)
-                                        (bound-identifier=? binding #`var))
-                                      use-lifted-names)))
-                     #`var
-                     (reconstruct-set!-var mark-list #`var))])
-            #`(set! #,rendered-var #,(recur #'rhs)))]
+        ; set!
+        [(set! var rhs)
+         (let ([rendered-var
+                (if (and (ormap (lambda (binding)
+                                  (bound-identifier=? binding #`var))
+                                dont-lookup)
+                         (not (ormap (lambda (binding)
+                                       (bound-identifier=? binding #`var))
+                                     use-lifted-names)))
+                    #`var
+                    (reconstruct-set!-var mark-list #`var))])
+           #`(set! #,rendered-var #,(recur #'rhs)))]
         
-         ; quote
-         [(quote body) (recon-value (eval-quoted expr) render-settings)]
-         [(quote-syntax v #:local) (recon-value (eval-quoted #'(quote v)) render-settings)]
-         [(quote-syntax v) (recon-value (eval-quoted #'(quote v)) render-settings)]
+        ; quote
+        [(quote body) (recon-value (eval-quoted expr) render-settings)]
         
+        ; quote-syntax : like set!, the current stepper cannot handle quote-syntax
         
-         ; with-continuation-mark
-         [(with-continuation-mark . rest) (recon-basic)]
+        ; with-continuation-mark
+        [(with-continuation-mark . rest) (recon-basic)]
         
-         ; application
-         [(#%plain-app . terms) (recon-basic)]
+        ; application
+        [(#%plain-app . terms) (recon-basic)]
         
-         ; varref
-         [var-stx
-          (identifier? expr)
-          (let* ([var (syntax var-stx)])
-            (if (render-settings-all-bindings-mutable? render-settings)
-                var
-                (cond [(eq? (identifier-binding var) 'lexical)
-                       ; has this varref's binding not been evaluated yet?
-                       ; (and this varref isn't in the list of must-lookups?)
-                       (if (and (ormap (lambda (binding)
-                                         (bound-identifier=? binding var))
-                                       dont-lookup)
-                                (not (ormap (lambda (binding)
-                                              (bound-identifier=? binding var))
-                                            use-lifted-names)))
-                           var
+        ; varref
+        [var-stx
+         (identifier? expr)
+         (let* ([var (syntax var-stx)])
+           (if (render-settings-all-bindings-mutable? render-settings)
+               var
+               (cond [(eq? (identifier-binding var) 'lexical)
+                      ; has this varref's binding not been evaluated yet?
+                      ; (and this varref isn't in the list of must-lookups?)
+                      (if (and (ormap (lambda (binding)
+                                        (bound-identifier=? binding var))
+                                      dont-lookup)
+                               (not (ormap (lambda (binding)
+                                             (bound-identifier=? binding var))
+                                           use-lifted-names)))
+                          var
                           
-                           (case (stepper-syntax-property var 'stepper-binding-type)
-                             ((lambda-bound)
-                              (recon-value (lookup-binding mark-list var) render-settings))
-                             ((macro-bound)
-                              ; for the moment, let-bound vars occur only in and/or :
-                              (recon-value (lookup-binding mark-list var) render-settings))
-                             ((let-bound)
-                              (if (stepper-syntax-property var 'stepper-no-lifting-info)
-                                  var
-                                  (stepper-syntax-property var
-                                                           'stepper-lifted-name
-                                                           (binding-lifted-name mark-list var))))
-                             ((stepper-temp)
-                              (error 'recon-source-expr
-                                     "internal error: stepper-temp showed up in source?!?"))
-                             ((non-lexical)
-                              (error
-                               'recon-source-expr
-                               "internal error, unreachable: lexical identifier labeled as non-lexical"))
-                             (else
-                              (error 'recon-source-expr
-                                     "unknown 'stepper-binding-type property: ~a on var: ~a"
-                                     (stepper-syntax-property var 'stepper-binding-type)
-                                     (syntax->datum var)))))]
-                      [else ; top-level-varref
-                       (fixup-name
-                        var)])))]
-         [(#%top . var)
-          (syntax var)]
+                          (case (stepper-syntax-property var 'stepper-binding-type)
+                            ((lambda-bound)
+                             (recon-value (lookup-binding mark-list var) render-settings))
+                            ((macro-bound)
+                             ; for the moment, let-bound vars occur only in and/or :
+                             (recon-value (lookup-binding mark-list var) render-settings))
+                            ((let-bound)
+                             (if (stepper-syntax-property var 'stepper-no-lifting-info)
+                                 var
+                                 (stepper-syntax-property var
+                                                          'stepper-lifted-name
+                                                          (binding-lifted-name mark-list var))))
+                            ((stepper-temp)
+                             (error 'recon-source-expr
+                                    "internal error: stepper-temp showed up in source?!?"))
+                            ((non-lexical)
+                             (error
+                              'recon-source-expr
+                              "internal error, unreachable: lexical identifier labeled as non-lexical"))
+                            (else
+                             (error 'recon-source-expr
+                                    "unknown 'stepper-binding-type property: ~a on var: ~a"
+                                    (stepper-syntax-property var 'stepper-binding-type)
+                                    (syntax->datum var)))))]
+                     [else ; top-level-varref
+                      (fixup-name
+                       var)])))]
+        [(#%top . var)
+         (syntax var)]
         
-         [else
-          (error 'recon-source "no matching clause for syntax: ~a" (if (syntax? expr)
-                                                                       (syntax->datum expr)
-                                                                       expr))]))
-      (if (stepper-syntax-property expr 'stepper-prim-name)
-          (stepper-syntax-property expr 'stepper-prim-name)
-          (let* ()
-            (attach-info (recon) expr)))))))
+        [else
+         (error 'recon-source "no matching clause for syntax: ~a" (if (syntax? expr)
+                                                                      (syntax->datum expr)
+                                                                      expr))]))
+     (if (stepper-syntax-property expr 'stepper-prim-name)
+         (stepper-syntax-property expr 'stepper-prim-name)
+         (let* ()
+           (attach-info (recon) expr))))))
 
 ;; reconstruct-set!-var
 

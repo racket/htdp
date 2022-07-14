@@ -64,7 +64,7 @@
 ;  .                                                                                               .
 ;  ..........lighthearted-as-it-did-when-I-created-it-in-1998.......................................
 ;  .                                                                                               .
-;  .................................................................................................
+;  ...........And-now-it's-2022-and-it-feels-non-lighthearted-for-an-entirely-different-reason......
 ;  .                                                                                               .
 ;  .................................................................................................
 ;  .                                                                                               .
@@ -121,12 +121,12 @@
                  (lambda () (error 'make-define-struct-break
                                    "no getter for a define-struct"))))))
   
-  ; wcm-pre-break-wrap : call wcm-wrap with a pre-break on the expr
-  (define (wcm-pre-break-wrap debug-info exp)
-    (wcm-wrap debug-info (pre-break-wrap exp)))
+  ; wcm-pre-break-wrap : call wcm-wrap with a result-exp-break on the expr
+  (define (wcm-result-exp-break-wrap debug-info exp)
+    (wcm-wrap debug-info (result-exp-break-wrap exp)))
   
   ;; wrap a pre-break around stx
-  (define (pre-break-wrap stx)
+  (define (result-exp-break-wrap stx)
     #`(begin (#%plain-app #,result-exp-break) #,stx))
   
   ;; wrap a normal break around stx
@@ -155,7 +155,7 @@
   (define normal-break/values-wrap
     (return-value-wrap-maker normal-break/values))
   
-  (define (top-level-annotate/inner exp source-exp defined-name)
+  (define (module-top-level-annotate/inner exp source-exp defined-name)
     (match-let* 
         ([(vector annotated dont-care)
           (annotate/inner exp 'all #f defined-name)])
@@ -202,6 +202,9 @@
     #;(syntax? binding-set? boolean? (or/c false/c syntax? (list/p syntax? syntax?)) (or/c false/c integer?)
                . -> . (vector/p syntax? binding-set?))
     (lambda (exp tail-bound pre-break? procedure-name-info)
+
+      (printf "exp: ~v\n" exp)
+
       
       ;; annotate an exp with a stepper/skipto or stepper-skipto/discard
       ;; label. If force-discard? is true, then we use a discarding
@@ -277,7 +280,7 @@
                          tail-bound free-bindings 'none #t))
                   
       (define outer-wcm-wrap (if pre-break?
-                                 wcm-pre-break-wrap
+                                 wcm-result-exp-break-wrap
                                  wcm-wrap))
       (define (wcm-break-wrap debug-info exp)
         (outer-wcm-wrap debug-info (break-wrap exp)))
@@ -305,20 +308,8 @@
               ([(vector annotated-body free-varrefs)
                 ; wrap bodies in explicit begin if more than 1 
                 ; user-introduced (non-skipped) bodies
-                ; NB: CAN'T HAPPEN in beginner up through int/lambda
-                (let ([non-skipped-bodies
-                       (filter 
-                        (lambda (clause)
-                          (not (to-be-skipped? clause)))
-                        (syntax->list (syntax bodies)))])
-                  (if (> (length non-skipped-bodies) 1)
-                      (lambda-body-recur (syntax (begin . bodies)))
-                      (match-let* 
-                          ([(vector annotated-bodies free-var-sets)
-                            (2vals-map lambda-body-recur
-                                       (syntax->list #`bodies))])
-                        (vector #`(begin . #,annotated-bodies)
-                                (varref-set-union free-var-sets)))))]
+                ; NB: generally can't happen in beginner up through int/lambda
+                (lambda-body-recur (syntax (begin . bodies)))]
                [new-free-varrefs 
                 (varref-set-remove-bindings
                  free-varrefs
@@ -483,7 +474,7 @@
                                      #,rest)])
                               (vector (if outermost?
                                           (wcm-wrap debug-info begin-form)
-                                          (wcm-pre-break-wrap debug-info
+                                          (wcm-result-exp-break-wrap debug-info
                                                               begin-form))
                                       free-vars-all))])))])
            
@@ -686,8 +677,10 @@
       (cond [(or (stepper-syntax-property exp 'stepper-skipto)
                  (stepper-syntax-property exp 'stepper-skipto/discard))
              (dont-annotate)]
-            [(to-be-skipped? exp)
+            [(stepper-syntax-property exp 'stepper-skip-completely)
              (vector (wcm-wrap "supposed to be skipped" exp) null)]
+            [(stepper-syntax-property exp 'no-further-annotation)
+             (vector (wcm-break-wrap (make-debug-info/normal '()) exp) null)]
             
             [else
              (let ([exp (disarm exp)])
@@ -733,19 +726,25 @@
                 ;                     ;               
                 ;                 ;;;;                
                 ;                                     
-
-                ;; one-element begin gets output bei the match construct from #lang deinprogramm/sdp
-                [(begin body)
-                 (match-let* ([(vector annotated-body free-vars-body) 
-                               (tail-recur #'body)])
-                   (vector (wcm-break-wrap (make-debug-info/normal free-vars-body)
-                                           (quasisyntax/loc #'body (begin #,annotated-body)))
-                           free-vars-body))]
-
-                [(begin . bodies-stx)
-                 (begin
-                   (error 'annotate-inner "nothing expands into begin! : ~v" (syntax->datum exp))
-                   #;(begin-abstraction (syntax->list #`bodies-stx)))]
+                
+                
+                [(begin . bodies)
+                 ;; begin is typically introduced by the use of a template, though
+                 ;; generally indirectly.
+                 ;; it may also happen in other ways as the body of a lambda.
+                 (let ([non-skipped-bodies
+                        (filter 
+                         (lambda (clause)
+                           (not (to-be-skipped? clause)))
+                         (syntax->list (syntax bodies)))])
+                   (if (> (length non-skipped-bodies) 1)
+                       (error 'annotate-inner "unexpected begin : ~v" (syntax->datum exp))
+                       (match-let* 
+                           ([(vector annotated-bodies free-var-sets)
+                             (2vals-map tail-recur
+                                        (syntax->list #`bodies))])
+                         (vector #`(begin . #,annotated-bodies)
+                                 (varref-set-union free-var-sets)))))]
                 
                 
                 ;                                            
@@ -792,7 +791,7 @@
                        (let loop ([remaining-wrapped wrapped-rest] 
                                   [remaining-src (syntax->list #`bodies-stx)]
                                   [first-time? #t])
-                         ((if first-time? wcm-wrap wcm-pre-break-wrap)
+                         ((if first-time? wcm-wrap wcm-result-exp-break-wrap)
                           (debug-info-maker remaining-src)   
                           (cond [(null? remaining-src) begin0-temp]
                                 [else #`(begin #,(car remaining-wrapped) #,(loop (cdr remaining-wrapped)
@@ -1066,7 +1065,7 @@
                 (stepper-recertify
                  #`(begin
                      (define-values (new-var ...)
-                       #,(top-level-annotate/inner (top-level-rewrite #`e) exp defined-name))
+                       #,(module-top-level-annotate/inner (module-top-level-rewrite #`e) exp defined-name))
                      ;; this next expression should deliver the newly computed values to an
                      ;; exp-finished-break
                      (#%plain-app #,exp-finished-break
@@ -1110,7 +1109,7 @@
                    () 
                    (#%plain-app 
                     (#%plain-app toplevel-forcer)
-                    #,(top-level-annotate/inner (top-level-rewrite #'operand) exp #f)))
+                    #,(module-top-level-annotate/inner (module-top-level-rewrite #'operand) exp #f)))
                   (#%plain-lambda 
                    vals
                    (begin
@@ -1135,7 +1134,7 @@
                  #`(#%plain-app
                     call-with-values 
                     #,(stepper-recertify
-                       #`(#%plain-lambda () #,(top-level-annotate/inner (top-level-rewrite #`body) exp #f))
+                       #`(#%plain-lambda () #,(module-top-level-annotate/inner (module-top-level-rewrite #`body) exp #f))
                        lam-for-cert)
                     (#%plain-lambda vals
                                     (begin
@@ -1155,7 +1154,7 @@
                    () 
                    (#%plain-app 
                     (#%plain-app toplevel-forcer)
-                    #,(top-level-annotate/inner (top-level-rewrite #'operand) exp #f)))
+                    #,(module-top-level-annotate/inner (module-top-level-rewrite #'operand) exp #f)))
                   (#%plain-lambda 
                    vals
                    (begin
@@ -1171,9 +1170,9 @@
                exp)]
              [any
               (stepper-syntax-property exp 'stepper-test-suite-hint)
-              (top-level-annotate/inner (top-level-rewrite exp) exp #f)]
+              (module-top-level-annotate/inner (module-top-level-rewrite exp) exp #f)]
              [else
-              (top-level-annotate/inner (top-level-rewrite exp) exp #f)
+              (module-top-level-annotate/inner (module-top-level-rewrite exp) exp #f)
               ;; the following check can't be permitted in the presence of things like test-suite cases
               ;; which produce arbitrary expressions at the top level.
               #;(error `annotate/module-top-level "unexpected module-top-level expression to annotate: ~a\n" (syntax->datum exp))])]))
@@ -1215,7 +1214,7 @@
 ; let-bound, lambda-bound, or non-lexical. (It can also be 'macro-bound, set
 ; earlier during macro expansion.)
 
-(define (top-level-rewrite stx)
+(define (module-top-level-rewrite stx)
   (let loop ([stx stx]
              [let-bound-bindings null]
              [cond-test (lx #f)])
@@ -1272,16 +1271,20 @@
           disarmed-stx
           #f
           ; cond :
-          [(if test (let-values () then) else-stx)
+          [(if test (let-values () thens ...) else-stx)
            (let ([origin (syntax-property disarmed-stx 'origin)]
                  [rebuild-if
                   (lambda (new-cond-test)
-                    (let* ([new-then (recur-regular (syntax then))]
+                    (let* ([new-thens (map recur-regular (syntax->list #'(thens ...)))]
                            [rebuilt 
                             (stepper-syntax-property
                              (rebuild-stx 
                               `(if ,(recur-regular (syntax test))
-                                   ,new-then
+                                   ,(if (= (length new-thens) 1)
+                                        (car new-thens)
+                                        (with-stepper-syntax-properties
+                                            (['stepper-hint 'cond-rhs-begin])
+                                            #`(begin #,@new-thens)))
                                    ,(recur-in-cond (syntax else-stx)
                                                    new-cond-test))
                               disarmed-stx)
@@ -1301,7 +1304,7 @@
                                        (eq? (syntax-position disarmed-stx)
                                             (syntax-position test-stx)))))]
                    [else ; not from a 'cond' at all.
-                    (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin then)) (syntax else-stx)))) disarmed-stx)]))]
+                    (rebuild-stx `(if ,@(map recur-regular (list (syntax test) (syntax (begin thens ...)) (syntax else-stx)))) disarmed-stx)]))]
           [_ ; else clauses of conds; ALWAYS AN ERROR CALL
            (cond-test disarmed-stx)
            (stepper-syntax-property disarmed-stx 'stepper-skip-completely #t)]
@@ -1359,9 +1362,11 @@
 (define (stepper-recertify new-stx old-stx)
   (syntax-rearm new-stx old-stx #t))
 
-;; does this stx have the 'stepper-skip-completely or 'stepper-black-box-expr property?
+;; does this stx have the 'stepper-skip-completely property?
 (define (to-be-skipped? stx)
-  (stepper-syntax-property stx 'stepper-skip-completely))
+  (or
+   (stepper-syntax-property stx 'stepper-skip-completely)
+   (stepper-syntax-property stx 'no-further-annotation)))
 
 ;; given a syntax object, return the largest number that appears as part of
 ;; an identifier of the form .*_[0-9]+
