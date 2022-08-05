@@ -147,7 +147,7 @@
   (list
    @defform/none[(#,define-elem name (#,lambda-elem (variable variable ...) expression))]{
 
-   An alternate way on defining functions. The @racket[name] is the name of
+   An alternate way to defining functions. The @racket[name] is the name of
    the function, which cannot be the same as that of another function or
    variable. 
 
