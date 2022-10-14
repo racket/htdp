@@ -733,8 +733,15 @@
                 ;                     ;               
                 ;                 ;;;;                
                 ;                                     
-                
-                
+
+                ;; one-element begin gets output bei the match construct from #lang deinprogramm/sdp
+                [(begin body)
+                 (match-let* ([(vector annotated-body free-vars-body) 
+                               (tail-recur #'body)])
+                   (vector (wcm-break-wrap (make-debug-info/normal free-vars-body)
+                                           (quasisyntax/loc #'body (begin #,annotated-body)))
+                           free-vars-body))]
+
                 [(begin . bodies-stx)
                  (begin
                    (error 'annotate-inner "nothing expands into begin! : ~v" (syntax->datum exp))
