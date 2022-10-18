@@ -518,8 +518,9 @@
         
          ; quote
          [(quote body) (recon-value (eval-quoted expr) render-settings)]
+         [(quote-syntax v #:local) (recon-value (eval-quoted #'(quote v)) render-settings)]
+         [(quote-syntax v) (recon-value (eval-quoted #'(quote v)) render-settings)]
         
-         ; quote-syntax : like set!, the current stepper cannot handle quote-syntax
         
          ; with-continuation-mark
          [(with-continuation-mark . rest) (recon-basic)]
