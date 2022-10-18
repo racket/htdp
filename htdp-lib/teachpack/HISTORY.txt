@@ -1,13 +1,13 @@
 ------------------------------------------------------------------------
-Version 8.7+				  [??]
+Version 8.7				  [Tue Oct 18 08:53:31 EDT 2022]
 
-* expose arrow images from htdp/arrow
+* expose arrow images from htdp/arrow for additional uses
+  (they were available via collects-path only) 
 
 ------------------------------------------------------------------------
 Version 8.6				  [Wed Jul 13 08:48:06 EDT 2022]
 
 * no change 
-
 
 ------------------------------------------------------------------------
 Version 8.5				  [Mon Apr 11 20:49:03 EDT 2022]
