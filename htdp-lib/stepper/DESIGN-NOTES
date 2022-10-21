@@ -1011,3 +1011,25 @@ text as well as s-expressions, as long as it's always the whole program
 that's being compared. Mini-blecch.
 
 2015-08-28
+
+**************
+
+Whoa, I'd forgotten all about this file. It's 2022, now, and the stepper
+is now more or less working for the "new-style" #lang-using languages,
+thanks in large part to work done by Mike Sperber. It's now late at night
+and we are trying to get to the testing phase of 8.7 ... oh, I'm the
+release manager now. That's worth mentioning, I think. Anyhow, templates
+(that is, uses of ...) have not really ever worked well in the stepper,
+but they are now more a part of standard workflow, so this failure is
+more conspicuous. I think I ... sort of ... am semi-close to fixes? In
+principle, it looks to me like this should be fixable with stepper-skipto
+annonations. But they're not working. More specifically, the code I
+wrote in Scotland while holed up in a hotel room waiting for covid tests
+to come back negative didn't quite get finished. So now I'm trying to
+reconstruct that development session, and get them working. Oog.
+
+...
+
+Hey! It works. Wasn't so bad after all.
+
+2022-10-21
