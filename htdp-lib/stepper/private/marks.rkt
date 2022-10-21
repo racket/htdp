@@ -14,8 +14,8 @@
                full-mark-struct?))
 (define mark-list? (listof procedure?))
 
-(provide/contract 
- ;[make-debug-info (any/c binding-set? varref-set? any/c boolean? . -> . syntax?)] ; (location tail-bound free label lifting? -> mark-stx)
+(provide/contract
+ [make-debug-info (syntax? binding-set? varref-set? label? boolean? . -> . syntax?)]
  [expose-mark (-> mark? (list/c any/c symbol? (listof (list/c identifier? any/c))))]
  [make-top-level-mark (syntax? . -> . syntax?)]
  [lookup-all-bindings ((identifier? . -> . boolean?) mark-list? . -> . (listof any/c))]
@@ -23,7 +23,7 @@
  [lookup-binding (mark-list? identifier? . -> . any)])
 
 (provide
- make-debug-info
+ ;make-debug-info
  wcm-wrap
  skipto-mark?
  skipto-mark
@@ -157,7 +157,6 @@
 ;;
 ;; make-debug-info builds the thunk which will be the mark at runtime.  It contains 
 ;; a source expression and a set of binding/value pairs.
-;; (syntax-object BINDING-SET VARREF-SET any boolean (union/c false/c integer?)) -> debug-info)
 ;;
 ;;;;;;;;;;
 
