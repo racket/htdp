@@ -6,6 +6,9 @@
 (provide Varref-Set
          Binding-Set
          Arglist
+         varref-set?
+         binding-set?
+         label?
          step-result?
          (struct-out Before-After-Result)
          (struct-out Before-Error-Result)
@@ -34,6 +37,18 @@
      (Pairof Identifier Arglist)
      (Syntaxof '())
      (Syntaxof (Pairof Identifier Arglist))))
+
+(define-predicate varref-set? Varref-Set)
+(define-predicate binding-set? Binding-Set)
+
+;; possible values for the label on a mark
+(define-type Label
+  (U 'none
+     'let-body
+     'not-yet-called
+     'called))
+
+(define-predicate label? Label)
 
 ;; represents the result of a step, traveling from the model
 ;; to the view-controller
