@@ -1,5 +1,10 @@
 Stepper
 -------
+
+Changes for 8.7:
+
+Bug fixes in & around templates & begin
+
 Changes for 8.6:
 
 None.
