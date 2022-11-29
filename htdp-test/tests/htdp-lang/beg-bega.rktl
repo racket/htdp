@@ -2,6 +2,16 @@
 (htdp-err/rt-test (/) "/: expects at least 2 arguments, but found none")
 (htdp-err/rt-test (+ 1) #rx"^[+]: expects at least 2 arguments, but found only 1$")
 
+(htdp-err/rt-test (<)      "<: expects 2 arguments, but found none") 
+(htdp-err/rt-test (>)      ">: expects 2 arguments, but found none") 
+(htdp-err/rt-test (<=)     "<=: expects 2 arguments, but found none") 
+(htdp-err/rt-test (>=)     ">=: expects 2 arguments, but found none")
+
+(htdp-err/rt-test (<  5) #rx"^[<]: expects at least 2 arguments, but found only 1$")
+(htdp-err/rt-test (>  5) #rx"^[<]: expects at least 2 arguments, but found only 1$")
+(htdp-err/rt-test (<= 5) #rx"^[<]: expects at least 2 arguments, but found only 1$")
+(htdp-err/rt-test (>= 5) #rx"^[<]: expects at least 2 arguments, but found only 1$")
+
 (htdp-err/rt-test (string-append) "string-append: expects at least 2 arguments, but found none")
 (htdp-err/rt-test (string=?)      "string=[?]: expects 2 arguments, but found none")
 (htdp-err/rt-test (string<?)      "string<[?]: expects 2 arguments, but found none") 

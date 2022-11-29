@@ -113,23 +113,23 @@
  @interaction[#:eval (bsl) (number? "hello world") (number? 42)] 
 }
   @defproc[((beginner-= =) [x number][y number][z number] ...) boolean?]{
- Compares numbers for equality.
+ Compares two or more numbers for equality.
  @interaction[#:eval (bsl) (= 42 2/5)]
 }
-  @defproc[(< [x real][y real][z real] ...) boolean?]{
- Compares (real) numbers for less-than.
+  @defproc[((beginner-< <) [x real][y real][z real] ...) boolean?]{
+ Compares two or more (real) numbers for less-than.
  @interaction[#:eval (bsl) (< 42 2/5)]
 }
-  @defproc[(> [x real][y real][z real] ...) boolean?]{
- Compares (real) numbers for greater-than.
+  @defproc[((beginner-> >) [x real][y real][z real] ...) boolean?]{
+ Compares two or more (real) numbers for greater-than.
  @interaction[#:eval (bsl) (> 42 2/5)]   
 }
-  @defproc[(<= [x real][y real][z real] ...) boolean?]{
- Compares (real) numbers for less-than or equality.
+  @defproc[((beginner-<= <=) [x real][y real][z real] ...) boolean?]{
+ Compares two or more (real) numbers for less-than or equality.
  @interaction[#:eval (bsl) (<= 42 2/5)]
 }
-  @defproc[(>= [x real][y real][z real] ...) boolean?]{
- Compares (real) numbers for greater-than or equality.
+  @defproc[((beginner->= >=) [x real][y real][z real] ...) boolean?]{
+ Compares two or more (real) numbers for greater-than or equality.
  @interaction[#:eval (bsl) (>= 42 42)]
 }
   @defproc[((beginner-+ +) [x number][y number][z number] ...) number]{

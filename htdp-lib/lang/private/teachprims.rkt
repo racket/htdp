@@ -162,6 +162,22 @@ namespace.
         (current-continuation-marks))))
     (sqr a)))
 
+(define-teach beginner <
+  (lambda (a b . args)
+    (apply < a b args)))
+
+(define-teach beginner <=
+  (lambda (a b . args)
+    (apply <= a b args)))
+
+(define-teach beginner >
+  (lambda (a b . args)
+    (apply > a b args)))
+
+(define-teach beginner >=
+  (lambda (a b . args)
+    (apply >= a b args)))
+
 (define-teach beginner memq
   (lambda (a b)
     (check-second 'memq a b)
@@ -518,6 +534,10 @@ namespace.
  beginner-/
  beginner-*
  beginner-sqr
+ beginner-<
+ beginner-<=
+ beginner->
+ beginner->=
  beginner-list?
  beginner-member
  beginner-member?

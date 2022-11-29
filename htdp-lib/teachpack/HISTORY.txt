@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version 8.8
+
+* restrict <, <=, >, >= in *SL to take at least two arguments 
+
+------------------------------------------------------------------------
 Version 8.7				  [Tue Oct 18 08:53:31 EDT 2022]
 
 * expose arrow images from htdp/arrow for additional uses
