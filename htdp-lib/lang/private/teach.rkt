@@ -1018,17 +1018,27 @@
                           #,(if setters?
                                 (quasisyntax/loc stx
                                   (define (#,parametric-signature-name field_ ...)
-                                    (make-combined-signature
-                                     '#,signature-name
-                                     (list (signature (at name_ (predicate raw-predicate)))
-                                           #,@(map (lambda (field-name getter-name)
-                                                     #`(make-property-signature (signature-name #,field-name)
-                                                                                #,getter-name
-                                                                                #,field-name
-                                                                                (signature-syntax #,field-name)))
-                                                   (syntax->list #'(field_ ...))
-                                                   (syntax->list #'(getter-id ...))))
-                                     'parametric-signature)))
+                                    (let ((sig
+                                           (make-combined-signature
+                                            '#,signature-name
+                                            (list (signature (at name_ (predicate raw-predicate)))
+                                                  #,@(map (lambda (field-name getter-name)
+                                                            #`(make-property-signature (signature-name #,field-name)
+                                                                                       #,getter-name
+                                                                                       #,field-name
+                                                                                       (signature-syntax #,field-name)))
+                                                          (syntax->list #'(field_ ...))
+                                                          (syntax->list #'(getter-id ...))))
+                                            'parametric-signature)))
+                                      (let ((arbs (map signature-arbitrary (list field_ ...))))
+                                        (when (andmap values arbs)
+                                          (set-signature-arbitrary! 
+                                           sig
+                                           (apply arbitrary-record
+                                                  #,constructor-name 
+                                                  (list #,@getter-names)
+                                                  arbs))))
+                                      sig)))
                                 (quasisyntax/loc stx
                                   (define (#,parametric-signature-name field_ ...)
                                     (let* ((sigs (list (signature field_) ...))
