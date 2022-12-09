@@ -2018,12 +2018,12 @@ Finally, here is the third function, which renders the state as an image:
 
 ; String -> WorldState
 ; create and hook up a world with the @racket[LOCALHOST] server
-(define (create-world name)
+(define (create-world a-name)
   (big-bang WORLD0
    (on-receive receive)
-   (to-draw    (draw n))
+   (to-draw    (draw a-name))
    (on-tick    move)
-   (name       name)
+   (name       a-name)
    (register   LOCALHOST)))
 ))
 
