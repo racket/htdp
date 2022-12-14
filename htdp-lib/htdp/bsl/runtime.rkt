@@ -48,6 +48,7 @@
   (configure/settings (options->sl-runtime-settings options)))
 
 (define (configure/settings settings)
+  (read-decimal-as-inexact #f)
   ;; Set print-convert options:
   (booleans-as-true/false (sl-runtime-settings-true/false/empty-as-ids? settings))
   (print-boolean-long-form #t)
