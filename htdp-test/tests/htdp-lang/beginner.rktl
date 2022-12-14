@@ -5,6 +5,7 @@
 
 ;; Limitations of this test suite:
 ;;  - It doesn't check reader-level parameterization, such as use of quotes
+;;    (but see reader-settings.rkt)
 ;;  - It doesn't check format of printed results
 ;;  - It doesn't check the absence of Racket forms
 
