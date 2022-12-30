@@ -43,3 +43,7 @@
 (check-docs (quote htdp/big-draw) #:skip private-module)
 (check-docs (quote htdp/arrow))
 (check-docs (quote htdp/arrow-gui))
+(check-docs (quote graphics/turtles))
+(check-docs (quote graphics/value-turtles))
+(check-docs (quote graphics/turtle-examples))
+(check-docs (quote graphics/value-turtles-examples))

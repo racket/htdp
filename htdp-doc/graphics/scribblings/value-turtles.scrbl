@@ -39,22 +39,6 @@ Moves the turtle @racket[n] pixels, returning a new turtles window.}
 Moves the turtle @racket[n] pixels and draws a line along the path,
 returning a new turtles window.}
 
-@defproc[(erase [n real?] [turtles turtles?]) turtles?]{
-
-Moves the turtle @racket[n] pixels and erases a line along the path,
-returning a new turtles window.}
-
-
-@deftogether[(
-@defproc[(move-offset [h real?] [v real?] [turtles turtles?]) turtles?]
-@defproc[(draw-offset [h real?] [v real?] [turtles turtles?]) turtles?]
-@defproc[(erase-offset [h real?] [v real?] [turtles turtles?]) turtles?]
-)]{
-
-Like @racket[move], @racket[draw], and @racket[erase], but using a
-horizontal and vertical offset from the turtle's current position.}
-
-
 @defproc[(turn [theta real?] [turtles turtles?]) turtles?]{
 
 Turns the turtle @racket[theta] degrees counter-clockwise, returning a
