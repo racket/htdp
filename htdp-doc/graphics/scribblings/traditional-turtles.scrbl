@@ -165,7 +165,7 @@ Draws some spokes, using @racket[radial-turtles] and
 
 @defproc[(spyro-gyra) void?]{
  
-Draws a spyro-grya reminiscent shape.}
+Draws a spyrograph-reminiscent shape.}
 
 @defproc[(neato) void?]{
 
