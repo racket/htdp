@@ -342,27 +342,27 @@
          (stx (signature-syntax signature))
          (srcloc (signature-violation-srcloc violation))
          (message (signature-violation-message violation)))
-    (horizontal
-     (cond
-       ((string? message) message)
-       ((signature-got? message)
-        (horizontal (string-constant test-engine-got)
-                    " "
-                    (framed-markup (value->markup (signature-got-value message)))))
-       (else empty-markup))
-    
-     (if srcloc
-         (horizontal " " (srcloc-markup srcloc (format-srcloc srcloc)))
-         empty-markup)
-     ", "
-     (string-constant test-engine-signature)
-     " "
-     (srcloc-markup (syntax-srcloc stx) (format-srcloc (syntax-srcloc stx)))
+    (vertical
+     (horizontal
+      (cond
+        ((string? message) message)
+        ((signature-got? message)
+         (horizontal (string-constant test-engine-got)
+                     " "
+                     (framed-markup (value->markup (signature-got-value message)))))
+        (else empty-markup))
+      
+      (if srcloc
+          (horizontal " " (srcloc-markup srcloc (format-srcloc srcloc)))
+          empty-markup)
+      ", "
+      (string-constant test-engine-signature)
+      " "
+      (srcloc-markup (syntax-srcloc stx) (format-srcloc (syntax-srcloc stx))))
      (cond
        ((signature-violation-blame violation)
         => (lambda (blame)
              (horizontal
-              "        "
               (string-constant test-engine-to-blame)
               " "
               (srcloc-markup (syntax-srcloc blame) (format-srcloc (syntax-srcloc blame))))))
