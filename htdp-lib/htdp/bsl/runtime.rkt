@@ -180,8 +180,8 @@
            [(quasiquote) (pretty-write val port)])))))
 
   (signature-violation-proc
-   (lambda (obj signature message blame)
-     (report-signature-violation! obj signature message blame))))
+   (lambda (obj signature message blame-srcloc)
+     (report-signature-violation! obj signature message blame-srcloc))))
 
 (define (sl-render-value/format value port width)
   (parameterize ([print-value-columns (if (eq? width 'infinity)
