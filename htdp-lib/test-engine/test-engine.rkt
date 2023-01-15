@@ -104,7 +104,7 @@
             ((srcloc srcloc?)
              (obj any/c)
              (signature signature?)
-             (blame (or/c #f syntax?))))
+             (blame-srcloc (or/c #f srcloc?))))
 
           ; the value we got that violated the signature.
           (struct signature-got
@@ -115,7 +115,7 @@
              (signature signature?)
              (message (or/c string? signature-got?))
              (srcloc (or/c #f srcloc?))
-             (blame (or/c #f syntax?))))
+             (blame-srcloc (or/c #f srcloc?))))
 
           (struct (property-fail fail-reason)
             ((srcloc srcloc?)
@@ -237,13 +237,13 @@
 ; that directly calls add-signature-violation!
 ; The default handler raises an exception - when that happens
 ; during a test, this test failure is registered:
-(struct violated-signature fail-reason (obj signature blame)
+(struct violated-signature fail-reason (obj signature blame-srcloc)
   #:transparent)
 
 (struct signature-got (value)
   #:transparent)
 
-(struct signature-violation (obj signature message srcloc blame)
+(struct signature-violation (obj signature message srcloc blame-srcloc)
   #:transparent)
 
 (struct property-fail fail-reason (result)

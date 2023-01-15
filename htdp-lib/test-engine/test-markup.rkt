@@ -319,9 +319,9 @@
      (format->markup "Unhandled signature violation: got ~F, violated signature ~a, to blame: ~a"
                      (violated-signature-obj fail)
                      (signature-name (violated-signature-signature fail))
-                     (let ((blame (violated-signature-blame fail)))
-                       (if blame
-                           (syntax->datum blame)
+                     (let ((blame-srcloc (violated-signature-blame-srcloc fail)))
+                       (if blame-srcloc
+                           (format-srcloc blame-srcloc)
                            '<unknown>)))]))
 
 (define (error-link->markup reason srcloc check-srcloc)
@@ -360,12 +360,12 @@
       " "
       (srcloc-markup (syntax-srcloc stx) (format-srcloc (syntax-srcloc stx))))
      (cond
-       ((signature-violation-blame violation)
-        => (lambda (blame)
+       ((signature-violation-blame-srcloc violation)
+        => (lambda (blame-srcloc)
              (horizontal
               (string-constant test-engine-to-blame)
               " "
-              (srcloc-markup (syntax-srcloc blame) (format-srcloc (syntax-srcloc blame))))))
+              (srcloc-markup blame-srcloc (format-srcloc blame-srcloc)))))
        (else empty-markup)))))
 
 (define (syntax-srcloc stx)
@@ -483,7 +483,7 @@
   (define integer (make-predicate-signature 'integer integer? #'integer-marker))
   (define fail-violated-signature
     (failed-check
-     (violated-signature (srcloc 'source 1 0 10 20) 'obj integer #'syntax)
+     (violated-signature (srcloc 'source 1 0 10 20) 'obj integer (srcloc 'signature 2 3 23 333))
      #f))
 
   (define signature-violation-1

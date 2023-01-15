@@ -22,7 +22,7 @@
          (only-in deinprogramm/signature/signature
                   exn:fail:contract:signature?
                   exn:fail:contract:signature-obj exn:fail:contract:signature-signature
-                  exn:fail:contract:signature-blame)
+                  exn:fail:contract:signature-blame-srcloc)
          test-engine/srcloc
          test-engine/test-markup
          (only-in syntax/macro-testing convert-compile-time-error))
@@ -81,7 +81,7 @@
                                      (violated-signature src
                                                          (exn:fail:contract:signature-obj e)
                                                          (exn:fail:contract:signature-signature e)
-                                                         (exn:fail:contract:signature-blame e))
+                                                         (exn:fail:contract:signature-blame-srcloc e))
                                      e))]
                                  [exn:fail?
                                   (lambda (e)
@@ -94,12 +94,12 @@
         #t)))
 
 
-(define (report-signature-violation! obj signature message blame)
+(define (report-signature-violation! obj signature message blame-srcloc)
   (let* ([srcloc (continuation-marks-srcloc (current-continuation-marks))]
          [message
           (or message
               (signature-got obj))])
-    (add-signature-violation! (signature-violation obj signature message srcloc blame))))
+    (add-signature-violation! (signature-violation obj signature message srcloc blame-srcloc))))
 
 ; typed/test-engine/typen-env-ext knows what this expands into
 (define-syntax (test stx) 
