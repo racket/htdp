@@ -1,6 +1,11 @@
 Stepper
 -------
 
+Changes for 8.8:
+
+Test cases & better support for templates, better
+support for begin with at most one non-skipped subexpression
+
 Changes for 8.7:
 
 Bug fixes in & around templates & begin
