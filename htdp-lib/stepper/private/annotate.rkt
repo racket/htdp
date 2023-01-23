@@ -203,7 +203,7 @@
                . -> . (vector/p syntax? binding-set?))
     (lambda (exp tail-bound pre-break? procedure-name-info)
 
-      (printf "exp: ~v\n" exp)
+      ;(printf "exp: ~v\n" exp)
 
       
       ;; annotate an exp with a stepper/skipto or stepper-skipto/discard
