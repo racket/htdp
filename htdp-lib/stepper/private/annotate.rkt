@@ -203,9 +203,6 @@
                . -> . (vector/p syntax? binding-set?))
     (lambda (exp tail-bound pre-break? procedure-name-info)
 
-      ;(printf "exp: ~v\n" exp)
-
-      
       ;; annotate an exp with a stepper/skipto or stepper-skipto/discard
       ;; label. If force-discard? is true, then we use a discarding
       ;; reconstruction regardless of the tag
