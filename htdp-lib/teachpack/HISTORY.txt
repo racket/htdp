@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version 8.9
+
+* doc updates: use uniform contract names 
+
+------------------------------------------------------------------------
 Version 8.8				  [Wed Jan 18 16:41:16 EST 2023]
 
 * restrict <, <=, >, >= in *SL to take at least two arguments 
