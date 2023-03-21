@@ -6,6 +6,8 @@
          test-engine/racket-tests
          test-engine/test-engine)
 
+(require racket/format)
+
 (define (assert-failed-check failed-check reason? . selector+value-list)
   (check-pred failed-check? failed-check)
   (let ((reason (failed-check-reason failed-check)))
@@ -28,11 +30,15 @@
   (initialize-test-object!))
 
 (define (check-failure reason? . selector+value-list)
-  (let* ((test-object (run-tests!))
+  (let* ((test-object   (run-tests!))
          (failed-checks (test-object-failed-checks test-object)))
     (check-equal? (length failed-checks) 1)
     (when (null? failed-checks)
-      (error 'check-failure "expected failed check, none failed"))
+      (define names
+        (for/fold ([l (object-name reason?)])
+                  ([f selector+value-list] [i (in-naturals)] #:when (even? i))
+          (~a l ", " (object-name f))))
+      (error 'check-failure "expected failed check, none failed (~a)" names))
     (apply assert-failed-check (car failed-checks) reason? selector+value-list))
   (initialize-test-object!))
 
@@ -231,8 +237,8 @@
 (check-random (g 0)
               (let* ((x4 (random 40))
                      (x3 (random 30))
-                       (x2 (random 20))
-                       (x1 (random 10)))
+                     (x2 (random 20))
+                     (x1 (random 10)))
                 (list x1 x2 x3 x4)))
 (check-failure unequal?)
 
@@ -247,19 +253,19 @@
 (check-property
  (for-all ((a Integer)
            (b Integer))
-          (= (+ a b) (+ b a))))
+   (= (+ a b) (+ b a))))
 (check-success)
 
 (check-property
  (for-all ((a Integer)
            (b Integer))
-          (= (+ a b) (+ b a 1))))
+   (= (+ a b) (+ b a 1))))
 (check-failure property-fail?)
 
 (check-property
  (for-all ((a Integer)
            (b Integer))
-          (= (/ a b) (/ b a))))
+   (= (/ a b) (/ b a))))
 (check-failure property-fail?)
 
 
