@@ -13,7 +13,8 @@
 
 @racketgrammar*+qq[
 #:literals (define define-struct lambda cond else if and or require lib planet
-            local let let* letrec time check-expect check-random check-within check-error check-satisfied)
+            local let let* letrec time check-expect check-random check-within check-error check-satisfied
+   	    : signature enum mixed -> ListOf)
 (expr check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
 [program (code:line def-or-expr #, @dots)]
 [def-or-expr definition
@@ -42,9 +43,19 @@
       number
       boolean 
       string
-      character]
+      character
+      (signature signature-form)]
 [expr-for-let (lambda (variable variable #, @dots) expr)
               expr]
+[signature-declaration (: name signature-form)]
+[signature-form 
+	   (enum expr ...)
+	   (mixed signature-form ...)
+	   (signature-form ... -> signature-form)
+	   (ListOf signature-form)
+	   signature-variable
+	   expr]
+[signature-variable @#,elem{@racketvalfont{%}name}]
 ]
 
 @prim-nonterms[("intermediate") define define-struct]
@@ -99,7 +110,11 @@ did in the @secref["beginner-abbr"] level.
                      #:with-beginner-function-call #t)
 
 
+@; --------------------------------------------------
 
+@section[#:tag "intermediate-signatures"]{Signatures}
+
+@(signature-forms ("intermediate") define-struct : signature enum mixed -> ListOf)
 
 @section[#:tag "intermediate-pre-defined" ]{Pre-defined Functions}
 

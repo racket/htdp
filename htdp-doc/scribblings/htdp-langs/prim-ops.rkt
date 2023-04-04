@@ -1,6 +1,7 @@
 #lang at-exp racket/base
 (provide prim-variables
          prim-forms
+         signature-forms
          define-forms/normal
          define-form/explicit-lambda
          beginner-abbr-forms
@@ -727,7 +728,170 @@ see note on @racket[check-expect] for details.  }
   the best place to find examples of the syntax is on the
   @link["http://planet.racket-lang.org"]{the @PLaneT server}, in the
   description of a specific package.  
+  }
+))
+
+;; ----------------------------------------
+
+(define-syntax-rule (signature-forms 
+                     (section-prefix)
+                     define-struct : signature enum mixed -> ListOf)
+  (gen-signature-forms section-prefix
+                       #'define-struct @racket[define-struct]
+                       #': @racket[:]
+                       #'signature @racket[signature]
+                       #'enum @racket[enum]
+                       #'mixed @racket[mixed]
+                       #'-> @racket[->]
+                       #'ListOf @racket[ListOf]))
+
+(define (gen-signature-forms section-prefix
+                             define-struct-id define-struct-elem
+                             :-id :-elem
+                             signature-id signature-elem
+                             enum-id enum-elem
+                             mixed-id mixed-enum
+                             ->-id ->-elem
+                             ListOf-id ListOf-elem)
+  (list
+   @; ----------------------------------------------------------------------
+
+@nested{Signatures do not have to be comment: They can also be part of the
+code.  When a signature is attached to a function, DrRacket will check
+that program uses the function in accordance with the signature and
+display signature violations along with the test results.
+
+A signature is a regular value, and is specified as a
+@seclink[(string-append section-prefix "-signature-forms")]{@italic{signature form}}, a
+special syntax that only works with @:-elem signature declarations
+and inside @signature-elem expressions.}
+ 
+   @defform[#:id [: :-id]
+            (: name signature-form)]{
+This attaches the signature specified by @racket[signature-form] to
+the definition of @racket[name].
+There must be a definition of @racket[name] somewhere in the program.
+
+@racketblock[
+(: age Integer)
+(define age 42)
+
+(: area-of-square (Number -> Number)) 
+(define (area-of-square len)
+  (sqr len))
+  ]
+
+On running the program, Racket checks whether the signatures attached
+with @:-elem actually match the value of the variable.  If they
+don't, Racket reports @italic{signature violation} along with test failures.
+
+For example, this piece of code:
+
+@racketblock[
+(: age Integer)
+(define age "fortytwo")
+]
+
+Yields this output:
+
+@verbatim{
+1 signature violation.
+
+Signature violations:
+        got "fortytwo" at line 2, column 12, signature at line 1, column 7
 }
+
+Note that a signature violation does not stop the running program.
+}
+
+@defform[#:id [signature signature-id]
+         (signature signature-form)]{
+This returns the signature described by @racket[signature-form] as a value.
+}
+
+@subsection[#:tag (string-append section-prefix "-signature-forms")]{Signature Forms}
+
+@nested{Any expression can be a signature form, in which case the signature is
+the value returned by that expression.  There are a few special
+signature forms, however:
+
+In a signature form, any name that starts with a @racketvalfont{%} is a
+@italic{signature variable} that stands for any signature depending on how
+the signature is used.
+
+Example:}
+
+@racketblock[
+(: same (%a -> %a))
+
+(define (same x) x)
+]
+
+@defform[#:id [-> ->-id] (input-signature-form ... -> output-signature-form)]{
+This signature form describes a function with inputs described by the
+@racket[input-signature-form]s and output described by
+@racket[output-signature-form].
+}	
+
+@defform[#:id [enum enum-id] (enum expr ...)]{
+This signature describes an enumeration of the values returned by the @racket[expr]s.
+
+Example:
+
+@racketblock[
+(: cute? ((enum "cat" "snake") -> Boolean))
+
+(define (cute? pet)
+  (cond
+    [(string=? pet "cat") #t]
+    [(string=? pet "snake") #f]))
+]
+}
+
+@defform[#:id [mixed mixed-id] (mixed signature-form ...)]{
+This signature describes mixed data, i.e. an itemization where
+each of the cases has a signature described by a @racket[signature-form].
+
+Example:
+
+@racketblock[(define SIGS (signature (mixed Aim Fired)))]
+}
+
+@defform[#:id [ListOf ListOf-id] (ListOf signature-form)]{
+This signature describes a list where the elements are described by
+@racket[signature-form].
+}
+
+
+@subsection[#:tag (string-append section-prefix "-struct-signatures")]{Struct Signatures}
+
+@nested{
+ A @define-struct-elem form defines two additional names that can be
+ used in signatures.  For a struct called @racketvalfont{struct}, these
+ are @racketvalfont{Struct} and @racketvalfont{StructOf}.  Note that
+ these names are capitalized.  In particular, a struct called
+ @racketvalfont{Struct}, will also define @racketvalfont{Struct} and
+ @racketvalfont{StructOf}.  Moreover, when forming the additional
+ names, hyphens are removed, and each letter following a hyphen is
+ capitalized - so a struct called @racketvalfont{foo-bar} will define
+ @racketvalfont{FooBar} and @racketvalfont{FooBarOf}.
+ 
+ @racketvalfont{Struct} is a signature that describes struct values
+ from this structure type.  @racketvalfont{StructOf} is a function
+ that takes as input a signature for each field.  It returns a
+ signature describing values of this structure type, additionally
+ describing the values of the fields of the value.}
+ 
+@racketblock[
+(define-struct pair [fst snd])
+
+(: add-pair ((PairOf Number Number) -> Number))
+(define (add-pair p)
+  (+ (pair-fst p) (pair-snd p)))
+]
+
+@; --------------------------------------------------
+
 ))
 
 ;; ----------------------------------------
