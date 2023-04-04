@@ -15,7 +15,8 @@
 
 @racketgrammar*+library[
 #:literals (define define-struct lambda cond else if and or require lib planet
-            check-expect check-random check-within check-error check-satisfied)
+            check-expect check-random check-within check-error check-satisfied
+            : signature enum mixed -> ListOf)
 (name check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
 [program (code:line def-or-expr #, @dots)]
 [def-or-expr definition
@@ -38,7 +39,17 @@
       number
       boolean 
       string
-      character]
+      character
+      (signature signature-form)]
+[signature-declaration (: name signature-form)]
+[signature-form 
+	   (enum expr ...)
+	   (mixed signature-form ...)
+	   (signature-form ... -> signature-form)
+	   (ListOf signature-form)
+	   signature-variable
+	   expr]
+[signature-variable @#,elem{@racketvalfont{%}name}]
 ]
 
 @prim-nonterms[("beginner") define define-struct]
@@ -80,6 +91,12 @@ A quoted @racket[name] is a symbol. A symbol is a value, just like
              true false
              #:with-beginner-function-call #t
              )
+
+@; --------------------------------------------------
+
+@section[#:tag "beginner-signatures"]{Signatures}
+
+@(signature-forms ("beginner") define-struct : signature enum mixed -> ListOf)
 
 @; --------------------------------------------------
              
