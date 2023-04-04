@@ -7,7 +7,13 @@
 (require mzlib/etc mzlib/list mzlib/math syntax/docprovide
          (for-syntax "firstorder.rkt")
          (for-syntax syntax/parse) 
-         (for-syntax racket/syntax))
+         (for-syntax racket/syntax)
+         (only-in "teach.rkt"
+                  Integer Number Rational Real Natural
+                  Boolean True False
+                  String Char Symbol
+                  EmptyList ConsOf
+                  Any))
 
 ;; Implements the procedures:
 (require "teachprims.rkt" "teach.rkt" lang/posn lang/imageeq "provide-and-scribble.rkt")
@@ -984,4 +990,48 @@
 }
   @defproc[((beginner-exit exit)) void]{
  Evaluating @racket[(exit)] terminates the running program. 
- }))
+ })
+
+ ("Signatures"
+    @defthing[Number signature?]{
+    Signature for arbitrary numbers.
+    }
+    @defthing[Natural signature?]{
+    Signature for natural numbers.
+    }
+    @defthing[Integer signature?]{
+    Signature for integers.
+    }
+    @defthing[Rational signature?]{
+    Signature for rational numbers.
+    }
+    @defthing[Real signature?]{
+    Signature for real numbers.
+    }
+    @defthing[Boolean signature?]{
+    Signature for booleans.
+    }
+    @defthing[True signature?]{
+    Signature for just true.
+    }
+    @defthing[False signature?]{
+    Signature for just false.
+    }
+    @defthing[String signature?]{
+    Signature for strings.
+    }
+    @defthing[Char signature?]{
+    Signature for chararacters.
+    }
+    @defthing[Symbol signature?]{
+    Signature for symbols.
+    }
+    @defthing[EmptyList signature?]{
+    Signature for the empty list.
+    }
+    @defproc[(ConsOf [first-sig signature?] [rest-sig signature?]) signature?]{
+    Signature for a cons pair.
+    }
+    @defthing[Any signature?]{
+    Signature for any value.
+    }))
