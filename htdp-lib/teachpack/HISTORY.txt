@@ -1,7 +1,14 @@
 ------------------------------------------------------------------------
 Version 8.9
 
-* doc updates: use uniform contract names 
+* doc updates: use uniform contract names
+
+* The BSL, BSL+, ISL, and ISL+ languages come with checked signatures. 
+  This means that some names are now taken away from the global
+  namespace. -- This addition is an exploratory step. One problem
+  is that `lambda` now shows up in error messages of BSL .. ISL.
+  If we find additional obstacles over the summer and can't fix them, we
+  may backtrack. 
 
 ------------------------------------------------------------------------
 Version 8.8				  [Wed Jan 18 16:41:16 EST 2023]
