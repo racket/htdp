@@ -129,7 +129,7 @@
                               (andmap (λ (x) (or (string? x) (symbol? x))) x)))
                        l)))
           
-        (inherit get-allow-sharing? get-use-function-output-syntax? 
+        (inherit get-allow-sharing? get-use-function-output-syntax? get-output-function-instead-of-lambda?
                  get-accept-quasiquote? get-read-accept-dot)
         (define/override (config-panel parent)
           (sharing/not-config-panel (get-allow-sharing?) (get-accept-quasiquote?) parent))
@@ -195,7 +195,8 @@
                                                         (htdp-lang-settings-tracing? settings)
                                                         (htdp-lang-settings-true/false/empty-as-ids? settings)
                                                         (get-abbreviate-cons-as-list)
-                                                        (get-use-function-output-syntax?)))))))
+                                                        (get-use-function-output-syntax?)
+                                                        (get-output-function-instead-of-lambda?)))))))
 
         (define/private (teaching-languages-error-value->string settings v len)
           (let ([sp (open-output-string)])
@@ -381,6 +382,7 @@
                     manual
                     reader-module
                     (use-function-output-syntax? #f)
+                    (output-function-instead-of-lambda? #f)
                     (accept-quasiquote? #t)
                     (read-accept-dot #f)
                     (style-delta #f))
@@ -389,6 +391,7 @@
         (define/public (get-allow-sharing?) allow-sharing?)
         (define/public (get-manual) manual)
         (define/public (get-use-function-output-syntax?) use-function-output-syntax?)
+        (define/public (get-output-function-instead-of-lambda?) output-function-instead-of-lambda?)
         (define/public (get-accept-quasiquote?) accept-quasiquote?)
         (define/public (get-read-accept-dot) read-accept-dot)
         ;(define/override (get-one-line-summary) one-line-summary)
@@ -1069,6 +1072,7 @@
          (abbreviate-cons-as-list #t)
          (allow-sharing? #f)
          (use-function-output-syntax? #t)
+         (output-function-instead-of-lambda? #t)
          (reader-module '(lib "htdp-intermediate-reader.ss" "lang"))
          (stepper:supported #t)
          (stepper:enable-let-lifting #t)
@@ -1087,6 +1091,7 @@
          (language-numbers '(-500 -500 2))
          (sharing-printing #f)
          (abbreviate-cons-as-list #t)
+         (output-function-instead-of-lambda? #t)
          (allow-sharing? #f)
          (reader-module '(lib "htdp-beginner-abbr-reader.ss" "lang"))
          (stepper:supported #t)
@@ -1106,6 +1111,7 @@
          (language-id "plt:beginning-student")
          (sharing-printing #f)
          (abbreviate-cons-as-list #f)
+         (output-function-instead-of-lambda? #t)
          (allow-sharing? #f)
          (accept-quasiquote? #f)
          (reader-module '(lib "htdp-beginner-reader.ss" "lang"))

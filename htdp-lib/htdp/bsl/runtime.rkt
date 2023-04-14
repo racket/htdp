@@ -30,7 +30,8 @@
    tracing? ; unclear if this should be here
    true/false/empty-as-ids?
    abbreviate-cons-as-list?
-   use-function-output-syntax?))
+   use-function-output-syntax?
+   output-function-instead-of-lambda?))
 
 (define insert-newlines (make-parameter #t))
 
@@ -42,7 +43,8 @@
                        #f ; tracing?
                        #f ; true/false/empty-as-ids?
                        (and (memq 'abbreviate-cons-as-list options) #t)
-                       (and (memq 'use-function-output-syntax options) #t)))
+                       (and (memq 'use-function-output-syntax options) #t)
+                       (and (memq 'output-function-instead-of-lambda options) #t)))
 
 (define (configure options)
   (configure/settings (options->sl-runtime-settings options)))
@@ -64,6 +66,8 @@
    (let ([ph (current-print-convert-hook)])
      (lambda (val basic sub)
        (cond
+         [(and (sl-runtime-settings-output-function-instead-of-lambda? settings)
+               (procedure? val)) 'function]
          [(and (not (sl-runtime-settings-true/false/empty-as-ids? settings)) (equal? val '())) ''()]
          [(equal? val set!-result) '(void)]
          [(signature? val)
