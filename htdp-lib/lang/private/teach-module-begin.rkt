@@ -163,11 +163,13 @@
     
     (values
      ;; module-begin
-     (mk-module-begin '())
+     (mk-module-begin '(output-function-instead-of-lambda))
      (mk-module-begin '(abbreviate-cons-as-list
-                        read-accept-quasiquote))
+                        read-accept-quasiquote
+                        output-function-instead-of-lambda))
      (mk-module-begin '(abbreviate-cons-as-list
-                        read-accept-quasiquote))
+                        read-accept-quasiquote
+                        output-function-instead-of-lambda))
      (mk-module-begin '(abbreviate-cons-as-list
                         read-accept-quasiquote))
      (mk-module-begin '(abbreviate-cons-as-list
