@@ -185,7 +185,10 @@
     (syntax-case stx ()
       ((_ ?name ?cnt ?expr)
        (with-syntax ((?enforced
-		       (stepper-syntax-property #'(attach-name '?name (apply-signature/blame ?cnt ?expr))
+                      (stepper-syntax-property #'(attach-name '?name
+                                                              (apply-signature/blame ?cnt
+                                                                                     ;; for reporting in signature violations
+                                                                                     (attach-name '?name ?expr)))
 						'stepper-skipto/discard
 						;; apply-signature/blame takes care of itself
 						;; remember there's an implicit #%app

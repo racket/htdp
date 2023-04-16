@@ -67,7 +67,12 @@
      (lambda (val basic sub)
        (cond
          [(and (sl-runtime-settings-output-function-instead-of-lambda? settings)
-               (procedure? val)) 'function]
+               (procedure? val))
+          (cond
+            ((object-name val)
+             => (lambda (name)
+                  (string->symbol (format "function:~a" name))))
+            (else 'function))]
          [(and (not (sl-runtime-settings-true/false/empty-as-ids? settings)) (equal? val '())) ''()]
          [(equal? val set!-result) '(void)]
          [(signature? val)
