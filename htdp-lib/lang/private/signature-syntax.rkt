@@ -10,6 +10,7 @@
 	 scheme/promise
 	 (for-syntax scheme/base)
 	 (for-syntax syntax/stx)
+         (for-syntax racket/syntax)
          (for-syntax stepper/private/syntax-property)
 	 (for-syntax "firstorder.rkt"))
 
@@ -184,16 +185,16 @@
   (lambda (stx)
     (syntax-case stx ()
       ((_ ?name ?cnt ?expr)
-       (with-syntax ((?enforced
-                      (stepper-syntax-property #'(attach-name '?name
-                                                              (apply-signature/blame ?cnt
-                                                                                     ;; for reporting in signature violations
-                                                                                     (attach-name '?name ?expr)))
-						'stepper-skipto/discard
-						;; apply-signature/blame takes care of itself
-						;; remember there's an implicit #%app
-						'(syntax-e cdr syntax-e cdr cdr car))))
-							   
+       (with-syntax* (; for reporting in signature violations
+                      (?with-name (stepper-syntax-property (syntax/loc #'?expr (attach-name '?name ?expr))
+                                                           'stepper-skipto/discard
+                                                           '(syntax-e cdr syntax-e cdr cdr car)))
+                      (?enforced (stepper-syntax-property #'(attach-name '?name
+                                                                         (apply-signature/blame ?cnt ?with-name))
+                                                          'stepper-skipto/discard
+                                                          ;; apply-signature/blame takes care of itself
+                                                          ;; remember there's an implicit #%app
+                                                          '(syntax-e cdr syntax-e cdr cdr car))))
 	 #'(define ?name ?enforced))))))
 
 (define-syntax define-values/signature
