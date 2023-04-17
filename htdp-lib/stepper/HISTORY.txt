@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 8.9:
+
+None.
+
 Changes for 8.8:
 
 Test cases & better support for templates, better
