@@ -14,7 +14,8 @@
          racket/snip
          racket/class
          (only-in test-engine/test-markup get-rewritten-error-message-parameter render-value-parameter)
-         (only-in test-engine/syntax report-signature-violation!)
+         (only-in test-engine/syntax report-signature-violation! test)
+         (only-in test-engine/test-engine test-object-copy current-test-object test-object=?)
          (only-in deinprogramm/signature/signature
                   signature? signature-name
                   signature-violation-proc)
@@ -190,7 +191,27 @@
 
   (signature-violation-proc
    (lambda (obj signature message blame-srcloc)
-     (report-signature-violation! obj signature message blame-srcloc))))
+     (report-signature-violation! obj signature message blame-srcloc)))
+
+    (let ((interaction? #f))
+    (current-read-interaction
+     (let ((old-read-interaction (current-read-interaction)))
+       (lambda args
+         ; we've entered the REPL, so test once
+         (set! interaction? #t)
+         (apply old-read-interaction args))))
+
+    ; in the repl, re-run tests / display results if anything has changed
+    (current-eval
+     (let ((old-eval (current-eval)))
+       (lambda args
+         (let ((test-object (test-object-copy (current-test-object))))
+           (dynamic-wind
+             void
+             (lambda () (apply old-eval args))
+             (lambda ()
+               (when (and interaction? (not (test-object=? test-object (current-test-object))))
+                 (test))))))))))
 
 (define (sl-render-value/format value port width)
   (parameterize ([print-value-columns (if (eq? width 'infinity)

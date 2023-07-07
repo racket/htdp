@@ -10,12 +10,13 @@
 
 (require deinprogramm/signature/signature
          lang/private/signature-syntax
-         (only-in test-engine/syntax test))
+         (only-in test-engine/syntax test test-display-results!))
 
 (require (for-syntax scheme/base)
          (for-syntax racket/list)
          (for-syntax syntax/boundmap)
-         (for-syntax syntax/kerncase))
+         (for-syntax syntax/kerncase)
+         (for-syntax stepper/private/syntax-property))
 
 (require (for-syntax "firstorder.rkt"))
 
@@ -155,11 +156,28 @@
            ;; the module-expansion machinery can be used to handle
            ;; requires, etc.:
            #`(#%plain-module-begin
+              #,(stepper-syntax-property
+                 #`(begin
+                     (define repl? #f) ; whether we're in the REPL now
+                     (let ((handle (uncaught-exception-handler)))
+                       (uncaught-exception-handler
+                        (lambda (exn)
+                          (begin
+                            (unless repl? ; the REPL takes care of printing the results itself
+                              (test-display-results!))
+                            (set! repl? #t)
+                            (handle exn))))))
+                 'stepper-skip-completely 
+                 #t)
               (module-continue (e1 ...) () ())
               (module configure-runtime racket/base
                 (require htdp/bsl/runtime)
                 (configure '#,options))
-              (module+ test (test)))))))
+              (module+ test (test))
+              #,(stepper-syntax-property
+                 #`(set! repl? #t)
+                 'stepper-skip-completely 
+                 #t))))))
     
     (values
      ;; module-begin
