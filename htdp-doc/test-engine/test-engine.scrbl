@@ -367,7 +367,7 @@ for display in an error message in a language-specific way.
 The default is @racket[(lambda (v) (format "~V" v))].
 }
 
-@defparam[display-test-results-parameter display-test-proc (test-object? . -> . any)]{
+@defparam[display-test-results-parameter display-test-proc (markup? . -> . any)]{
 This parameter determines how to output the test results.
 The default prints to @racket[(current-output-port)].
 }
