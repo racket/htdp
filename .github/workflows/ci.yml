@@ -15,18 +15,15 @@ jobs:
     - uses: Bogdanp/setup-racket@v1.10
       with:
         architecture: 'x64'
-        distribution: 'minimal'
+        distribution: 'full'
         variant: ${{ matrix.racket-variant }}
         version: current
         sudo: never
         dest: '${HOME}/racket'
-    - name: Add racket to PATH
-      run: echo "${HOME}/racket/bin" >> $GITHUB_PATH
-    - name: Setup local catalog
-      run: |
-        racket -l- pkg/dirs-catalog --immediate $PWD/local-catalog $PWD/htdp $PWD/htdp-lib $PWD/htdp-test $PWD/htdp-doc
-        raco pkg config --set catalogs $PWD/local-catalog $(echo $(raco pkg config catalogs) | tr '\n' ' ')
+        local_catalogs: $GITHUB_WORKSPACE
+    - run: raco pkg update -i --no-setup htdp-lib htdp-doc htdp
     - name: Install htdp-test (depends on htdp-lib)
-      run: raco pkg install --auto htdp-test
+      run: raco pkg install --auto -i --skip-installed --no-setup htdp-test
+    - run: raco setup --check-pkg-deps --pkgs htdp-lib htdp-doc htdp-test
     - name: Run tests
       run: xvfb-run raco test htdp-test
