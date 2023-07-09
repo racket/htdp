@@ -24,12 +24,9 @@
   (syntax-case stx ()
     ((_ expr)
      (not (syntax-property #'expr 'test-call))
-     (syntax-property
       (syntax-property
        #'(#%app call-with-values (lambda () expr)
 		do-print-results)
-       'stepper-skipto 
-       '(syntax-e cdr cdr car syntax-e cdr cdr car))
       'certify-mode
       'transparent))
     ((_ expr) #'expr)))
@@ -142,9 +139,9 @@
     (define (signature-id-dummy-uses ids)
       #`(begin
           #,@(map (lambda (id)
-                    (syntax-property #`(begin #,id (void))
-                                     'stepper-skip-completely 
-                                     #t))
+                    (stepper-syntax-property #`(begin #,id (void))
+                                             'stepper-skip-completely 
+                                             #t))
                   ids)))
     
     (define (mk-module-begin options)
