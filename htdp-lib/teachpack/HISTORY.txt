@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version 8.10				  [Fri Jul 14 13:17:33 CDT 2023]
+
+* doc fixes: remove inconsistencies between functionality and docs
+
+------------------------------------------------------------------------
 Version 8.9				  [Sun Apr 23 16:26:24 EDT 2023]
 
 * doc updates: use uniform contract names
