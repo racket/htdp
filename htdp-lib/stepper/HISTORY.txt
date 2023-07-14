@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 8.10
+
+Bug fixes
+
 Changes for 8.9:
 
 None.
