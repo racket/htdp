@@ -100,7 +100,7 @@ Abbreviations} level as they did in the @secref["beginner"] level.
 
 @section[#:tag "beginner-abbr-signatures"]{Signatures}
 
-@(signature-forms ("beginner-abbr") define-struct : signature enum mixed -> ListOf)
+@(signature-forms ("beginner-abbr") define-struct : signature enum mixed -> ListOf predicate)
 
 @; ----------------------------------------
 

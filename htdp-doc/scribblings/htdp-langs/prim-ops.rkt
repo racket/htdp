@@ -735,7 +735,7 @@ see note on @racket[check-expect] for details.  }
 
 (define-syntax-rule (signature-forms 
                      (section-prefix)
-                     define-struct : signature enum mixed -> ListOf)
+                     define-struct : signature enum mixed -> ListOf predicate)
   (gen-signature-forms section-prefix
                        #'define-struct @racket[define-struct]
                        #': @racket[:]
@@ -743,16 +743,18 @@ see note on @racket[check-expect] for details.  }
                        #'enum @racket[enum]
                        #'mixed @racket[mixed]
                        #'-> @racket[->]
-                       #'ListOf @racket[ListOf]))
+                       #'ListOf @racket[ListOf]
+                       #'predicate @racket[predicate]))
 
 (define (gen-signature-forms section-prefix
                              define-struct-id define-struct-elem
                              :-id :-elem
                              signature-id signature-elem
                              enum-id enum-elem
-                             mixed-id mixed-enum
+                             mixed-id mixed-elem
                              ->-id ->-elem
-                             ListOf-id ListOf-elem)
+                             ListOf-id ListOf-elem
+                             predicate-id predicate-elem)
   (list
    @; ----------------------------------------------------------------------
 
@@ -862,6 +864,12 @@ This signature describes a list where the elements are described by
 @racket[signature-form].
 }
 
+@defform[#:id [predicate predicate-id] (predicate expression)]{
+This signature describes values through a predicate:
+@racket[expression] must evaluate to a function of one argument that
+returns a boolean.  The signature matches all values for which
+the predicate returns @racket[#true].
+}
 
 @subsection[#:tag (string-append section-prefix "-struct-signatures")]{Struct Signatures}
 

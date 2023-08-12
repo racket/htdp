@@ -141,7 +141,7 @@ level as they did in the @secref["intermediate"] level.
 
 @section[#:tag "intermediate-lambda-signatures"]{Signatures}
 
-@(signature-forms ("intermediate-lambda") define-struct : signature enum mixed -> ListOf)
+@(signature-forms ("intermediate-lambda") define-struct : signature enum mixed -> ListOf predicate)
 
 @pre-defined-fun
 

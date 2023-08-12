@@ -96,7 +96,7 @@ A quoted @racket[name] is a symbol. A symbol is a value, just like
 
 @section[#:tag "beginner-signatures"]{Signatures}
 
-@(signature-forms ("beginner") define-struct : signature enum mixed -> ListOf)
+@(signature-forms ("beginner") define-struct : signature enum mixed -> ListOf predicate)
 
 @; --------------------------------------------------
              

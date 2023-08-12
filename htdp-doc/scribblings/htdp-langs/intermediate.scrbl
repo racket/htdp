@@ -114,7 +114,7 @@ did in the @secref["beginner-abbr"] level.
 
 @section[#:tag "intermediate-signatures"]{Signatures}
 
-@(signature-forms ("intermediate") define-struct : signature enum mixed -> ListOf)
+@(signature-forms ("intermediate") define-struct : signature enum mixed -> ListOf predicate)
 
 @section[#:tag "intermediate-pre-defined" ]{Pre-defined Functions}
 

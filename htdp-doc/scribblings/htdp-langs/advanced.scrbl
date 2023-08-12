@@ -338,7 +338,7 @@ level as they did in the @secref["intermediate-lam"] level.
 
 @section[#:tag "advanced-signatures"]{Signatures}
 
-@(signature-forms ("advanced") advanced : signature enum mixed -> ListOf)
+@(signature-forms ("advanced") advanced : signature enum mixed -> ListOf predicate)
 
 @pre-defined-fun
 
