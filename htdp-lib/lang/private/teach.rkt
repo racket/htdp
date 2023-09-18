@@ -915,157 +915,153 @@
                               [(getter-id ...)     getter-names])
                   (define defns
                     (quasisyntax/loc stx
-                      ;; The temporaries are a hack to avoid a coverage annotation on the fields.
-                      ;; Search for "Coverage hack" to understand how that's done.
-                      (define-values (#,signature-name #,parametric-signature-name #,@(generate-temporaries fields)
-                                      def-proc-name ...)
-                        (let ()
-                          (define-values (type-descriptor
-                                          raw-constructor
-                                          raw-predicate
-                                          raw-generic-access
-                                          raw-generic-mutate)
-                            (make-struct-type
-                             'name_
-                             #f
-                             #,field# 1
-                             #f ; auto-v
-                             (list
-                              (cons prop:print-convert-constructor-name
-                                    '#,constructor-name)
-                              (cons prop:print-converter
-                                    (lambda (r recur)
-                                      (list '#,constructor-name
-                                            #,@(map-with-index
-                                                (lambda (i _)
-                                                  (quasisyntax/loc stx
-                                                    (recur (raw-generic-access r #,i))))
-                                                fields))))
-                              (cons prop:custom-print-quotable
-                                    'never)
-                              (cons prop:custom-write
-                                    ;; Need a transparent-like printer, but hide auto field.
-                                    ;; This simplest way to do that is to create an instance
-                                    ;; of a transparent structure with the same name and field values.
-                                    (let-values ([(struct:plain make-plain plain? plain-ref plain-set)
-                                                  (make-struct-type 'name_ #f #,field# 0 #f null #f)])
-                                      (lambda (r port mode)
-                                        (let ((v (make-plain
-                                                  #,@(map-with-index (lambda (i _)
-                                                                       (quasisyntax/loc stx
-                                                                         (raw-generic-access r #,i)))
-                                                                     fields))))
-                                          (cond
-                                            [(eq? mode #t) (write v port)]
-                                            [(eq? mode #f) (display v port)]
-                                            [else (print v port mode)])))))
-                              (cons prop:equal+hash
-                                    (list
-                                     (lambda (r1 r2 equal?)
-                                       (and #,@(map-with-index 
-                                                (lambda (i field-spec)
-                                                  (quasisyntax/loc stx
-                                                    (equal? (raw-generic-access r1 #,i)
-                                                            (raw-generic-access r2 #,i))))
-                                                fields)))
-                                     (make-equal-hash 
-                                      (lambda (r i) (raw-generic-access r i)) #,field#) 
-                                     (make-equal2-hash
-                                      (lambda (r i) (raw-generic-access r i)) #,field#)))
-                              (cons prop:lazy-wrap
-                                    (make-lazy-wrap-info
-                                     (lambda args (apply #,constructor-name args))
-                                     (list #,@(map-with-index
-                                               (lambda (i _) 
-                                                 (quasisyntax/loc stx
-                                                   (lambda (r) (raw-generic-access r #,i))))
-                                               fields))
-                                     (list #,@(map-with-index
-                                               (lambda (i _)
-                                                 (quasisyntax/loc stx
-                                                   (lambda (r v) (raw-generic-mutate r #,i v))))
-                                               fields))
-                                     (lambda (r)
-                                       (raw-generic-access r #,field#))
-                                     (lambda (r v)
-                                       (raw-generic-mutate r #,field# v)))))
-                             ;; give `check-struct-wraps!' access
-                             (make-inspector)))
+                      (begin
+                        ;; Coverage hack: This sticks a bunch of calls to void in the expansion, each
+                        ;; one with the location of one field.  This marks the fields in
+                        ;; define-struct as covered.
+                        #,@(map (lambda (field) (datum->syntax #'here '(void) field field))
+                                (syntax->list #'(field_ ...)))
+                        (define-values (#,signature-name #,parametric-signature-name def-proc-name ...)
+                          (let ()
+                            (define-values (type-descriptor
+                                            raw-constructor
+                                            raw-predicate
+                                            raw-generic-access
+                                            raw-generic-mutate)
+                              (make-struct-type
+                               'name_
+                               #f
+                               #,field# 1
+                               #f ; auto-v
+                               (list
+                                (cons prop:print-convert-constructor-name
+                                      '#,constructor-name)
+                                (cons prop:print-converter
+                                      (lambda (r recur)
+                                        (list '#,constructor-name
+                                              #,@(map-with-index
+                                                  (lambda (i _)
+                                                    (quasisyntax/loc stx
+                                                      (recur (raw-generic-access r #,i))))
+                                                  fields))))
+                                (cons prop:custom-print-quotable
+                                      'never)
+                                (cons prop:custom-write
+                                      ;; Need a transparent-like printer, but hide auto field.
+                                      ;; This simplest way to do that is to create an instance
+                                      ;; of a transparent structure with the same name and field values.
+                                      (let-values ([(struct:plain make-plain plain? plain-ref plain-set)
+                                                    (make-struct-type 'name_ #f #,field# 0 #f null #f)])
+                                        (lambda (r port mode)
+                                          (let ((v (make-plain
+                                                    #,@(map-with-index (lambda (i _)
+                                                                         (quasisyntax/loc stx
+                                                                           (raw-generic-access r #,i)))
+                                                                       fields))))
+                                            (cond
+                                              [(eq? mode #t) (write v port)]
+                                              [(eq? mode #f) (display v port)]
+                                              [else (print v port mode)])))))
+                                (cons prop:equal+hash
+                                      (list
+                                       (lambda (r1 r2 equal?)
+                                         (and #,@(map-with-index 
+                                                  (lambda (i field-spec)
+                                                    (quasisyntax/loc stx
+                                                      (equal? (raw-generic-access r1 #,i)
+                                                              (raw-generic-access r2 #,i))))
+                                                  fields)))
+                                       (make-equal-hash 
+                                        (lambda (r i) (raw-generic-access r i)) #,field#) 
+                                       (make-equal2-hash
+                                        (lambda (r i) (raw-generic-access r i)) #,field#)))
+                                (cons prop:lazy-wrap
+                                      (make-lazy-wrap-info
+                                       (lambda args (apply #,constructor-name args))
+                                       (list #,@(map-with-index
+                                                 (lambda (i _) 
+                                                   (quasisyntax/loc stx
+                                                     (lambda (r) (raw-generic-access r #,i))))
+                                                 fields))
+                                       (list #,@(map-with-index
+                                                 (lambda (i _)
+                                                   (quasisyntax/loc stx
+                                                     (lambda (r v) (raw-generic-mutate r #,i v))))
+                                                 fields))
+                                       (lambda (r)
+                                         (raw-generic-access r #,field#))
+                                       (lambda (r v)
+                                         (raw-generic-mutate r #,field# v)))))
+                               ;; give `check-struct-wraps!' access
+                               (make-inspector)))
                           
-                          #,@(map-with-index (lambda (i name field-name)
-                                               #`(define #,name
-                                                   (make-struct-field-accessor
-                                                               raw-generic-access
-                                                               #,i
-                                                               '#,field-name)))
-                                             getter-names
-                                             fields)
-                          #,@(map-with-index (lambda (i name field-name)
-                                               (quasisyntax/loc stx
-                                                 (define #,name 
-                                                   (let ([raw (make-struct-field-mutator
-                                                               raw-generic-mutate
-                                                               #,i
-                                                               '#,field-name)])
-                                                     raw))))
-                                             setter-names
-                                             fields)
-                          (define #,predicate-name raw-predicate)
-                          (define #,constructor-name raw-constructor)
+                            #,@(map-with-index (lambda (i name field-name)
+                                                 #`(define #,name
+                                                     (make-struct-field-accessor
+                                                      raw-generic-access
+                                                      #,i
+                                                      '#,field-name)))
+                                               getter-names
+                                               fields)
+                            #,@(map-with-index (lambda (i name field-name)
+                                                 (quasisyntax/loc stx
+                                                   (define #,name 
+                                                     (let ([raw (make-struct-field-mutator
+                                                                 raw-generic-mutate
+                                                                 #,i
+                                                                 '#,field-name)])
+                                                       raw))))
+                                               setter-names
+                                               fields)
+                            (define #,predicate-name raw-predicate)
+                            (define #,constructor-name raw-constructor)
 			  
-                          (define #,signature-name (signature #,signature-name (predicate raw-predicate)))
+                            (define #,signature-name (signature #,signature-name (predicate raw-predicate)))
                           
-                          #,(if setters?
-                                (quasisyntax/loc stx
-                                  (define (#,parametric-signature-name field_ ...)
-                                    (let ((sig
-                                           (make-combined-signature
-                                            '#,signature-name
-                                            (list (signature (at name_ (predicate raw-predicate)))
-                                                  #,@(map (lambda (field-name getter-name)
-                                                            #`(make-property-signature (signature-name #,field-name)
-                                                                                       #,getter-name
-                                                                                       #,field-name
-                                                                                       (signature-syntax #,field-name)))
-                                                          (syntax->list #'(field_ ...))
-                                                          (syntax->list #'(getter-id ...))))
-                                            'parametric-signature)))
-                                      (let ((arbs (map signature-arbitrary (list field_ ...))))
-                                        (when (andmap values arbs)
-                                          (set-signature-arbitrary! 
-                                           sig
-                                           (apply arbitrary-record
-                                                  #,constructor-name 
-                                                  (list #,@getter-names)
-                                                  arbs))))
-                                      sig)))
-                                (quasisyntax/loc stx
-                                  (define (#,parametric-signature-name field_ ...)
-                                    (let* ((sigs (list (signature field_) ...))
-                                           (sig
-                                            (make-lazy-wrap-signature 'name_ #t
-                                                                      type-descriptor
-                                                                      raw-predicate
-                                                                      sigs
-                                                                      #'name_)))
-                                      (let ((arbs (map signature-arbitrary sigs)))
-                                        (when (andmap values arbs)
-                                          (set-signature-arbitrary! 
-                                           sig
-                                           (apply arbitrary-record
-                                                  #,constructor-name 
-                                                  (list #,@getter-names)
-                                                  arbs))))
-                                      sig))))
+                            #,(if setters?
+                                  (quasisyntax/loc stx
+                                    (define (#,parametric-signature-name field_ ...)
+                                      (let ((sig
+                                             (make-combined-signature
+                                              '#,signature-name
+                                              (list (signature (at name_ (predicate raw-predicate)))
+                                                    #,@(map (lambda (field-name getter-name)
+                                                              #`(make-property-signature (signature-name #,field-name)
+                                                                                         #,getter-name
+                                                                                         #,field-name
+                                                                                         (signature-syntax #,field-name)))
+                                                            (syntax->list #'(field_ ...))
+                                                            (syntax->list #'(getter-id ...))))
+                                              'parametric-signature)))
+                                        (let ((arbs (map signature-arbitrary (list field_ ...))))
+                                          (when (andmap values arbs)
+                                            (set-signature-arbitrary! 
+                                             sig
+                                             (apply arbitrary-record
+                                                    #,constructor-name 
+                                                    (list #,@getter-names)
+                                                    arbs))))
+                                        sig)))
+                                  (quasisyntax/loc stx
+                                    (define (#,parametric-signature-name field_ ...)
+                                      (let* ((sigs (list (signature field_) ...))
+                                             (sig
+                                              (make-lazy-wrap-signature 'name_ #t
+                                                                        type-descriptor
+                                                                        raw-predicate
+                                                                        sigs
+                                                                        #'name_)))
+                                        (let ((arbs (map signature-arbitrary sigs)))
+                                          (when (andmap values arbs)
+                                            (set-signature-arbitrary! 
+                                             sig
+                                             (apply arbitrary-record
+                                                    #,constructor-name 
+                                                    (list #,@getter-names)
+                                                    arbs))))
+                                        sig))))
                           
-                          (values #,signature-name #,parametric-signature-name
-                                  ;; Coverage hack: This sticks a bunch of calls to void in the expansion, each
-                                  ;; one with the location of one field.  This marks the fields in
-                                  ;; define-struct as covered.
-                                  #,@(map (lambda (field)
-                                            (syntax/loc field (void)))
-                                          (syntax->list #'(field_ ...)))
-                                  proc-name ...)))))
+                            (values #,signature-name #,parametric-signature-name proc-name ...))))))
                   ;; --- IN ---
                   (stepper-syntax-property defns 'stepper-black-box-expr stx)))))
            ;; --------------------------------------------------------------------------------
