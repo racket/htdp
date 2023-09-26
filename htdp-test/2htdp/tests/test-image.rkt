@@ -1814,6 +1814,29 @@
   (test (image? b1) => #t)
   (test (equal? b1 b2) => #t))
 
+(let ()
+  (define w1 2)
+  (define h1 2)
+  (define w2 2)
+  (define h2 3)
+  (define b1 (make-bitmap w1 h1))
+  (define b2 (make-bitmap w2 h2))
+  (define bdc (make-object bitmap-dc% b1))
+  (send bdc set-pen "black" 1 'transparent)
+  (send bdc set-brush (make-object color% 200 200 200) 'solid)
+  (send bdc draw-rectangle 0 0 w1 h1)
+  (send bdc set-bitmap b2)
+  (send bdc draw-rectangle 0 0 w1 h1)
+  (send bdc set-brush (make-object color% 100 100 100) 'solid)
+  (send bdc draw-rectangle 0 0 w2 h2)
+  (send bdc set-bitmap #f)
+
+  (define R1 (rotate 0 b1))
+  (define R2 (rotate 0 b2))
+  (define I (above R1 (beside R1 R2)))
+
+  (test (equal? (above I empty-image) I) => #t)
+  (test (equal? (above empty-image I) I) => #t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
