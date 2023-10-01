@@ -81,18 +81,12 @@
 ;; the module that we've just defined.
 (define (make-dynamic-requirer module-name enable-testing?)
   (stepper-skip
-   #`(let ([done-already? #f])
-       (dynamic-wind
-        void
-        (lambda ()
-          (dynamic-require ''#,module-name #f))  ;; work around a bug in dynamic-require
-        (lambda ()
-          (unless done-already?
-            (set! done-already? #t)
-            #,(if enable-testing?
-                  #'(test)
-                  #'(begin))
-            (current-namespace (module->namespace ''#,module-name))))))))
+   #`(begin
+       (dynamic-require ''#,module-name #f)  ;; work around a bug in dynamic-require
+       #,(if enable-testing?
+             #'(test)
+             #'(begin))
+       (current-namespace (module->namespace ''#,module-name)))))
 
 ;; take all of the body expressions from the port
 (define (suck-all-exps port reader)
