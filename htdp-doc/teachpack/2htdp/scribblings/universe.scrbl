@@ -929,7 +929,7 @@ A typical program does not use all three of these functions. Furthermore,
  collection of all these functions is your @tech{world} program.
 
 @centerline{An extended example is available in
- @link["http://www.ccs.neu.edu/home/matthias/HtDP2e/"]{How to Design Programs/2e}.}
+ @link["https://htdp.org"]{How to Design Programs/2e}.}
 
 @; -----------------------------------------------------------------------------
 @section[#:tag "world2" #:tag-prefix "universe"]{The World is not Enough}
