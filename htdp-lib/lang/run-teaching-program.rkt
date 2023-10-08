@@ -85,13 +85,13 @@
        (dynamic-wind
         void
         (lambda ()
-          (dynamic-require ''#,module-name #f))  ;; work around a bug in dynamic-require
+          (dynamic-require ''#,module-name #f)   ;; work around a bug in dynamic-require
+          (define test-submod `(submod '#,module-name test))
+          (when (module-declared? test-submod)
+            (dynamic-require test-submod #f)))
         (lambda ()
           (unless done-already?
             (set! done-already? #t)
-            #,(if enable-testing?
-                  #'(test)
-                  #'(begin))
             (current-namespace (module->namespace ''#,module-name))))))))
 
 ;; take all of the body expressions from the port
