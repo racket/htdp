@@ -1,4 +1,10 @@
 ------------------------------------------------------------------------
+Version 8.11				  [Sun Oct 15 10:50:43 EDT 2023]
+
+* serious discrepancy between menu-based teaching languages and #lang
+  variants discovered; will be addressed in 8.12 
+
+------------------------------------------------------------------------
 Version 8.10				  [Fri Jul 14 13:17:33 CDT 2023]
 
 * doc fixes: remove inconsistencies between functionality and docs
