@@ -2141,6 +2141,43 @@
                        (make-pen "darkslategray" 6 "solid" "round" "round")))
       =>
       #t)
+(test (image? (polygon (list (make-posn 0 0)
+                             (make-posn 100 100)
+                             (make-posn 100 0)
+                             (make-posn 0 100))
+                       "outline"
+                       (make-pen "darkslategray" 6.5 "solid" "round" "round")))
+      =>
+      #t)
+
+(test (equal? (polygon (list (make-posn 0 0)
+                             (make-posn 100 100)
+                             (make-posn 100 0)
+                             (make-posn 0 100))
+                       "outline"
+                       (make-pen "darkslategray" #i6.5 "solid" "round" "round"))
+              (polygon (list (make-posn 0 0)
+                             (make-posn 100 100)
+                             (make-posn 100 0)
+                             (make-posn 0 100))
+                       "outline"
+                       (make-pen "darkslategray" #e6.5 "solid" "round" "round")))
+      =>
+      #t)
+(test (equal? (polygon (list (make-posn 0 0)
+                             (make-posn 100 100)
+                             (make-posn 100 0)
+                             (make-posn 0 100))
+                       "outline"
+                       (pen "darkslategray" #i1.5 "solid" "round" "round"))
+              (polygon (list (make-posn 0 0)
+                             (make-posn 100 100)
+                             (make-posn 100 0)
+                             (make-posn 0 100))
+                       "outline"
+                       (pen "darkslategray" #e1.5 "solid" "round" "round")))
+      =>
+      #t)
 
 (test (image? (line 10 
                     10 

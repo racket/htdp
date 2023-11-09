@@ -312,6 +312,10 @@
      (check-arg fn-name (and (integer? arg) (<= 0 arg 255)) 
                 'integer\ between\ 0\ and\ 255 i arg)
      (inexact->exact arg)]
+    [(real-0-255)
+     (check-arg fn-name (and (real? arg) (<= 0 arg 255))
+                'real\ between\ 0\ and\ 255 i arg)
+     arg]
     
     [(pen-style)
      (check-arg fn-name (pen-style? arg) 'pen-style i arg)
