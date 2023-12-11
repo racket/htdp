@@ -153,14 +153,18 @@ structure called a @italic{test object}.  There is always a current
 test object associated with the current namespace.
 
 @defstruct*[test-object
-            ((tests (listof (-> any)))
+            ((tests (listof (-> boolean?)))
+             (successful-tests (listof (-> boolean?)))
              (failed-checks (listof failed-check?))
              (signature-violations (listof signature-violation?)))
 	     #:omit-constructor]{
-The three components of a @racket[test-object] are all in reverse order:
+The four components of a @racket[test-object] are all in reverse order:
 
 The first one is the list of tests (each represented by a thunk), the
-others are failed checks and signature violations, respectively.
+others are succeeded tests, failed checks and signature violations, respectively.
+
+The thunks are expected to always run to completion.  They shouöd
+return @racket[#t] upon success, and @racket[#f] upon failure.
 }
 
 @defproc[(empty-test-object) test-object?]{
@@ -179,7 +183,7 @@ operating on it: These will automatically initialize as necessary.
 Use this function to reset the current test object.
 }
 
-@defproc[(add-test! [thunk (-> any)])  any]{
+@defproc[(add-test! [thunk (-> boolean?)])  any]{
 Register a test, represented by a thunk.  The thunk, when called, is
 expected to call @racket[add-failed-check!] and
 @racket[add-signature-violation!] as appropriate.
