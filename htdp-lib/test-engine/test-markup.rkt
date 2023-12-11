@@ -68,7 +68,7 @@
          empty-markup]
         [(and (null? (test-object-failed-checks test-object))
               (null? (test-object-signature-violations test-object)))
-         (let ((count (length (test-object-tests test-object))))
+         (let ((count (length (test-object-successful-tests test-object))))
            (case count
              [(0) (string-constant test-engine-0-tests-passed)]
              [(1) (string-constant test-engine-1-test-passed)]

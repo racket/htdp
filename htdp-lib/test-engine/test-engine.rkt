@@ -5,7 +5,8 @@
 
 (provide (contract-out
           (struct test-object
-            ((tests (listof (-> any)))
+            ((tests (listof (-> boolean?)))
+             (successful-tests (listof (-> boolean?)))
              (failed-checks (listof failed-check?))
              (signature-violations (listof signature-violation?)))
             #:omit-constructor)
@@ -14,7 +15,7 @@
           (test-object-copy (test-object? . -> . test-object?))
           (test-object=? (test-object? test-object? . -> . boolean?))
           (initialize-test-object! (-> any))
-          (add-test! ((-> any) . -> . any))
+          (add-test! ((-> boolean?) . -> . any))
           (add-failed-check! (failed-check? . -> . any))
           (add-signature-violation! (signature-violation? . -> . any))
           (run-tests! (-> test-object?))
@@ -134,19 +135,21 @@
 ;; - a check is a single assertion within that code
 
 (struct test-object
-	(tests ; reverse list of thunks
-	 failed-checks ; reverse list of failed-check structs
-	 signature-violations ; reverse list of signature-violation structs
-	 )
-	#:mutable #:transparent)
+  (tests ; reverse list of thunks
+   successful-tests ; reverse list of thunks from tests
+   failed-checks ; reverse list of failed-check structs
+   signature-violations ; reverse list of signature-violation structs
+   )
+  #:mutable #:transparent)
 
 (define (empty-test-object)
-  (test-object '() '() '()))
+  (test-object '() '() '() '()))
 
 (define *test-object* (empty-test-object))
 
 (define (initialize-test-object)
   (set-test-object-tests! *test-object* '())
+  (set-test-object-successful-tests! *test-object* '())
   (set-test-object-failed-checks! *test-object* '())
   (set-test-object-signature-violations! *test-object* '())
   *test-object*)
@@ -176,7 +179,10 @@
     ;; signature violations come before running tests, and there's no
     ;; way to easily re-run them, so so don't reset them here
     (for-each (lambda (thunk)
-                (thunk))
+                (when (thunk)
+                  (set-test-object-successful-tests!
+                   test-object
+                   (cons thunk (test-object-successful-tests test-object)))))
               (reverse (test-object-tests test-object)))
     test-object))
 
