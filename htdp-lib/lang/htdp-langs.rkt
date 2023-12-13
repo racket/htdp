@@ -1144,4 +1144,5 @@
                                                 test-coverage-off-style-pref
                                                 test-coverage-off-style-name
                                                 (string-constant test-coverage-off)
-                                                #:background? #t)))))
+                                                #:background? #t)
+       (color-prefs:normalize-color-selection-button-widths parent)))))
