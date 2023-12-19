@@ -176,6 +176,7 @@
   (let ((test-object (current-test-object)))
     ; in case we're re-running
     (set-test-object-failed-checks! test-object '())
+    (set-test-object-successful-tests! test-object '())
     ;; signature violations come before running tests, and there's no
     ;; way to easily re-run them, so so don't reset them here
     (for-each (lambda (thunk)
