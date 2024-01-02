@@ -58,11 +58,11 @@
   (ll-hashlang-model "lazy" fake-lazy-render-settings #f))
 
 ;; unsure about the render-settings, here: 
-(define dmda-a
-  (ll-ll-model `(lib "DMdA-beginner.ss" "deinprogramm") fake-beginner-render-settings #t))
+(define sdp-a
+  (ll-ll-model `(lib "beginner.rkt" "deinprogramm" "sdp") fake-beginner-render-settings #t))
 ;; waiting to hear from Mike Sperber on this....:
-#;(define dmda-a/h
-  (ll-hashlang-model `(lib "DMdA-beginner.ss" "deinprogramm") fake-beginner-render-settings #t))
+#;(define sdp-a/h
+  (ll-hashlang-model `(lib "beginner.ss" "deinprogramm" "sdp") fake-beginner-render-settings #t))
 
 
 ;; SUPPORT FOR TESTING A BUNCH OF LANGUAGES AT ONCE:

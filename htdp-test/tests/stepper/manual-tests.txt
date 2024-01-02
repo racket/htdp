@@ -39,5 +39,5 @@ e.g.
 
 - try big-bang program.
 
-- try DMdA program, make sure that test cases don't show extra steps.
+- try SdP program, make sure that test cases don't show extra steps.
 

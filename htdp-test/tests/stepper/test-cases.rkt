@@ -1207,12 +1207,12 @@
   
   ;;;;;;;;;;;;
   ;;
-  ;;    DMdA TESTS
+  ;;    SdP TESTS
   ;;
   ;;;;;;;;;;;
   
-  (t1 'dmda-certificate-bug
-       m:dmda-a
+  (t1 'sdp-certificate-bug
+       m:sdp-a
       "(: apply-nim-move (integer? -> integer?))
   (define apply-nim-move
     (lambda (s)
