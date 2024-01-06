@@ -69,7 +69,7 @@
                   #,@embedded-stxes
                   #,src-info)))))))
 
-; this wrapper is necessary because add-test! has a contract which confuses the stepper
+; without this wrapper the stepper annotations break
 (define (add-check-expect-test! thunk)
   (add-test! thunk))
 

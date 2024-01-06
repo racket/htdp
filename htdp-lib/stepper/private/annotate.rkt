@@ -666,7 +666,7 @@
                                           #,(lambda () exp)
                                           #f
                                           (#%plain-lambda () results))))
-                                          (#%plain-app values results)))
+                                          (#%plain-app apply values results)))
                        annotated)
                    free-vars)]
           [error 'maybe-final-val-wrap "stepper internal error 20080527"]))
