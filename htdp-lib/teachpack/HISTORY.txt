@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version 8.12				  [Mon Jan  8 10:32:06 EST 2024]
+
+* bug fixed in the testing framework 
+
+------------------------------------------------------------------------
 Version 8.11				  [Sun Oct 15 10:50:43 EDT 2023]
 
 * serious discrepancy between menu-based teaching languages and #lang
