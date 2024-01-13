@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes fro 8.12:
+
+Bug fix, thanks to both Robby and Mike Sperber.
+
 Changes for 8.11:
 
 None.
