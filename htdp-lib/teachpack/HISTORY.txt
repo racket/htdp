@@ -1,4 +1,9 @@
 ------------------------------------------------------------------------
+Version x.y
+
+* fixed random to give better error message and improve its docs 
+
+------------------------------------------------------------------------
 Version 8.12				  [Mon Jan  8 10:32:06 EST 2024]
 
 * bug fixed in the testing framework 

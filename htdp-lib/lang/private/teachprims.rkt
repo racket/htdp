@@ -125,6 +125,11 @@ namespace.
 
 (define-teach beginner random 
   (lambda (a)
+    (unless (and (natural? a) (positive? a))
+      (raise
+       (make-exn:fail:contract
+        (format "random: expected a positive integer; given ~e" a)
+        (current-continuation-marks))))
     (random a)))
 
 (define-teach beginner number->string-digits 
