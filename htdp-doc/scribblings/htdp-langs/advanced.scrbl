@@ -177,9 +177,9 @@ the @racket[begin] expression is the value of the first @racket[expression].}
 
 @defform[(set! variable expression)]{
 
-Evaluates @racket[expression], and then mutates the @racket[variable]
+Evaluates @racket[expression], and then changes the value of the @racket[variable]
 to have @racket[expression]'s value. The @racket[variable] must be defined 
-by @racket[define], @racket[letrec], @racket[let*], or @racket[let].}
+by @racket[define], @racket[letrec], @racket[let*], @racket[let], or @racket[local].}
 
 
 @defform[(delay expression)]{
