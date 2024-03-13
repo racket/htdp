@@ -200,7 +200,7 @@
   
   ;; exponents and logarithms 
   @defproc[(expt [x number][y number]) number]{
- Computes the power of the first to the second number.
+ Computes the power of the first to the second number, which is to say, exponentiation.
  @interaction[#:eval (bsl) (expt 16 1/2) (expt 3 -4)]
 }
   @defproc[(exp [x number]) number]{
