@@ -15,6 +15,7 @@ namespace.
 (require mzlib/list 
          mzlib/math
          mzlib/etc
+         mzlib/pconvert-prop
          deinprogramm/signature/signature
          deinprogramm/signature/signature-english)
 
@@ -515,11 +516,39 @@ namespace.
 (define (list->cons-for-hash a)
   (map (lambda (l) (cons (car l) (cadr l))) a))
 
+
+(define (pconvert-teach-hash teach-hash recur)  
+  (let ([hash (teach-hash-underlying teach-hash)])
+    (let ([constructor
+           (cond
+             [(immutable? hash)
+              (cond
+                [(hash-equal? hash) 'make-immutable-hash]
+                [(hash-eqv? hash) 'make-immutable-hasheqv]
+                [(hash-eq? hash) 'make-immutable-hasheq])]
+            [else
+             (cond
+               [(hash-equal? hash) 'make-hash]
+               [(hash-eqv? hash) 'make-hasheqv]
+               [(hash-eq? hash) 'make-hasheq])])]
+          [contents
+           (hash-map
+            hash
+            (lambda (k v)
+              `(list ,(recur k) ,(recur v))))])
+      (if (null? contents)
+          `(,constructor)
+          `(,constructor (list ,@contents))))))
+
+(struct teach-hash
+  (underlying)
+  #:property prop:print-converter pconvert-teach-hash)
+
 (define-syntax-rule
   (define-hasher lang some-hash-maker)
   (define-teach lang some-hash-maker
     (lambda ([a empty])
-      (some-hash-maker (list->cons-for-hash a)))))
+      (teach-hash (some-hash-maker (list->cons-for-hash a))))))
 
 (define-hasher advanced make-hash)
 (define-hasher advanced make-hasheq)
@@ -528,6 +557,37 @@ namespace.
 (define-hasher advanced make-immutable-hasheq)
 (define-hasher advanced make-immutable-hasheqv)
 
+(define-syntax define-hash-proc
+  (syntax-rules ()
+    [(define-hash-proc lang name (hash-arg arg ...))
+     (define-teach lang name
+       (lambda (hash-arg arg ...)
+         (name (teach-hash-underlying hash-arg) arg ...)))]
+    [(define-hash-proc lang name (hash-arg arg ...) wrap)
+     (define-teach lang name
+       (lambda (hash-arg arg ...)
+         (wrap (name (teach-hash-underlying hash-arg) arg ...))))]))
+
+(define-hash-proc advanced hash-set! (h k v))
+(define-hash-proc advanced hash-set (h k v) teach-hash)
+(define-hash-proc advanced hash-ref (h k))
+(define-hash-proc advanced hash-ref! (h k v))
+(define-hash-proc advanced hash-update! (h k f))
+(define-hash-proc advanced hash-update (h k f) teach-hash)
+(define-hash-proc advanced hash-has-key? (h x))
+(define-hash-proc advanced hash-remove! (h x))
+(define-hash-proc advanced hash-remove (h k) teach-hash)
+(define-hash-proc advanced hash-map (h f))
+(define-hash-proc advanced hash-for-each (h f))
+(define-hash-proc advanced hash-count (h))
+(define-hash-proc advanced hash-copy (h) teach-hash)
+(define-teach advanced hash?
+  (lambda (x)
+    (teach-hash? x)))
+(define-hash-proc advanced hash-equal? (h))
+(define-hash-proc advanced hash-eq? (h))
+(define-hash-proc advanced hash-eqv? (h))
+  
 (provide  
  false?
  beginner-not
@@ -578,6 +638,23 @@ namespace.
  advanced-make-immutable-hash
  advanced-make-immutable-hasheq
  advanced-make-immutable-hasheqv
+ advanced-hash-set!
+ advanced-hash-set
+ advanced-hash-ref
+ advanced-hash-ref!
+ advanced-hash-update!
+ advanced-hash-update
+ advanced-hash-has-key?
+ advanced-hash-remove!
+ advanced-hash-remove
+ advanced-hash-map
+ advanced-hash-for-each
+ advanced-hash-count
+ advanced-hash-copy
+ advanced-hash?
+ advanced-hash-equal?
+ advanced-hash-eq?
+ advanced-hash-eqv?
  cyclic-list?
  teach-equal?)
 
