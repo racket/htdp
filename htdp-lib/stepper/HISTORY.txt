@@ -1,5 +1,10 @@
 Stepper
 -------
+
+Changes for 8.14:
+
+None.
+
 Changes for 8.13:
 
 None.
