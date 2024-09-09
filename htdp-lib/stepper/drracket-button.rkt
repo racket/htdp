@@ -20,4 +20,8 @@
    x:step-img
    (λ (drs-frame)
      (configure)
-     (send (send drs-frame get-current-tab) stepper-button-callback language settings))))
+     (define tab (send drs-frame get-current-tab))
+     (parameterize
+         ;; make sure output, say from failed check-expects, goes into the REPL
+         ((current-output-port (send (send tab get-ints) get-out-port)))
+       (send tab stepper-button-callback language settings)))))
