@@ -37,6 +37,7 @@
                          (syntax-column stx)
                          (syntax-position stx)
                          (syntax-span stx)))))
+  (define test-expr-checked-for-syntax-error #`(convert-compile-time-error #,test-expr))
   (if (eq? 'module (syntax-local-context))
       #`(define #,bogus-name
           #,(stepper-syntax-property
@@ -48,7 +49,7 @@
                        ['stepper-use-val-as-final #t])
                       (quasisyntax/loc stx
                         (#,checker-proc-stx
-                         (lambda () #,test-expr)
+                         (lambda () #,test-expr-checked-for-syntax-error)
                          #,@embedded-stxes
                          #,src-info)))))
              'stepper-skipto
@@ -64,7 +65,7 @@
                 ['stepper-use-val-as-final #t])
                (quasisyntax/loc stx
                  (#,checker-proc-stx
-                  (lambda () #,test-expr)
+                  (lambda () #,test-expr-checked-for-syntax-error)
                   #,@embedded-stxes
                   #,src-info)))))))
 
