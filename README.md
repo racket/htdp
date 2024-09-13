@@ -1,6 +1,6 @@
 # htdp
 
-This the source for the Racket packages: "htdp", "htdp-doc", "htdp-lib", "htdp-test".
+This is the source for the Racket packages: "htdp", "htdp-doc", "htdp-lib", "htdp-test".
 
 ### Contributing
 
