@@ -200,13 +200,15 @@
     (register-toolbar-button stepper-button #:number 59)
 
     (define (stepper-button-show)
-      (unless (send stepper-button is-shown?)
-        (send (send stepper-button get-parent)
+      (define parent (send stepper-button get-parent))
+      (unless (member stepper-button (send parent get-children))
+        (send parent
               add-child stepper-button)))
 
     (define (stepper-button-hide)
-      (when (send stepper-button is-shown?)
-        (send (send stepper-button get-parent)
+      (define parent (send stepper-button get-parent))
+      (when (member stepper-button (send parent get-children))
+        (send parent
               delete-child stepper-button)))
 
     ;; when the window closes, notify all of the stepper frames.
