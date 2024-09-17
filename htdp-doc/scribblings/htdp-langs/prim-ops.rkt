@@ -322,7 +322,7 @@
             [(check-expect expression expected-expression)]]{
 
    Checks that the first @racket[expression] evaluates to the same value as the
-   @racket[expected-expression].
+   @racket[expected-expression]. 
 
 @;%
 @(begin
@@ -341,8 +341,11 @@ A @racket[check-expect] expression must be placed at the top-level of a
  ahead of the tested function definition. By placing @racket[check-expect]s
  there, a programmer conveys to a future reader the intention behind the
  program with working examples, thus making it often superfluous to read
- the function definition proper. 
-
+ the function definition proper. Syntax errors in
+  @racket[check-expect] (and all check forms)
+are intentionally delayed to run time so that students can write tests
+@emph{without} necessarily writing complete function headers.  
+ 
 It is an error for @racket[expr] or @racket[expected-expr] to produce an
 inexact number or a function value. As for inexact numbers, it is
 @italic{morally} wrong to compare them for plain equality. Instead one

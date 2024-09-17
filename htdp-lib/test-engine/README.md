@@ -10,7 +10,7 @@ teaching languages.
 - `test-engine.rkt`: register tests, run them, collect & inspect results
 - `racket-tests.rkt`: surface syntax for the teaching languages
 - `syntax.rkt`: utilities for defining surface syntax in a way that
-  works with the stepper
+     works with the stepper
 - `markup-gui.rkt`: graphical rendering for markup in a `text%` object
 - `test-markup.rkt`: convert test results into markup
 - `srcloc.rkt`: extract source location from the stack trace in an exception
@@ -32,3 +32,7 @@ the `simple-tree-text-markup` package.
 
 The teaching languages use `test-engine/markup-gui` to render in
 DrRacket.
+
+Note The test engine delays the reporting of error in `syntax.rkt` so
+that check expressions can be used without always writing a dummy
+function header. See note there. 

@@ -27,7 +27,9 @@ as parameters to configure the behavior of test reports.
 Each check form may only occur at the top-level; results are collected
 and reported by the test function.  Note that the check forms only
 register checks to be performed.  The checks are actually run by the
-@racket[test] function.
+@racket[test] function. Furthermore, syntax errors in check forms 
+are intentionally delayed to run time so that students can write tests
+@emph{without} necessarily writing complete function headers.  
 
 @defform[(check-expect expr expected-expr)]{
 Checks whether the value of the @racket[expr] expression is
