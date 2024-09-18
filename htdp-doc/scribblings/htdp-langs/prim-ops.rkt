@@ -667,7 +667,7 @@ functions that compute inexact numbers:
   (slope f (- x EPSILON) (+ x EPSILON)))
 
 ;; [Real -> Real] Real Real -> Real 
-(define (slope-of f left right)
+(define (slope f left right)
   (/ (- (f right) (f left))
      2 EPSILON))
 
