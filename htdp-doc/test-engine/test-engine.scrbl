@@ -378,7 +378,7 @@ This parameter determines how to output the test results.
 The default prints to @racket[(current-output-port)].
 }
 
-@defproc[(display-test-results! [test-object test-object?]) any]{
+@defproc[(display-test-results! [markup markup?]) any]{
 This just calls the procedure bound to @racket[display-test-results-parameter].
 }
 
