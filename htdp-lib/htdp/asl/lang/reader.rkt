@@ -3,4 +3,5 @@ lang/htdp-advanced
 '(abbreviate-cons-as-list
   read-accept-quasiquote
   show-sharing
-  disable-stepper)
+  disable-stepper
+  enable-debugger)
