@@ -3238,7 +3238,7 @@
 
 (define Boolean (signature/arbitrary arbitrary-boolean Boolean (predicate boolean?)))
 
-(define True (signature True (enum #f)))
+(define True (signature True (enum #t)))
 (define False (signature False (enum #f)))
 
 (define String (signature/arbitrary arbitrary-printable-ascii-string String (predicate string?)))
