@@ -5,7 +5,10 @@
          (only-in lang/private/teach
                   beginner-define-struct advanced-define-struct
                   signature
-                  Integer Boolean)
+                  Integer Natural Boolean True False
+                  String Char Symbol
+                  [EmptyList htdp:EmptyList]
+                  ConsOf)
          deinprogramm/signature/signature)
 
 (define-syntax say-no
@@ -37,6 +40,35 @@
 	  (exit (signature-name signature)))
 	(lambda ()
 	  ?body ...))))))
+
+(check-equal? (say-no (apply-signature False #t)) 'no)
+(check-equal? (apply-signature False #f) #f)
+
+(check-equal? (say-no (apply-signature True #f)) 'no)
+(check-equal? (apply-signature True #t) #t)
+
+(check-equal? (say-no (apply-signature Integer 1/2)) 'no)
+(check-pred (λ (v) (= v 20241017))
+            (apply-signature Integer 20241017))
+
+(check-equal? (say-no (apply-signature Natural -1)) 'no)
+(check-pred zero? (apply-signature Natural 0))
+
+(check-equal? (say-no (apply-signature htdp:EmptyList #t)) 'no)
+(check-equal? (apply-signature htdp:EmptyList null) null)
+
+(check-equal? (say-no (apply-signature (ConsOf False Natural) (cons #t 5))) 'no)
+(check-equal? (say-no (apply-signature (ConsOf False Natural) (cons #f -1))) 'no)
+(check-equal? (apply-signature (ConsOf False Natural) (cons #f 5)) (cons #f 5))
+
+(check-equal? (say-no (apply-signature String #\h)) 'no)
+(check-equal? (apply-signature String "hello") "hello")
+
+(check-equal? (say-no (apply-signature Char "h")) 'no)
+(check-equal? (apply-signature Char #\h) #\h)
+
+(check-equal? (say-no (apply-signature Symbol 0)) 'no)
+(check-equal? (apply-signature Symbol 'yes) 'yes)
 
 ; Need to test both beginner and advanced
 (advanced-define-struct dillo (alive? weight))
