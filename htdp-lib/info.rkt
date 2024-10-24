@@ -12,7 +12,7 @@
     "images-gui-lib"
     "images-lib"
     "net-lib"
-    "pconvert-lib"
+    ["pconvert-lib" #:version "1.2"]
     "plai-lib"
     "r5rs-lib"
     "sandbox-lib"

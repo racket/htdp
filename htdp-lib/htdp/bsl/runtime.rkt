@@ -54,6 +54,7 @@
   (read-decimal-as-inexact #f)
   ;; Set print-convert options:
   (booleans-as-true/false (sl-runtime-settings-true/false/empty-as-ids? settings))
+  (hash-table-constructor-with-lists #t)
   (print-boolean-long-form #t)
   [constructor-style-printing
    (case (sl-runtime-settings-printing-style settings)
