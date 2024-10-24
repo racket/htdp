@@ -30,6 +30,9 @@
   "check-expect: cannot compare inexact numbers, but the second argument is ~a. Try (check-within test ~a error-range).")
 (define FUNCTION-FMT
   "check-expect: cannot compare functions, but the second argument ~a is a function.")
+;; No fix were available; don't suggest anything.
+(define CHECK-RANDOM-INEXACT-NUMBERS-FMT
+  "check-random: cannot compare inexact numbers, but the second argument is ~a.")
 (define SATISFIED-FMT
   "check-satisfied: expects function of one argument in second position. Given ~a")
 (define CHECK-ERROR-STR-FMT
@@ -109,7 +112,7 @@
 
 (define (do-check-expect test expected src)
   (error-check (lambda (v) (if (number? v) (exact? v) #t))
-               expected INEXACT-NUMBERS-FMT #t (list expected expected))
+               expected CHECK-EXPECT-INEXACT-NUMBERS-FMT #t (list expected expected))
   (error-check (lambda (v) (not (procedure? v)))
                expected FUNCTION-FMT #t)
   (execute-test
@@ -136,7 +139,7 @@
                           (random-seed k)
                           (expected-thunk))))
       (error-check (lambda (v) (if (number? v) (exact? v) #t))
-                   expected INEXACT-NUMBERS-FMT #t)
+                   expected CHECK-RANDOM-INEXACT-NUMBERS-FMT #t)
       (execute-test
        src
        (lambda ()
