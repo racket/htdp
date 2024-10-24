@@ -35,9 +35,9 @@
 (define CHECK-ERROR-STR-FMT
   "check-error: expects a string (the expected error message) for the second argument. Given ~s")
 (define CHECK-WITHIN-INEXACT-FMT
-  "check-within: expects an inexact number for the range. ~a is not inexact.")
+  "check-within: expects an inexact number for the range. ~s is not inexact.")
 (define CHECK-WITHIN-FUNCTION-FMT
-  "check-within cannot compare functions.")
+  "check-within cannot compare functions, but the second argument is ~a.")
 (define LIST-FMT
   "check-member-of: expects a list for the second argument (the possible outcomes). Given ~s")
 (define CHECK-MEMBER-OF-FUNCTION-FMT
@@ -217,7 +217,7 @@
 
 (define (do-check-within test expected within src)
   (error-check number? within CHECK-WITHIN-INEXACT-FMT #t)
-  (error-check (lambda (v) (not (procedure? v))) expected CHECK-WITHIN-FUNCTION-FMT #f)
+  (error-check (lambda (v) (not (procedure? v))) expected CHECK-WITHIN-FUNCTION-FMT #t)
   (execute-test
    src
    (lambda ()
