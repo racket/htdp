@@ -15,7 +15,7 @@
          racket/class
          (only-in test-engine/test-markup get-rewritten-error-message-parameter render-value-parameter)
          (only-in test-engine/syntax report-signature-violation! test)
-         (only-in test-engine/test-engine test-object-copy current-test-object test-object=?)
+         (only-in test-engine/test-engine initialize-test-object! test-object-copy current-test-object test-object=?)
          (only-in deinprogramm/signature/signature
                   signature? signature-name
                   signature-violation-proc)
@@ -206,6 +206,8 @@
     (current-eval
      (let ((old-eval (current-eval)))
        (lambda args
+         (when interaction?
+           (initialize-test-object!))
          (let ((test-object (test-object-copy (current-test-object))))
            (dynamic-wind
              void
