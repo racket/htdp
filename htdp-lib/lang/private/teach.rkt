@@ -164,6 +164,14 @@
 (define-for-syntax (stepper-ignore-checker stx)
   (stepper-syntax-property stx 'stepper-skipto '(syntax-e cdr syntax-e cdr car)))
 
+
+;; wrap-lambda-remove-name: syntax? -> syntax?
+;;   Removes source-location names for lambdas by erasing the source location
+;;   Preserves the lexical context, the syntax properties, but removes the source location
+(define-for-syntax (wrap-lambda-remove-name stx)
+  (cond [(syntax-local-name) stx]
+        [else (datum->syntax stx (syntax-e stx) #f stx)]))
+
 (define-for-syntax (map-with-index proc . lists)
   (let loop ([i 0] [lists lists] [rev-result '()])
     (if (null? (car lists))
@@ -2297,7 +2305,8 @@
                                      stx
                                      (syntax->list (syntax (lexpr ...)))
                                      args)
-            (syntax/loc stx (lambda arg-seq lexpr ...)))]
+            (wrap-lambda-remove-name
+             (syntax/loc stx (lambda arg-seq lexpr ...))))]
          ;; Bad lambda because bad args:
          [(_ args . __)
           (teach-syntax-error
@@ -2504,7 +2513,8 @@
                                      stx
                                      (syntax->list (syntax exprs))
                                      names)
-            (syntax/loc stx (lambda (name ...) . exprs)))]
+            (wrap-lambda-remove-name
+             (syntax/loc stx (lambda (name ...) . exprs))))]
          [(_ args . __)
           (teach-syntax-error
            'lambda

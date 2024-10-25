@@ -184,11 +184,14 @@
                         output-function-instead-of-lambda))
      (mk-module-begin '(abbreviate-cons-as-list
                         read-accept-quasiquote
+                        use-function-output-syntax
                         output-function-instead-of-lambda))
      (mk-module-begin '(abbreviate-cons-as-list
-                        read-accept-quasiquote))
+                        read-accept-quasiquote
+                        use-function-output-syntax))
      (mk-module-begin '(abbreviate-cons-as-list
                         read-accept-quasiquote
+                        use-function-output-syntax
                         show-sharing))
 
      ;; module-continue
