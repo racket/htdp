@@ -86,10 +86,11 @@
      (and (sl-runtime-settings-use-function-output-syntax? settings)
           (procedure? x)
           (object-name x))))
+  ;; The ISL case -- sl-runtime-settings-output-function-instead-of-lambda? --
+  ;; is already covered by the current-print-convert-hook above.
   (named/undefined-handler
    (lambda (x)
-     (string->symbol
-      (format "function:~a" (object-name x)))))
+     (object-name x)))
 
   ; sharing done by print-convert
   (show-sharing (sl-runtime-settings-show-sharing? settings))
