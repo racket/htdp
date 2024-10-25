@@ -1144,7 +1144,7 @@
   (t 'check-expect-err m:upto-int/lam
      (check-expect 0 (sqrt 2))
      :: (check-expect 0 {(sqrt 2)}) -> (check-expect 0 {1.4142135623730951})
-     :: error: "check-expect cannot compare inexact numbers")
+     :: error: "check-expect: cannot compare inexact numbers")
 
   (t1 'check-within
       m:upto-int/lam
