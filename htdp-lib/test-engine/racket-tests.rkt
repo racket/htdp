@@ -27,7 +27,7 @@
          simple-tree-text-markup/port)
 
 (define CHECK-EXPECT-INEXACT-NUMBERS-FMT
-  "check-expect: cannot compare inexact numbers, but the second argument is ~a. Try (check-within test ~a error-range).")
+  "check-expect: cannot compare inexact numbers, but the second argument is ~a.")
 (define FUNCTION-FMT
   "check-expect: cannot compare functions, but the second argument ~a is a function.")
 ;; No fix were available; don't suggest anything.
@@ -112,7 +112,7 @@
 
 (define (do-check-expect test expected src)
   (error-check (lambda (v) (if (number? v) (exact? v) #t))
-               expected CHECK-EXPECT-INEXACT-NUMBERS-FMT #t (list expected expected))
+               expected CHECK-EXPECT-INEXACT-NUMBERS-FMT #t)
   (error-check (lambda (v) (not (procedure? v)))
                expected FUNCTION-FMT #t)
   (execute-test
@@ -315,10 +315,10 @@
            (not-range src val min max))))
    (make-exn->unexpected-error src (format "[~a, ~a]" min max))))
 
-(define (error-check pred? actual fmt fmt-act? [fmt-args (list actual)])
+(define (error-check pred? actual fmt fmt-act?)
   (unless (pred? actual)
     (raise
-     (make-exn:fail:contract (if fmt-act? (apply format fmt fmt-args) fmt)
+     (make-exn:fail:contract (if fmt-act? (format fmt actual) fmt)
                              (current-continuation-marks)))))
 
 
