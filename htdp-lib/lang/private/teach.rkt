@@ -3255,10 +3255,11 @@
 
 ; QuickCheck
 
-(provide for-all ==>
+(provide for-all 
          check-property
          expect expect-within expect-member-of expect-range
-         Property)
+         Property
+         (rename ==> ===>))
 
 (define-syntax (for-all stx)
   (syntax-case stx ()
