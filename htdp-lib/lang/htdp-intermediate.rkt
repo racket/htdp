@@ -59,7 +59,7 @@
          Number Real Rational Integer Natural Boolean True False String Symbol Char Any
          ConsOf ListOf EmptyList
          Property
-         check-property for-all ==> expect expect-within expect-member-of expect-range)
+         check-property for-all ===> expect expect-within expect-member-of expect-range)
 
 
 (provide-and-scribble 
