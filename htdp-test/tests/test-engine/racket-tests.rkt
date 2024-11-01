@@ -268,6 +268,7 @@
    (= (/ a b) (/ b a))))
 (check-failure property-fail?)
 
-
-
-
+; check for malformed property
+(check-property
+ (for-all ((minutes)) #t))
+(check-failure property-error?)
