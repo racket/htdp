@@ -26,18 +26,21 @@
          simple-tree-text-markup/construct
          simple-tree-text-markup/port)
 
-(define INEXACT-NUMBERS-FMT
-  "check-expect cannot compare inexact numbers. Try (check-within test ~a range).")
+(define CHECK-EXPECT-INEXACT-NUMBERS-FMT
+  "check-expect: cannot compare inexact numbers, but the second argument is ~a.")
 (define FUNCTION-FMT
-  "check-expect cannot compare functions.")
+  "check-expect: cannot compare functions, but the second argument ~a is a function.")
+;; No fix were available; don't suggest anything.
+(define CHECK-RANDOM-INEXACT-NUMBERS-FMT
+  "check-random: cannot compare inexact numbers, but the second argument is ~a.")
 (define SATISFIED-FMT
   "check-satisfied: expects function of one argument in second position. Given ~a")
 (define CHECK-ERROR-STR-FMT
   "check-error: expects a string (the expected error message) for the second argument. Given ~s")
 (define CHECK-WITHIN-INEXACT-FMT
-  "check-within: expects an inexact number for the range. ~a is not inexact.")
+  "check-within: expects an inexact number for the range. ~s is not inexact.")
 (define CHECK-WITHIN-FUNCTION-FMT
-  "check-within cannot compare functions.")
+  "check-within cannot compare functions, but the second argument is ~a.")
 (define LIST-FMT
   "check-member-of: expects a list for the second argument (the possible outcomes). Given ~s")
 (define CHECK-MEMBER-OF-FUNCTION-FMT
@@ -109,9 +112,9 @@
 
 (define (do-check-expect test expected src)
   (error-check (lambda (v) (if (number? v) (exact? v) #t))
-               expected INEXACT-NUMBERS-FMT #t)
+               expected CHECK-EXPECT-INEXACT-NUMBERS-FMT #t)
   (error-check (lambda (v) (not (procedure? v)))
-               expected FUNCTION-FMT #f)
+               expected FUNCTION-FMT #t)
   (execute-test
    src
    (lambda ()
@@ -136,7 +139,7 @@
                           (random-seed k)
                           (expected-thunk))))
       (error-check (lambda (v) (if (number? v) (exact? v) #t))
-                   expected INEXACT-NUMBERS-FMT #t)
+                   expected CHECK-RANDOM-INEXACT-NUMBERS-FMT #t)
       (execute-test
        src
        (lambda ()
@@ -217,7 +220,7 @@
 
 (define (do-check-within test expected within src)
   (error-check number? within CHECK-WITHIN-INEXACT-FMT #t)
-  (error-check (lambda (v) (not (procedure? v))) expected CHECK-WITHIN-FUNCTION-FMT #f)
+  (error-check (lambda (v) (not (procedure? v))) expected CHECK-WITHIN-FUNCTION-FMT #t)
   (execute-test
    src
    (lambda ()

@@ -60,11 +60,14 @@
                       (['stepper-hint hint-tag]
                        ['stepper-hide-reduction #t]
                        ['stepper-use-val-as-final #t])
-                      (quasisyntax/loc stx
-                        (#,checker-proc-stx
-                         (lambda () #,test-expr-checked-for-syntax-error)
-                         #,@embedded-stxes
-                         #,src-info)))))
+                      (syntax-property
+                       (quasisyntax/loc stx
+                         (#,checker-proc-stx
+                          (lambda () #,test-expr-checked-for-syntax-error)
+                          #,@embedded-stxes
+                          #,src-info))
+                       'errortrace:annotate
+                       #t))))
              'stepper-skipto
              (append skipto/cdr
                      skipto/second ;; outer lambda
