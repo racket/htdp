@@ -442,5 +442,11 @@
          (with-handlers ([exn:fail? (lambda (e) (channel-put obj-or-exn:ch e))])
            (channel-put obj-or-exn:ch (o))))))
     (match (channel-get obj-or-exn:ch)
-      [(? exn:fail? e) (raise e)]
+      [(? exn:fail? e)
+       (raise (if (regexp-match? #rx"check-with" (exn-message e))
+                  ;; Report big-bang check-with errors using the big-bang's stack frames
+                  ;; instead of esp/thd's stacks
+                  (make-exn:fail:contract (exn-message e)
+                                          (current-continuation-marks))
+                  e))]
       [obj (send obj last)])))
