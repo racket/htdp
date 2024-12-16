@@ -435,7 +435,12 @@
   (define esp (make-eventspace))
   (define thd (eventspace-handler-thread esp))
   (with-handlers ((exn:break? (lambda (x) (break-thread thd))))
-    (define obj:ch (make-channel))
+    (define obj-or-exn:ch (make-channel))
     (parameterize ([current-eventspace esp])
-      (queue-callback (lambda () (channel-put obj:ch (o)))))
-    (send (channel-get obj:ch) last)))
+      (queue-callback
+       (lambda ()
+         (with-handlers ([exn:fail? (lambda (e) (channel-put obj-or-exn:ch e))])
+           (channel-put obj-or-exn:ch (o))))))
+    (match (channel-get obj-or-exn:ch)
+      [(? exn:fail? e) (raise e)]
+      [obj (send obj last)])))
