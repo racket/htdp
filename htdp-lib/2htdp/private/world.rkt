@@ -220,6 +220,7 @@
       (define/pubment (create-frame/universe)
         (define play-back:cust (make-custodian))
         
+        (define inset (universe-inset))
         (define frame-x 2)
         (define frame-y 2)
         
@@ -256,10 +257,10 @@
                (stretchable-width #f)
                (stretchable-height #f)
                (style '(no-hscroll no-vscroll))
-               (horizontal-inset INSET)
-               (vertical-inset INSET)))
-        (send editor-canvas min-client-width (sub1 (+ width INSET INSET)))
-        (send editor-canvas min-client-height (sub1 (+ height INSET INSET)))
+               (horizontal-inset inset)
+               (vertical-inset inset)))
+        (send editor-canvas min-client-width (sub1 (+ width inset inset)))
+        (send editor-canvas min-client-height (sub1 (+ height inset inset)))
         (set!-values (enable-images-button disable-images-button)
                      (inner (values void void) create-frame/universe frame play-back:cust))
         (send editor-canvas focus)
