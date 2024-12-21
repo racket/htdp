@@ -18,7 +18,8 @@
          ; racket/function
          htdp/error
          (for-syntax racket/base
-                     #;"requiring from" lang/private/firstorder #;"avoids load cycle")
+                     #;"requiring from" lang/private/firstorder #;"avoids load cycle"
+                     stepper/private/syntax-property)
          test-engine/test-engine
          (only-in test-engine/test-markup get-rewritten-error-message)
          test-engine/syntax
@@ -170,11 +171,13 @@
                                                     (raise exn)))]
                                              [else (raise exn)])))])
                         (#,prop1 x)))])
-       (check-expect-maker stx 
-                           #'do-check-satisfied 
-                           #'actual:exp
-                           (list code name)
-                           'comes-from-check-satisfied))]
+       (stepper-syntax-property
+        (check-expect-maker stx 
+                            #'do-check-satisfied 
+                            #'actual:exp
+                            (list code name)
+                            'comes-from-check-satisfied)
+        'stepper-skip-completely #t))]
     [(_ actual:exp expected-predicate:exp)
      (let ([pred #`(let ([p? expected-predicate:exp])
                      (let ((name (object-name p?)))
@@ -183,11 +186,13 @@
                              (error-check (lambda (v) #f) name SATISFIED-FMT #t)
                              (error-check (lambda (v) #f) p? SATISFIED-FMT #t))))
                      p?)])
-       (check-expect-maker stx 
-                           #'do-check-satisfied
-                           #'actual:exp
-                           (list pred "unknown name")
-                           'comes-from-check-satisfied))]
+       (stepper-syntax-property
+        (check-expect-maker stx 
+                            #'do-check-satisfied
+                            #'actual:exp
+                            (list pred "unknown name")
+                            'comes-from-check-satisfied)
+        'stepper-skip-completely #t))]
     [(_ actual:exp expected-predicate:exp) 
      (raise-syntax-error 'check-satisfied "expects named function in second position." stx)]
     [_ (raise-syntax-error 'check-satisfied (argcount-error-message/stx 2 stx) stx)]))
