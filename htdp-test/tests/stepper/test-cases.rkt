@@ -1135,6 +1135,42 @@
      :: 9 false (check-expect {(+ 1 1)} 2) -> 9 false (check-expect {2} 2)
      :: 9 false true (check-expect {(+ 2 2)} 4) -> 9 false true (check-expect {4} 4))
 
+  ;; check-satisfied is generally skipped
+  ;; UPDATE ME when the stepper supports check-satisfied
+  (t 'check-satisfied-identifier m:upto-int/lam
+     (check-expect 1 (+ 1 1)) (check-satisfied (* 2 2) even?) (check-expect 3 (+ 1 2))
+     :: (check-expect 1 {(+ 1 1)}) -> (check-expect 1 {2})
+     :: false (check-expect 3 {(+ 1 2)}) -> false (check-expect 3 {3}))
+
+  ;; non-identifier predicate in check-satisfied
+  ;; UPDATE ME when the stepper supports check-satisfied
+  (t 'check-satisfied-lambda m:intermediate-lambda/both
+     (check-satisfied (+ 2 3) (lambda (n) (even? (sub1 n)))) (check-expect 3 (+ 1 2))
+     :: (check-expect 3 {(+ 1 2)}) -> (check-expect 3 {3}))
+
+  ;; defined function in check-satisfied
+  ;; define/lambda from user code is stepped
+  ;; UPDATE ME when the stepper supports check-satisfied
+  (let* ([defs '(;; add2minus1 is stepped
+                 (define (add2minus1 n) (+ 2 n -1))
+                 ;; the (lambda (j) ...) part is also stepped since it has cms
+                 (define (curried-mul3 i) (lambda (j) (* 3 i j))))])
+    (t 'check-satisfied-defined m:intermediate-lambda/both
+       (define (add2minus1 n) (+ 2 n -1))
+       (define (curried-mul3 i) (lambda (j) (* 3 i j)))
+       (check-satisfied (add2minus1 5) even?)
+       (check-satisfied (curried-mul3 1) procedure?)
+       (check-satisfied (number? ((curried-mul3 2) 3)) boolean?)
+       (check-satisfied (curried-mul3 4) (lambda (f) (= (f 5) 60)))
+       :: ,@defs {(+ 2 5 -1)} -> ,@defs {6}
+       :: ... -> ,@defs {(lambda (j) (* 3 1 j))}
+       :: ... -> ,@defs {(lambda (j) (* 3 2 j))}
+       :: ... -> ,@defs {(* 3 2 3)}
+       :: ,@defs {(* 3 2 3)} -> ,@defs {18}
+       :: ... -> ,@defs {(lambda (j) (* 3 4 j))}  ;; (f 5) is inside user code, so it is
+       :: ... -> ,@defs {(* 3 4 5)}               ;; stepped through by the stepper; but
+       :: ,@defs {(* 3 4 5)} -> ,@defs {60}))     ;; but (= (f 5) 60) is not.
+
   (t 'check-random m:upto-int/lam
      (check-random (+ 3 4) (+ 2 5)) (+ 4 5)
      :: {(+ 4 5)} -> {9}
