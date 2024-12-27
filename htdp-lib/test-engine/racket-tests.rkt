@@ -176,7 +176,8 @@
                            (list code name)
                            'comes-from-check-satisfied))]
     [(_ actual:exp expected-predicate:exp)
-     (let ([pred #`(let ([p? expected-predicate:exp])
+     (let ([pred #`(let ([p? #,(syntax-property #'expected-predicate:exp
+                                                'inferred-name (void))])
                      (let ((name (object-name p?)))
                        (unless (and (procedure? p?) (procedure-arity-includes? p? 1))
                          (if name  ;; this produces the BSL/ISL name 

@@ -60,6 +60,20 @@
                unequal-actual 1
                unequal-expected 2)
 
+(check-satisfied 0 (lambda (n bad) #t))
+(check-exn
+ (lambda (e)
+   (initialize-test-object!)
+   (and (exn:fail:contract? e)
+        (regexp-match?
+         ;; BUG: error-check in test-engine/racket-tests is NOT using print-convert!
+         (pregexp
+          (string-append "check-satisfied.*expect.*one argument.*second position.*"
+                         "Given.*racket-tests[.]rkt:[[:digit:]]+:[[:digit:]]+"))
+         (exn-message e))))
+ (lambda ()
+   (run-tests!)))
+
 (check-within 1.345 1.3 .05)
 (check-success)
 
