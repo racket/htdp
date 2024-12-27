@@ -83,6 +83,16 @@
                not-within-expected 1.3
                not-within-range 0.005)
 
+(check-within 1.345 1.3 "0.05")
+(check-exn
+ (lambda (e)
+   (initialize-test-object!)
+   (and (exn:fail:contract? e)
+        (regexp-match? #rx"check-within.*\"0[.]05\" is not inexact"
+                       (exn-message e))))
+ (lambda ()
+   (run-tests!)))
+
 (check-expect (cons 1 (cons 2 (cons 3 '()))) (cons 2 (cons 2 (cons 2 '()))))
 (check-failure unequal?
                unequal-actual '(1 2 3)
