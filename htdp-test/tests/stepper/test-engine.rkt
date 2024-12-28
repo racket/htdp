@@ -12,6 +12,7 @@
          racket/contract
          racket/file
          mzlib/pconvert-prop ;; so it can be attached.
+         racket/gui/base ;; stepper big-bang tests need them attached
          test-engine/test-markup
          lang/private/rewrite-error-message
          test-engine/test-engine
@@ -196,6 +197,7 @@
   (parameterize ([current-namespace (make-base-namespace)])
     (namespace-attach-module orig-namespace 'mzlib/pconvert-prop)
     (namespace-attach-module orig-namespace 'racket/class)
+    (namespace-attach-module orig-namespace 'racket/gui/base)
     (namespace-attach-module orig-namespace 'test-engine/racket-tests)
     (thunk)))
 

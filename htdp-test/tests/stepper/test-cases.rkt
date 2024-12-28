@@ -1205,6 +1205,57 @@
                       (9 false (check-expect (hilite 4) 4)))
         (finished-stepping)))
   
+  ;; NOTE: a straight-line big-bang test would not work because
+  ;; it will hang indefinitely, waiting for big-bang to terminate
+  (let ([defs '((require 2htdp/universe)
+                (require 2htdp/image)
+                (define (draw t) (empty-scene 50 50)))]
+        [img '(instantiate (class ...) ...)]) ;; #<image>; somehow `any` did not work?
+    ;; Somehow, we could not start big-bang with 2 or below to run only one or two steps
+    ;; because to-draw won't always get a chance to properly run.
+    ;;
+    ;; When the initial world is only 2 or 1, there will be extra steps after
+    ;; "finished-stepping" which also shows up in the actual Stepper GUI as two extra steps
+    ;; after "all of the definitions  have been successfully evaluated" is displayed.
+    ;;
+    ;; The (empty-scene 50 50) also shows up only after the final world 0 like:
+    ;;   :: ... -> ,@defs 0 {(empty-scene 50 50)} -> ,@defs 0 {,img}
+    ;;
+    ;; It seems as if `big-bang` has terminated too quickly, possibly due to high ticking
+    ;; frequency, causing out-of-ordered to-draw steps
+    (t 'big-bang m:upto-int/lam
+       ,@defs
+       (big-bang 4 [stop-when zero?] [close-on-stop #true]
+         [to-draw draw]
+         [on-tick sub1 1/8])
+       ;; The initial `draw` before the clock starts ticking
+       :: ,@defs {(empty-scene 50 50)} -> ,@defs {,img}
+       :: ... -> ,@defs {(empty-scene 50 50)} -> ,@defs {,img}   ;; `draw` for w = 3
+       :: ... -> ,@defs {(empty-scene 50 50)} -> ,@defs {,img}   ;; `draw` for w = 2
+       :: ... -> ,@defs {(empty-scene 50 50)} -> ,@defs {,img})) ;; `draw` for w = 1
+
+  ;; Testing the current big-bang stepping behavior
+  ;; functions defined in user code are stepped, but lambdas in big-bang are not
+  ;; so: in to-draw: (first w), empty-scene, and overlay are invisible
+  (let ([defs '((require 2htdp/universe)
+                (require 2htdp/image)
+                (define (drawobj r) (circle r "solid" "red"))
+                (define (next w) (rest w)))]
+        [img '(instantiate (class ...) ...)]) ;; #<image>; somehow `any` did not work?
+    (t 'big-bang-lambda m:intermediate-lambda/both
+       ,@defs
+       (big-bang (list 25 18 11) [stop-when empty?] [close-on-stop #true]
+         [to-draw (lambda (w)
+                    (overlay (drawobj (first w))
+                             (empty-scene 60 60)))]
+         [on-tick next 1/5])
+       :: ,@defs {(circle 25 "solid" "red")} -> ,@defs {,img}
+       :: ... -> ,@defs {(rest (list 25 18 11))}     ->  ,@defs {(list 18 11)} ;; next
+       :: ... -> ,@defs {(circle 18 "solid" "red")}  ->  ,@defs {,img}         ;; drawobj
+       :: ... -> ,@defs {(rest (list 18 11))}        ->  ,@defs {(list 11)}    ;; next
+       :: ... -> ,@defs {(circle 11 "solid" "red")}  ->  ,@defs {,img}         ;; drawobj
+       :: ... -> ,@defs {(rest (list 11))}           ->  ,@defs {empty}))      ;; next
+
   ;;;;;;;;;;;;
   ;;
   ;;    SdP TESTS
@@ -1217,14 +1268,6 @@
   (define apply-nim-move
     (lambda (s)
       (if s s s)))"
-      '((finished-stepping)))
-
-  (t1 'big-bang
-      m:beginner
-      "(require 2htdp/image)
-(require 2htdp/universe)
-(define (f2 w) (text \"hi\" 30 \"red\"))
-(big-bang \"dummy\" [to-draw f2])"
       '((finished-stepping)))
   
 
