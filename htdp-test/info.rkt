@@ -6,6 +6,7 @@
 (define build-deps '("lazy"
                      "deinprogramm"
                      "pict-lib"
+                     "simple-tree-text-markup-lib"
                      "redex-lib"
                      "racket-index"
                      "scheme-lib"

@@ -2,11 +2,23 @@
 
 (require (only-in lang/private/teach check-property
                   for-all Integer)
+         (only-in lang/htdp-intermediate-lambda
+                  [define define/isl]
+                  local)
+         (only-in htdp/bsl/runtime configure)
          (except-in rackunit check-within)
+         racket/port
+         simple-tree-text-markup/text
          test-engine/racket-tests
          test-engine/test-engine)
 
 (require racket/format)
+
+;; To configure error messages
+(configure ;; ISL options
+ '(abbreviate-cons-as-list
+   read-accept-quasiquote
+   use-function-output-syntax))
 
 (define (assert-failed-check failed-check reason? . selector+value-list)
   (check-pred failed-check? failed-check)
@@ -59,6 +71,50 @@
 (check-failure unequal?
                unequal-actual 1
                unequal-expected 2)
+
+(check-satisfied (cdr (list 3514)) null)
+(check-failure unsatisfied-error?
+               unsatisfied-error-exn (lambda (e)
+                                       (regexp-match? #rx"application: not a procedure"
+                                                      (exn-message e)))
+               unsatisfied-error/markup-error-markup
+               (lambda (m)
+                 (regexp-match? #rx"function call: expected a function after the open parenthesis, but received '[(][)]"
+                                (with-output-to-string
+                                  (lambda () (display-markup m))))))
+
+(define/isl even1
+  (local [(define/isl (local-even m k)
+            (even? (+ m k)))]
+    local-even))
+
+(define/isl (even2 m k)
+  (even? (+ m k)))
+
+(check-satisfied 4 even1)
+(check-failure unsatisfied-error?
+               unsatisfied-error-exn (lambda (e)
+                                       (regexp-match? #rx"local-even.*arity mismatch"
+                                                      (exn-message e)))
+               unsatisfied-error/markup-error-markup
+               (lambda (m)
+                 (regexp-match? #rx"local-even.*expects 2 arguments.*found only 1"
+                                (with-output-to-string
+                                  (lambda () (display-markup m))))))
+
+(check-satisfied 4 even2)
+(check-failure unsatisfied-error?
+               unsatisfied-error-exn
+               (lambda (e)
+                 (regexp-match?
+                  #rx"check-satisfied.*expects function of one argument.*Given even2"
+                  (exn-message e)))
+               unsatisfied-error/markup-error-markup
+               (lambda (m)
+                 (regexp-match?
+                  #rx"check-satisfied.*expects function of one argument.*Given even2"
+                  (with-output-to-string
+                    (lambda () (display-markup m))))))
 
 (check-satisfied 0 (lambda (n bad) #t))
 (check-exn
