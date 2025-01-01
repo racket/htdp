@@ -36,7 +36,12 @@
 ;; (before-after exps exps)
 ;; (before-error exps str)
 ;; (error str)
-;; (finished)
+;; (repetition lo hi (non-empty-listof step)) steps are repeated for [lo,hi] times (inclusive)
+;; (finished-stepping)
+;;
+;; The repetition form matches the steps greedily---it is not a regular expression form.
+;; It will try to match as many steps as possible.
+;;
 ;; an exps is a list of s-expressions with certain non-hygienic extensions:
 ;;  - (hilite X) denotes the s-expression X, only highlighted
 ;;  - any        denotes any s-expression (matches everything)
@@ -50,6 +55,10 @@
 ;;    expr1 ... :: expr2 ... -> expr3 ...)
 ;; means that `expr1 ...' is the original, the first step is
 ;;   (before-after (expr2 ...) (expr3 ...))
+;; to express repetitions, write
+;;    ::*[lo hi] expr2 ... -> expr3 ... -> expr4 ...
+;; where the range of ::* extends until the next :: or the next ::*
+;;
 ;; Cute stuff:
 ;; * use `::' to mark a new step that doesn't continue the previous one
 ;;     e1 :: e2 -> e3 -> e4
@@ -1230,9 +1239,10 @@
          [on-tick sub1 1/8])
        ;; The initial `draw` before the clock starts ticking
        :: ,@defs {(empty-scene 50 50)} -> ,@defs {,img}
-       :: ... -> ,@defs {(empty-scene 50 50)} -> ,@defs {,img}   ;; `draw` for w = 3
-       :: ... -> ,@defs {(empty-scene 50 50)} -> ,@defs {,img}   ;; `draw` for w = 2
-       :: ... -> ,@defs {(empty-scene 50 50)} -> ,@defs {,img})) ;; `draw` for w = 1
+       ::*[3 99] ... -> ,@defs {(empty-scene 50 50)} -> ,@defs {,img})) ;; `draw` for w=3..1
+  ;;       ^ ^~~ the additional repetition count is for potentially extra `draw` steps
+  ;;       |     provided `draw` is called more than once in one tick
+  ;;       +~~ if the tick frequency is too high, reduce the lower bound.
 
   ;; Testing the current big-bang stepping behavior
   ;; functions defined in user code are stepped, but lambdas in big-bang are not
@@ -1248,12 +1258,13 @@
          [to-draw (lambda (w)
                     (overlay (drawobj (first w))
                              (empty-scene 60 60)))]
-         [on-tick next 1/5])
+         [on-tick next 1/8])
        :: ,@defs {(circle 25 "solid" "red")} -> ,@defs {,img}
+       ::*[0 99] ... -> ,@defs {(circle 25 "solid" "red")}  ->  ,@defs {,img}  ;; drawobj
        :: ... -> ,@defs {(rest (list 25 18 11))}     ->  ,@defs {(list 18 11)} ;; next
-       :: ... -> ,@defs {(circle 18 "solid" "red")}  ->  ,@defs {,img}         ;; drawobj
+       ::*[1 99] ... -> ,@defs {(circle 18 "solid" "red")}  ->  ,@defs {,img}  ;; drawobj
        :: ... -> ,@defs {(rest (list 18 11))}        ->  ,@defs {(list 11)}    ;; next
-       :: ... -> ,@defs {(circle 11 "solid" "red")}  ->  ,@defs {,img}         ;; drawobj
+       ::*[1 99] ... -> ,@defs {(circle 11 "solid" "red")}  ->  ,@defs {,img}  ;; drawobj
        :: ... -> ,@defs {(rest (list 11))}           ->  ,@defs {empty}))      ;; next
 
   ;;;;;;;;;;;;

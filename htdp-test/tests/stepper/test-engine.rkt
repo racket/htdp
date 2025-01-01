@@ -7,7 +7,7 @@
          stepper/private/model
          tests/utils/sexp-diff
          lang/run-teaching-program
-         (only-in srfi/13 string-contains)
+         racket/string
          racket/match
          racket/contract
          racket/file
@@ -110,9 +110,16 @@
 ;; - `(before-error ,before ,err-msg) where before is an sexp-with-hilite and err-msg is a string
 ;; - `(finished-stepping)
 ;; or
+;; - `(repetition ,(>=/c 0) ,(>/c 0) ,(non-empty-listof step)) (possible skippable) repetitions
+;; or
 ;; - `(ignore)
 (define (step? sexp)
   (match sexp
+    [`(repetition ,lo ,hi ,rep-expected-steps)
+     (and (exact-integer? lo) (>= lo 0)
+          (exact-integer? hi) (> hi 0)
+          (not (null? rep-expected-steps))
+          (andmap step? rep-expected-steps))]
     [(list 'before-after before after) #t]
     [(list 'error (? string? msg)) #t]
     [(list 'before-error before (? string? msg)) #t]
@@ -336,12 +343,61 @@
                   (set-box! remaining (cdr (unbox remaining)))
                   next]))))
 
+(struct sstk-data ([warns #:mutable] [hd #:mutable])
+  #:transparent)
+(struct sstk-last sstk-data ()
+  #:transparent)
+(struct sstk-cons sstk-data ([received-results #:mutable] rep-hi rep-steps tl)
+  #:transparent)
+
+(define (steps-stack-last? stk)
+  (sstk-last? stk))
+
+(define (make-steps-stack all-steps)
+  (sstk-last '() all-steps))
+
+(define (steps-stack-push stk repetition)
+  (match-define `(repetition 0 ,hi ,rep-expected-steps)
+    repetition)
+  (sstk-cons '() rep-expected-steps '() hi rep-expected-steps stk))
+
+(define (steps-stack-pop stk)                  (sstk-cons-tl stk))
+(define (steps-stack-top-repetition-hi stk)    (sstk-cons-rep-hi stk))
+(define (steps-stack-top-repetition-steps stk) (sstk-cons-rep-steps stk))
+(define (steps-stack-top stk)                  (sstk-data-hd stk))
+
+(define (steps-stack-top-next! stk)
+  (set-sstk-data-hd! stk (cdr (sstk-data-hd stk))))
+(define (steps-stack-top-prepend! stk new-steps)
+  (set-sstk-data-hd! stk (append new-steps (sstk-data-hd stk))))
+
+(define (steps-stack-top-received-results stk)
+  (reverse (sstk-cons-received-results stk)))
+
+(define (steps-stack-top-receive! stk result)
+  (when (sstk-cons? stk)
+    (set-sstk-cons-received-results! stk
+                                     (cons result (sstk-cons-received-results stk)))))
+
+(define (steps-stack-top-warn stk error-box name fmt . args)
+  (set-sstk-data-warns! stk
+                        (cons (list error-box name fmt args)
+                              (sstk-data-warns stk))))
+
+(define (steps-stack-top-commit-warns! stk)
+  (for ([warn-data (in-list (sstk-data-warns stk))])
+    (match-define (list error-box name fmt args)
+      warn-data)
+    (apply warn error-box name fmt args))
+  (set-sstk-data-warns! stk '()))
+
 ;; this is a front end for calling the stepper's "go"; the main 
 ;; responsibility here is to fake the behavior of DrRacket and collect the
 ;; resulting steps.
 (define (test-sequence/core render-settings expanded-thunk dynamic-requirer expected-steps error-box)
   (define current-error-display-handler (error-display-handler))
-  (define all-steps expected-steps)
+  ;; stacks of all-steps for backtracking
+  (define all-steps-stk (make-steps-stack expected-steps))
   ;; the values of certain parameters aren't surviving; create
   ;; lexical bindings for them:
   (define current-show-all-steps (show-all-steps))
@@ -349,26 +405,78 @@
   (define test-finished-semaphore (make-semaphore))
   (define receive-result
     (λ (result)
-      (if (null? all-steps)
+      (if (null? (steps-stack-top all-steps-stk))
           (begin (warn error-box
                        'test-sequence
                        "ran out of expected steps. Given result: ~v" result)
                  ;; test is finished, release the semaphore:
                  (semaphore-post test-finished-semaphore))
-          (begin
-            (if (compare-steps result (car all-steps) error-box)
+          (match (car (steps-stack-top all-steps-stk))
+            ;; non-skippable repetition => unroll it
+            [`(repetition ,lo ,hi ,rep-expected-steps)
+             #:when (> lo 0)
+             (steps-stack-top-next! all-steps-stk)
+             (define unrolled-expected-steps
+               (append rep-expected-steps
+                       (if (> hi 0)
+                           `((repetition ,(sub1 lo) ,(sub1 hi) ,rep-expected-steps))
+                           '())))
+             (steps-stack-top-prepend! all-steps-stk unrolled-expected-steps)
+             (receive-result result)]
+            [`(repetition 0 ,hi ,rep-expected-steps)
+             ;; lo = 0, the repetition form can match ε
+             (steps-stack-top-next! all-steps-stk)
+             (set! all-steps-stk
+                   (steps-stack-push all-steps-stk `(repetition 0 ,hi ,rep-expected-steps)))
+             (receive-result result)]
+            [expected
+             (steps-stack-top-receive! all-steps-stk result)
+             (cond
+               [(compare-steps result expected error-box all-steps-stk)
                 (when (and current-show-all-steps (not current-display-only-errors))
                   (printf "test-sequence: steps match for expected result: ~v\n"
-                          (car all-steps)))
-                (warn error-box
-                      'test-sequence
-                      "steps do not match\n   given: ~v\nexpected: ~v"
-                      (show-result result error-box)
-                      (car all-steps)))
-            (set! all-steps (cdr all-steps))
-            (when (null? all-steps)
-              ;; test is happy, release the semaphore:
-              (semaphore-post test-finished-semaphore))))))
+                          expected))
+                (steps-stack-top-next! all-steps-stk)
+                (when (null? (steps-stack-top all-steps-stk))
+                  (cond [(steps-stack-last? all-steps-stk)
+                         (steps-stack-top-commit-warns! all-steps-stk)
+                         ;; test is happy, release the semaphore:
+                         (semaphore-post test-finished-semaphore)]
+                        [(> (steps-stack-top-repetition-hi all-steps-stk) 1)
+                         (define rep-step
+                           `(repetition
+                             0
+                             ,(- (steps-stack-top-repetition-hi all-steps-stk) 1)
+                             ,(steps-stack-top-repetition-steps all-steps-stk)))
+                         (steps-stack-top-commit-warns! all-steps-stk)
+                         (set! all-steps-stk (steps-stack-pop all-steps-stk))
+                         (steps-stack-top-prepend! all-steps-stk (list rep-step))]
+                        [else
+                         (steps-stack-top-commit-warns! all-steps-stk)
+                         (set! all-steps-stk (steps-stack-pop all-steps-stk))]))]
+               [else
+                (cond
+                  ;; no more backtracking point, i.e. the failure is not caused by
+                  ;; a skippable (0-repeated-times) repetition form
+                  [(steps-stack-last? all-steps-stk)
+                   (steps-stack-top-commit-warns! all-steps-stk)
+                   ;; record the error but continue to compare new results
+                   (warn error-box
+                         'test-sequence
+                         "steps do not match\n   given: ~v\nexpected: ~v"
+                         (show-result result error-box)
+                         expected)
+                   (steps-stack-top-next! all-steps-stk)
+                   (when (null? (steps-stack-top all-steps-stk))
+                     ;; test is happy, release the semaphore:
+                     (semaphore-post test-finished-semaphore))]
+                  ;; the current skippable repetition form failed.
+                  ;; start from the backtracking point with all received forms
+                  [else
+                   (define accumulated-results
+                     (steps-stack-top-received-results all-steps-stk))
+                   (set! all-steps-stk (steps-stack-pop all-steps-stk))
+                   (for-each receive-result accumulated-results)])])]))))
   (define iter-caller
     (λ (init iter)
       (init)
@@ -431,7 +539,7 @@
 
 
 ;; (-> step-result? sexp? boolean?)
-(define (compare-steps actual expected error-box)
+(define (compare-steps actual expected error-box all-steps-stk)
   (match expected
     [`(before-after ,before ,after)
      (and (Before-After-Result? actual)
@@ -444,21 +552,23 @@
                                        exps)
                                   expected
                                   name
-                                  error-box))
+                                  error-box
+                                  all-steps-stk))
                   (list (map sstx-s (Before-After-Result-pre-exps actual))
                         (map sstx-s (Before-After-Result-post-exps actual)))
                   (list before after)
                   (list 'before 'after)))]
     [`(error ,err-msg)
      (and (Error-Result? actual)
-          (string-contains (Error-Result-err-msg actual) err-msg))]
+          (string-contains? (Error-Result-err-msg actual) err-msg))]
     [`(before-error ,before ,err-msg)
      (and (Before-Error-Result? actual)
           (and (noisy-equal? (map syntax->hilite-datum
                                   (map sstx-s (Before-Error-Result-pre-exps actual)))
                              before
                              'before
-                             error-box)
+                             error-box
+                             all-steps-stk)
                (equal? err-msg (Before-Error-Result-err-msg actual))))]
     [`(finished-stepping) (eq? 'finished-stepping actual)]
     [`(ignore) (warn error-box 
@@ -487,10 +597,10 @@
 
 ;; noisy-equal? : (any any . -> . boolean)
 ;; like equal?, but prints a noisy error message
-(define (noisy-equal? actual expected name error-box)
+(define (noisy-equal? actual expected name error-box all-steps-stk)
   (if (equal? actual expected)
       #t
-      (begin (warn error-box 'not-equal?
+      (begin (steps-stack-top-warn all-steps-stk error-box 'not-equal?
                    "~.s:\nactual:   ~e =/= \nexpected: ~e\n  here's the diff: ~e" name actual expected (sexp-diff actual expected))
              #f)))
 
