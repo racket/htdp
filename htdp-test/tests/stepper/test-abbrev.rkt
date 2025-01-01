@@ -1,6 +1,6 @@
 #lang racket
 
-(require (for-syntax scheme/mpair))
+(require (for-syntax scheme/mpair racket/list))
 
 (provide t)
 
@@ -49,25 +49,43 @@
   (define (process stx)
     (split (map (lambda (s)
                   (if (and (identifier? s)
-                           (memq (syntax-e s) '(:: -> error:)))
+                           (memq (syntax-e s) '(:: ::* -> error:)))
                       (syntax-e s)
                       (process-hilites s)))
                 (syntax->list stx))))
+  (define (parse-:: rest)
+    (syntax-case rest (:: ::* -> error:)
+      [(error: (err)) (list #'(error err))]
+      [() (list #'(finished-stepping))]
+      [(x -> y) (list #'(before-after x y) #'(finished-stepping))]
+      [(x -> error: (err)) (list #'(before-error x err))]
+      [(x -> y :: . rest)
+       (cons #'(before-after x y) (parse-:: #'rest))]
+      [(x -> y ::*([lo hi] . snd) . rest)
+       (cons #'(before-after x y) (parse-::* #'lo #'hi #'(snd . rest)))]
+      [(x -> y -> . rest)
+       (cons #'(before-after x y) (parse-:: #'(y -> . rest)))]))
+  (define (parse-::* lo hi curr)
+    (define-values (prefix suffix)
+      (let rep-scan-loop ([prevs '()] [curr curr])
+        (syntax-case curr (:: ::*)
+          [()           (values (reverse prevs) curr)]
+          [(:: . rest)  (values (reverse prevs) curr)]
+          [(::* . rest) (values (reverse prevs) curr)]
+          [(fst . rest) (rep-scan-loop (cons #'fst prevs) #'rest)])))
+    (cons #`(repetition #,lo #,hi #,(drop-right (parse-:: prefix) 1))
+          ;; ^ drop-right to remove the trailing (finished-stepping) in repetition steps
+          (syntax-case suffix (:: ::*)
+            [()                                (parse-:: suffix)]
+            [(:: rest ...)                     (parse-:: #'(rest ...))]
+            [(::* ([lo hi] snd ...) rest ...)  (parse-::* #'lo #'hi #'((snd ...) rest ...))])))
   (define (parse l)
-    (syntax-case l (::)
+    (syntax-case l (:: ::*)
       [(fst :: rest ...)
-       (cons #'fst
-             (let loop ([rest #'(rest ...)])
-               (syntax-case rest (:: -> error:)
-                 [(error: (err)) (list #'(error err))]
-                 [() (list #'(finished-stepping))]
-                 [(x -> y) (list #'(before-after x y) #'(finished-stepping))]
-                 [(x -> error: (err)) (list #'(before-error x err))]
-                 [(x -> y :: . rest)
-                  (cons #'(before-after x y) (loop #'rest))]
-                 [(x -> y -> . rest)
-                  (cons #'(before-after x y) (loop #'(y -> . rest)))])))]))
-  (syntax-case stx (::)
+       (cons #'fst (parse-:: #'(rest ...)))]
+      [(fst ::* ([lo hi] snd ...) rest ...)
+       (cons #'fst (parse-::* #'lo #'hi #'((snd ...) rest ...)))]))
+  (syntax-case stx (:: ::*)
     [(_ name ll-models . rest)
      (with-syntax ([(exprs arg ...) (parse (process #'rest))])
        (quasisyntax/loc stx

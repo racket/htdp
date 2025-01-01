@@ -33,8 +33,7 @@
   '(local-struct/ilam
     local-struct/i
     begin-let-bug
-    qq-splice
-    big-bang))
+    qq-splice))
 
 ;; this test anticipates the implementation of the stepper
 ;; for check-random, which is not yet implemented
