@@ -10,7 +10,6 @@
                      "redex-lib"
                      "racket-index"
                      "scheme-lib"
-                     "srfi-lite-lib"
                      "compatibility-lib"
                      "gui-lib"
                      "racket-test"

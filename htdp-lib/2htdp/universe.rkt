@@ -276,7 +276,7 @@
          [else
           (syntax-property 
            (stepper-syntax-property
-            (quasisyntax/loc stx (send [((new-world (if #,rec? aworld% world%)) w #,@args)] last))
+            (quasisyntax/loc stx (run-it ((new-world (if #,rec? aworld% world%)) w #,@args)))
             'stepper-skip-completely #t)
            'disappeared-use (map (lambda (x) (car (syntax->list x))) dom))]))]))
 
@@ -411,7 +411,7 @@
           (raise-syntax-error #f "expects a on-msg clause, but found none" stx)]
          [else ; (and (memq #'on-new dom) (memq #'on-msg dom))
           (syntax-property 
-           (quasisyntax/loc stx (send [((new-universe universe%) u #,@args)] last))
+           (quasisyntax/loc stx (run-it ((new-universe universe%) u #,@args)))
            'disappeared-use (map (lambda (x) (car (syntax->list x))) dom))]))]))
 
 ;                                          
@@ -430,12 +430,23 @@
 ;                                          
 ;                                          
 
-#;
+;; (-> Object) -> Any
 (define (run-it o)
   (define esp (make-eventspace))
   (define thd (eventspace-handler-thread esp))
   (with-handlers ((exn:break? (lambda (x) (break-thread thd))))
-    (define obj:ch (make-channel))
+    (define obj-or-exn:ch (make-channel))
     (parameterize ([current-eventspace esp])
-      (queue-callback (lambda () (channel-put obj:ch (o)))))
-    (send (channel-get obj:ch) last)))
+      (queue-callback
+       (lambda ()
+         (with-handlers ([exn:fail? (lambda (e) (channel-put obj-or-exn:ch e))])
+           (channel-put obj-or-exn:ch (o))))))
+    (match (channel-get obj-or-exn:ch)
+      [(? exn:fail? e)
+       (raise (if (regexp-match? #rx"check-with" (exn-message e))
+                  ;; Report big-bang check-with errors using the big-bang's stack frames
+                  ;; instead of esp/thd's stacks
+                  (make-exn:fail:contract (exn-message e)
+                                          (current-continuation-marks))
+                  e))]
+      [obj (send obj last)])))
