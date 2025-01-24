@@ -16,6 +16,18 @@ because you see no colors, does not mean that your program has been
 fully tested; it simply means that each part of the program has been run
 (at least once).
 
+While these languages are normally selected using the Choose Language dialog
+in DrRacket, they can also be accessed using the @litchar{#lang} language 
+directive as the first line of code in DrRacket or other editors.
+
+@itemize[
+@item{Beginning Student @litchar{#lang htdp/bsl}}
+@item{Beginning Student with List Abbreviations @litchar{#lang htdp/bsl+}}
+@item{Intermediate Student @litchar{#lang htdp/isl}}
+@item{Intermediate Student with lambda @litchar{#lang htdp/isl+}}
+@item{Advanced Student @litchar{#lang htdp/asl}}
+]
+
 @table-of-contents[]
 
 @;------------------------------------------------------------------------
