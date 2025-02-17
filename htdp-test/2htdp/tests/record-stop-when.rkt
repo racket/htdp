@@ -28,7 +28,9 @@
       (stop-when (curry = 5) draw-stop)
       (on-draw draw-number)
       (record? dir)))
-  (sleep 1)
+  (for ([_ 20]
+	#:break (file-exists? (build-path dir "i1.png")))
+    (sleep .1))
 
   (define i (bitmap "images0/i1.png"))
   (define j (draw-stop 5))
