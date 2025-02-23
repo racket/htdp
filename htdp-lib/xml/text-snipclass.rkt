@@ -45,6 +45,14 @@
 (define snipclass-text-box%
   (class decorated-editor-snipclass%
     (define/override (make-snip stream-in) (new text-box%))
+    (define/override (read stream-in)
+      (define snip (make-snip stream-in))
+      (define ed (send snip get-editor))
+      (send ed read-from-file stream-in #f)
+      (define style (send (send ed get-style-list) find-named-style (editor:get-default-color-style-name)))
+      (when style
+        (send ed change-style style 0 (send ed last-position)))
+      snip)
     (super-instantiate ())))
 
 (define old-snipclass (new snipclass-text-box%))
@@ -59,9 +67,10 @@
 
 (define text-box%
   (class* decorated-editor-snip% (readable-snip<%>)
-    (define/override (make-editor) (let ([e (new text:keymap%)])
-                                     (send e set-max-undo-history 'forever)
-                                     e))
+    (define/override (make-editor)
+      (define e (new (text:foreground-color-mixin text:keymap%)))
+      (send e set-max-undo-history 'forever)
+      e)
     (define/override (make-snip) (make-object text-box%))
     (inherit get-editor get-admin)
 
