@@ -1,6 +1,7 @@
 #lang racket/base
 (require framework
          mzlib/class
+         racket/match
          mred)
 
 (provide text-box%
@@ -128,31 +129,29 @@
         (and ed
              (send ed get-snip-position this))))
 
-    ;; input-port -> (union (listof char) char eof-object? syntax-object)
-    (define/private (get-next port)
-      (let ([v (read-char-or-special port)])
-        (if (special-comment? v)
-          (get-next port)
-          v)))
-
     (define/public (read-special source line column position)
-      (let* ((ed (get-editor))
-             (port (open-input-text-editor ed))
-             (str (let loop ((next (get-next port)))
-                    (cond
-                      ((eof-object? next) null)
-                      ((char? next)
-                       (cons next (loop (get-next port))))
-                      (else (cons `(marshall ,next) (loop (get-next port))))))))
-        (datum->syntax
-         #f
-         `(let ((marshall
-                 (lambda (s)
-                   (let ((os (open-output-string)))
-                     (with-handlers ((exn:fail? (lambda (x) "")))
-                       (display s os)
-                       (get-output-string os))))))
-            (string-append ,@(chunk-string str null))))))
+      (define (add-string-appends strs)
+        (let loop ([strs strs])
+          (match strs
+            ['() ""]
+            [(cons x '()) x]
+            [else `(string-append ,(car strs) ,(loop (cdr strs)))])))
+      (define ed (get-editor))
+      (define strs
+        (let loop ([snip (send ed find-first-snip)])
+          (cond
+            [(not snip) '()]
+            [(is-a? snip string-snip%)
+             (cons (send snip get-text 0 (send snip get-count))
+                   (loop (send snip next)))]
+            [(is-a? snip readable-snip<%>)
+             (cons `(format "~a" ,(send snip read-special source line column position))
+                   (loop (send snip next)))]
+            [else
+             (loop (send snip next))])))
+      (datum->syntax
+       #f
+       (add-string-appends strs)))
 
     (super-instantiate ())
     (inherit set-snipclass)
