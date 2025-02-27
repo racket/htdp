@@ -27,7 +27,7 @@
          ;; 
          (only-in "private/launch-many-worlds.rkt" launch-many-worlds launch-many-worlds/proc)
          (only-in "private/stop.rkt" make-stop-the-world)
-         (only-in "private/check-aux.rkt" sexp? SQPORT)
+         (only-in "private/check-aux.rkt" sexp? SQPORT universe-inset)
          (only-in "private/pad.rkt" pad-event? pad=?)
          htdp/error
          (rename-in lang/prim (first-order->higher-order f2h)))
@@ -178,7 +178,8 @@
 
 (provide 
  big-bang     ;; <syntax> : see below 
- pad-handler  ;; <syntax> : see below 
+ pad-handler  ;; <syntax> : see below
+ universe-inset
  )
 
 (provide-primitives
