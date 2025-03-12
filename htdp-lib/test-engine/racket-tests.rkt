@@ -253,7 +253,9 @@
   (execute-test
    src
    (lambda ()
-     (with-handlers ([exn:fail?
+     (with-handlers ([(lambda (exn)
+                        (and (exn:fail? exn)
+                             (not (exn:fail:syntax? exn))))
                       (lambda (exn)
                         (let ((msg (get-rewritten-error-message exn)))
                           (if (equal? msg error)
