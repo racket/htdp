@@ -2,8 +2,12 @@
 
 (require (only-in lang/private/teach check-property
                   for-all Integer)
+         (only-in lang/htdp-beginner
+                  [#%app #%app/bsl]
+                  empty)
          (only-in lang/htdp-intermediate-lambda
                   [define define/isl]
+                  [#%app #%app/isl]
                   local)
          (only-in htdp/bsl/runtime configure)
          (except-in rackunit check-within)
@@ -253,6 +257,56 @@
 (check-failure incorrect-error?
                incorrect-error-expected "another message"
                incorrect-error-exn exn:fail:contract?)
+
+(check-error (empty) "function call: expected a function after the open parenthesis, but received '()")
+(check-success)
+
+;; rational: x is unbound so this check-error shall not pass
+;; (but it also should not raise the syntax error immediately at expansion)
+(check-error x "x: this variable is not defined")
+(check-failure unexpected-error?
+               unexpected-error-exn      exn:fail:syntax?
+               unexpected-error-expected "x: this variable is not defined"
+               unexpected-error/markup-error-markup
+               (lambda (m)
+                 (regexp-match?
+                  ;; From the command line, tests/test-engine/racket-tests[.]rkt is
+                  ;; in the error message
+                  ;;
+                  ;; Ideally, we want to see the message "x: this variable is not defined" in
+                  ;; the exception. Unfortunately, the #%top binding is not from *sl.
+                  #rx"x: unbound identifier.*tests/test-engine/racket-tests[.]rkt"
+                  (with-output-to-string
+                    (lambda () (display-markup m))))))
+
+(check-error (#%app/isl 123) "function call: expected a function after the open parenthesis, but received 123")
+(check-success)
+
+(check-error (#%app/bsl 123) "function call: expected a function after the open parenthesis, but found a number")
+(check-failure unexpected-error?
+               unexpected-error-exn      exn:fail:syntax?
+               unexpected-error-expected "function call: expected a function after the open parenthesis, but found a number"
+               unexpected-error/markup-error-markup
+               (lambda (m)
+                 (regexp-match?
+                  ;; From the command line, tests/test-engine/racket-tests[.]rkt is
+                  ;; in the error message
+                  #rx"function call: expected a function after the open parenthesis, but found a number.*tests/test-engine/racket-tests[.]rkt"
+                  (with-output-to-string
+                    (lambda () (display-markup m))))))
+
+(check-error define/isl "define: expected an open parenthesis before define, but found none")
+(check-failure unexpected-error?
+               unexpected-error-exn      exn:fail:syntax?
+               unexpected-error-expected "define: expected an open parenthesis before define, but found none"
+               unexpected-error/markup-error-markup
+               (lambda (m)
+                 (regexp-match?
+                  ;; From the command line, tests/test-engine/racket-tests[.]rkt is
+                  ;; in the error message
+                  #rx"define: expected an open parenthesis before define, but found none.*tests/test-engine/racket-tests[.]rkt"
+                  (with-output-to-string
+                    (lambda () (display-markup m))))))
 
 (define (create n)
   (make-ball n n 'blue))
