@@ -7,6 +7,7 @@
          images/compile-time
          string-constants
          pict
+         simple-tree-text-markup/data
          (for-syntax images/icons/control images/icons/style))
 
 (provide
@@ -178,7 +179,16 @@
     (inherit get-dc)
     
     (define/private (format-sexp sexp)
-      (define text-port (open-output-text-editor this))
+      (define text-port
+        (open-output-text-editor this 'end
+                                 ; need to handle number-markup
+                                 (lambda (x)
+                                   (if (number-markup? x)
+                                       (f:number-snip:number->string/snip (number-markup-number x)
+                                                                          #:exact-prefix (number-markup-exact-prefix x)
+                                                                          #:inexact-prefix (number-markup-inexact-prefix x)
+                                                                          #:fraction-view (number-markup-fraction-view x))
+                                       x))))
       
       (parameterize 
           ([pretty-print-show-inexactness show-inexactness?]
@@ -187,38 +197,37 @@
            
            ; the pretty-print-size-hook decides whether this object should be printed by the new pretty-print-hook
            [pretty-print-size-hook
-            (lambda (value display? port)
-              (let ([looked-up (hash-ref highlight-table value (lambda () #f))])
-                (cond
-                  [(is-a? value snip%) 
-                   ;; Calculate the effective width of the snip, so that
-                   ;;  too-long lines (as a result of large snips) are broken
-                   ;;  correctly. When the snip is actusally inserted, its width
-                   ;;  will be determined by `(send snip get-count)', but the number
-                   ;;  returned here triggers line breaking in the pretty printer.
-                   (let ([dc (get-dc)]
-                         [wbox (box 0)])
-                     (send value get-extent dc 0 0 wbox #f #f #f #f #f)
-                     (let-values ([(xw dc dc2 dc3) (send dc get-text-extent "x")])
-                       (max 1 (inexact->exact (ceiling (/ (unbox wbox) xw))))))]
-                  [(and looked-up (not (eq? looked-up 'non-confusable)))
-                   (string-length (format "~s" (car looked-up)))]
-                  [else #f])))]
+            (let ([language-pretty-print-size-hook (pretty-print-size-hook)])
+              (lambda (value display? port)
+                (let ([looked-up (hash-ref highlight-table value (lambda () #f))])
+                  (cond
+                    [(is-a? value snip%) 
+                     ;; Calculate the effective width of the snip, so that
+                     ;;  too-long lines (as a result of large snips) are broken
+                     ;;  correctly. When the snip is actusally inserted, its width
+                     ;;  will be determined by `(send snip get-count)', but the number
+                     ;;  returned here triggers line breaking in the pretty printer.
+                     (let ([dc (get-dc)]
+                           [wbox (box 0)])
+                       (send value get-extent dc 0 0 wbox #f #f #f #f #f)
+                       (let-values ([(xw dc dc2 dc3) (send dc get-text-extent "x")])
+                         (max 1 (inexact->exact (ceiling (/ (unbox wbox) xw))))))]
+                    [(and looked-up (not (eq? looked-up 'non-confusable)))
+                     (language-pretty-print-size-hook (car looked-up) display? port)]
+                    [else #f]))))]
            
            [pretty-print-print-hook
-            ; this print-hook is called for confusable highlights and for images.
-            (lambda (value display? port)
-              (let ([to-display (cond 
-                                  [(hash-ref highlight-table value (lambda () #f)) => car]
-                                  [else value])])
-                (cond 
-                  [(is-a? to-display snip%) 
-                   (write-special (send to-display copy) port) (set-last-style)]
-                  [else
-                   ;; there's already code somewhere else to handle this; this seems like a bit of a hack.
-                   (when (and (number? to-display) (inexact? to-display) (pretty-print-show-inexactness))
-                     (write-string "#i" port))
-                   (write-string (format "~s" to-display) port)])))]
+            (let ([language-pretty-print-print-hook (pretty-print-print-hook)])
+              ; this print-hook is called for confusable highlights and for images.
+              (lambda (value display? port)
+                (let ([to-display (cond 
+                                    [(hash-ref highlight-table value (lambda () #f)) => car]
+                                    [else value])])
+                  (cond 
+                    [(is-a? to-display snip%) 
+                     (write-special (send to-display copy) port) (set-last-style)]
+                    [else
+                     (language-pretty-print-print-hook to-display display? port)]))))]
            [pretty-print-print-line
             (lambda (number port old-length dest-columns)
               (when (and number (not (eq? number 0)))
@@ -254,10 +263,14 @@
       (select-all)
       (clear)
       (reset-style)
+      (define start (get-start-position))
       (for ([exp stripped-exps] [i (in-naturals)])
         (unless (= i 0)
           (insert #\newline))
         (format-sexp exp))
+      (define end (get-start-position))
+      (change-style (send (get-style-list) find-named-style "Standard")
+                    start end)
       (end-edit-sequence)
       (lock #t))
     
