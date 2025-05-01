@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 8.17:
+
+None.
+
 Changes for 8.16:
 
 Bug fixes, thanks to Shu-hung You
