@@ -2034,3 +2034,15 @@ Finally, here is the third function, which renders the state as an image:
 @bold{Exercise} Design a function that takes care of a world to which the
  universe has lost its connection. Is @emph{Result} the proper contract for
  the result of this function?
+
+@section[#:tag "universe-extra"]{Extra Features in Racket}
+
+This section documents features of the universe teachpack not available in
+the HtDP student languages.
+
+@defparam[universe-inset inset-width (integer-in 0 1000)
+          #:value 5]{
+ A @tech[#:doc '(lib "scribblings/guide/guide.scrbl")]{parameter} that controls
+ the visual inset of the window displayed by @racket[animate] or @racket[big-bang].
+ The inset usually appears as a white border.
+  }
