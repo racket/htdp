@@ -1344,7 +1344,7 @@ optional handlers:
 }
 
 @defform/none[#:literals (on-tick)
-              (on-tick tick-expr rate-expr)
+              (on-tick tick-expr rate-expr limit-expr)
               #:contracts
               ([tick-expr (-> (unsyntax @tech{UniverseState}) (or/c (unsyntax @tech{UniverseState}) bundle?))]
                [rate-expr (and/c real? positive?)]
