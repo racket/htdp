@@ -45,7 +45,11 @@
     (check-pred null? failed-checks))
   (initialize-test-object!))
 
-(define (check-failure reason? . selector+value-list)
+
+(define-syntax-rule (check-failure reason . selector+value-list)
+  (check-failure* #'reason reason . selector+value-list))
+  
+(define (check-failure* src reason? . selector+value-list)
   (let* ((test-object   (run-tests!))
          (failed-checks (test-object-failed-checks test-object)))
     (check-equal? (length failed-checks) 1)
@@ -54,7 +58,7 @@
         (for/fold ([l (object-name reason?)])
                   ([f selector+value-list] [i (in-naturals)] #:when (even? i))
           (~a l ", " (object-name f))))
-      (error 'check-failure "expected failed check, none failed (~a)" names))
+      (error 'check-failure "expected failed check, none failed (~a) (~a)" names src))
     (apply assert-failed-check (car failed-checks) reason? selector+value-list))
   (initialize-test-object!))
 
@@ -376,12 +380,12 @@
                 (list x1 x2 x3 x4)))
 (check-failure unequal?)
 
-(define (h _x) (car (list (random 50) (random 20) (random 100) (random 70))))
+(define (h _x) (list (random 50) (random 20) (random 100) (random 70)))
 
-(check-random (h 0) (begin0 (random 50) (random 20) (random 100) (random 70)))
+(check-random (h 0) (list (random 50) (random 20) (random 100) (random 70)))
 (check-success)
 
-(check-random (h 0) (begin (random 20) (random 50) (random 70) (random 100))) ;; fails
+(check-random (h 0) (list (random 20) (random 50) (random 70) (random 100)))
 (check-failure unequal?)
 
 (check-property
