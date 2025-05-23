@@ -100,10 +100,6 @@
         ((error-display-handler) (exn-message exn) exn)
         (get-markup))))
 
-(define (make-exn->unexpected-error src expected)
-  (lambda (exn)
-    (unexpected-error/markup src expected exn (exn->markup exn))))
-
 (define-syntax (check-expect stx)
   (check-context! 'check-expect CHECK-EXPECT-DEFN-STR stx)
   (syntax-case stx ()
@@ -123,7 +119,8 @@
        (if (teach-equal? actual expected)
            #t
            (unequal src actual expected))))
-   (make-exn->unexpected-error src expected)))
+   (lambda (exn)
+     (unexpected-error/check-* src expected exn (exn->markup exn) 'check-expect))))
 
 (define-syntax (check-random stx)
   (syntax-case stx ()
@@ -150,7 +147,8 @@
            (if (teach-equal? actual expected)
                #t
                (unequal src actual expected))))
-       (make-exn->unexpected-error src expected)))))
+       (lambda (exn)
+         (unexpected-error/check-* src expected exn (exn->markup exn) 'check-random))))))
 
 (define-syntax (check-satisfied stx)
   (syntax-case stx ()
@@ -234,7 +232,8 @@
        (if (beginner-equal~? actual expected within)
            #t
            (not-within src actual expected within))))
-   (make-exn->unexpected-error src expected)))
+   (lambda (exn)
+     (unexpected-error/check-* src expected exn (exn->markup exn) 'check-within))))
 
 (define-syntax (check-error stx)
   (check-context! 'check-error CHECK-ERROR-DEFN-STR stx)
@@ -263,7 +262,8 @@
                               (incorrect-error/markup src error exn (exn->markup exn)))))])
        (let ([actual (test)])
          (expected-error src error actual))))
-   (make-exn->unexpected-error src error))) ; probably can't happen
+    (lambda (exn)
+      (unexpected-error/check-* src error exn (exn->markup exn) 'check-error))))  ; probably can't happen
 
 (define (do-check-error/no-message test src)
   (execute-test
@@ -273,7 +273,8 @@
                       (lambda (exn) #t)])
        (let ([actual (test)])
          (expected-error src #f actual))))
-   (make-exn->unexpected-error src "any error"))) ; probably can't happen
+   (lambda (exn)
+     (unexpected-error/check-* src "any error" exn (exn->markup exn) 'check-error))))  ; probably can't happen
 
 (define-syntax (check-member-of stx)
   (check-context! 'check-member-of CHECK-EXPECT-DEFN-STR stx)
@@ -298,10 +299,11 @@
        (if (memf (lambda (expected) (teach-equal? actual expected)) expecteds)
            #t
            (not-mem src actual expecteds))))
-   (make-exn->unexpected-error src expecteds)))
+   (lambda (exn)
+     (unexpected-error/member src #f exn (exn->markup exn) expecteds))))
        
 (define-syntax (check-range stx)
-  (check-context! 'check-member-of CHECK-EXPECT-DEFN-STR stx)
+  (check-context! 'check-range CHECK-EXPECT-DEFN-STR stx)
   (syntax-case stx ()
     [(_ test min max)
      (check-expect-maker stx #'do-check-range #`test (list #`min #`max)
@@ -321,7 +323,8 @@
                 (<= min val max))
            #t
            (not-range src val min max))))
-   (make-exn->unexpected-error src (format "[~a, ~a]" min max))))
+   (lambda (exn)
+     (unexpected-error/range src #f exn (exn->markup exn) min max))))
 
 (define (error-check pred? actual fmt fmt-act?)
   (unless (pred? actual)

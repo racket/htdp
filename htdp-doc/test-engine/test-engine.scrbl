@@ -231,6 +231,38 @@ An error happened instead of regular termination.  This also contains markup
 describing the error.
 }
 
+@defstruct*[(unexpected-error/check-* unexpected-error/markup)
+            ((srcloc srcloc?)
+             (expected any/c)
+             (exn exn?)
+	     (error-markup markup?)
+             (form-name (or/c symbol? string?)))]{
+An error happened instead of regular termination.  This also contains markup
+describing the error and the name of the check form.
+}
+
+@defstruct*[(unexpected-error/range unexpected-error/markup)
+            ((srcloc srcloc?)
+             (expected any/c)
+             (exn exn?)
+	     (error-markup markup?)
+             (min real?)
+             (max real?))]{
+An error happened instead of regular termination in a @racket[check-range] form.
+This also contains markup describing the error.
+}
+
+@defstruct*[(unexpected-error/member unexpected-error/markup)
+            ((srcloc srcloc?)
+             (expected any/c)
+             (exn exn?)
+	     (error-markup markup?)
+             (set any/c))]{
+An error happened instead of regular termination in a @racket[check-member-of] form.
+This also contains markup describing the error.
+}
+
+
 @defstruct*[(unequal fail-reason)
             ((srcloc srcloc?)
              (actual any/c)

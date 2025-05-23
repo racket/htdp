@@ -32,11 +32,34 @@
              (expected any/c)
              (exn exn?)))
 
+          ; deprecated
           (struct (unexpected-error/markup unexpected-error)
             ((srcloc srcloc?)
              (expected any/c)
              (exn exn?)
              (error-markup markup?)))
+
+          (struct (unexpected-error/check-* unexpected-error/markup)
+            ((srcloc srcloc?)
+             (expected any/c)
+             (exn exn?)
+             (error-markup markup?)
+             (form-name (or/c symbol? string?))))
+
+          (struct (unexpected-error/range unexpected-error/markup)
+            ((srcloc srcloc?)
+             (expected any/c)
+             (exn exn?)
+             (error-markup markup?)
+             (min real?)
+             (max real?)))
+
+          (struct (unexpected-error/member unexpected-error/markup)
+            ((srcloc srcloc?)
+             (expected any/c)
+             (exn exn?)
+             (error-markup markup?)
+             (set any/c)))
 
           ; wanted to satisfy a predicate, but error happend
           (struct (unsatisfied-error fail-reason)
@@ -207,7 +230,19 @@
 (struct unexpected-error fail-reason (expected exn)
   #:transparent)
 
+; deprecated
 (struct unexpected-error/markup unexpected-error (error-markup)
+  #:transparent)
+
+(struct unexpected-error/check-* unexpected-error/markup (form-name)
+  #:transparent)
+
+; in this case, the expected field from unexpected-error is #f
+; for historical reasons
+(struct unexpected-error/range unexpected-error/markup (min max)
+  #:transparent)
+
+(struct unexpected-error/member unexpected-error/markup (set)
   #:transparent)
 
 (struct unsatisfied-error fail-reason (name exn)

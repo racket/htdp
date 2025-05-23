@@ -195,6 +195,14 @@
                 (cdr vals)
                 (cons (framed-markup (value->markup (car vals))) rev-markups)
                 rev-lines))
+         ((#\L #\l)
+          (loop (cddr chars)
+                (cdr vals)
+                (append (reverse (cdr (append-map (lambda (val)
+                                                    (list " " (framed-markup (value->markup val))))
+                                                  (car vals))))
+                        rev-markups)
+                rev-lines))
          ((#\a #\A)
           (let ((val (car vals)))
             (loop (cddr chars)
@@ -227,11 +235,26 @@
 
 (define (reason->markup fail)
   (cond
+    [(unexpected-error/range? fail)
+     (format->markup (string-constant test-engine-check-range-encountered-error)
+                     (unexpected-error/range-min fail)
+                     (unexpected-error/range-max fail)
+                     (unexpected-error/markup-error-markup fail))]
+    [(unexpected-error/member? fail)
+     (horizontal
+      (format->markup (string-constant test-engine-check-member-of-encountered-error)
+                      (unexpected-error/member-set fail)
+                      (unexpected-error/markup-error-markup fail)))]
+    [(unexpected-error/check-*? fail)
+     (format->markup (string-constant test-engine-check-*-encountered-error)
+                     (unexpected-error/check-*-form-name fail)
+                     (unexpected-error-expected fail)
+                     (unexpected-error/markup-error-markup fail))]
     [(unexpected-error/markup? fail)
      (format->markup (string-constant test-engine-check-encountered-error)
                      (unexpected-error-expected fail)
                      (unexpected-error/markup-error-markup fail))]
-     
+
     [(unexpected-error? fail)
      (format->markup (string-constant test-engine-check-encountered-error)
                      (unexpected-error-expected fail)
@@ -423,6 +446,24 @@
      (unexpected-error/markup (srcloc 'source 1 0 10 20) 'expected (exn "not expected" (current-continuation-marks))
                               (vertical "line1" "line2"))
      (srcloc 'exn 2 1 30 40)))
+  (define fail-unexpected-error/check-*
+    (failed-check
+     (unexpected-error/check-* (srcloc 'source 1 0 10 20) 'expected (exn "not expected" (current-continuation-marks))
+                               (vertical "line1" "line2")
+                               'check-something)
+     (srcloc 'exn 2 1 30 40)))
+  (define fail-unexpected-error/range
+    (failed-check
+     (unexpected-error/range (srcloc 'source 1 0 10 20) #f (exn "not expected" (current-continuation-marks))
+                             (vertical "line1" "line2")
+                             1 5)
+     (srcloc 'exn 2 1 30 40)))
+  (define fail-unexpected-error/member
+    (failed-check
+     (unexpected-error/member (srcloc 'source 1 0 10 20) #f (exn "not expected" (current-continuation-marks))
+                              (vertical "line1" "line2")
+                              '(1 2 3))
+     (srcloc 'exn 2 1 30 40)))
   (define fail-unsatisfied-error
     (failed-check
      (unsatisfied-error (srcloc 'source 1 0 10 20) "zero?" (exn "not expected" (current-continuation-marks)))
@@ -520,6 +561,8 @@
    (test-object->markup
     (make-test-object (list void void)
                       (list fail-unexpected-error fail-unexpected-error/markup
+                            fail-unexpected-error/check-*
+                            fail-unexpected-error/range fail-unexpected-error/member
                             fail-unsatisfied-error fail-unsatisfied-error/markup
                             fail-unequal fail-not-within
                             fail-incorrect-error fail-incorrect-error/markup
