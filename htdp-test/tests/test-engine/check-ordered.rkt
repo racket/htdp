@@ -3,6 +3,7 @@
 #reader(lib "htdp-beginner-reader.ss" "lang")((modname check-ordered) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f () #f)))
 ; #lang htdp/bsl
 
+;; no tests are run because `f` is used before its definition is evaluated
 ;; BUT THE RENDERING OF THE OUTPUT SUCKS. IT SEEMS TO LACK A NEWLINE.
 
 (check-expect (g 30) "goodbye")
