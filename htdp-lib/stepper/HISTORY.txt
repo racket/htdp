@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 8.18:
+
+None.
+
 Changes for 8.17:
 
 Repairs and improved testing around 2htdp/universe, thanks
