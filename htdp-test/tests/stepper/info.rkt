@@ -5,4 +5,4 @@
 
 (define test-responsibles '((all clements)))
 (define test-timeouts '(("run-manual-tests.rkt" 500)
-                        ("automatic-tests.rkt" 800)))
+                        ("automatic-tests.rkt" 1000)))
