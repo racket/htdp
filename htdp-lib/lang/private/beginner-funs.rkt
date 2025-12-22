@@ -924,7 +924,6 @@
  @interaction[#:eval (bsl)
               (format "Dear Dr. ~a:" "Flatt")
               (format "Dear Dr. ~s:" "Flatt")
-              (format "the value of ~s is ~a" '(+ 1 1) (+ 1 1))
               ]
  })
  
