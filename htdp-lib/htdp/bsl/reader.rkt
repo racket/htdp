@@ -41,5 +41,8 @@
              '(macro-stepper drracket:syncheck))]
     
     [(drracket:show-big-defs/ints-labels) #t]
+
+    [(documentation-language-family)
+     (hash 'doc-query (hash 'fam "HtDP"))]
     
     [else (use-default key default)]))
