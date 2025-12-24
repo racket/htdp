@@ -42,7 +42,6 @@
     
     [(drracket:show-big-defs/ints-labels) #t]
 
-    [(documentation-language-family)
-     (hash 'doc-query (hash 'fam "HtDP"))]
+    [(documentation-language-family) "HtDP"]
     
     [else (use-default key default)]))
