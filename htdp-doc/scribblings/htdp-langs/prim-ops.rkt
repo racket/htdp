@@ -399,7 +399,7 @@ Note how @racket[random] is called on the same numbers in the same order in
 (define (create-randomly-placed-player name)
   (a-helper-function name (random HEIGHT)))
 
-;; Striing Number -> Player
+;; String Number -> Player
 (define (a-helper-function name height)
    (make-player name (random WIDTH) height))
 ))
