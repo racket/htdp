@@ -198,7 +198,8 @@
           (set! scheme-box-text%
                 (class ((drracket:unit:get-program-editor-mixin)
                         (add-file-keymap-mixin
-                         racket:text%))
+                         (text:searching-embedded-mixin
+                          racket:text%)))
                   (inherit copy-self-to)
                   (define/override (copy-self)
                     (let ([t (new scheme-box-text%)])
@@ -308,7 +309,8 @@
 	    (unless xml-text%
 	      (set! xml-text% (class ((drracket:unit:get-program-editor-mixin)
                                       (xml-text-mixin
-                                       plain-text%))
+                                       (text:searching-embedded-mixin
+                                        plain-text%)))
                                 (inherit copy-self-to)
                                 (define/override (copy-self)
                                   (let ([t (new xml-text%)])

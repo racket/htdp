@@ -69,7 +69,7 @@
 (define text-box%
   (class* decorated-editor-snip% (readable-snip<%>)
     (define/override (make-editor)
-      (define e (new (text:foreground-color-mixin text:keymap%)))
+      (define e (new (text:searching-embedded-mixin (text:foreground-color-mixin text:keymap%))))
       (send e set-max-undo-history 'forever)
       e)
     (define/override (make-snip) (make-object text-box%))
