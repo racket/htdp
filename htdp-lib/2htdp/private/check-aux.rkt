@@ -8,7 +8,14 @@
 
 (provide (all-defined-out))
 
-(define INSET  5)     ;; the space around the image in the canvas
+(define universe-inset  ;; the space around the image in the canvas
+  (make-parameter
+   5
+   (λ (v)
+     (unless (and (integer? v)
+                  (<= 0 v 1000))
+       (raise-argument-error 'universe-inset "an integer between 0 and 1000 (inclusive)" v))
+     v)))
 (define RATE   1/30)   ;; the clock tick rate 
 (define TRIES  3)     ;; how many times should register try to connect to the server 
 (define PAUSE  1/2)     ;; # secs to wait between attempts to connect to server 
@@ -53,8 +60,8 @@
 ;; MouseEvent% -> [List Nat Nat MouseEventType]
 ;; turn a mouse event into its pieces 
 (define (mouse-event->parts e)
-  (define x (- (send e get-x) INSET))
-  (define y (- (send e get-y) INSET))
+  (define x (- (send e get-x) (universe-inset)))
+  (define y (- (send e get-y) (universe-inset)))
   (values x y 
           (cond [(send e button-down?) "button-down"]
                 [(send e button-up?)   "button-up"]
