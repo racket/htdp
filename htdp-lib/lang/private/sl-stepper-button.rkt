@@ -49,6 +49,10 @@
     (public stepper:show-consumed-and/or-clauses?)
     (define (stepper:show-consumed-and/or-clauses?) #t)
 
+    (public stepper:configure-rendering)
+    (define (stepper:configure-rendering settings)
+      (configure/settings settings))
+
     (public stepper:render-to-sexp)
     (define (stepper:render-to-sexp val settings language-level)
       (when (boolean? val)

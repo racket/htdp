@@ -410,6 +410,7 @@
 
   (define stepper-frame-eventspace (send s-frame get-eventspace))
   ;; START THE MODEL
+  (send language-level stepper:configure-rendering simple-settings)
   (start-listener-thread stepper-frame-eventspace)
   (model:go
    program-expander-prime

@@ -10,4 +10,5 @@
       stepper:show-lambdas-as-lambdas?
       stepper:show-inexactness?
       stepper:show-consumed-and/or-clauses?
+      stepper:configure-rendering
       stepper:render-to-sexp)))

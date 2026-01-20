@@ -189,7 +189,10 @@
                                                                           #:inexact-prefix (number-markup-inexact-prefix x)
                                                                           #:fraction-view (number-markup-fraction-view x))
                                        x))))
-      
+
+      (define language-pretty-print-size-hook (pretty-print-size-hook))
+      (define language-pretty-print-print-hook (pretty-print-print-hook))
+
       (parameterize 
           ([pretty-print-show-inexactness show-inexactness?]
            [pretty-print-columns pretty-printed-width]
@@ -197,37 +200,46 @@
            
            ; the pretty-print-size-hook decides whether this object should be printed by the new pretty-print-hook
            [pretty-print-size-hook
-            (let ([language-pretty-print-size-hook (pretty-print-size-hook)])
-              (lambda (value display? port)
-                (let ([looked-up (hash-ref highlight-table value (lambda () #f))])
-                  (cond
-                    [(is-a? value snip%) 
-                     ;; Calculate the effective width of the snip, so that
-                     ;;  too-long lines (as a result of large snips) are broken
-                     ;;  correctly. When the snip is actusally inserted, its width
-                     ;;  will be determined by `(send snip get-count)', but the number
-                     ;;  returned here triggers line breaking in the pretty printer.
-                     (let ([dc (get-dc)]
-                           [wbox (box 0)])
-                       (send value get-extent dc 0 0 wbox #f #f #f #f #f)
-                       (let-values ([(xw dc dc2 dc3) (send dc get-text-extent "x")])
-                         (max 1 (inexact->exact (ceiling (/ (unbox wbox) xw))))))]
-                    [(and looked-up (not (eq? looked-up 'non-confusable)))
-                     (language-pretty-print-size-hook (car looked-up) display? port)]
-                    [else #f]))))]
+            (lambda (value display? port)
+              (let ([looked-up (hash-ref highlight-table value (lambda () #f))])
+                (cond
+                  [(is-a? value snip%) 
+                   ;; Calculate the effective width of the snip, so that
+                   ;;  too-long lines (as a result of large snips) are broken
+                   ;;  correctly. When the snip is actusally inserted, its width
+                   ;;  will be determined by `(send snip get-count)', but the number
+                   ;;  returned here triggers line breaking in the pretty printer.
+                   (let ([dc (get-dc)]
+                         [wbox (box 0)])
+                     (send value get-extent dc 0 0 wbox #f #f #f #f #f)
+                     (let-values ([(xw dc dc2 dc3) (send dc get-text-extent "x")])
+                       (max 1 (inexact->exact (ceiling (/ (unbox wbox) xw))))))]
+                  [(and looked-up (not (eq? looked-up 'non-confusable)))
+                   (or
+                    ; note that this may return #f, but we still want the print-hook to handle it
+                    (language-pretty-print-size-hook (car looked-up) display? port)
+                    (string-length (format "~s" (car looked-up))))]
+                  [else
+                   (language-pretty-print-size-hook value display? port)])))]
            
            [pretty-print-print-hook
-            (let ([language-pretty-print-print-hook (pretty-print-print-hook)])
-              ; this print-hook is called for confusable highlights and for images.
-              (lambda (value display? port)
-                (let ([to-display (cond 
-                                    [(hash-ref highlight-table value (lambda () #f)) => car]
-                                    [else value])])
-                  (cond 
-                    [(is-a? to-display snip%) 
-                     (write-special (send to-display copy) port) (set-last-style)]
-                    [else
-                     (language-pretty-print-print-hook to-display display? port)]))))]
+            ; this print-hook is called for confusable highlights and for images.
+            (lambda (value display? port)
+              (let ([looked-up (hash-ref highlight-table value (lambda () #f))])
+                (cond 
+                  [(is-a? value snip%) 
+                   (write-special (send value copy) port) (set-last-style)]
+                  [(and looked-up (not (eq? looked-up 'non-confusable)))
+                   ; we have to call the size hook *again* to find
+                   ; out if the underlying pretty-print-print-hook
+                   ; can handle this
+                   (define to-display (car looked-up))
+                   (if (language-pretty-print-size-hook to-display display? port)
+                       (language-pretty-print-print-hook to-display display? port)
+                       (write-string (format "~s" to-display) port))]
+                  [else
+                   (language-pretty-print-print-hook value display? port)])))]
+
            [pretty-print-print-line
             (lambda (number port old-length dest-columns)
               (when (and number (not (eq? number 0)))
