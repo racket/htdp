@@ -54,7 +54,7 @@
       (configure/settings settings))
 
     (public stepper:render-to-sexp)
-    (define (stepper:render-to-sexp val settings language-level)
+    (define (stepper:render-to-sexp val language-level)
       (when (boolean? val)
         (log-stepper-debug "render-to-sexp got a boolean: ~v\n" val))
       (or (and (procedure? val)

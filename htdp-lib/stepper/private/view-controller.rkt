@@ -72,7 +72,7 @@
   ;; render-to-sexp : TST -> sexp
   (define (render-to-sexp val)
     (send language-level stepper:render-to-sexp
-          val simple-settings language-level))
+          val language-level))
 
   ;; channel for incoming views
   (define view-channel (make-async-channel))
