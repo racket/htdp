@@ -132,9 +132,10 @@
               (thread (RECEIVE in))))))
       
       (define/private (broadcast msg)
-        (when *out* 
+        (when *out*
           (check-result 'send sexp? "Sexp expected; given ~e\n" msg)
-          (tcp-send *out* msg)))
+          (with-handlers ([exn:fail:network? (lambda (e) (set! *out* #f))])
+            (tcp-send *out* msg))))
       
       ;; -----------------------------------------------------------------------
       (field
