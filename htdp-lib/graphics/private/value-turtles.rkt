@@ -224,7 +224,7 @@
         (send dc set-pen old-pen)
         (send dc set-brush old-brush)
         (send dc set-clipping-region old-clip)))
-    (define/override (get-extent dc x y w h descent space lspace rspace)
+    (define/override (get-extent dc x y [w #f] [h #f] [descent #f] [space #f] [lspace #f] [rspace #f])
       (set-box/f w (+ width 2))
       (set-box/f h (+ height 2))
       (set-box/f descent 0)

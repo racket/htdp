@@ -82,7 +82,7 @@
         (send s set-style (get-style))
         s))
     
-    (define (get-extent dc x y w-box h-box descent-box space-box lspace-box rspace-box)
+    (define (get-extent dc x y [w-box #f] [h-box #f] [descent-box #f] [space-box #f] [lspace-box #f] [rspace-box #f])
       (for-each (lambda (box) (unless (not box) (set-box! box 0)))
                 (list descent-box space-box lspace-box rspace-box))
       (unless (not w-box)
