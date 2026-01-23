@@ -7,6 +7,7 @@
          images/compile-time
          string-constants
          pict
+         simple-tree-text-markup/data
          (for-syntax images/icons/control images/icons/style))
 
 (provide
@@ -178,8 +179,20 @@
     (inherit get-dc)
     
     (define/private (format-sexp sexp)
-      (define text-port (open-output-text-editor this))
-      
+      (define text-port
+        (open-output-text-editor this 'end
+                                 ; need to handle number-markup
+                                 (lambda (x)
+                                   (if (number-markup? x)
+                                       (f:number-snip:number->string/snip (number-markup-number x)
+                                                                          #:exact-prefix (number-markup-exact-prefix x)
+                                                                          #:inexact-prefix (number-markup-inexact-prefix x)
+                                                                          #:fraction-view (number-markup-fraction-view x))
+                                       x))))
+
+      (define language-pretty-print-size-hook (pretty-print-size-hook))
+      (define language-pretty-print-print-hook (pretty-print-print-hook))
+
       (parameterize 
           ([pretty-print-show-inexactness show-inexactness?]
            [pretty-print-columns pretty-printed-width]
@@ -202,23 +215,31 @@
                      (let-values ([(xw dc dc2 dc3) (send dc get-text-extent "x")])
                        (max 1 (inexact->exact (ceiling (/ (unbox wbox) xw))))))]
                   [(and looked-up (not (eq? looked-up 'non-confusable)))
-                   (string-length (format "~s" (car looked-up)))]
-                  [else #f])))]
+                   (or
+                    ; note that this may return #f, but we still want the print-hook to handle it
+                    (language-pretty-print-size-hook (car looked-up) display? port)
+                    (string-length (format "~s" (car looked-up))))]
+                  [else
+                   (language-pretty-print-size-hook value display? port)])))]
            
            [pretty-print-print-hook
             ; this print-hook is called for confusable highlights and for images.
             (lambda (value display? port)
-              (let ([to-display (cond 
-                                  [(hash-ref highlight-table value (lambda () #f)) => car]
-                                  [else value])])
+              (let ([looked-up (hash-ref highlight-table value (lambda () #f))])
                 (cond 
-                  [(is-a? to-display snip%) 
-                   (write-special (send to-display copy) port) (set-last-style)]
+                  [(is-a? value snip%) 
+                   (write-special (send value copy) port) (set-last-style)]
+                  [(and looked-up (not (eq? looked-up 'non-confusable)))
+                   ; we have to call the size hook *again* to find
+                   ; out if the underlying pretty-print-print-hook
+                   ; can handle this
+                   (define to-display (car looked-up))
+                   (if (language-pretty-print-size-hook to-display display? port)
+                       (language-pretty-print-print-hook to-display display? port)
+                       (write-string (format "~s" to-display) port))]
                   [else
-                   ;; there's already code somewhere else to handle this; this seems like a bit of a hack.
-                   (when (and (number? to-display) (inexact? to-display) (pretty-print-show-inexactness))
-                     (write-string "#i" port))
-                   (write-string (format "~s" to-display) port)])))]
+                   (language-pretty-print-print-hook value display? port)])))]
+
            [pretty-print-print-line
             (lambda (number port old-length dest-columns)
               (when (and number (not (eq? number 0)))
@@ -254,10 +275,14 @@
       (select-all)
       (clear)
       (reset-style)
+      (define start (get-start-position))
       (for ([exp stripped-exps] [i (in-naturals)])
         (unless (= i 0)
           (insert #\newline))
         (format-sexp exp))
+      (define end (get-start-position))
+      (change-style (send (get-style-list) find-named-style "Standard")
+                    start end)
       (end-edit-sequence)
       (lock #t))
     

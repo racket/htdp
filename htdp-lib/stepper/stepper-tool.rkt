@@ -50,8 +50,12 @@
        (public stepper:show-consumed-and/or-clauses?)
        (define (stepper:show-consumed-and/or-clauses?) #t)
 
+       (public stepper:configure-rendering)
+       (define (stepper:configure-rendering settings)
+         (error 'stepper:configure-rendering "this must be overridden"))
+
        (public stepper:render-to-sexp)
-       (define (stepper:render-to-sexp val settings language-level)
+       (define (stepper:render-to-sexp val language-level)
          (when (boolean? val)
            (log-stepper-debug "render-to-sexp got a boolean: ~v\n" val))
          (or (and (procedure? val)
