@@ -738,7 +738,7 @@
             (define/override (stepper:pretty-print-hooks settings previous-size-hook previous-print-hook)
               ;; avoid mutating the parameters in the current thread
               ;; (the stepper will typically run in the same thread on subsequent invocations)
-              (let ((channel (make-channel)))
+              (thread-wait
                 (thread
                  (lambda ()
                    (parameterize ((pretty-print-size-hook previous-size-hook)
@@ -753,11 +753,9 @@
                                            (get-abbreviate-cons-as-list)
                                            (get-use-function-output-syntax?)
                                            (get-output-function-instead-of-lambda?)))
-                     (channel-put
-                      channel
-                      (list (pretty-print-size-hook)
-                            (pretty-print-print-hook))))))
-                (apply values (channel-get channel))))
+                     (values (pretty-print-size-hook)
+                             (pretty-print-print-hook))))
+                 #:keep 'results)))
 
             (super-new))
           (class* % ()
