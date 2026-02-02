@@ -10,5 +10,7 @@
       stepper:show-lambdas-as-lambdas?
       stepper:show-inexactness?
       stepper:show-consumed-and/or-clauses?
-      stepper:configure-rendering
+      ; takes settings, previous -size-hook and -print-hook as arguments
+      ; returns the language's -size-hook, -print-hook
+      stepper:pretty-print-hooks
       stepper:render-to-sexp)))

@@ -138,7 +138,10 @@
 (define stepper-sub-text%
   (class f:text:standard-style-list%
     
-    (init-field exps highlight-color show-inexactness? print-boolean-long-form?)
+    (init-field exps highlight-color
+                language-pretty-print-size-hook
+                language-pretty-print-print-hook
+                show-inexactness? print-boolean-long-form?)
     
     (inherit insert get-style-list set-style-list change-style highlight-range last-position lock erase
              begin-edit-sequence end-edit-sequence get-start-position select-all clear)
@@ -189,9 +192,6 @@
                                                                           #:inexact-prefix (number-markup-inexact-prefix x)
                                                                           #:fraction-view (number-markup-fraction-view x))
                                        x))))
-
-      (define language-pretty-print-size-hook (pretty-print-size-hook))
-      (define language-pretty-print-print-hook (pretty-print-print-hook))
 
       (parameterize 
           ([pretty-print-show-inexactness show-inexactness?]
@@ -373,7 +373,8 @@
 (define stepper-text%
   (class f:text:standard-style-list%
     
-    (init-field left-side right-side show-inexactness? print-boolean-long-form?)
+    (init-field left-side right-side show-inexactness? print-boolean-long-form?
+                language-pretty-print-size-hook language-pretty-print-print-hook)
     
     (inherit find-snip insert change-style highlight-range last-position lock erase auto-wrap
              begin-edit-sequence end-edit-sequence get-start-position get-style-list set-style-list
@@ -440,8 +441,11 @@
                    (make-object stepper-sub-error-text% error-or-exps)]
                   [else 
                    (make-object stepper-sub-text%
-                     error-or-exps highlight-color show-inexactness?
-                     print-boolean-long-form?)])))
+                                error-or-exps highlight-color
+                                language-pretty-print-size-hook 
+                                language-pretty-print-print-hook
+                                show-inexactness?
+                                print-boolean-long-form?)])))
     
     (setup-editor-snip before-snip left-side 'stepper:redex-highlight-color)
     (setup-editor-snip after-snip right-side 'stepper:reduct-highlight-color)

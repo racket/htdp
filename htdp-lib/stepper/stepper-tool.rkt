@@ -54,6 +54,10 @@
        (define (stepper:configure-rendering settings)
          (error 'stepper:configure-rendering "this must be overridden"))
 
+       (public stepper:pretty-print-hooks)
+       (define (stepper:pretty-print-hooks settings previous-size-hook previous-print-hook)
+         (error 'stepper:configure-rendering "this must be overridden"))
+
        (public stepper:render-to-sexp)
        (define (stepper:render-to-sexp val language-level)
          (when (boolean? val)

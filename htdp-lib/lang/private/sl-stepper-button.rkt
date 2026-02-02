@@ -49,9 +49,21 @@
     (public stepper:show-consumed-and/or-clauses?)
     (define (stepper:show-consumed-and/or-clauses?) #t)
 
-    (public stepper:configure-rendering)
-    (define (stepper:configure-rendering settings)
-      (configure/settings settings))
+    (public stepper:pretty-print-hooks)
+    (define (stepper:pretty-print-hooks settings previous-size-hook previous-print-hook)
+      ;; avoid mutating the parameters in the current thread
+      ;; (the stepper will typically run in the same thread on subsequent invocations)
+      (let ((channel (make-channel)))
+        (thread
+         (lambda ()
+           (parameterize ((pretty-print-size-hook previous-size-hook)
+                          (pretty-print-print-hook previous-print-hook))
+             (configure/settings settings)
+             (channel-put
+              channel
+              (list (pretty-print-size-hook)
+                    (pretty-print-print-hook))))))
+        (apply values (channel-get channel))))
 
     (public stepper:render-to-sexp)
     (define (stepper:render-to-sexp val language-level)
