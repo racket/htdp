@@ -49,8 +49,22 @@
     (public stepper:show-consumed-and/or-clauses?)
     (define (stepper:show-consumed-and/or-clauses?) #t)
 
+    (public stepper:pretty-print-hooks)
+    (define (stepper:pretty-print-hooks settings previous-size-hook previous-print-hook)
+      ;; avoid mutating the parameters in the current thread
+      ;; (the stepper will typically run in the same thread on subsequent invocations)
+      (thread-wait
+       (thread
+        (lambda ()
+          (parameterize ((pretty-print-size-hook previous-size-hook)
+                         (pretty-print-print-hook previous-print-hook))
+            (configure/settings settings)
+            (values (pretty-print-size-hook)
+                    (pretty-print-print-hook))))
+        #:keep 'results)))
+
     (public stepper:render-to-sexp)
-    (define (stepper:render-to-sexp val settings language-level)
+    (define (stepper:render-to-sexp val language-level)
       (when (boolean? val)
         (log-stepper-debug "render-to-sexp got a boolean: ~v\n" val))
       (or (and (procedure? val)
@@ -63,6 +77,3 @@
         (print val port)))
     
     (super-instantiate ())))
-
-
-

@@ -726,12 +726,37 @@
     (define (stepper-settings-language %)
       (if (implementation? % stepper-language<%>)
           (class* % (stepper-language<%>)
+            (inherit get-abbreviate-cons-as-list
+                     get-use-function-output-syntax?
+                     get-output-function-instead-of-lambda?)
             (init-field stepper:supported)
             (init-field stepper:enable-let-lifting)
             (init-field stepper:show-lambdas-as-lambdas)
             (define/override (stepper:supported?) stepper:supported)
             (define/override (stepper:enable-let-lifting?) stepper:enable-let-lifting)
             (define/override (stepper:show-lambdas-as-lambdas?) stepper:show-lambdas-as-lambdas)
+            (define/override (stepper:pretty-print-hooks settings previous-size-hook previous-print-hook)
+              ;; avoid mutating the parameters in the current thread
+              ;; (the stepper will typically run in the same thread on subsequent invocations)
+              (thread-wait
+                (thread
+                 (lambda ()
+                   (parameterize ((pretty-print-size-hook previous-size-hook)
+                                  (pretty-print-print-hook previous-print-hook))
+                     (configure/settings
+                      (sl-runtime-settings (drscheme:language:simple-settings-printing-style settings)
+                                           (drscheme:language:simple-settings-fraction-style settings)
+                                           (drscheme:language:simple-settings-show-sharing settings)
+                                           (drscheme:language:simple-settings-insert-newlines settings)
+                                           (htdp-lang-settings-tracing? settings)
+                                           (htdp-lang-settings-true/false/empty-as-ids? settings)
+                                           (get-abbreviate-cons-as-list)
+                                           (get-use-function-output-syntax?)
+                                           (get-output-function-instead-of-lambda?)))
+                     (values (pretty-print-size-hook)
+                             (pretty-print-print-hook))))
+                 #:keep 'results)))
+
             (super-new))
           (class* % ()
             (init stepper:supported)

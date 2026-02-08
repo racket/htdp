@@ -10,6 +10,8 @@
 (require racket/class
          racket/match
          racket/list
+         (only-in racket/pretty
+                  pretty-print-size-hook pretty-print-print-hook)
          drracket/tool
          mred
          string-constants
@@ -72,7 +74,7 @@
   ;; render-to-sexp : TST -> sexp
   (define (render-to-sexp val)
     (send language-level stepper:render-to-sexp
-          val simple-settings language-level))
+          val language-level))
 
   ;; channel for incoming views
   (define view-channel (make-async-channel))
@@ -353,6 +355,10 @@
          (set! disable-runaway-counter #t)
          #t]))
 
+  (define-values (language-pretty-print-size-hook
+                  language-pretty-print-print-hook)
+    (send language-level stepper:pretty-print-hooks simple-settings
+          (pretty-print-size-hook) (pretty-print-print-hook)))
 
   ;; translates a result into a step
   ;; format-result : step-result -> step?
@@ -362,6 +368,8 @@
        (Step (new x:stepper-text%
                   [left-side (map sstx-s pre-exps)]
                   [right-side (map sstx-s post-exps)]
+                  [language-pretty-print-size-hook language-pretty-print-size-hook]
+                  [language-pretty-print-print-hook language-pretty-print-print-hook]
                   [show-inexactness?
                    (send language-level stepper:show-inexactness?)]
                   [print-boolean-long-form?
@@ -372,6 +380,8 @@
        (Step (new x:stepper-text%
                   [left-side (map sstx-s pre-exps)]
                   [right-side err-msg]
+                  [language-pretty-print-size-hook language-pretty-print-size-hook]
+                  [language-pretty-print-print-hook language-pretty-print-print-hook]
                   [show-inexactness?
                    (send language-level stepper:show-inexactness?)]
                   [print-boolean-long-form?
@@ -382,6 +392,8 @@
        (Step (new x:stepper-text%
                   [left-side null]
                   [right-side err-msg]
+                  [language-pretty-print-size-hook language-pretty-print-size-hook]
+                  [language-pretty-print-print-hook language-pretty-print-print-hook]
                   [show-inexactness?
                    (send language-level stepper:show-inexactness?)]
                   [print-boolean-long-form?
