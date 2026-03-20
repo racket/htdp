@@ -37,7 +37,35 @@ e.g.
 (check-expect (f (list 4))
               (list 7 13))
 
-- try big-bang program.
+- try big-bang program. Here's one
 
-- try SdP program, make sure that test cases don't show extra steps.
+#lang htdp/isl
+
+(require 2htdp/universe
+         )
+
+(require 2htdp/image)
+
+(define (world-is-zero? n)
+  (<= n 0))
+
+(define (world-render n)
+  (square 230 "solid" "blue"))
+
+(define (tick-fun n)
+  (- n 1))
+
+
+(big-bang 30
+  [stop-when world-is-zero?]
+  [to-draw world-render]
+  [on-tick tick-fun])
+
+
+
+- try SdP program, make sure that test cases don't show extra steps. Here's one:
+
+(define f (λ (x) (+ 3 (+ x 4))))
+
+(f 9)
 
