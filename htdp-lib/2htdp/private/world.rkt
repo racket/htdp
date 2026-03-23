@@ -439,17 +439,24 @@
       ;; wrap up actions 
       (define/private (wrap-up name)
 	(last-draw)
-	(callback-stop! 'name)
-	(enable-images-button)
+        
         ;; in principle, a big-bang that specifies both
         ;;   [record? #true]
         ;; and
         ;;   [close-on-stop #true]
         ;; is self-contradictory; I will wait until someone complaints -- MF, 22 Nov 2015
-	(when close-on-stop
-          (unless (boolean? close-on-stop)
-            (sleep close-on-stop))
-	  (send the-frame show #f)))
+        (cond
+          [(number? close-on-stop)
+           (sleep close-on-stop)
+           (send the-frame show #f)]
+          [(false? close-on-stop)
+           (sleep 600) ;; just wait for a long time
+           (send the-frame show #f)]
+          [else
+           (send the-frame show #f)])
+
+        (callback-stop! 'name)
+	(enable-images-button))
 
       (define/public (callback-stop! msg)
         (stop! (send world get)))
