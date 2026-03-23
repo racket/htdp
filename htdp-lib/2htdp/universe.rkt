@@ -126,7 +126,7 @@
   ;; and
   ;;   [close-on-stop #true]
   ;; is self-contradictory; I will wait until someone complaints -- MF, 22 Nov 2015
-  [close-on-stop DEFAULT #'#f (expr-with-check opt-nat> "expected a boolean or a natural number")]
+  [close-on-stop DEFAULT #'#true (expr-with-check opt-nat> "expected a boolean or a natural number")]
   
   ;; (U #f String)
   ;; -- name specifies one string 
