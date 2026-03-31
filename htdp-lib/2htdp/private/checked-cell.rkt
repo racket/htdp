@@ -65,7 +65,7 @@
     (define/private (coerce tag nw [say-evaluated-to #f])
       (define bool-fmt "the test function ~a is expected to return a boolean, but it returned ~v")
       (define ok-fmt   "~a ~a ~v, which fails to pass check-with's ~a test")
-      (define name   (symbol->string (object-name ok?)))
+      (define name   (symbol->string (or (object-name ok?) 'unknown)))
       (define ok?-nw (ok? nw))
       (unless (boolean? ok?-nw) (tp-error 'check-with bool-fmt name ok?-nw))
       (unless ok?-nw
@@ -93,6 +93,9 @@
     (super-new)
     
     (when pb (show-state))))
+
+
+
 
 ; (define c (new checked-cell% [msg "World"] [value0 1] [ok? positive?]))
 ; (send c set "tick" 10)
