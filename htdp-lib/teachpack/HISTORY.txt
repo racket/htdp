@@ -1,4 +1,13 @@
 ------------------------------------------------------------------------
+Version 9.2				  
+
+* fix bug that prevented distributed .dmg programs to close down
+  properly at the end, depending on the close-on-stop clause.
+
+* fix documentation for close-on-stop clauses, which somehow had it
+  backwards (given the tag's name). 
+
+------------------------------------------------------------------------
 Version 9.1				  [Fri Jan  9 08:52:50 EST 2026]
 
 * nothing to report 
