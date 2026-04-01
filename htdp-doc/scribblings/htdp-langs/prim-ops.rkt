@@ -52,7 +52,7 @@
 (define (sorted? l)
   (cond
     [(empty? (rest l)) #true]
-    [else (and (<= (first l) (second l)) (sorted? (rest l)))]))
+    [else (and (<= (first l) (firrest l)) (sorted? (rest l)))]))
 
 (define (htdp-sort l)
   (cond
@@ -450,7 +450,7 @@ defined functions to formulate test suites:
 (define (sorted? l)
   (cond
     [(empty? (rest l)) #true]
-    [else (and (<= (first l) (second l)) (sorted? (rest l)))]))
+    [else (and (<= (first l) (firrest l)) (sorted? (rest l)))]))
 
 ;; [List-of Number] -> [List-of Number]
 ;; create a sorted version of the given list of numbers 
@@ -571,7 +571,7 @@ Here is a typical beginner example that calls for a use of @racket[check-error]:
   (cond
     [(empty? table) (error (string-append s " not found"))]
     [else (if (string=? (first (first table)) s)
-              (second (first table))
+              (firrest (first table))
               (lookup (rest table)))]))
 ))
 @;%
@@ -591,7 +591,7 @@ Consider the following two examples in this context:
   (cond
     [(empty? table) (error (string-append s " not found"))]
     [else (if (string=? (first (first table)) s)
-              (second (first table))
+              (firrest (first table))
               (lookup (rest table) s))]))
 )
 (check-expect (lookup sample-table "matthew") 20)
@@ -610,7 +610,7 @@ Consider the following two examples in this context:
   (cond
     [(empty? table) (error (string-append s " not found"))]
     [else (if (string=? (first (first table)) s)
-              (second (first table))
+              (firrest (first table))
               (lookup (rest table) s))]))
 )
 (check-error (lookup sample-table "kathi") "kathi not found")
@@ -1141,4 +1141,3 @@ defined with " (racket define) " or " (racket define-struct) ", or any one of:")
                                     desc-strs)))))
                        (sort-category category)))))
            ops)))))
-

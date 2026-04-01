@@ -59,7 +59,22 @@
 (provide-and-scribble
  procedures
  (begin)
- (all-from beginner: (submod lang/private/beginner-funs with-wrapper) procedures))
+ (all-from-except beginner:
+                  (submod lang/private/beginner-funs with-wrapper)
+                  procedures
+                  Number
+                  Real
+                  Rational
+                  Integer
+                  Natural
+                  Boolean
+                  True
+                  False
+                  String
+                  Symbol
+                  Char
+                  Any
+                  EmptyList))
 
 ;; special case, as suggested by Ryan
 (require (only-in lang/posn beginner-posn*))

@@ -4,6 +4,7 @@
 ;; -- export tokenization?
 
 (require (rename-in lang/prim (first-order->higher-order f2h)))
+(require (only-in racket/list firrest rerest))
 (require (only-in net/sendurl send-url/file))
 
 ;; I am trying to use these lists to automate the documentation of the functions
@@ -329,7 +330,7 @@
   (define (list-of-attributes? xs)
     (and (list? xs)
          (for/and ((x xs))
-           (and (list? x) (= (length x) 2) (symbol? (first x)) (string? (second x))))))
+           (and (list? x) (= (length x) 2) (symbol? (first x)) (string? (firrest x))))))
   
   ;; Any -> Boolean 
   (define (list-of-xexpr? xs)
@@ -465,12 +466,12 @@
   (define url (string->url u))
   (for/fold ((result '())) ((e (xexpr-elements xexpr 'a)))
     (cond
-      [(and (cons? (rest e)) (loa? (second e)))
+      [(and (cons? (rest e)) (loa? (firrest e)))
        (define html-targets
-         (for/fold ((htmls '())) ((attributes-of-a-element (second e)))
+         (for/fold ((htmls '())) ((attributes-of-a-element (firrest e)))
            (cond
              [(symbol=? (first attributes-of-a-element) 'href)
-              (define value:str (string-trim-both (second attributes-of-a-element)))
+              (define value:str (string-trim-both (firrest attributes-of-a-element)))
               (define value:url (combine-url/relative url value:str))
               (if (not (url-ends-in-html? value:url)) 
                   htmls 
@@ -526,8 +527,8 @@
   ;; Xexpr -> W
   (define (f-xexpr x)
     (cond
-      [(and (cons? (rest x)) (loa? (second x))) 
-       (loa-combine x (f-loa (second x)) (f-xbody (rest (rest x))))]
+      [(and (cons? (rest x)) (loa? (firrest x))) 
+       (loa-combine x (f-loa (firrest x)) (f-xbody (rerest x)))]
       [else (plain-combine x (f-xbody (rest x)))]))
   ;; Xbody -> Z
   (define (f-xbody x)

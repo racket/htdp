@@ -11,6 +11,7 @@
          "pad.rkt"
          "logging-gui.rkt"
          (only-in 2htdp/image scale overlay/align rotate empty-image)
+         (only-in racket/list firfirst firrest firrerest)
          htdp/error
          mrlib/include-bitmap
          mrlib/bitmap-label
@@ -75,7 +76,7 @@
       ;; -----------------------------------------------------------------------
       (field
        [display-full? (if (cons? display-mode) (first display-mode) display-mode)]
-       [display-info  (if (cons? display-mode) (second display-mode) (lambda (w width height) w))])
+       [display-info  (if (cons? display-mode) (firrest display-mode) (lambda (w width height) w))])
       
       ;; -----------------------------------------------------------------------
       (define (mk-lbl x)
@@ -144,8 +145,8 @@
                  [(pair? to-draw)      (first to-draw)]
                  [else to-draw]))
        (live   (not (boolean? draw)))
-       (width  (if (pair? to-draw) (second to-draw) #f))
-       (height (if (pair? to-draw) (third to-draw) #f)))
+       (width  (if (pair? to-draw) (firrest to-draw) #f))
+       (height (if (pair? to-draw) (firrerest to-draw) #f)))
       
       ;; the visible world 
       (field [enable-images-button void] ;; used if stop-when call produces #t
@@ -426,7 +427,7 @@
                        (define result (s x))
                        (check-result (name-of s 'your-stop-when) boolean? "boolean" result)
                        result))]
-             [last-picture (if (pair? stop-when) (second stop-when) #f)])
+             [last-picture (if (pair? stop-when) (firrest stop-when) #f)])
       
       (define/private (last-draw)
         (when last-picture
@@ -613,7 +614,7 @@
 (define (interpolate-history lox0)
   (define lox (reverse lox0))
   (cond 
-    [(or (empty? lox) (empty? (rest lox))) (map second lox)]
+    [(or (empty? lox) (empty? (rest lox))) (map firrest lox)]
     [else 
      ;; -----------------------------------------------------------------------------
      (define raw-times (map first lox))
@@ -624,13 +625,13 @@
            [else (cons (- (first l) last) (loop (rest l) (first l)))])))
      (define delta (apply min intervals))
      ;; -----------------------------------------------------------------------------
-     (define image1 (second (first lox)))
-     (let loop ([last-image image1][t (first (first lox))][lox (rest lox)][images (list image1)])
+     (define image1 (firrest (first lox)))
+     (let loop ([last-image image1][t (firfirst lox)][lox (rest lox)][images (list image1)])
        (cond
          [(empty? lox) images]
          [else (define stamp+image (first lox))
                (define stamp (first stamp+image))
-               (define image (second stamp+image))
+               (define image (firrest stamp+image))
                (define new-t (+ delta t))
                (if (< new-t stamp)
                    (loop last-image new-t lox (cons last-image images))
@@ -653,4 +654,3 @@
                       #:loop? #f))
 
 (define ANIMATED-GIF-FILE "i-animated.gif")
-

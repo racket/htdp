@@ -65,4 +65,19 @@
 (provide-and-scribble 
  procedures
  (begin)
- (all-from intermediate: lang/private/intermediate-funs procedures))
+ (all-from-except intermediate:
+                  lang/private/intermediate-funs
+                  procedures
+                  Number
+                  Real
+                  Rational
+                  Integer
+                  Natural
+                  Boolean
+                  True
+                  False
+                  String
+                  Symbol
+                  Char
+                  Any
+                  EmptyList))

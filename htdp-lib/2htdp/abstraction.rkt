@@ -35,6 +35,7 @@
 (require (for-syntax syntax/parse
                      racket/struct-info)
          syntax/parse 
+         (only-in racket/list firrest firrerest)
          plai 
          htdp/error
          (only-in lang/htdp-beginner implode explode))
@@ -54,8 +55,8 @@
      (in-range (nat> 'in-range (first x) "first"))]
     [(= L 3)
      (in-range (nat> 'in-range (first x) "first")
-               (nat> 'in-range (second x) "second")
-               (nat> 'in-range (third x) "third"))]
+               (nat> 'in-range (firrest x) "second")
+               (nat> 'in-range (firrerest x) "third"))]
     [else (error 'in-range "expects 1 or 3 arguments, found ~a" L)]))
 
 (begin-for-syntax

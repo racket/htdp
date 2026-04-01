@@ -28,6 +28,7 @@
          "clauses-spec-aux.rkt"
          "stop.rkt"
          "logging-gui.rkt"
+         (only-in racket/list firrest)
          htdp/error
          (only-in mzlib/etc evcase)
          string-constants)
@@ -175,7 +176,7 @@
           ;; [list IPort OPort] -> Void 
           (define (add-iworld in-out)
             (define in (first in-out))
-            (define out (second in-out))
+            (define out (firrest in-out))
             ;; is it possible to kill the server with lots of bad connections?
             (with-handlers ((tcp-eof? (lambda _ (void)))
                             (exn? (lambda (e) (printf "process registration failed!\n"))))

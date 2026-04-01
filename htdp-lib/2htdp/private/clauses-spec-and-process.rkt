@@ -96,7 +96,7 @@
   (not-a-clause tag stx state0 kwds)
   (map (lambda (s) 
          (define kw (first s))
-         (define kw-alt (second s))
+         (define kw-alt (firrest s))
          (define r
            (let loop ([spec spec])
              (cond
@@ -112,11 +112,11 @@
                  (cdar spec))]
                [else (loop (cdr spec))])))
          (if r 
-             (let ([f (third s)])
+             (let ([f (firrerest s)])
                (if (procedure-arity-includes? f 2)
                    (f r `',(car (syntax->list r)))
                    (f r)))
-             (fourth s)))
+             (firrererest s)))
        Spec))
 
 ;; check whether rec? occurs, produces list of keyword x clause pairs 

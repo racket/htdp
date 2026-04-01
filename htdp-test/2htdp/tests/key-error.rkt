@@ -3,7 +3,10 @@
 ;; ---------------------------------------------------------------------------------------------------
 ;; the error message should refer to the 'on-tick handler, not the lambda in the clause 
 
-(require 2htdp/universe 2htdp/image "test-aux.rkt")
+(require 2htdp/universe
+         2htdp/image
+         (only-in racket/list firrest)
+         "test-aux.rkt")
 
 (define (main)
   (big-bang 0
@@ -16,8 +19,8 @@
   (with-handlers ((exn:fail? (lambda (x) 
 			       (define msg (exn-message x))
 			       (define hdl (regexp-match "check-with: (.*) returned" msg))
-			       (unless (and hdl (cons? (regexp-match "on-tick" (second hdl))))
-				 (error 'test "expected: \"on-tick\", actual: ~e" (second hdl))))))
+			       (unless (and hdl (cons? (regexp-match "on-tick" (firrest hdl))))
+				 (error 'test "expected: \"on-tick\", actual: ~e" (firrest hdl))))))
     (main))
 
 

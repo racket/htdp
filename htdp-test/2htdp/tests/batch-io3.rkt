@@ -2,7 +2,8 @@
 
 ;; test for pr11445
 
-(require 2htdp/batch-io)
+(require 2htdp/batch-io
+         (only-in racket/list firrest firrerest))
 
 (define batch-io3
   #<<eos
@@ -115,9 +116,9 @@ eos
     ;; [Listof [List Number String Number]] String -> String 
     ;; compute query result and turn into string 
     (define (total-message sales-records query)
-      (define good* (filter (λ (sales-record) (string=? (second sales-record) query)) sales-records))
+      (define good* (filter (λ (sales-record) (string=? (firrest sales-record) query)) sales-records))
       (define count (apply + (map first good*)))
-      (define value (apply + (map third good*)))
+      (define value (apply + (map firrerest good*)))
       (format "You sold ~a ~a for a total of $~a.\n" 
               count (add-s query (length good*)) (real->decimal-string value 2)))
     ;; String Natural -> String 

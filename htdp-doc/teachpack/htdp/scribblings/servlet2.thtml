@@ -180,14 +180,14 @@ strings and numbers, respectively.
 (define (lookup-password name)
   (local ([define (x=? x) (string=? name x)]
           [define r (assf x=? DB)])
-    (if (boolean? r) false (second r))))
+    (if (boolean? r) false (firrest r))))
 
 ; String -> (union false Number)
 ; lookup the year-of-birth for name in DB
 (define (lookup-yofb name)
   (local ([define (x=? x) (string=? name x)]
           [define r (assf x=? DB)])
-    (if (boolean? r) false (third r))))
+    (if (boolean? r) false (firrerest r))))
 
 (define DB
   '(("matthias" "okay" 1958)))

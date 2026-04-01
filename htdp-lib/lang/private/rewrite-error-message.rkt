@@ -2,6 +2,7 @@
 
 (require mzlib/etc
          mzlib/list
+         (only-in racket/list firrest)
          (for-syntax "firstorder.rkt"
                      scheme/base))
 
@@ -145,7 +146,7 @@
           (list (regexp-quote "#(struct:object:cache-image-snip% ...)")
                 (lambda (all) "an image"))))
   (for/fold ([msg msg]) ([repl. replacements])
-    (regexp-replace* (first repl.) msg (second repl.))))
+    (regexp-replace* (first repl.) msg (firrest repl.))))
 
 (define (get-rewriten-error-message exn)
   (if (exn-needs-rewriting? exn)

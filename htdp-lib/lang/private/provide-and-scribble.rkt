@@ -34,7 +34,8 @@ tests to run:
 
 (require (for-syntax syntax/parse))
 
-(require racket/provide)
+(require racket/provide
+         (only-in racket/list firrest))
 
 (provide 
  provide-and-scribble 
@@ -187,7 +188,7 @@ tests to run:
                            (define (is-exception i)
                              (memf (lambda (j) (eq? (syntax-e j) (syntax-e i))) exceptions))
                            (for/list ((s *sections))
-                             (define sectn (second s))
+                             (define sectn (firrest s))
                              (define clean (filter (lambda (i) (not (is-exception (car i)))) sectn))
                               (list (first s) clean)))
                          ;; 
@@ -202,7 +203,7 @@ tests to run:
                                (cond
                                  [(string=? (first s) stitle) 
                                   (set! exists #t)
-                                  (list stitle (append (second s) scontent))]
+                                  (list stitle (append (firrest s) scontent))]
                                  [else s])))
                            (if exists
                                (set! *sections sections)
@@ -227,4 +228,3 @@ tests to run:
            [(internal:id external:id) #'(rename-out (internal external))]
            [name:id #'name]))
        lon))
-

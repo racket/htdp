@@ -76,5 +76,25 @@
 (provide-and-scribble
  procedures
  (begin)
- (all-from-except intermediateplus: lang/private/intermediate-plus procedures cons list* append random for-each)
+ (all-from-except intermediateplus:
+                  lang/private/intermediate-plus
+                  procedures
+                  cons
+                  list*
+                  append
+                  random
+                  for-each
+                  Number
+                  Real
+                  Rational
+                  Integer
+                  Natural
+                  Boolean
+                  True
+                  False
+                  String
+                  Symbol
+                  Char
+                  Any
+                  EmptyList)
  (all-from        advanced:         lang/private/advanced-funs     procedures))

@@ -213,7 +213,7 @@
 (define (receive w m)
   (make-world (world-todraft w)
               (world-mmdraft w)
-              (enqueue 2 (world-from w) (first m) (second m))
+              (enqueue 2 (world-from w) (first m) (firrest m))
               (world-to w)))
 
 ;                                                          

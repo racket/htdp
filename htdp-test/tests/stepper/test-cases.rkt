@@ -1838,27 +1838,27 @@
    (t 'lazy-cddddr m:lazy
       (cddddr (list 1 2 3 4))
       :: {(cddddr (list 1 2 3 4))} -> {empty})
-   (t 'lazy-second m:lazy
-      (second (list 1 2 3 4 5 6 7 8))
-      :: {(second (list 1 2 3 4 5 6 7 8))} -> {2})
-   (t 'lazy-third m:lazy
-      (third (list 1 2 3 4 5 6 7 8))
-      :: {(third (list 1 2 3 4 5 6 7 8))} -> {3})
-   (t 'lazy-fourth m:lazy
-      (fourth (list 1 2 3 4 5 6 7 8))
-      :: {(fourth (list 1 2 3 4 5 6 7 8))} -> {4})
-   (t 'lazy-fifth m:lazy
-      (fifth (list 1 2 3 4 5 6 7 8))
-      :: {(fifth (list 1 2 3 4 5 6 7 8))} -> {5})
-   (t 'lazy-sixth m:lazy
-      (sixth (list 1 2 3 4 5 6 7 8))
-      :: {(sixth (list 1 2 3 4 5 6 7 8))} -> {6})
-   (t 'lazy-seventh m:lazy
-      (seventh (list 1 2 3 4 5 6 7 8))
-      :: {(seventh (list 1 2 3 4 5 6 7 8))} -> {7})
-   (t 'lazy-eighth m:lazy
-      (eighth (list 1 2 3 4 5 6 7 8))
-      :: {(eighth (list 1 2 3 4 5 6 7 8))} -> {8})
+   (t 'lazy-firrest m:lazy
+      (firrest (list 1 2 3 4 5 6 7 8))
+      :: {(firrest (list 1 2 3 4 5 6 7 8))} -> {2})
+   (t 'lazy-firrerest m:lazy
+      (firrerest (list 1 2 3 4 5 6 7 8))
+      :: {(firrerest (list 1 2 3 4 5 6 7 8))} -> {3})
+   (t 'lazy-firrererest m:lazy
+      (firrererest (list 1 2 3 4 5 6 7 8))
+      :: {(firrererest (list 1 2 3 4 5 6 7 8))} -> {4})
+   (t 'lazy-firrererest+rest m:lazy
+      (firrererest (rest (list 1 2 3 4 5 6 7 8)))
+      :: {(firrererest (rest (list 1 2 3 4 5 6 7 8)))} -> {5})
+   (t 'lazy-firrererest+rerest m:lazy
+      (firrererest (rerest (list 1 2 3 4 5 6 7 8)))
+      :: {(firrererest (rerest (list 1 2 3 4 5 6 7 8)))} -> {6})
+   (t 'lazy-firrererest+rererest m:lazy
+      (firrererest (rererest (list 1 2 3 4 5 6 7 8)))
+      :: {(firrererest (rererest (list 1 2 3 4 5 6 7 8)))} -> {7})
+   (t 'lazy-firrererest+rerererest m:lazy
+      (firrererest (rerererest (list 1 2 3 4 5 6 7 8)))
+      :: {(firrererest (rerererest (list 1 2 3 4 5 6 7 8)))} -> {8})
  
    (t 'lazy-list4 m:lazy
       (caaaar (cdddar (list (list ,err ,err ,err (list (list (list (+ 1 2))))))))

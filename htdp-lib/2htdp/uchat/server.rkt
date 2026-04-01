@@ -47,7 +47,7 @@
 
 (define (forward u s msg) 
   (local ((define to (first msg)))
-    (make-bundle u (transform u (iworld-name s) to (second msg)) '())))
+    (make-bundle u (transform u (iworld-name s) to (firrest msg)) '())))
 
 ;; Universe String Message -> [Listof Message]
 ;; transform an incoming message into a list of outgoing ones

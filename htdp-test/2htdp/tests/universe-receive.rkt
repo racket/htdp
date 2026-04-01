@@ -24,7 +24,7 @@
           ;; given one iworld, pick the other one from a list of two 
           (define (other iw lo-iworld)
             (if (iworld=? (first lo-iworld) iw)
-                (second lo-iworld)
+                (firrest lo-iworld)
                 (first lo-iworld))))
     (launch-many-worlds 
      (sending-world rate limit)

@@ -1,6 +1,8 @@
 #lang racket
 
-(require 2htdp/universe 2htdp/image)
+(require 2htdp/universe
+         2htdp/image
+         (only-in racket/list firrest))
 
 ;; Run two client-server pairs
 (define (run)
@@ -24,12 +26,12 @@
             (port p)
             (on-tick
              (λ (s) (if (first s) 
-                        (make-package (list #f (add1 (second s))) (second s))
-                        (list #t (second s))))
+                        (make-package (list #f (add1 (firrest s))) (firrest s))
+                        (list #t (firrest s))))
              1)
             (on-receive 
-             (λ (s msg) (displayln msg) (list (first s) (+ (second s) msg))))
+             (λ (s msg) (displayln msg) (list (first s) (+ (firrest s) msg))))
             (to-draw 
-             (λ (s) (if (first s) (place-image (circle (second s) 'solid c) 200 200 mt) mt)))
+             (λ (s) (if (first s) (place-image (circle (firrest s) 'solid c) 200 200 mt) mt)))
             (register LOCALHOST)))
 (run)

@@ -4,7 +4,10 @@
 ;; eq? is questionable, but okay if someone uses BSL to teach not out of HtDP 
 ;; 
 
-(require mzlib/etc mzlib/list mzlib/math syntax/docprovide
+(require mzlib/etc
+         (except-in mzlib/list second third fourth fifth sixth seventh eighth)
+         mzlib/math
+         syntax/docprovide
          (for-syntax "firstorder.rkt")
          (for-syntax syntax/parse) 
          (for-syntax racket/syntax)
@@ -17,6 +20,58 @@
 
 ;; Implements the procedures:
 (require "teachprims.rkt" "teach.rkt" lang/posn lang/imageeq "provide-and-scribble.rkt")
+
+(define-syntax-rule (define-selector name op ...)
+  (define (name x0)
+    (let loop ([x x0] [ops (reverse '(op ...))])
+      (cond
+        [(null? ops) x]
+        [(not (list? x))
+         (error 'name "expects a list, given ~e" x)]
+        [(null? x)
+         (error 'name "expects a list with enough elements, given ~e" x0)]
+        [else
+         (loop (if (eq? (car ops) 'fir) (first x) (rest x))
+               (cdr ops))]))))
+
+(define-selector firfirst fir fir)
+(define-selector firrest fir re)
+(define-selector refirst re fir)
+(define-selector rerest re re)
+
+(define-selector firfirfirst fir fir fir)
+(define-selector firfirrest fir fir re)
+(define-selector firrefirst fir re fir)
+(define-selector firrerest fir re re)
+(define-selector refirfirst re fir fir)
+(define-selector refirrest re fir re)
+(define-selector rerefirst re re fir)
+(define-selector rererest re re re)
+
+(define-selector firfirfirfirst fir fir fir fir)
+(define-selector firfirfirrest fir fir fir re)
+(define-selector firfirrefirst fir fir re fir)
+(define-selector firfirrerest fir fir re re)
+(define-selector firrefirfirst fir re fir fir)
+(define-selector firrefirrest fir re fir re)
+(define-selector firrerefirst fir re re fir)
+(define-selector firrererest fir re re re)
+(define-selector refirfirfirst re fir fir fir)
+(define-selector refirfirrest re fir fir re)
+(define-selector refirrefirst re fir re fir)
+(define-selector refirrerest re fir re re)
+(define-selector rerefirfirst re re fir fir)
+(define-selector rerefirrest re re fir re)
+(define-selector rererefirst re re re fir)
+(define-selector rerererest re re re re)
+
+(define second firrest)
+(define third firrerest)
+(define fourth firrererest)
+(define (fifth x) (firrererest (rest x)))
+(define (sixth x) (firrererest (rerest x)))
+(define (seventh x) (firrererest (rererest x)))
+(define (eighth x) (firrererest (rerererest x)))
 
 (define-syntax (provide-and-wrap stx)
   (syntax-parse stx 
@@ -478,34 +533,124 @@
  Selects the rest of a non-empty list.
  @interaction[#:eval (bsl) x (rest x)]
 }
+  @defproc[(firfirst [x list?]) any/c]{
+ Canonical selector: @racket[(first (first x))]. The
+ @racket[first]/@racket[rest] vocabulary also supports a systematic
+ family of compositional names through depth 4; the names use
+ @litchar{fir} and @litchar{re} with a final @litchar{st}, and they are
+ read from right to left in the same style as LISP's @racket[cadr]
+ family.
+ @interaction[#:eval (bsl) y (firfirst y)]
+}
+  @defproc[(firrest [x list?]) any/c]{
+ Canonical selector: @racket[(first (rest x))].
+}
+  @defproc[(refirst [x list?]) any/c]{
+ Canonical selector: @racket[(rest (first x))].
+}
+  @defproc[(rerest [x list?]) any/c]{
+ Canonical selector: @racket[(rest (rest x))].
+}
+  @defproc[(firfirfirst [x list?]) any/c]{
+ Canonical selector: @racket[(first (first (first x)))].
+}
+  @defproc[(firfirrest [x list?]) any/c]{
+ Canonical selector: @racket[(first (first (rest x)))].
+}
+  @defproc[(firrefirst [x list?]) any/c]{
+ Canonical selector: @racket[(first (rest (first x)))].
+}
+  @defproc[(firrerest [x list?]) any/c]{
+ Canonical selector: @racket[(first (rest (rest x)))].
+}
+  @defproc[(refirfirst [x list?]) any/c]{
+ Canonical selector: @racket[(rest (first (first x)))].
+}
+  @defproc[(refirrest [x list?]) any/c]{
+ Canonical selector: @racket[(rest (first (rest x)))].
+}
+  @defproc[(rerefirst [x list?]) any/c]{
+ Canonical selector: @racket[(rest (rest (first x)))].
+}
+  @defproc[(rererest [x list?]) any/c]{
+ Canonical selector: @racket[(rest (rest (rest x)))].
+}
+  @defproc[(firfirfirfirst [x list?]) any/c]{
+ Canonical selector: @racket[(first (first (first (first x))))].
+}
+  @defproc[(firfirfirrest [x list?]) any/c]{
+ Canonical selector: @racket[(first (first (first (rest x))))].
+}
+  @defproc[(firfirrefirst [x list?]) any/c]{
+ Canonical selector: @racket[(first (first (rest (first x))))].
+}
+  @defproc[(firfirrerest [x list?]) any/c]{
+ Canonical selector: @racket[(first (first (rest (rest x))))].
+}
+  @defproc[(firrefirfirst [x list?]) any/c]{
+ Canonical selector: @racket[(first (rest (first (first x))))].
+}
+  @defproc[(firrefirrest [x list?]) any/c]{
+ Canonical selector: @racket[(first (rest (first (rest x))))].
+}
+  @defproc[(firrerefirst [x list?]) any/c]{
+ Canonical selector: @racket[(first (rest (rest (first x))))].
+}
+  @defproc[(firrererest [x list?]) any/c]{
+ Canonical selector: @racket[(first (rest (rest (rest x))))].
+}
+  @defproc[(refirfirfirst [x list?]) any/c]{
+ Canonical selector: @racket[(rest (first (first (first x))))].
+}
+  @defproc[(refirfirrest [x list?]) any/c]{
+ Canonical selector: @racket[(rest (first (first (rest x))))].
+}
+  @defproc[(refirrefirst [x list?]) any/c]{
+ Canonical selector: @racket[(rest (first (rest (first x))))].
+}
+  @defproc[(refirrerest [x list?]) any/c]{
+ Canonical selector: @racket[(rest (first (rest (rest x))))].
+}
+  @defproc[(rerefirfirst [x list?]) any/c]{
+ Canonical selector: @racket[(rest (rest (first (first x))))].
+}
+  @defproc[(rerefirrest [x list?]) any/c]{
+ Canonical selector: @racket[(rest (rest (first (rest x))))].
+}
+  @defproc[(rererefirst [x list?]) any/c]{
+ Canonical selector: @racket[(rest (rest (rest (first x))))].
+}
+  @defproc[(rerererest [x list?]) any/c]{
+ Canonical selector: @racket[(rest (rest (rest (rest x))))].
+}
   @defproc[(second [x list?]) any/c]{
- Selects the second item of a non-empty list. 
+ Compatibility alias for @racket[firrest].
  @interaction[#:eval (bsl) x (second x)]
 }
   @defproc[(third [x list?]) any/c]{
- Selects the third item of a non-empty list.
+ Compatibility alias for @racket[firrerest].
  @interaction[#:eval (bsl) x (third x)]
 }
   
   @defproc[(fourth [x list?]) any/c]{
- Selects the fourth item of a non-empty list. 
+ Compatibility alias for @racket[firrererest].
  @interaction[#:eval (bsl) v (fourth v)]
 }
   
   @defproc[(fifth [x list?]) any/c]{
- Selects the fifth item of a non-empty list. 
+ Compatibility wrapper over the compositional selector family.
  @interaction[#:eval (bsl) v (fifth v)]
 }
   @defproc[(sixth [x list?]) any/c]{
- Selects the sixth item of a non-empty list.
+ Compatibility wrapper over the compositional selector family.
  @interaction[#:eval (bsl) v (sixth v)]
 }
   @defproc[(seventh [x list?]) any/c]{
- Selects the seventh item of a non-empty list.
+ Compatibility wrapper over the compositional selector family.
  @interaction[#:eval (bsl) v (seventh v)]
 }
   @defproc[(eighth [x list?]) any/c]{
- Selects the eighth item of a non-empty list. 
+ Compatibility wrapper over the compositional selector family.
  @interaction[#:eval (bsl) v (eighth v)]
 }
   @defproc[(list-ref [x list?][i natural?]) any/c]{

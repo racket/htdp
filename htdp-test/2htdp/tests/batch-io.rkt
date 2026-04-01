@@ -1,6 +1,7 @@
 #lang racket
 
-(require rackunit)
+(require rackunit
+         (only-in racket/list firrest))
 (require 2htdp/batch-io)
 
 ;; ---------------------------------------------------------------------------------------------------
@@ -53,7 +54,7 @@ eos
     (apply string-append 
            (list (first test2-as-list)
                  (string #\newline)
-                 (second test2-as-list))))
+                 (firrest test2-as-list))))
   
   (write-file file test1)
   (check-true (string=? (simulate-file read-file test1) test1) "read-file 1")
@@ -89,7 +90,7 @@ eos
            (list (first test2-as-list)
                  (string #\newline)
                  (string #\newline)
-                 (second test2-as-list))))
+                 (firrest test2-as-list))))
   
   (write-file file test2-a)
   (check-equal? (read-lines file) test2-a-as-list "as-lines 2-a")
@@ -155,7 +156,7 @@ eos
     (apply string-append 
            (list (first test2-as-list)
                  (string #\newline)
-                 (second test2-as-list))))
+                 (firrest test2-as-list))))
   
   (catch-stdo (write-file 'standard-out test1))
   (check-equal? (pipe-stdi (read-lines 'standard-in)) (list test1) "as-lines 1")
@@ -185,7 +186,7 @@ eos
            (list (first test2-as-list)
                  (string #\newline)
                  (string #\newline)
-                 (second test2-as-list))))
+                 (firrest test2-as-list))))
   
   (catch-stdo (write-file 'standard-out test2-a))
   (check-equal? (pipe-stdi (read-lines 'standard-in)) test2-a-as-list "as-lines 2-a")

@@ -1,0 +1,5 @@
+repo: jasonhemann/firrest-racket-prep
+branch: firrest-core-primitives
+commit: c4c13f060470eaa14098e180485b10c6c9116b10
+collects: /Users/jhemann/Code/firrest/racket/racket/collects
+note: Refresh the sibling racket checkout to this commit and use a matching built racket/raco from that checkout for paired HtDP verification.

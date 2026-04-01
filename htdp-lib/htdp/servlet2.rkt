@@ -6,6 +6,7 @@
 (require (prefix-in servlet: web-server/servlet-env)
          (prefix-in servlet: web-server/servlet)
          htdp/error
+         (only-in racket/list firrest)
          scheme/tcp
          scheme/bool
          scheme/list
@@ -196,7 +197,7 @@
 (define (internal:form-query f)
   (check-list-list 'form-query (form? f) "form" f)
   (map list (map first f)
-       (conduct-query "Web Query" (map list (make-keys f) (map second f)))))
+       (conduct-query "Web Query" (map list (make-keys f) (map firrest f)))))
 
 
 ; extracting values from forms ----------------------------------------------
@@ -204,7 +205,7 @@
 ; extract : Symbol Response -> (listof Answer)
 ; extract all answers associated with a tag 
 (define (extract tag r)
-  (map second (filter (lambda (a) (eq? (first a) tag)) r)))
+  (map firrest (filter (lambda (a) (eq? (first a) tag)) r)))
 
 ; extract/single : Symbol Response -> Answer
 (define (extract/single tag r)
@@ -227,7 +228,7 @@
           `(tr (td ,(symbol->string tag))
                (td ,(answer->string answer))))
         (map first form)
-        (map second form))))
+        (map firrest form))))
 
 ; (listof Answer) -> true
 ; to display a list of answers on a web page
@@ -346,12 +347,12 @@
               (br)
               (form ([action ,url])                       
                     (table ,@(map build-row f))
-                    ,@(add-submit-button (map second f)))))))))
+                    ,@(add-submit-button (map firrest f)))))))))
 
 ; build-row : (list Symbol FormElement) -> Xexpr[tr]
 (define (build-row x)
   (let* ([tag (first x)]
-         [fe  (second x)]
+         [fe  (firrest x)]
          [rad (lambda (x)
                 `(td (input ([type "radio"][name ,tag][value ,x])) " " ,x))]
          [make-radio

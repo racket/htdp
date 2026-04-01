@@ -477,13 +477,13 @@
                (for ([x (in-list returned-value-list)])
                  (log-stepper-debug "add to finished:")
                  (log-stepper-debug "  source: ~a" (syntax->hilite-datum ((car x))))
-                 (log-stepper-debug "  index: ~a" (second x))
+                 (log-stepper-debug "  index: ~a" (firrest x))
                  (log-stepper-debug
                   "  getter: ~a"
                   (if (stepper-syntax-property ((car x))
                                                'stepper-black-box-expr)
                       "no getter for term with stepper-black-box-expr property"
-                      ((third x)))))
+                      ((firrerest x)))))
                (for-each (lambda (source/index/getter)
                            (apply add-to-finished source/index/getter))
                          returned-value-list)]

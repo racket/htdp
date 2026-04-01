@@ -61,7 +61,7 @@
          (eq? (object-name 
                (with-handlers ; for print output-style
                    ([(λ (e) #t) (λ (e) #f)]) 
-                 (syntax-e (second (syntax-e #'proc-extract)))))
+                 (syntax-e (firrest (syntax-e #'proc-extract)))))
               'extract-if-lazy-proc))
      (unwind #'p settings)]
     ; lazy #%app special case: force and delay
@@ -346,7 +346,7 @@
     [(dots1 actual dots2) 
      (and (eq? (syntax->datum #'dots1) '...)
           (eq? (syntax->datum #'dots2) '...))
-     (with-syntax ([expected (unwind (third (stepper-syntax-property stx 'stepper-args-of-call)) settings)])
+     (with-syntax ([expected (unwind (firrerest (stepper-syntax-property stx 'stepper-args-of-call)) settings)])
        #`(check-expect actual expected))]
     [any #`(c-e any) #;#`(check-expect )]))
 
@@ -358,8 +358,8 @@
      (and (eq? (syntax->datum #'dots1) '...)
           (eq? (syntax->datum #'dots2) '...))
      (let ([args-of-call (stepper-syntax-property stx 'stepper-args-of-call)])
-       (with-syntax ([expected (unwind (third args-of-call) settings)]
-                     [within (unwind (fourth args-of-call) settings)])
+       (with-syntax ([expected (unwind (firrerest args-of-call) settings)]
+                     [within (unwind (firrererest args-of-call) settings)])
          #`(check-within actual expected within)))]
     [any #`(c-e any) #;#`(check-expect )]))
 
@@ -371,7 +371,7 @@
      (and (eq? (syntax->datum #'dots1) '...)
           (eq? (syntax->datum #'dots2) '...))
      (let ([args-of-call (stepper-syntax-property stx 'stepper-args-of-call)])
-       (with-syntax ([expected (unwind (third args-of-call) settings)])
+       (with-syntax ([expected (unwind (firrerest args-of-call) settings)])
          #`(check-error actual expected)))]
     [any #`(c-e any) #;#`(check-expect )]))
 

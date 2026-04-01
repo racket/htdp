@@ -53,7 +53,9 @@
  date-second)
 
 ;; ---------------------------------------------------------------------------------------------------
-(require xml/xml htdp/error)
+(require (only-in racket/list firrest firrerest rerest)
+         xml/xml
+         htdp/error)
 
 (module+ test
   (require rackunit))
@@ -392,15 +394,16 @@ eos
   (let loop ([d (xexpr-body d)])
     (cond
       [(empty? d) #false]
-      [else (define key (first d))
-            (and (cons? (rest d))
-                 (let ([attribute (second d)])
-                   (match key
-                     [`(key ,attributes ,key-string)
-                      (if (string=? key-string k)
-                          (attribute->value attribute)
-                          (loop (rest (rest d))))]
-                     [_ (error 'dict-attribute "wrong key format: ~e" key)])))])))
+      [else
+       (define key (first d))
+       (and (cons? (rest d))
+            (let ([attribute (firrest d)])
+              (match key
+                [`(key ,attributes ,key-string)
+                 (if (string=? key-string k)
+                     (attribute->value attribute)
+                     (loop (rerest d)))]
+                [_ (error 'dict-attribute "wrong key format: ~e" key)])))])))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Xexpr [dict] -> [Listof String (U String Integer Date)]
@@ -409,11 +412,12 @@ eos
   (let loop ([d (xexpr-body d)])
     (cond
       [(empty? d) '()]
-      [else (define key (first d))
-            (if (empty? (rest d))
-                (error 'dict->list "wrong format: ~e" d)
-                (cons `(,(third key) ,(attribute->value (second d)))
-                      (loop (rest (rest d)))))])))
+      [else
+       (define key (first d))
+       (if (empty? (rest d))
+           (error 'dict->list "wrong format: ~e" d)
+           (cons `(,(firrerest key) ,(attribute->value (firrest d)))
+                 (loop (rerest d))))])))
 
 ;; ---------------------------------------------------------------------------------------------------
 ;; Xexpr -> SL-Value
@@ -445,8 +449,9 @@ eos
      (let loop ([d d])
        (cond
          [(empty? d) '()]
-         [else (cons (list (key->value (first d)) (attribute->value (second d)))
-                     (loop (rest (rest d))))]))]
+         [else
+          (cons (list (key->value (first d)) (attribute->value (firrest d)))
+                (loop (rerest d)))]))]
     [else (error 'attribute->value "unknown kind of value: ~e" a)]))
 
 ;; Xexpr -> String 

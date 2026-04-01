@@ -271,15 +271,15 @@
  @interaction[#:eval (isl) (ormap or-satisfies? (list 0 1 2) (list odd? even? positive?))]
 }
   @defproc[(argmin [f (X -> real)] [l (listof X)]) X]{
- Finds the (first) element of the list that minimizes the output of the function.
+Finds the (first) element of the list that minimizes the output of the function.
  @interaction[#:eval (isl)
-              (argmin second '((sam 98) (carl 78) (vincent 93) (asumu 99)))
+              (argmin firrest '((sam 98) (carl 78) (vincent 93) (asumu 99)))
               ]
 }
   @defproc[(argmax [f (X -> real)] [l (listof X)]) X]{
- Finds the (first) element of the list that maximizes the output of the function.
+Finds the (first) element of the list that maximizes the output of the function.
  @interaction[#:eval (isl)
-              (argmax second '((sam 98) (carl 78) (vincent 93) (asumu 99)))
+              (argmax firrest '((sam 98) (carl 78) (vincent 93) (asumu 99)))
               ]
 }
   @defproc[(memf [p? (X -> any)] [l (listof X)]) (union #false (listof X))]{
@@ -307,7 +307,7 @@
  (define (f-after-g x)
    (f (g x)))}
  
- @interaction[#:eval (isl) (map (compose add1 second) '((add 3) (sub 2) (mul 4))) ]
+ @interaction[#:eval (isl) (map (compose add1 firrest) '((add 3) (sub 2) (mul 4))) ]
 }
   @defproc[(procedure? [x any]) boolean?]{
  Produces true if the value is a procedure.
