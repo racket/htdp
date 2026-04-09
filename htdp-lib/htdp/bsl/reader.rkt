@@ -43,5 +43,7 @@
     [(drracket:show-big-defs/ints-labels) #t]
 
     [(documentation-language-family) "HtDP"]
+
+    [(drracket:default-instrumentation) 'test-coverage]
     
     [else (use-default key default)]))
