@@ -2,8 +2,8 @@
 #lang racket/base
 (provide exn-srcloc continuation-marks-srcloc)
 
-(require lang/private/continuation-mark-key
-	 setup/collects)
+(require setup/collects
+         errortrace/marks-to-context)
 
 ; return srcloc associated with exception, in user program, or #f
 (define (exn-srcloc exn)
@@ -12,24 +12,20 @@
 	(and (pair? srclocs)
 	     (car srclocs)))
       (continuation-marks-srcloc (exn-continuation-marks exn))))
-    
+
 (define (continuation-marks-srcloc marks)
-  (let ([cms (continuation-mark-set->list marks teaching-languages-continuation-mark-key)])
-    (cond
-     [(not cms) '()]
-     [(findf (lambda (mark)
-	       (and mark
-		    (let ([ppath (car mark)])
-		      (or (and (path? ppath)
-			       (not (let ([rel (path->collects-relative ppath)])
-				      (and (pair? rel)
-					   (eq? 'collects (car rel))
-					   (or (equal? #"lang" (cadr rel))
-					       (equal? #"deinprogramm" (cadr rel)))))))
-			  (symbol? ppath)))))
-	     cms)
-      => (lambda (mark)
-	   (apply (lambda (source line col pos span)
-		    (make-srcloc source line col pos span))
-		  mark))]
-     (else #f))))
+  (cond
+    (((errortrace-continuation-mark-set->context) marks)
+     => (lambda (cms)
+          (findf (lambda (mark)
+                   (and (srcloc? mark)
+                        (let ([ppath (srcloc-source mark)])
+                          (or (and (path? ppath)
+                                   (not (let ([rel (path->collects-relative ppath)])
+                                          (and (pair? rel)
+                                               (eq? 'collects (car rel))
+                                               (or (equal? #"lang" (cadr rel))
+                                                   (equal? #"deinprogramm" (cadr rel)))))))
+                              (symbol? ppath)))))
+                 cms)))
+    (else #f)))

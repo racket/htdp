@@ -22,8 +22,8 @@
          ;; and the user's namespace in the teaching languages
          "private/set-result.rkt"
          "private/rewrite-error-message.rkt"
+         errortrace/marks-to-context
 
-         "private/continuation-mark-key.rkt"
          "private/create-htdp-executable.rkt"
          "private/tp-dialog.rkt"
          
@@ -49,7 +49,9 @@
 
 (define o (current-output-port))
 (define (oprintf . args) (apply fprintf o args))
-  
+
+(define htdp-continuation-mark-key (gensym 'htdp-continuation-mark-key))
+
 (define tool@
   (unit 
     (import drscheme:tool^)
@@ -196,7 +198,13 @@
                                                         (htdp-lang-settings-true/false/empty-as-ids? settings)
                                                         (get-abbreviate-cons-as-list)
                                                         (get-use-function-output-syntax?)
-                                                        (get-output-function-instead-of-lambda?)))))))
+                                                        (get-output-function-instead-of-lambda?)))
+
+               (errortrace-continuation-mark-set->context
+                (lambda (cms)
+                  (map
+                   (lambda (list) (apply make-srcloc list))
+                   (continuation-mark-set->list cms htdp-continuation-mark-key))))))))
 
         (define/private (teaching-languages-error-value->string settings v len)
           (let ([sp (open-output-string)])
@@ -887,7 +895,7 @@
                            (symbol? ppath))]))
              
              [define cms (exn-continuation-marks exn)]
-             [define lcm (continuation-mark-set->list cms teaching-languages-continuation-mark-key)]
+             [define lcm (continuation-mark-set->list cms htdp-continuation-mark-key)]
              
              (cond
                [(not lcm) '()] ;; MF: I don't understand how this could possibly hold
@@ -903,7 +911,7 @@
     ;; with-mark : syntax syntax exact-nonnegative-integer -> syntax
     ;; a member of stacktrace-imports^
     ;; guarantees that the continuation marks associated with
-    ;; teaching-languages-continuation-mark-key are members of the debug-source type
+    ;; htdp-continuation-mark-key are members of the debug-source type
     (define (with-mark source-stx expr phase)
       [define source (syntax-source source-stx)]
       [define line   (syntax-line source-stx)]
@@ -914,7 +922,7 @@
       (if (and (or (symbol? source) (path? source)) (number? alpha) (number? span))
           (with-syntax ([expr  expr]
                         [mark  (list source line col alpha span)]
-                        [tlcmk teaching-languages-continuation-mark-key]
+                        [tlcmk htdp-continuation-mark-key]
                         [wcm   (syntax-shift-phase-level #'with-continuation-mark delta)]
                         [quot  (syntax-shift-phase-level #'quote delta)])
             #`(wcm (quot tlcmk) (quot mark) expr))
