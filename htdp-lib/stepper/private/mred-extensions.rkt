@@ -225,10 +225,11 @@
            [pretty-print-print-hook
             ; this print-hook is called for confusable highlights and for images.
             (lambda (value display? port)
-              (let ([looked-up (hash-ref highlight-table value (lambda () #f))])
+              (let* ([looked-up (hash-ref highlight-table value (lambda () #f))]
+                     [maybe-snip (if looked-up (car looked-up) value)])
                 (cond 
-                  [(is-a? value snip%) 
-                   (write-special (send value copy) port) (set-last-style)]
+                  [(is-a? maybe-snip snip%)
+                   (write-special (send maybe-snip copy) port) (set-last-style)]
                   [(and looked-up (not (eq? looked-up 'non-confusable)))
                    ; we have to call the size hook *again* to find
                    ; out if the underlying pretty-print-print-hook
