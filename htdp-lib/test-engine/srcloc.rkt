@@ -15,7 +15,9 @@
 
 (define (continuation-marks-srcloc marks)
   (cond
-    (((errortrace-continuation-mark-set->context) marks)
+    (((or (errortrace-continuation-mark-set->context)
+          continuation-mark-set->context)
+      marks)
      => (lambda (cms)
           (findf (lambda (mark)
                    (and (srcloc? mark)
