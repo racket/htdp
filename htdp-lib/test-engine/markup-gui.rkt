@@ -87,7 +87,7 @@
      (let ((data (image-markup-data markup)))
        (cond
          ((is-a? data snip%)
-          (send text insert data))
+          (send text insert (send data copy)))
          ((is-a? data bitmap%)         ;; works in other places, so include it here too
           (send text insert (make-object image-snip% data)))
          ((record-dc-datum? data)
