@@ -247,10 +247,12 @@
 		   ((begin-for-syntax . _)
 		    #`(begin #,e2 (frm e3s #,e1s #,def-ids)))
 		   ((begin b1 ...)
-		    (syntax-track-origin 
-		     (loop (append (syntax->list #'(b1 ...)) #'e3s) e1s def-ids)
-		     e2
-		     (car (syntax-e e2))))
+                    (loop (append (map (lambda (b)
+                                         (syntax-track-origin b e2 (car (syntax-e e2))))
+                                       (syntax->list #'(b1 ...)))
+                                  #'e3s)
+                          e1s
+                          def-ids))
 		   ((define-values (id ...) . _)
 		    (loop #'e3s (cons e2 e1s) (append (syntax->list #'(id ...)) def-ids)))
 		   ((define-signature id ctr)
