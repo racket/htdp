@@ -7,7 +7,7 @@
     "compatibility-lib"
     "draw-lib"
     ("drracket-plugin-lib" #:version "1.1")
-    "errortrace-lib"
+    ("errortrace-lib" #:version "1.6")
     "html-lib"
     "images-gui-lib"
     "images-lib"
