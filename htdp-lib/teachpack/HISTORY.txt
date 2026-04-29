@@ -2,8 +2,13 @@
 Version 9.3
 
 * The #lang *SL languages now display coverage information by default
-  in DrRacket.  With this, the #lang *SL languages finally reach
-  parity with the menu-based *SL languages.
+  in DrRacket.  
+
+* The #lang *SL languages now display source-code locations in the
+  same way as the menu-based *SL languages.
+
+With these changes, the #lang *SL languages finally reach parity with
+the menu-based *SL languages.
 
 ------------------------------------------------------------------------
 Version 9.2				  [Thu Apr  9 08:24:24 CDT 2026]	  
