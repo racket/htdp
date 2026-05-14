@@ -90,6 +90,9 @@ and @racketmodname[lang/imageeq].  This language corresponds to the
 The @racket[posn] structure type that is also provided by
 @racket[lang/htdp-beginner].}
 
+@defidform[Posn]{Signature for posns.}
+@defproc[(PosnOf [x-sig signature] [y-sig signature]) signature]{
+ Creates a parametric signature for posns from signatures for its fields.}
 
 @; ----------------------------------------------------------------------
 
