@@ -137,6 +137,7 @@
   @defthing[Posn signature]{Signature for posns.}
   @defproc[(PosnOf [x-sig signature] [y-sig signature]) signature]{
  Creates a parametric signature for posns from signatures for its fields.}
+  @defthing[posn struct]{Name for using @racket[match] with posns.}
   )
  
  ("Lists"
