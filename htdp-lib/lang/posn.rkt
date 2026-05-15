@@ -80,7 +80,3 @@
                                                 (list posn-x posn-y)
                                                 (signature-arbitrary x-sig) (signature-arbitrary y-sig)))
     sig))
-     
-        
-; FIXME: tests missing
-         
