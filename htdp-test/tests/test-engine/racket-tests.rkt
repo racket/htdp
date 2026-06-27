@@ -382,6 +382,28 @@
 (check-random (h 0) (list (random 20) (random 50) (random 70) (random 100)))
 (check-failure unequal?)
 
+;; check-random-within: both expressions use the same seeded random
+;; sequence, and results are compared up to a tolerance. Unlike
+;; check-random, inexact results are allowed.
+(check-random-within (exact->inexact (random 100))
+                     (exact->inexact (random 100))
+                     0.001)
+(check-success)
+
+;; Same seed, but the expected value is shifted past the tolerance.
+(check-random-within (random 100) (+ 50 (random 100)) 0.001)
+(check-failure not-within?)
+
+;; A non-number tolerance is an error.
+(check-random-within 1.0 1.0 "0.1")
+(check-exn
+ (lambda (e)
+   (initialize-test-object!)
+   (and (exn:fail:contract? e)
+        (regexp-match? #rx"\"0[.]1\" is not inexact" (exn-message e))))
+ (lambda ()
+   (run-tests!)))
+
 (check-property
  (for-all ((a Integer)
            (b Integer))

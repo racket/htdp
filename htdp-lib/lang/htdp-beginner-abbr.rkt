@@ -42,6 +42,7 @@
 	 check-random
 	 check-satisfied
          check-within
+         check-random-within
          check-error
          check-member-of
          check-range

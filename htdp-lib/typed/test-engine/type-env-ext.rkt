@@ -61,6 +61,12 @@
       [(define-values _
          (add-check-expect-test! (lambda () (do-check-random _ _ _))))
        #'do-check-random])
-    ((-> Univ) (-> Univ) Univ . -> . -Boolean)]))
+    ((-> Univ) (-> Univ) Univ . -> . -Boolean)]
+   [(syntax-parse (local-expand #'(ce:check-random-within 1 1 1) 'module #f)
+      #:literals (define-values)
+      [(define-values _
+         (add-check-expect-test! (lambda () (do-check-random-within _ _ _ _))))
+       #'do-check-random-within])
+    ((-> Univ) (-> Univ) -Real Univ . -> . -Boolean)]))
 
 (begin-for-syntax (initialize-type-env ce-env))
