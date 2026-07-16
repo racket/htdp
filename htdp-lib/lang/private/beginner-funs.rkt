@@ -105,7 +105,7 @@
         
  (define one (list 1))
         
- (define q (make-posn 1 2))
+ (define q (make-posn "bye" 2))
  (define p (make-posn 2 -3))
         
  (define a (list (list 'a 22) (list 'b 8) (list 'c 70)))
@@ -676,7 +676,7 @@
   ; @defproc[(posn) signature]{Signature for posns.}
   @defproc[(make-posn [x any/c][y any/c]) posn]{
  Constructs a posn from two arbitrary values.
- @interaction[#:eval (bsl) (make-posn 3 3) (make-posn 3 4)]
+ @interaction[#:eval (bsl) (make-posn 3 3) (make-posn "hello" #true)]
 }
   @defproc[(posn? [x any/c]) boolean?]{
  Determines if its input is a posn.
