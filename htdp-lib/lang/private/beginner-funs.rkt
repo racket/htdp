@@ -21,7 +21,10 @@
 (define-syntax (provide-and-wrap stx)
   (syntax-parse stx 
     ; (defproc (name args ...) range w ...)
-    [(provide-and-wrap wrap doc-tag:id requires (title df ...) ...)
+    [(provide-and-wrap wrap doc-tag:id requires
+       (title (~optional (~seq #:description description)
+                         #:defaults ([description #'#f]))
+              df ...) ...)
      (let* ((defs (map syntax->list (syntax->list #'((df ...) ...))))
             (names (map extract-names defs))
             (tmps  (map generate-temporaries names))
@@ -55,10 +58,12 @@
              ;; one that makes definitions first-order 
              (module+ with-wrapper 
                (wrap f internal-name) ... ...
-               (provide-and-scribble doc-tag requires (title dg ...) ...))
+               (provide-and-scribble doc-tag requires
+                 (title #:description description dg ...) ...))
              ;; and one that doesn't
              (module+ without-wrapper 
-               (provide-and-scribble doc-tag requires (title df ...) ...)))))]))
+               (provide-and-scribble doc-tag requires
+                 (title #:description description df ...) ...)))))]))
 
 ;; MF: this is now an ugly kludge, left over from my original conversion of Matthew's docs for *SL
 (define-syntax (in-rator-position-only stx)
@@ -100,7 +105,7 @@
         
  (define one (list 1))
         
- (define q (make-posn "bye" 2))
+ (define q (make-posn 1 2))
  (define p (make-posn 2 -3))
         
  (define a (list (list 'a 22) (list 'b 8) (list 'c 70)))
@@ -665,10 +670,13 @@
   )
  
  ("Posns"
+  #:description @para{A posn represents a position using two coordinates: the distance from the
+  left margin, called the @italic{x-coordinate}, and the distance from the top margin, called the
+  @italic{y-coordinate}.}
   ; @defproc[(posn) signature]{Signature for posns.}
   @defproc[(make-posn [x any/c][y any/c]) posn]{
  Constructs a posn from two arbitrary values.
- @interaction[#:eval (bsl) (make-posn 3 3) (make-posn "hello" #true)]
+ @interaction[#:eval (bsl) (make-posn 3 3) (make-posn 3 4)]
 }
   @defproc[(posn? [x any/c]) boolean?]{
  Determines if its input is a posn.

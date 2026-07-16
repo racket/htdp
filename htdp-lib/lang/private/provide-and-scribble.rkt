@@ -67,14 +67,16 @@ tests to run:
         [(all-from tag:id path label:id)
          (define-values (a p) (provide-all-from #'path #'label #'tag #'()))
          (values (cons a add-docs-and-provide) (append (syntax->list p) provides))]
-        [(title df ...)
+        [(title (~optional (~seq #:description description)
+                           #:defaults ([description #'#f]))
+                df ...)
          (define name* (extract-names (syntax->list #'(df ...))))
          (define exnm* (extract-external-name name*))
          (define defs* (rewrite-defs (syntax->list #'(df ...)) exnm*))
          (values (cons (lambda ()  ;; delay the syntax creation until add-sections is set
                          (with-syntax ([(ex ...) exnm*]
                                        [(df ...) defs*])
-                           #`(#,*add title (list (cons #'ex df) ...))))
+                           #`(#,*add title description (list (cons #'ex df) ...))))
                        add-docs-and-provide)
                  (cons #`(provide #,@(optional-rename-out name*))
                        provides))])))
@@ -127,7 +129,7 @@ tests to run:
               ;; so I went with dynamic-require. Argh. 
               ;; ******************************************************************
               #`(for ((s ((dynamic-require '(submod path nested-tag ... label) 'docs) #'f ...)))
-                  (#,*add (car s) (cadr s))))
+                  (#,*add (car s) (cadr s) (caddr s))))
             #`(;; import from path with prefix, exclude f ...
                (require (prefix-in prefix (except-in (submod path nested-tag ...) f ...)))
                ;; export the bindings without prefix 
@@ -153,7 +155,7 @@ tests to run:
                          #,requires
                          ;; -----------------------------------------------------------------------
                          ;; Section  = [Listof (cons Identifier Doc)]
-                         ;; Sections = [Listof (list Title Section)]
+                         ;; Sections = [Listof (list Title (U #f Block) Section)]
                          (provide 
                           ;; Identifier ... *-> Sections
                           ;; retrieve the document without the specified identifiers
@@ -172,12 +174,15 @@ tests to run:
                                [else 
                                 (define section1 (car s))
                                 (define others (render-sections (cdr s)))
-                                (define-values (section-title stuff) (apply values section1))
+                                (define-values (section-title description stuff)
+                                  (apply values section1))
                                 (define sorted 
                                   (sort stuff string<=? #:key (compose symbol->string syntax-e car)))
                                 (define typed (for/list ((s sorted)) (re-context c (car s) (cdr s))))
                                 (cons @section[#:tag-prefix p]{@section-title}
-                                      (cons typed others))])))
+                                      (if description
+                                          (cons description (cons typed others))
+                                          (cons typed others)))])))
                          
                          (define (re-context c id defproc)
                            (defproc c))
@@ -187,26 +192,30 @@ tests to run:
                            (define (is-exception i)
                              (memf (lambda (j) (eq? (syntax-e j) (syntax-e i))) exceptions))
                            (for/list ((s *sections))
-                             (define sectn (second s))
+                             (define sectn (third s))
                              (define clean (filter (lambda (i) (not (is-exception (car i)))) sectn))
-                              (list (first s) clean)))
+                             (list (first s) (second s) clean)))
                          ;; 
                          ;; state variable: Sections
                          (define *sections '())
-                         ;; String Section -> Void 
+                         ;; String (U #f Block) Section -> Void
                          ;; add _scontent_ section to *sections in the doc submodule 
-                         (define (#,*add stitle scontent)
+                         (define (#,*add stitle sdescription scontent)
                            (define exists #f)
                            (define sections
                              (for/list ((s *sections))
                                (cond
                                  [(string=? (first s) stitle) 
                                   (set! exists #t)
-                                  (list stitle (append (second s) scontent))]
+                                  (list stitle
+                                        (or (second s) sdescription)
+                                        (append (third s) scontent))]
                                  [else s])))
                            (if exists
                                (set! *sections sections)
-                               (set! *sections (append sections (list (list stitle scontent))))))
+                               (set! *sections
+                                     (append sections
+                                             (list (list stitle sdescription scontent))))))
                          
                          #,@(map (lambda (adp) (adp)) (reverse add-docs-and-provide)))
                 p* ...)])))
@@ -227,4 +236,3 @@ tests to run:
            [(internal:id external:id) #'(rename-out (internal external))]
            [name:id #'name]))
        lon))
-
