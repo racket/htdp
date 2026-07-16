@@ -155,7 +155,8 @@ tests to run:
                          #,requires
                          ;; -----------------------------------------------------------------------
                          ;; Section  = [Listof (cons Identifier Doc)]
-                         ;; Sections = [Listof (list Title (U #f Block) Section)]
+                         ;; Description = (U #f Block [Listof Block])
+                         ;; Sections = [Listof (list Title Description Section)]
                          (provide 
                           ;; Identifier ... *-> Sections
                           ;; retrieve the document without the specified identifiers
@@ -179,10 +180,13 @@ tests to run:
                                 (define sorted 
                                   (sort stuff string<=? #:key (compose symbol->string syntax-e car)))
                                 (define typed (for/list ((s sorted)) (re-context c (car s) (cdr s))))
+                                (define description-blocks
+                                  (cond
+                                    [(not description) '()]
+                                    [(list? description) description]
+                                    [else (list description)]))
                                 (cons @section[#:tag-prefix p]{@section-title}
-                                      (if description
-                                          (cons description (cons typed others))
-                                          (cons typed others)))])))
+                                      (append description-blocks (cons typed others)))])))
                          
                          (define (re-context c id defproc)
                            (defproc c))
@@ -198,7 +202,7 @@ tests to run:
                          ;; 
                          ;; state variable: Sections
                          (define *sections '())
-                         ;; String (U #f Block) Section -> Void
+                         ;; String Description Section -> Void
                          ;; add _scontent_ section to *sections in the doc submodule 
                          (define (#,*add stitle sdescription scontent)
                            (define exists #f)

@@ -670,9 +670,13 @@
   )
  
  ("Posns"
-  #:description @para{A posn represents a position using two coordinates: the distance from the
-  left margin, called the @italic{x-coordinate}, and the distance from the top margin, called the
-  @italic{y-coordinate}.}
+  #:description
+  (list
+   @para{A @italic{Posn} is a structure:}
+   @racketblock[(make-posn Number Number)]
+   @para{@bold{interpretation} @racket[(make-posn x y)] represents a position using two coordinates:
+   the distance from the left margin, called the @italic{x-coordinate}, and the distance from the
+   top margin, called the @italic{y-coordinate}.})
   ; @defproc[(posn) signature]{Signature for posns.}
   @defproc[(make-posn [x any/c][y any/c]) posn]{
  Constructs a posn from two arbitrary values.
