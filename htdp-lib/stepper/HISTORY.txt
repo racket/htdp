@@ -1,6 +1,10 @@
 Stepper
 -------
 
+Changes for 9.3:
+
+None.
+
 Changes for 9.2:
 
 The stepper now displays numbers according the the language settings.
