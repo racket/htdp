@@ -11,8 +11,8 @@ jobs:
         racket-variant: ["CS"]
 
     steps:
-    - uses: actions/checkout@v4.3.0
-    - uses: Bogdanp/setup-racket@v1.14
+    - uses: actions/checkout@v7
+    - uses: Bogdanp/setup-racket@v1.15
       with:
         architecture: 'x64'
         distribution: 'full'
@@ -22,8 +22,10 @@ jobs:
         dest: '${HOME}/racket'
         local_catalogs: $GITHUB_WORKSPACE
     - run: raco pkg update -i --no-setup htdp-lib htdp-doc htdp
-    - name: Install htdp-test (depends on htdp-lib)
-      run: raco pkg install --auto -i --skip-installed --no-setup htdp-test
-    - run: raco setup --check-pkg-deps --pkgs htdp-lib htdp-doc htdp-test
+    - name: Install htdp-test and htdp-drracket-test (depends on htdp-lib)
+      run: raco pkg install --auto -i --skip-installed --no-setup htdp-test htdp-drracket-test
+    - run: raco setup --check-pkg-deps --pkgs htdp-lib htdp-doc htdp-test htdp-drracket-test
     - name: Run tests
       run: xvfb-run raco test htdp-test
+    - name: Run DrRacket integration tests
+      run: xvfb-run raco test -p htdp-drracket-test
