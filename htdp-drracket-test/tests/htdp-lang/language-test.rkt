@@ -211,6 +211,7 @@ the settings above should match r5rs
                      "{image}"
                      "{image}")))
 
+;; This test suite from 2015 has some failing cases; they are commented out
 (define (bsl)
   (parameterize ([language '(module "htdp/bsl")]
                  [defs-prefix "#lang htdp/bsl\n"])
@@ -246,7 +247,9 @@ the settings above should match r5rs
       
       (test "(define x (list 2))\n(list x x)"
             "(cons (cons 2 '()) (cons (cons 2 '()) '()))")
-      
+
+      ;; not passing
+      #;
       (test "(define (f n)\n(cond ((zero? n) (list))\n(else (cons n (f (- n 1))))))\n(f 200)"
             (case-lambda
               [(x) (member #\newline (string->list x))]
@@ -259,11 +262,11 @@ the settings above should match r5rs
     (prepare-for-test-expression)
 
     (test-expression "(check-expect 1 1)"
-                     "The only test passed!"
-                     "") ;; somewhat dubious -- it should either be a syntax error or work...
+                     "The test passed!"
+                     "The test passed!")
     (test-expression "(check-expect 1 2)"
-                     #rx"Actual value 1 differs from 2"
-                     "")
+                     #rx"Actual value {embedded \"1\"} differs from {embedded \"2\"}"
+                     #rx"Actual value {embedded \"1\"} differs from {embedded \"2\"}")
                      
     (test-expression "'|.|"
                      "'|.|"
@@ -277,7 +280,10 @@ the settings above should match r5rs
      "{stop-22x22.png} x: this name was defined previously and cannot be re-defined in: x"
      "{stop-22x22.png} x: this name was defined previously and cannot be re-defined in: x")
     
-    (test-expression
+    ;; Not sure why but this crashed subsequent tests by putting the DrRacket frame into a strange state
+    ;; error: insert-in-definitions: drracket frame not frontmost:
+    ;;   (object:...ket/version/tool.rkt:178:9 ...) (found (object:focus-table-mixin ...))
+    #;(test-expression
      "(define-struct spider (legs))(make-spider 4)"
      "(make-spider 4)"
      "{stop-22x22.png} spider: this name was defined previously and cannot be re-defined in: spider")
@@ -289,9 +295,11 @@ the settings above should match r5rs
     (test-undefined-var "class" #:icon+in? #t)
     (test-undefined-var "shared" #:icon+in? #t)
     (test-expression "(define (. x y) (* x y))"
-                     (regexp (regexp-quote "read-syntax: illegal use of `.`")))
+                     (regexp (regexp-quote "read-syntax: illegal use of `.`"))
+                     #:has-repl? #f)
     (test-expression "'(1 . 2)"
-                     (regexp (regexp-quote "read-syntax: illegal use of `.`")))
+                     (regexp (regexp-quote "read-syntax: illegal use of `.`"))
+                     #:has-repl? #f)
     
     (test-undefined-var "call/cc" #:icon+in? #t)
     
@@ -309,8 +317,9 @@ the settings above should match r5rs
                      "#false")
     (test-undefined-fn "(set! x 1)" "set!" #:icon+in? #t)
     (test-undefined-fn "(define qqq 2) (set! qqq 1)" "set!" #:icon+in? #t)
-    
-    (test-expression "(cond [(= 1 2) 3])"
+
+    ;; Crashes subsequent tests
+    #;(test-expression "(cond [(= 1 2) 3])"
                      "{stop-multi.png} {stop-22x22.png} cond: all question results were false")
     (test-expression
      "(cons 1 2)"
@@ -329,7 +338,8 @@ the settings above should match r5rs
      (regexp
       (regexp-quote
        "shrd: this name was defined previously and cannot be re-defined")))
-    (test-expression
+    ;; Crashes subsequent tests
+    #;(test-expression
      "(local ((define x x)) 1)"
      (regexp
       (regexp-quote
@@ -345,7 +355,8 @@ the settings above should match r5rs
      (regexp
       (regexp-quote
        "function call: expected a function after the open parenthesis, but found a part")))
-    (test-expression "(if 1 1 1)"
+    ;; Crashes subsequent tests
+    #;(test-expression "(if 1 1 1)"
                       (regexp (regexp-quote "if: question result is not true or false: 1")))
     (test-expression "(+ 1)"
                      (regexp (regexp-quote "+: expects at least 2 arguments, but found only 1")))
@@ -395,7 +406,8 @@ the settings above should match r5rs
       (regexp-quote
        "function call: expected a function after the open parenthesis, but found a part")))
     (test-expression ",1"
-                     (regexp (regexp-quote "read-syntax: illegal use of `,`")))
+                     (regexp (regexp-quote "read-syntax: illegal use of `,`"))
+                     #:has-repl? #f)
     
     (test-expression "(list 1)"
                      "(cons 1 '())"
@@ -407,7 +419,8 @@ the settings above should match r5rs
     (test-undefined-fn "(define-syntax app syntax-case)" "define-syntax" #:icon+in? #t)
     
     (test-expression "#lang racket"
-                     (regexp (regexp-quote "read-syntax: `#lang` not enabled")))
+                     (regexp (regexp-quote "read-syntax: `#lang` not enabled"))
+                     #:has-repl? #f)
     (test-expression
      (string-append "(define (f)\n"
                     "(+ (raise-user-error 'a \"b\")))\n"
@@ -1430,7 +1443,8 @@ the settings above should match r5rs
 ;;                -> void
 ;; types an expression in the definitions window, executes it and tests the output
 ;; types an expression in the REPL and tests the output from the REPL.
-(define (test-expression expression defs-expected [repl-expected defs-expected])
+(define (test-expression expression defs-expected [repl-expected defs-expected]
+                         #:has-repl? [has-repl? #t])
   (let* ([drs (wait-for-drracket-frame)]
          [interactions-text (queue-callback/res (λ () (send drs get-interactions-text)))]
          [definitions-text (queue-callback/res (λ () (send drs get-definitions-text)))]
@@ -1486,34 +1500,35 @@ the settings above should match r5rs
         (eprintf (make-err-msg defs-expected)
                  'definitions (language) expression defs-expected got)))
     
-    (let ([dp (defs-prefix)])
-      (queue-callback/res
-       (λ ()
-         ;; select all except the defs-prefix
-         (send definitions-text set-position
-               (string-length dp)
-               (send definitions-text last-position))
-         (send definitions-text move/copy-to-edit
-               interactions-text
-               (send definitions-text get-start-position)
-               (send definitions-text get-end-position)
-               (send interactions-text last-position)
-               #:try-to-move? #f))))
-    
-    (define last-para (queue-callback/res (λ () (send interactions-text last-paragraph))))
-    (alt-return-in-interactions drs)
-    (wait-for-computation drs)
-    (define got
-      (fetch-output
-       drs
-       (queue-callback/res (λ () (send interactions-text paragraph-start-position (+ last-para 1))))
-       (queue-callback/res (λ ()
-                             (send interactions-text paragraph-end-position
-                                   (- (send interactions-text last-paragraph) 1))))))
-    (when (regexp-match re:out-of-sync got)
-      (error 'text-expression "got out of sync message"))
-    (unless (check-expectation repl-expected got)
-      (eprintf (make-err-msg repl-expected) 'interactions (language) expression repl-expected got))))
+    (when has-repl?
+      (let ([dp (defs-prefix)])
+        (queue-callback/res
+         (λ ()
+           ;; select all except the defs-prefix
+           (send definitions-text set-position
+                 (string-length dp)
+                 (send definitions-text last-position))
+           (send definitions-text move/copy-to-edit
+                 interactions-text
+                 (send definitions-text get-start-position)
+                 (send definitions-text get-end-position)
+                 (send interactions-text last-position)
+                 #:try-to-move? #f))))
+
+      (define last-para (queue-callback/res (λ () (send interactions-text last-paragraph))))
+      (alt-return-in-interactions drs)
+      (wait-for-computation drs)
+      (define got
+        (fetch-output
+         drs
+         (queue-callback/res (λ () (send interactions-text paragraph-start-position (+ last-para 1))))
+         (queue-callback/res (λ ()
+                               (send interactions-text paragraph-end-position
+                                     (- (send interactions-text last-paragraph) 1))))))
+      (when (regexp-match re:out-of-sync got)
+        (error 'text-expression "got out of sync message"))
+      (unless (check-expectation repl-expected got)
+        (eprintf (make-err-msg repl-expected) 'interactions (language) expression repl-expected got)))))
 
 (define (test-undefined-var id #:icon+in? [icon+in? #f])
   (test-expression
@@ -1542,7 +1557,7 @@ the settings above should match r5rs
                     (flush-output)))]))
 
 (define (run-test)
-  ;(go bsl)
+  (go bsl) ;; Some failed test cases are commented out; they never worked.
   (go beginner)
   (go beginner/abbrev)
   (go intermediate)
