@@ -53,6 +53,12 @@
          #'(let ((?temp ?exp) ...)
              ?check ...
              (make-case-signature '?name (list ?temp ...) equal? ?stx)))))
+    ((predicate ?id)
+     (identifier? #'?id)
+     (with-syntax ((?stx (phase-lift stx))
+		   (?name name)
+                   (?ho:id (first-order->higher-order #'?id)))
+       #'(make-predicate-signature '?name (delay ?ho:id) ?stx)))
     ((predicate ?exp)
      (with-syntax ((?stx (phase-lift stx))
 		   (?name name))
