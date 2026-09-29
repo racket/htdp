@@ -11,7 +11,7 @@
 
 (define-syntax-rule (racketgrammar*+library
                      #:literals lits
-                     (rhs-satisfied check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
+                     (rhs-satisfied check-satisfied check-expect check-random check-within check-random-within check-member-of check-range check-error require)
                      form ...)
   (racketgrammar*
    #:literals lits
@@ -19,6 +19,7 @@
    [test-case @#,racket[(check-expect expr expr)]
               @#,racket[(check-random expr expr)]
               @#,racket[(check-within expr expr expr)]
+              @#,racket[(check-random-within expr expr expr)]
               @#,racket[(check-member-of expr expr (... ...))]
               @#,racket[(check-range expr expr expr)]
               @#,racket[(check-satisfied expr rhs-satisfied)]
@@ -33,11 +34,11 @@
 
 (define-syntax-rule (racketgrammar*+qq 
                      #:literals lits
-                     (rhs-satisfied check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
+                     (rhs-satisfied check-satisfied check-expect check-random check-within check-random-within check-member-of check-range check-error require)
                      form ...)
   (racketgrammar*+library
    #:literals lits
-   (rhs-satisfied check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
+   (rhs-satisfied check-satisfied check-expect check-random check-within check-random-within check-member-of check-range check-error require)
    form ...
    (...
     [quoted name
@@ -100,4 +101,3 @@ with @racket[define] or @racket[define-struct], or any one of the
 @seclink[(string-append section-prefix "-pre-defined")]{pre-defined functions}.}
 
 )))
-

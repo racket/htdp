@@ -13,9 +13,9 @@
 @racketgrammar*+qq[
 #:literals (define define-struct lambda λ cond else if and or require lib planet
             local let let* letrec time check-expect check-random
-	    check-within check-member-of check-range check-error check-satisfied
+	    check-within check-random-within check-member-of check-range check-error check-satisfied
             : signature enum mixed -> ListOf)
-(expr check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
+(expr check-satisfied check-expect check-random check-within check-random-within check-member-of check-range check-error require)
 [program (code:line def-or-expr #, @dots)]
 [def-or-expr definition
              expr
@@ -128,6 +128,7 @@ level as they did in the @secref["intermediate"] level.
              check-random
 	     check-satisfied
              check-within
+             check-random-within
              check-error
              check-member-of
              check-range
