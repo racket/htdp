@@ -13,9 +13,9 @@
 
 @racketgrammar*+qq[
 #:literals (define define-struct lambda cond else if and or require lib planet
-            local let let* letrec time check-expect check-random check-within check-error check-satisfied
+            local let let* letrec time check-expect check-random check-within check-random-within check-error check-satisfied
    	    : signature enum mixed -> ListOf)
-(expr check-satisfied check-expect check-random check-within check-member-of check-range check-error require)
+(expr check-satisfied check-expect check-random check-within check-random-within check-member-of check-range check-error require)
 [program (code:line def-or-expr #, @dots)]
 [def-or-expr definition
              expr
@@ -102,6 +102,7 @@ did in the @secref["beginner-abbr"] level.
                      check-random
                      check-satisfied
                      check-within
+                     check-random-within
                      check-error
                      check-member-of
                      check-range
@@ -124,4 +125,3 @@ did in the @secref["beginner-abbr"] level.
 @(render-sections (docs) #'here "htdp-intermediate")
 
 @;prim-op-defns['(lib "htdp-intermediate.rkt" "lang") #'here '()]
-
