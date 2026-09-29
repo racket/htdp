@@ -4,6 +4,7 @@
 (provide check-expect ;; syntax : (check-expect <expression> <expression>)
          check-random ;; syntax : (check-random <expression> <expression>)
          check-within ;; syntax : (check-within <expression> <expression> <expression>)
+         check-random-within ;; syntax : (check-random-within <expression> <expression> <expression>)
          check-member-of ;; syntax : (check-member-of <expression> <expression>)
          check-range ;; syntax : (check-range <expression> <expression> <expression>)
          check-error  ;; syntax : (check-error <expression> [<expression>])
@@ -234,6 +235,38 @@
            (not-within src actual expected within))))
    (lambda (exn)
      (unexpected-error/check-* src expected exn (exn->markup exn) 'check-within))))
+
+(define-syntax (check-random-within stx)
+  (check-context! 'check-random-within CHECK-WITHIN-DEFN-STR stx)
+  (syntax-case stx ()
+    [(_ e1 e2 within)
+     (let ([test #`(lambda () e1)]
+           [args (list #`(lambda () e2) #`within)])
+       (check-expect-maker stx #'do-check-random-within test args 'comes-from-check-random))]
+    [_ (raise-syntax-error 'check-random-within (argcount-error-message/stx 3 stx) stx)]))
+
+;; Like check-random, the test and expected expressions are evaluated
+;; with the same freshly-seeded pseudo-random generator; like check-within,
+;; the two results are compared up to the `within` tolerance.
+(define (do-check-random-within test expected-thunk within src)
+  (error-check number? within CHECK-WITHIN-INEXACT-FMT #t)
+  (let ((rng (make-pseudo-random-generator))
+        (k (modulo (current-milliseconds) (sub1 (expt 2 31)))))
+    (let ((expected (parameterize ([current-pseudo-random-generator rng])
+                      (random-seed k)
+                      (expected-thunk))))
+      (error-check (lambda (v) (not (procedure? v))) expected CHECK-WITHIN-FUNCTION-FMT #t)
+      (execute-test
+       src
+       (lambda ()
+         (let ((actual (parameterize ([current-pseudo-random-generator rng])
+                         (random-seed k)
+                         ((test)))))
+           (if (beginner-equal~? actual expected within)
+               #t
+               (not-within src actual expected within))))
+       (lambda (exn)
+         (unexpected-error/check-* src expected exn (exn->markup exn) 'check-random))))))
 
 (define-syntax (check-error stx)
   (check-context! 'check-error CHECK-ERROR-DEFN-STR stx)

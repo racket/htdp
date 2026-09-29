@@ -170,6 +170,7 @@
                      check-random
 		     check-satisfied
                      check-within
+                     check-random-within
                      check-error
                      check-member-of
                      check-range
@@ -187,6 +188,7 @@
                   #'check-random @racket[check-random]
 		  #'check-satisfied @racket[check-satisfied]
                   #'check-within @racket[check-within]
+                  #'check-random-within @racket[check-random-within]
                   #'check-error @racket[check-error]
                   #'check-member-of @racket[check-member-of]
                   #'check-range @racket[check-range]
@@ -204,6 +206,7 @@
                         check-random-id check-random-elem
 			check-satisfied-id check-satisfied-elem
                         check-within-id check-within-elem
+                        check-random-within-id check-random-within-elem
                         check-error-id check-error-elem
                         check-member-of-id check-member-of-elem
                         check-range-id check-range-elem
@@ -544,7 +547,24 @@ In contrast, when @racket[delta] is small, the test fails:
   It is an error for @racket[expressions] or @racket[expected-expression]
   to produce a function value; see note on @racket[check-expect] for details.
 
-  If @racket[delta] is not a number, @check-within-elem reports an error.} 
+  If @racket[delta] is not a number, @check-within-elem reports an error.}
+
+  @defform*[#:id [check-random-within check-random-within-id]
+            [(check-random-within expression expected-expression delta)]]{
+
+  Combines @racket[check-random] and @racket[check-within]. Like
+  @racket[check-random], @racket[expression] and
+  @racket[expected-expression] are evaluated with the same random-number
+  sequence, so calls to @racket[random] in both expressions draw the same
+  numbers. Like @racket[check-within], the test then succeeds if every number
+  in the value of @racket[expression] is within @racket[delta] of the
+  corresponding number in the value of @racket[expected-expression].
+
+  Use @racket[check-random-within] in place of @racket[check-random] when the
+  random computation produces inexact numbers, which @racket[check-random]
+  refuses to compare.
+
+  If @racket[delta] is not a number, @check-random-within-elem reports an error.}
 
   @defform*[#:id [check-error check-error-id]
             [(check-error expression expected-error-message)
