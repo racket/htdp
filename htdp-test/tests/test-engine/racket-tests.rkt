@@ -400,9 +400,24 @@
  (lambda (e)
    (initialize-test-object!)
    (and (exn:fail:contract? e)
-        (regexp-match? #rx"\"0[.]1\" is not inexact" (exn-message e))))
+        (regexp-match? #rx"^check-random-within:.*\"0[.]1\" is not a number" (exn-message e))))
  (lambda ()
    (run-tests!)))
+
+;; A function in the expected position names the correct check form.
+(check-random-within 1.0 (lambda (x) x) 0.1)
+(check-exn
+ (lambda (e)
+   (initialize-test-object!)
+   (and (exn:fail:contract? e)
+        (regexp-match? #rx"^check-random-within cannot compare functions"
+                       (exn-message e))))
+ (lambda () (run-tests!)))
+
+;; An exception in the tested expression also names the correct check form.
+(check-random-within (error 'random-test "failed") 1.0 0.1)
+(check-failure unexpected-error/check-*?
+               unexpected-error/check-*-form-name 'check-random-within)
 
 (check-property
  (for-all ((a Integer)
