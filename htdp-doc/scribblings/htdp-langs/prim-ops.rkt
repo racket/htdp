@@ -564,7 +564,9 @@ In contrast, when @racket[delta] is small, the test fails:
   random computation produces inexact numbers, which @racket[check-random]
   refuses to compare.
 
-  If @racket[delta] is not a number, @check-random-within-elem reports an error.}
+  If @racket[delta] is not a number, @check-random-within-elem reports an error.
+
+  @history[#:added "1.9"]}
 
   @defform*[#:id [check-error check-error-id]
             [(check-error expression expected-error-message)

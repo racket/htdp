@@ -43,6 +43,10 @@
   "check-within: expects an inexact number for the range. ~s is not inexact.")
 (define CHECK-WITHIN-FUNCTION-FMT
   "check-within cannot compare functions, but the second argument is ~a.")
+(define CHECK-RANDOM-WITHIN-NUMBER-FMT
+  "check-random-within: expects a number for the range. ~s is not a number.")
+(define CHECK-RANDOM-WITHIN-FUNCTION-FMT
+  "check-random-within cannot compare functions, but the second argument is ~a.")
 (define LIST-FMT
   "check-member-of: expects a list for the second argument (the possible outcomes). Given ~s")
 (define CHECK-MEMBER-OF-FUNCTION-FMT
@@ -249,13 +253,13 @@
 ;; with the same freshly-seeded pseudo-random generator; like check-within,
 ;; the two results are compared up to the `within` tolerance.
 (define (do-check-random-within test expected-thunk within src)
-  (error-check number? within CHECK-WITHIN-INEXACT-FMT #t)
+  (error-check number? within CHECK-RANDOM-WITHIN-NUMBER-FMT #t)
   (let ((rng (make-pseudo-random-generator))
         (k (modulo (current-milliseconds) (sub1 (expt 2 31)))))
     (let ((expected (parameterize ([current-pseudo-random-generator rng])
                       (random-seed k)
                       (expected-thunk))))
-      (error-check (lambda (v) (not (procedure? v))) expected CHECK-WITHIN-FUNCTION-FMT #t)
+      (error-check (lambda (v) (not (procedure? v))) expected CHECK-RANDOM-WITHIN-FUNCTION-FMT #t)
       (execute-test
        src
        (lambda ()
@@ -266,7 +270,7 @@
                #t
                (not-within src actual expected within))))
        (lambda (exn)
-         (unexpected-error/check-* src expected exn (exn->markup exn) 'check-random))))))
+         (unexpected-error/check-* src expected exn (exn->markup exn) 'check-random-within))))))
 
 (define-syntax (check-error stx)
   (check-context! 'check-error CHECK-ERROR-DEFN-STR stx)

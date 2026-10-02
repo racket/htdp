@@ -101,6 +101,26 @@ corresponding number in the second expression.
 It is an error for @racket[expr] or @racket[expected] to produce a function
 value.} 
 
+@defform[(check-random-within expr expected-expr delta-expr)
+          #:contracts ([delta-expr number?])]{
+Combines @racket[check-random] and @racket[check-within]. The
+@racket[expr] and @racket[expected-expr] expressions are evaluated with
+the same random-number sequence. Their values must be structurally equal,
+with every number in the first value within @racket[delta-expr] of the
+corresponding number in the second value. Inexact numbers are allowed.
+
+@examples[#:eval (mk-eval (require test-engine/racket-tests))
+(check-random-within (exact->inexact (random 100))
+                     (+ 0.01 (random 100))
+                     0.1)
+(test)
+]
+
+It is an error for @racket[expr] or @racket[expected-expr] to produce a
+function value.
+
+@history[#:added "1.9"]}
+
 @defform*[ [(check-error expr)
             (check-error expr msg-expr)]
             #:contracts ([msg-expr string?]) ]{
