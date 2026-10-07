@@ -25,20 +25,24 @@
 
 (define ((make-info options) key default use-default)
   (case key
-    [(drscheme:toolbar-buttons)
-     ;; if you want to add more buttons, the strategy used here might not
-     ;; be the right one to use. If you can simply enable existing buttons,
-     ;; do that instead.
-     (append (if (memq 'disable-stepper options)
-                 '()
-                 (list ((dynamic-require 'lang/private/sl-stepper-button 'sl-stepper-drracket-button) options)))
-             (list (dynamic-require 'drracket/syncheck-drracket-button 'syncheck-drracket-button)))]
-
     [(drscheme:opt-out-toolbar-buttons)
      (append (if (memq 'enable-debugger options)
                  '()
                  '(debug-tool))
-             '(macro-stepper drracket:syncheck))]
+             '(macro-stepper))]
+
+    [(drracket:opt-in-toolbar-buttons)
+     (cond
+       [(memq 'disable-stepper options) '()]
+       [(and (member 'abbreviate-cons-as-list options)
+             (member 'use-function-output-syntax options)
+             (member 'read-accept-quasiquote options))
+        (list 'htdp:stepper:isl+)]
+       [(and (member 'abbreviate-cons-as-list options)
+             (member 'read-accept-quasiquote options))
+        (list 'htdp:stepper:bsl+)]
+       [else
+        (list 'htdp:stepper:bsl)])]
     
     [(drracket:show-big-defs/ints-labels) #t]
 
