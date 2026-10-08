@@ -23,7 +23,8 @@
 [def-or-expr definition
              expr
              test-case
-             library-require]
+             library-require
+             signature-declaration]
 [definition (define (name variable variable #, @dots) expr)
             (define name expr)
             (define name (lambda (variable variable #, @dots) expr))
