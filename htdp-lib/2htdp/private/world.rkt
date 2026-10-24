@@ -448,13 +448,10 @@
         ;; is self-contradictory; I will wait until someone complaints -- MF, 22 Nov 2015
         (cond
           [(number? close-on-stop)
-           (sleep/yield close-on-stop)
-           (send the-frame show #f)]
-          [(false? close-on-stop)
-           (sleep/yield 600) ;; just wait for a long time
-           (send the-frame show #f)]
-          [else
-           (send the-frame show #f)])
+           (sleep/yield close-on-stop)]
+          [(or (false? close-on-stop) last-picture)
+           (sleep/yield 600)]) ;; just wait for a long time
+        (send the-frame show #f)
 
         (callback-stop! 'name)
         (enable-images-button))
