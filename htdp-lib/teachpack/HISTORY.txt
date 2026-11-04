@@ -1,4 +1,10 @@
 ------------------------------------------------------------------------
+Version 9.4                               [Wed Nov  4 15:13:36 CST 2026]
+
+* improve documentation to explain how the change to close-on-stop in 9.2
+  introduced a subtle change to stop-when
+
+------------------------------------------------------------------------
 Version 9.3                               [Thu Jul 16 19:22:45 CDT 2026]
 
 * The #lang *SL languages now display coverage information by default
