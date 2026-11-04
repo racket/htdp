@@ -4,6 +4,7 @@
           (for-label scheme
                      (only-in lang/htdp-beginner check-expect)
                      teachpack/2htdp/universe
+		     (only-in lang/htdp-intermediate-lambda)
                      2htdp/image))
 @(require scribble/struct)
 
@@ -687,6 +688,10 @@ All @tech{MouseEvent}s are represented via strings:
  tick events, @tech{KeyEvent}s, or @tech{MouseEvent}s are forwarded to
  the respective handlers. The @racket[big-bang] expression returns this
  last world.
+
+ If the window is to stay open once the callback returns
+ @racket[#true], add a @racket[close-on-stop] clause. See for an
+ example below. 
 }
 
 @defform/none[#:literals (stop-when)
@@ -703,6 +708,45 @@ All @tech{MouseEvent}s are represented via strings:
  tick events, @tech{KeyEvent}s, or @tech{MouseEvent}s are forwarded to
  the respective handlers. The @racket[big-bang] expression returns this
  last world.
+
+ If the window is to stay open once the callback returns
+ @racket[#true], add a @racket[close-on-stop] clause. Here is a
+ complete example: 
+
+@;%
+@(begin
+#reader scribble/comment-reader
+(racketmod
+htdp/isl+ 
+
+(require 2htdp/universe)
+(require 2htdp/image)
+
+(code:comment# @#,elem{{Natural -> Natural}})
+(define (count-down start-time)
+  (big-bang start-time
+    [on-tick sub1 1]
+    [to-draw  draw-while-active]
+    [close-on-stop #false]
+    [stop-when zero? draw-last]))
+
+(code:comment# @#,elem{{Natural -> Image}})
+(define (draw-while-active w)
+  (overlay
+   (text (number->string w) 22 'black)
+   (square 500 'solid 'green)))
+
+(code:comment# @#,elem{{Natural -> Image}})
+(define (draw-last w)
+  (square 500 'solid 'red))
+
+(code:comment2 "run program run")
+
+(count-down 3)
+))
+@;%
+
+
 }
 }
 
