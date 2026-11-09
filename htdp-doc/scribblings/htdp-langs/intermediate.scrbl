@@ -7,7 +7,9 @@
 
 @section-index["ISL"]
 
-@declare-exporting[lang/htdp-intermediate]
+@(defmodule htdp/isl #:lang #:use-sources (lang/htdp-intermediate))
+
+@;declare-exporting[lang/htdp-intermediate]
 
 @grammar
 

@@ -6,7 +6,9 @@
 
 @section-index["ISL+"]
 
-@declare-exporting[lang/htdp-intermediate-lambda]
+@(defmodule htdp/isl+ #:lang #:use-sources [lang/htdp-intermediate-lambda])
+
+@;declare-exporting[lang/htdp-intermediate-lambda]
 
 @grammar
 
@@ -67,7 +69,6 @@
 @; ----------------------------------------------------------------------
 
 @section[#:tag "intm-w-lambda-syntax"]{Syntax for Intermediate with Lambda}
-
 
 @defform[(lambda (variable variable #, @dots) expression)]{
 

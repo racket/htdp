@@ -6,7 +6,9 @@
 
 @section-index["BSL+"]
 
-@declare-exporting[lang/htdp-beginner-abbr]
+@(defmodule htdp/bsl+ #:lang #:use-sources (lang/htdp-beginner-abbr))
+
+@;declare-exporting[lang/htdp-beginner-abbr]
 
 @grammar 
 
