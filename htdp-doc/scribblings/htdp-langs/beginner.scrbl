@@ -7,7 +7,7 @@
 
 @section-index["BSL"]
 
-@(defmodule htdp/bsl #:lang #:use-sources (lang/htdp-beginner lang/private/teachprims))
+@(defmodule htdp/bsl #:lang #:packages ("htdp-lib") #:use-sources (lang/htdp-beginner lang/private/teachprims))
 
 @;declare-exporting[lang/htdp-beginner #:use-sources (lang/htdp-beginner lang/private/teachprims)]
 

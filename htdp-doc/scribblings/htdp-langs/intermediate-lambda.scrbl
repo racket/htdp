@@ -6,7 +6,7 @@
 
 @section-index["ISL+"]
 
-@(defmodule htdp/isl+ #:lang #:use-sources [lang/htdp-intermediate-lambda])
+@(defmodule htdp/isl+ #:lang #:packages ("htdp-lib") #:use-sources [lang/htdp-intermediate-lambda])
 
 @;declare-exporting[lang/htdp-intermediate-lambda]
 

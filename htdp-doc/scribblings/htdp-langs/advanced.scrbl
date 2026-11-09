@@ -8,7 +8,7 @@
 
 @section-index["ASL"]
 
-@(defmodule htdp/asl #:lang #:use-sources (lang/htdp-advanced))
+@(defmodule htdp/asl #:lang #:packages ("htdp-lib") #:use-sources (lang/htdp-advanced))
 
 @;declare-exporting[lang/htdp-advanced]
 
