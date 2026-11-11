@@ -10,6 +10,7 @@
          racket/match
          string-constants
          lang/stepper-language-interface
+         lang/private/sl-stepper-button
          (only-in racket/list last)
          (prefix-in x: "private/mred-extensions.rkt")
          "private/step-img.rkt"
@@ -21,6 +22,8 @@
 (export drracket:tool-exports^ stepper-frame^)
 
 (define-logger stepper)
+
+(define stepper-button-number 59)
 
 ;; tool magic here:
 (define (phase1)
@@ -56,7 +59,7 @@
 
        (public stepper:pretty-print-hooks)
        (define (stepper:pretty-print-hooks settings previous-size-hook previous-print-hook)
-         (error 'stepper:configure-rendering "this must be overridden"))
+         (error 'stepper:pretty-print-hooks "this must be overridden"))
 
        (public stepper:render-to-sexp)
        (define (stepper:render-to-sexp val language-level)
@@ -205,7 +208,7 @@
                                (drracket:language-configuration:language-settings-language language-settings)
                                (drracket:language-configuration:language-settings-settings language-settings))))]))
 
-    (register-toolbar-button stepper-button #:number 59)
+    (register-toolbar-button stepper-button #:number stepper-button-number)
 
     (define (stepper-button-show)
       (define parent (send stepper-button get-parent))
@@ -248,6 +251,21 @@
 
     ;; hide stepper button if it's not supported for the initial language:
     (show/hide-stepper-button)))
+
+(for ([options (in-list '(("bsl")
+                          ("bsl+" abbreviate-cons-as-list read-accept-quasiquote) ;; also isl
+                          ("isl+" abbreviate-cons-as-list use-function-output-syntax read-accept-quasiquote)))])
+  (match-define (list button-label button-image callback)
+    (sl-stepper-drracket-button (cdr options)))
+  (drracket:module-language-tools:add-opt-in-toolbar-button
+   (λ (drr-frame parent)
+     (new switchable-button%
+          [parent parent]
+          [label button-label]
+          [bitmap button-image]
+          [callback (lambda (dont-care) (callback drr-frame))]))
+   (string->symbol (format "htdp:stepper:~a" (car options)))
+   #:number stepper-button-number))
 
 ;; stepper-tab-mixin : the mixin that is applied to drracket tabs, to
 ;; interact with a possible stepper window.
