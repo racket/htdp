@@ -8,6 +8,8 @@
          string-constants
          pict
          simple-tree-text-markup/data
+         (only-in syntax-color/racket-lexer racket-lexer* current-lexeme->semantic-type-guess)
+         (only-in syntax-color/racket-indentation racket-tabify-table->head-sexp-type)
          (for-syntax images/icons/control images/icons/style))
 
 (provide
@@ -282,11 +284,44 @@
           (insert #\newline))
         (format-sexp exp))
       (define end (get-start-position))
-      (change-style (send (get-style-list) find-named-style "Standard")
+      (change-style (send (get-style-list) find-named-style (f:editor:get-default-color-style-name))
                     start end)
+      (syntax-colorize start end)
       (end-edit-sequence)
       (lock #t))
     
+    ;; syntax-colorize : nat nat -> void
+    ;; colors the text between start and end the way the definitions window
+    ;; does, using the Racket lexer and the current color scheme's syntax-color
+    ;; styles. We can't use color:text-mixin's background colorer here, since
+    ;; it waits until the editor is unlocked, and these editors stay locked.
+    ;; Coloring is purely cosmetic, so a lexing failure must not break the step.
+    (define/private (syntax-colorize start end)
+      (with-handlers ([exn:fail? void])
+        (define port (open-input-text-editor this start end))
+        (port-count-lines! port)
+        ;; as in the definitions window, identifiers in the indentation
+        ;; preferences (define, cond, lambda, ...) get the "keyword" style
+        (define head-sexp-type
+          (racket-tabify-table->head-sexp-type (f:preferences:get 'framework:tabify)))
+        (let loop ([mode #f])
+          (define-values (lexeme raw-type paren tok-start tok-end backup new-mode)
+            (parameterize ([current-lexeme->semantic-type-guess
+                            (lambda (lexeme) (and (head-sexp-type lexeme) 'keyword))])
+              (racket-lexer* port 0 mode)))
+          (define type
+            (cond
+              [(not (hash? raw-type)) raw-type]
+              [(memq (hash-ref raw-type 'semantic-type-guess #f) '(keyword builtin)) 'keyword]
+              [else (hash-ref raw-type 'type)]))
+          (unless (eq? type 'eof)
+            (unless (memq type '(no-color white-space))
+              (define style (send (get-style-list) find-named-style
+                                  (f:racket:short-sym->style-name type)))
+              (when (and style tok-start tok-end)
+                (change-style style (+ start tok-start -1) (+ start tok-end -1) #f)))
+            (loop new-mode)))))
+
     (super-instantiate ())))
 
 

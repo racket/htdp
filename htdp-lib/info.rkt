@@ -23,6 +23,7 @@
     "snip-lib"
     "srfi-lite-lib"
     ["string-constants-lib" #:version "1.20"]
+    ["syntax-color-lib" #:version "1.7"]
     "typed-racket-lib"
     "typed-racket-more"
     "web-server-lib"
